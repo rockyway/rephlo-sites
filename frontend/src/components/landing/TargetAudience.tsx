@@ -34,14 +34,14 @@ const audiences = [
 
 function TargetAudience() {
   return (
-    <section className="py-4xl bg-deep-navy-50">
+    <section className="py-4xl bg-deep-navy-50 dark:bg-deep-navy-950">
       <div className="container mx-auto px-lg sm:px-xl lg:px-2xl">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-4xl">
-          <h2 className="text-h1 font-bold text-deep-navy-800 mb-lg">
+          <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Built for how you work
           </h2>
-          <p className="text-body-lg text-deep-navy-500">
+          <p className="text-body-lg text-deep-navy-500 dark:text-deep-navy-300">
             Whether you're writing code, emails, or content, Rephlo adapts to your workflow.
           </p>
         </div>
@@ -51,11 +51,11 @@ function TargetAudience() {
           {audiences.map((audience, index) => {
             const Icon = audience.icon;
             return (
-              <Card key={index} variant="interactive">
+              <Card key={index} variant="interactive" className="shadow-md hover:shadow-xl transition-all duration-base">
                 <CardHeader>
                   <div className="flex items-start gap-lg">
-                    <div className="flex-shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-electric-cyan/10 transition-all duration-base ease-out group-hover:bg-electric-cyan/20">
-                      <Icon className="h-6 w-6 text-electric-cyan-600 transition-transform duration-base ease-out group-hover:scale-110" />
+                    <div className="flex-shrink-0 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-electric-cyan-500 to-electric-cyan-600 shadow-lg transition-all duration-base ease-out group-hover:shadow-xl group-hover:scale-105">
+                      <Icon className="h-8 w-8 text-white transition-transform duration-base ease-out group-hover:scale-110" />
                     </div>
                     <div className="flex-1">
                       <div className="text-caption font-semibold text-electric-cyan-600 uppercase tracking-wide mb-sm">

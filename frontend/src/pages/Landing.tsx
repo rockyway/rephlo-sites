@@ -5,11 +5,10 @@ import Features from '@/components/landing/Features';
 import TargetAudience from '@/components/landing/TargetAudience';
 import Testimonials from '@/components/landing/Testimonials';
 import CTA from '@/components/landing/CTA';
-import FeedbackForm from '@/components/landing/FeedbackForm';
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-deep-navy-900">
       <Header />
       <main>
         <Hero />
@@ -17,7 +16,6 @@ function Landing() {
         <TargetAudience />
         <Testimonials />
         <CTA />
-        <FeedbackForm />
       </main>
       <Footer />
     </div>

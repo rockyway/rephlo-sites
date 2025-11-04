@@ -27,14 +27,14 @@ const testimonials = [
 
 function Testimonials() {
   return (
-    <section className="py-4xl bg-white">
+    <section className="py-4xl bg-white dark:bg-deep-navy-900">
       <div className="container mx-auto px-lg sm:px-xl lg:px-2xl">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-4xl">
-          <h2 className="text-h1 font-bold text-deep-navy-800 mb-lg">
+          <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Trusted by professionals worldwide
           </h2>
-          <p className="text-body-lg text-deep-navy-500">
+          <p className="text-body-lg text-deep-navy-500 dark:text-deep-navy-300">
             From thought to polished—instantly.
           </p>
         </div>
@@ -42,14 +42,14 @@ function Testimonials() {
         {/* Testimonials Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2xl">
           {testimonials.map((testimonial, index) => (
-            <Card key={index} variant="featured" className="relative">
+            <Card key={index} variant="featured" className="relative shadow-lg hover:shadow-2xl transition-all duration-base">
               <CardContent className="pt-xl">
-                <Quote className="h-8 w-8 text-rephlo-blue/30 mb-lg transition-colors duration-base ease-out" />
+                <Quote className="h-12 w-12 text-rephlo-blue/40 mb-lg transition-all duration-base ease-out group-hover:text-rephlo-blue/60 group-hover:scale-110" />
                 <blockquote className="text-body text-deep-navy-700 mb-xl">
                   "{testimonial.quote}"
                 </blockquote>
                 <div className="flex items-center gap-md">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-rephlo flex items-center justify-center text-white font-semibold text-body-sm shadow-sm">
+                  <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-rephlo flex items-center justify-center text-white font-semibold text-body shadow-md">
                     {testimonial.avatar}
                   </div>
                   <div>
