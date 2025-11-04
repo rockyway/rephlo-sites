@@ -1,5 +1,36 @@
 import type { Config } from 'tailwindcss'
 
+/**
+ * Rephlo Design Token System
+ *
+ * Shadow Scale (elevation):
+ * - sm: subtle shadows (default state)
+ * - md: elevated state (hover)
+ * - lg: interactive feedback
+ * - xl: overlay/prominent
+ *
+ * Gradient System:
+ * - gradient-rephlo: primary brand gradient (135deg diagonal)
+ * - gradient-rephlo-vertical: vertical variant (180deg top-to-bottom)
+ * - gradient-navy-blue: secondary gradient (navy to blue)
+ *
+ * Animation Timing:
+ * - fast: 150ms (quick feedback for micro-interactions)
+ * - base: 200ms (standard interaction timing)
+ * - slow: 300ms (deliberate, emphasized actions)
+ * - slower: 500ms (complex animations and state changes)
+ *
+ * Easing Functions:
+ * - in-out: smooth, natural motion (default for most interactions)
+ * - out: quick entrance (use for appearing elements)
+ * - in: slow entrance (use for dismissing elements)
+ * - bounce: playful, energetic (use sparingly for special effects)
+ *
+ * Spacing Scale:
+ * - Based on 4px base unit for consistent visual rhythm
+ * - xs (4px) through 4xl (64px) for comprehensive spacing needs
+ */
+
 export default {
   darkMode: ['class'],
   content: [
@@ -111,6 +142,49 @@ export default {
         lg: '12px',
         md: '8px',
         sm: '6px',
+      },
+      // Shadow/Elevation Scale
+      // Usage: shadow-sm (default), shadow-md (hover), shadow-lg (interactive), shadow-xl (overlay)
+      boxShadow: {
+        sm: '0 1px 2px rgba(0, 0, 0, 0.05)',
+        md: '0 4px 8px rgba(0, 0, 0, 0.1)',
+        lg: '0 8px 16px rgba(0, 0, 0, 0.12)',
+        xl: '0 12px 24px rgba(0, 0, 0, 0.15)',
+      },
+      // Gradient System
+      // Usage: bg-gradient-rephlo, bg-gradient-rephlo-vertical, bg-gradient-navy-blue
+      backgroundImage: {
+        'gradient-rephlo': 'linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)',
+        'gradient-rephlo-vertical': 'linear-gradient(180deg, #2563EB 0%, #06B6D4 100%)',
+        'gradient-navy-blue': 'linear-gradient(135deg, #1E293B 0%, #2563EB 100%)',
+      },
+      // Animation Timing Scale
+      // Usage: duration-fast, duration-base, duration-slow, duration-slower
+      transitionDuration: {
+        fast: '150ms',
+        base: '200ms',
+        slow: '300ms',
+        slower: '500ms',
+      },
+      // Easing Functions
+      // Usage: ease-in-out, ease-out, ease-in, ease-bounce
+      transitionTimingFunction: {
+        'in-out': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        out: 'cubic-bezier(0, 0, 0.2, 1)',
+        in: 'cubic-bezier(0.4, 0, 1, 1)',
+        bounce: 'cubic-bezier(0.68, -0.55, 0.27, 1.55)',
+      },
+      // Enhanced Spacing Scale (4px base unit)
+      // Usage: p-xs, m-sm, gap-md, etc.
+      spacing: {
+        xs: '0.25rem',   // 4px
+        sm: '0.5rem',    // 8px
+        md: '0.75rem',   // 12px
+        lg: '1rem',      // 16px
+        xl: '1.5rem',    // 24px
+        '2xl': '2rem',   // 32px
+        '3xl': '3rem',   // 48px
+        '4xl': '4rem',   // 64px
       },
       keyframes: {
         'accordion-down': {
