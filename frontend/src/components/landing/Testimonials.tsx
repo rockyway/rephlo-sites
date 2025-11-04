@@ -44,8 +44,8 @@ function Testimonials() {
           {testimonials.map((testimonial, index) => (
             <Card key={index} variant="featured" className="relative shadow-lg hover:shadow-2xl transition-all duration-base">
               <CardContent className="pt-xl">
-                <Quote className="h-12 w-12 text-rephlo-blue/40 mb-lg transition-all duration-base ease-out group-hover:text-rephlo-blue/60 group-hover:scale-110" />
-                <blockquote className="text-body text-deep-navy-700 mb-xl">
+                <Quote className="h-12 w-12 text-rephlo-blue/40 dark:text-electric-cyan/60 mb-lg transition-all duration-base ease-out group-hover:text-rephlo-blue/60 dark:group-hover:text-electric-cyan/80 group-hover:scale-110" />
+                <blockquote className="text-body text-deep-navy-700 dark:text-deep-navy-200 mb-xl">
                   "{testimonial.quote}"
                 </blockquote>
                 <div className="flex items-center gap-md">
@@ -53,10 +53,10 @@ function Testimonials() {
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <div className="text-body-sm font-semibold text-deep-navy-800">
+                    <div className="text-body-sm font-semibold text-deep-navy-800 dark:text-white">
                       {testimonial.author}
                     </div>
-                    <div className="text-caption text-deep-navy-500">
+                    <div className="text-caption text-deep-navy-500 dark:text-deep-navy-400">
                       {testimonial.role}
                     </div>
                   </div>
