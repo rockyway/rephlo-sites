@@ -1,6 +1,7 @@
 import { Globe, Zap, Lock, Sparkles, Clock, Layers, Cpu, Rocket, Shield } from 'lucide-react';
 import { Card, CardHeader, CardTitle } from '@/components/common/Card';
 import FeatureBadge from '@/components/common/FeatureBadge';
+import ExpandableContent from '@/components/common/ExpandableContent';
 import useScrollAnimation from '@/hooks/useScrollAnimation';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,8 @@ const features = [
     ],
     highlights: ['Outlook', 'Slack', 'VS Code', 'Notion', 'Browsers'],
     keyPoint: 'Direct Windows integration',
+    fullDescription:
+      'Unlike browser extensions or chat interfaces, Rephlo integrates directly into Windows. Transform text in Outlook, Slack, VS Code, Notion, browsers, and any application—no copy-paste required.',
   },
   {
     icon: Zap,
@@ -24,6 +27,8 @@ const features = [
     ],
     highlights: ['"Make Professional"', '"Simplify Docs"', 'Your Commands'],
     keyPoint: 'Powerful template system',
+    fullDescription:
+      'Create unlimited custom commands tailored to your workflows. From "Write Professional Email" to "Simplify Technical Docs," Rephlo adapts to your specific writing needs with powerful template system.',
   },
   {
     icon: Sparkles,
@@ -34,6 +39,8 @@ const features = [
     ],
     highlights: ['Context menu', 'Transform in seconds', 'No waiting'],
     keyPoint: 'Speed of thought',
+    fullDescription:
+      'No context switching. No waiting. Select text, choose a command from the context menu, and your content transforms in seconds. Writing enhancement at the speed of thought.',
   },
   {
     icon: Lock,
@@ -44,6 +51,8 @@ const features = [
     ],
     highlights: ['Azure OpenAI', 'Groq', 'Ollama (local)'],
     keyPoint: 'You control where AI runs',
+    fullDescription:
+      'Choose from cloud providers (Azure OpenAI, Groq) or run completely local with Ollama. Your text stays private, and you control where AI processing happens—essential for sensitive work.',
   },
   {
     icon: Clock,
@@ -54,6 +63,8 @@ const features = [
     ],
     highlights: ['<100MB RAM', 'Zero performance impact', 'System tray'],
     keyPoint: 'One shortcut away',
+    fullDescription:
+      'Rephlo runs quietly in your system tray, ready when you need it. Minimal memory footprint (<100MB), zero performance impact, and always one keyboard shortcut away.',
   },
   {
     icon: Layers,
@@ -64,6 +75,8 @@ const features = [
     ],
     highlights: ['Windows UI patterns', 'Keyboard shortcuts', 'Select & use'],
     keyPoint: 'Instantly familiar',
+    fullDescription:
+      "No learning curve. Rephlo uses Windows' native UI patterns and keyboard shortcuts. If you can select text, you can use Rephlo—it's that simple.",
   },
 ];
 
@@ -122,11 +135,18 @@ function FeatureCard({ feature, delay }: { feature: typeof features[0]; delay: n
           </ul>
 
           {/* Key Point - Call to Action */}
-          <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700 mb-sm">
             <p className="text-caption font-medium text-electric-cyan-600 dark:text-electric-cyan-400">
               {feature.keyPoint}
             </p>
           </div>
+
+          {/* Expandable Full Description */}
+          <ExpandableContent>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 leading-relaxed">
+              {feature.fullDescription}
+            </p>
+          </ExpandableContent>
         </CardHeader>
       </Card>
     </div>

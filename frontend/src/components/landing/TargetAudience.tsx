@@ -2,6 +2,7 @@ import { Users, Code, PenTool, Globe, Mail, MessageSquare, FileText, Github, Ter
 import { Card, CardHeader, CardTitle } from '@/components/common/Card';
 import AppIconGrid from '@/components/common/AppIconGrid';
 import WorkflowVisual from '@/components/common/WorkflowVisual';
+import ExpandableContent from '@/components/common/ExpandableContent';
 import useScrollAnimation from '@/hooks/useScrollAnimation';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,8 @@ const audiences = [
       { icon: Zap, label: 'Refine' },
       { icon: CheckCircle, label: 'Send' },
     ],
+    fullDescription:
+      'Rephlo brings AI writing assistance directly into Outlook, Teams, and every app you use—transforming drafts into polished messages without leaving your workspace. Refine emails, summarize documents, adjust tone—all with a simple text selection and command.',
   },
   {
     icon: Code,
@@ -39,6 +42,8 @@ const audiences = [
       { icon: Zap, label: 'Enhance' },
       { icon: CheckCircle, label: 'Commit' },
     ],
+    fullDescription:
+      'Rephlo integrates with VS Code, Visual Studio, and any editor you use. Generate documentation, improve commit messages, translate code comments—with full support for local Ollama models to keep your code private and secure.',
   },
   {
     icon: PenTool,
@@ -56,6 +61,8 @@ const audiences = [
       { icon: Zap, label: 'Polish' },
       { icon: CheckCircle, label: 'Publish' },
     ],
+    fullDescription:
+      'Rewrite social posts, summarize research, adapt tone across platforms—all from your favorite tools. Rephlo gives you custom AI commands tailored to your content workflows, from blog drafts to Twitter threads.',
   },
   {
     icon: Globe,
@@ -73,6 +80,8 @@ const audiences = [
       { icon: Zap, label: 'Refine' },
       { icon: CheckCircle, label: 'Confident' },
     ],
+    fullDescription:
+      "Rephlo refines grammar, adjusts tone, and polishes your English—in real-time, wherever you're composing messages or documents. Build custom commands for your specific writing challenges and improve with every use.",
   },
 ];
 
@@ -140,12 +149,19 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
           </div>
 
           {/* Workflow Visualization */}
-          <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700 mb-sm">
             <div className="text-caption font-medium text-deep-navy-500 dark:text-deep-navy-400 mb-sm">
               Workflow:
             </div>
             <WorkflowVisual steps={audience.workflow} />
           </div>
+
+          {/* Expandable Full Description */}
+          <ExpandableContent>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 leading-relaxed">
+              {audience.fullDescription}
+            </p>
+          </ExpandableContent>
         </CardHeader>
       </Card>
     </div>
