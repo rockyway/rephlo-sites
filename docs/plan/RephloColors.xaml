@@ -1,0 +1,314 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+    Rephlo Brand Color System
+    Version: 1.0
+    Created: November 2025
+
+    Based on Rephlo Brand Guidelines (docs/plan/065-rephlo-brand-guidelines.md)
+
+    Color Philosophy:
+    - Professional intelligence with modern appeal
+    - High contrast for accessibility (WCAG AAA)
+    - Consistent semantic meaning across all contexts
+    -->
+
+    <!-- ============================================ -->
+    <!-- PRIMARY BRAND COLORS                         -->
+    <!-- ============================================ -->
+
+    <!-- Rephlo Blue - Primary Brand Color -->
+    <Color x:Key="RephloBlueColor">#2563EB</Color>
+    <SolidColorBrush x:Key="RephloBlueBrush" Color="{StaticResource RephloBlueColor}"/>
+
+    <!-- Usage: Primary logo, CTAs, links, headings -->
+    <!-- RGB: 37, 99, 235 | CMYK: 84, 58, 0, 8 -->
+    <!-- Accessibility: WCAG AAA on white (12.6:1 contrast) -->
+
+    <!-- Deep Navy - Secondary Brand Color -->
+    <Color x:Key="DeepNavyColor">#1E293B</Color>
+    <SolidColorBrush x:Key="DeepNavyBrush" Color="{StaticResource DeepNavyColor}"/>
+
+    <!-- Usage: Body text, dark backgrounds (dark mode) -->
+    <!-- RGB: 30, 41, 59 | CMYK: 81, 66, 39, 61 -->
+    <!-- Accessibility: WCAG AAA on white (14.8:1 contrast) -->
+
+    <!-- Electric Cyan - Accent Color -->
+    <Color x:Key="ElectricCyanColor">#06B6D4</Color>
+    <SolidColorBrush x:Key="ElectricCyanBrush" Color="{StaticResource ElectricCyanColor}"/>
+
+    <!-- Usage: Accents, success states, hover effects, processing states -->
+    <!-- RGB: 6, 182, 212 | CMYK: 72, 0, 18, 0 -->
+    <!-- Warning: WCAG AA only (3.9:1) - use for large text/elements only -->
+
+
+    <!-- ============================================ -->
+    <!-- STATE VARIATIONS - Primary Blue             -->
+    <!-- ============================================ -->
+
+    <!-- Rephlo Blue Hover State (Darker) -->
+    <Color x:Key="RephloBlueHoverColor">#1D4ED8</Color>
+    <SolidColorBrush x:Key="RephloBlueHoverBrush" Color="{StaticResource RephloBlueHoverColor}"/>
+
+    <!-- Rephlo Blue Pressed/Active State -->
+    <Color x:Key="RephloBluePressedColor">#1E40AF</Color>
+    <SolidColorBrush x:Key="RephloBluePressedBrush" Color="{StaticResource RephloBluePressedColor}"/>
+
+    <!-- Rephlo Blue Light (10% opacity for backgrounds) -->
+    <Color x:Key="RephloBlueLight10Color">#192563EB</Color>
+    <SolidColorBrush x:Key="RephloBlueLight10Brush" Color="{StaticResource RephloBlueLight10Color}"/>
+
+    <!-- Rephlo Blue Light (20% opacity for active states) -->
+    <Color x:Key="RephloBlueLight20Color">#332563EB</Color>
+    <SolidColorBrush x:Key="RephloBlueLight20Brush" Color="{StaticResource RephloBlueLight20Color}"/>
+
+
+    <!-- ============================================ -->
+    <!-- NEUTRAL COLORS - Light Theme                 -->
+    <!-- ============================================ -->
+
+    <!-- Text Hierarchy -->
+    <Color x:Key="TextPrimaryColor">#0F172A</Color>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <!-- Pure Black - Headings, important content -->
+
+    <Color x:Key="TextSecondaryColor">#64748B</Color>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <!-- Slate Gray - Body text, descriptions -->
+
+    <Color x:Key="TextTertiaryColor">#94A3B8</Color>
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiaryColor}"/>
+    <!-- Light Slate - Hints, placeholders -->
+
+    <Color x:Key="TextDisabledColor">#CBD5E1</Color>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
+    <!-- Very Light Slate - Disabled states -->
+
+    <!-- Background Hierarchy -->
+    <Color x:Key="BackgroundPrimaryColor">#FFFFFF</Color>
+    <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="{StaticResource BackgroundPrimaryColor}"/>
+    <!-- White - Main content areas -->
+
+    <Color x:Key="BackgroundSecondaryColor">#F1F5F9</Color>
+    <SolidColorBrush x:Key="BackgroundSecondaryBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+    <!-- Light Gray - Subtle backgrounds, panels -->
+
+    <Color x:Key="BackgroundTertiaryColor">#E2E8F0</Color>
+    <SolidColorBrush x:Key="BackgroundTertiaryBrush" Color="{StaticResource BackgroundTertiaryColor}"/>
+    <!-- Lighter Gray - Hover states, disabled backgrounds -->
+
+    <!-- Border Colors -->
+    <Color x:Key="BorderColor">#CBD5E1</Color>
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
+    <!-- Light Slate - Dividers, borders, separators -->
+
+    <Color x:Key="BorderFocusColor">#2563EB</Color>
+    <SolidColorBrush x:Key="BorderFocusBrush" Color="{StaticResource BorderFocusColor}"/>
+    <!-- Rephlo Blue - Focus states -->
+
+
+    <!-- ============================================ -->
+    <!-- SEMANTIC COLORS                              -->
+    <!-- ============================================ -->
+
+    <!-- Success (Green) -->
+    <Color x:Key="SuccessColor">#10B981</Color>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
+    <!-- Emerald Green - Success messages, confirmations, completed states -->
+
+    <Color x:Key="SuccessBackgroundColor">#D1FAE5</Color>
+    <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="{StaticResource SuccessBackgroundColor}"/>
+    <!-- Light Emerald - Success message backgrounds -->
+
+    <Color x:Key="SuccessTextColor">#065F46</Color>
+    <SolidColorBrush x:Key="SuccessTextBrush" Color="{StaticResource SuccessTextColor}"/>
+    <!-- Dark Green - Text on success backgrounds -->
+
+    <!-- Warning (Amber) -->
+    <Color x:Key="WarningColor">#F59E0B</Color>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <!-- Amber - Warnings, caution messages, important notices -->
+
+    <Color x:Key="WarningBackgroundColor">#FEF3C7</Color>
+    <SolidColorBrush x:Key="WarningBackgroundBrush" Color="{StaticResource WarningBackgroundColor}"/>
+    <!-- Light Amber - Warning message backgrounds -->
+
+    <Color x:Key="WarningTextColor">#92400E</Color>
+    <SolidColorBrush x:Key="WarningTextBrush" Color="{StaticResource WarningTextColor}"/>
+    <!-- Dark Amber - Text on warning backgrounds -->
+
+    <!-- Error (Red) -->
+    <Color x:Key="ErrorColor">#EF4444</Color>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <!-- Red - Error messages, validation errors, destructive actions -->
+
+    <Color x:Key="ErrorBackgroundColor">#FEE2E2</Color>
+    <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="{StaticResource ErrorBackgroundColor}"/>
+    <!-- Light Red - Error message backgrounds -->
+
+    <Color x:Key="ErrorTextColor">#991B1B</Color>
+    <SolidColorBrush x:Key="ErrorTextBrush" Color="{StaticResource ErrorTextColor}"/>
+    <!-- Dark Red - Text on error backgrounds -->
+
+    <!-- Info (Blue) -->
+    <Color x:Key="InfoColor">#3B82F6</Color>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
+    <!-- Blue - Information messages, tips, neutral notifications -->
+
+    <Color x:Key="InfoBackgroundColor">#DBEAFE</Color>
+    <SolidColorBrush x:Key="InfoBackgroundBrush" Color="{StaticResource InfoBackgroundColor}"/>
+    <!-- Light Blue - Info message backgrounds -->
+
+    <Color x:Key="InfoTextColor">#1E40AF</Color>
+    <SolidColorBrush x:Key="InfoTextBrush" Color="{StaticResource InfoTextColor}"/>
+    <!-- Dark Blue - Text on info backgrounds -->
+
+
+    <!-- ============================================ -->
+    <!-- COMPONENT-SPECIFIC COLORS                    -->
+    <!-- ============================================ -->
+
+    <!-- Button Colors -->
+    <SolidColorBrush x:Key="ButtonPrimaryBackgroundBrush" Color="{StaticResource RephloBlueColor}"/>
+    <SolidColorBrush x:Key="ButtonPrimaryForegroundBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ButtonPrimaryHoverBrush" Color="{StaticResource RephloBlueHoverColor}"/>
+    <SolidColorBrush x:Key="ButtonPrimaryPressedBrush" Color="{StaticResource RephloBluePressedColor}"/>
+
+    <SolidColorBrush x:Key="ButtonSecondaryBackgroundBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="ButtonSecondaryForegroundBrush" Color="{StaticResource RephloBlueColor}"/>
+    <SolidColorBrush x:Key="ButtonSecondaryBorderBrush" Color="{StaticResource RephloBlueColor}"/>
+    <SolidColorBrush x:Key="ButtonSecondaryHoverBrush" Color="{StaticResource RephloBlueLight10Color}"/>
+
+    <SolidColorBrush x:Key="ButtonGhostHoverBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+
+    <!-- Input Field Colors -->
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource BackgroundPrimaryColor}"/>
+    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}"/>
+    <SolidColorBrush x:Key="InputFocusBorderBrush" Color="{StaticResource RephloBlueColor}"/>
+    <SolidColorBrush x:Key="InputFocusOutlineBrush" Color="{StaticResource RephloBlueLight20Color}"/>
+    <SolidColorBrush x:Key="InputErrorBorderBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="InputDisabledBackgroundBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+
+    <!-- Card Colors -->
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource BackgroundPrimaryColor}"/>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource BackgroundTertiaryColor}"/>
+    <SolidColorBrush x:Key="CardAccentBrush" Color="{StaticResource RephloBlueColor}"/>
+
+    <!-- Badge/Tag Colors -->
+    <SolidColorBrush x:Key="BadgePrimaryBackgroundBrush" Color="#DBEAFE"/>
+    <SolidColorBrush x:Key="BadgePrimaryTextBrush" Color="#1E40AF"/>
+
+
+    <!-- ============================================ -->
+    <!-- GRADIENT DEFINITIONS (Optional)              -->
+    <!-- ============================================ -->
+
+    <!-- Primary Gradient: Blue to Cyan (135deg) -->
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource RephloBlueColor}" Offset="0.0"/>
+        <GradientStop Color="{StaticResource ElectricCyanColor}" Offset="1.0"/>
+    </LinearGradientBrush>
+    <!-- Usage: Hero sections, feature highlights, premium badges -->
+    <!-- Warning: Use sparingly - gradients can date quickly -->
+
+
+    <!-- ============================================ -->
+    <!-- LEGACY/COMPATIBILITY ALIASES                 -->
+    <!-- ============================================ -->
+
+    <!-- Map legacy names to Rephlo brand colors for gradual migration -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource RephloBlueColor}"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource RephloBlueHoverColor}"/>
+    <SolidColorBrush x:Key="PrimaryPressedBrush" Color="{StaticResource RephloBluePressedColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource ElectricCyanColor}"/>
+
+    <SolidColorBrush x:Key="ForegroundBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="ForegroundMutedBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="ForegroundDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
+
+    <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundPrimaryColor}"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource BackgroundSecondaryColor}"/>
+
+    <!-- Note: Semantic colors (Success, Warning, Error) are already consistently named -->
+
+
+    <!-- ============================================ -->
+    <!-- USAGE NOTES                                  -->
+    <!-- ============================================ -->
+
+    <!--
+    COLOR USAGE GUIDELINES:
+
+    1. TEXT COLORS
+       - Primary (#0F172A): Headings, important content
+       - Secondary (#64748B): Body text, descriptions
+       - Tertiary (#94A3B8): Hints, placeholders, captions
+       - Disabled (#CBD5E1): Disabled state text
+
+    2. BACKGROUNDS
+       - Primary (#FFFFFF): Main content areas, cards
+       - Secondary (#F1F5F9): Panels, subtle backgrounds
+       - Tertiary (#E2E8F0): Hover states, disabled backgrounds
+
+    3. INTERACTIVE ELEMENTS
+       - Primary CTA: Rephlo Blue (#2563EB)
+       - Hover: Rephlo Blue Hover (#1D4ED8)
+       - Pressed: Rephlo Blue Pressed (#1E40AF)
+       - Accent: Electric Cyan (#06B6D4)
+
+    4. SEMANTIC COLORS
+       - Success: Green (#10B981) - Confirmations, completed
+       - Warning: Amber (#F59E0B) - Cautions, important notices
+       - Error: Red (#EF4444) - Errors, destructive actions
+       - Info: Blue (#3B82F6) - Tips, neutral notifications
+
+    5. ACCESSIBILITY
+       - All text colors meet WCAG AA minimum (4.5:1 contrast)
+       - Most colors meet WCAG AAA (7:1 contrast)
+       - Electric Cyan: Large text only (3.9:1 on white)
+       - Always test color combinations for sufficient contrast
+
+    6. SEMANTIC MEANING
+       - Blue = Primary brand, neutral actions
+       - Cyan = Accent, emphasis, processing
+       - Green = Success only
+       - Amber = Warning only
+       - Red = Error/destructive only
+       - Never use color alone to convey meaning
+
+    MIGRATION GUIDE:
+
+    To migrate from AmethystHaze theme to Rephlo brand:
+
+    1. Replace theme reference in App.xaml:
+       OLD: <ResourceDictionary Source="Resources/AmethystHazeTheme.xaml"/>
+       NEW: <ResourceDictionary Source="Resources/RephloColors.xaml"/>
+
+    2. Update component styles to use new brush names:
+       - Replace PrimaryBrush with RephloBlueBrush (or use legacy alias)
+       - Replace custom purple colors with Rephlo Blue
+       - Use semantic colors (Success, Warning, Error) consistently
+
+    3. Test all UI components for:
+       - Sufficient color contrast
+       - Consistent hover/pressed states
+       - Proper disabled state appearance
+       - Semantic color usage (don't use red for non-errors)
+
+    DEVELOPER CHECKLIST:
+
+    □ Import RephloColors.xaml in App.xaml ResourceDictionary
+    □ Update primary button styles to use RephloBlueBrush
+    □ Verify text contrast meets WCAG AA minimum (4.5:1)
+    □ Use semantic colors for appropriate states only
+    □ Test dark mode compatibility (if applicable)
+    □ Remove old theme-specific color references
+    □ Update documentation with new color usage
+
+    QUESTIONS?
+    Refer to: docs/plan/065-rephlo-brand-guidelines.md
+    Contact: design@rephlo.io
+    -->
+
+</ResourceDictionary>

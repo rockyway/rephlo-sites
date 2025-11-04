@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "env": {}
+    },
+    "ragsearch": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "rs-mcp"
+      ],
+      "env": {
+        "EMBEDDING_PROVIDER": "ollama",
+        "OLLAMA_URL": "http://localhost:11434",
+        "MILVUS_URL": "http://localhost:19530"
+      }
+    }
+  }
+}

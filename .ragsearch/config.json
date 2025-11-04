@@ -1,0 +1,166 @@
+{
+  "name": "rephlo_sites",
+  "id": "rephlo_sites-hnue",
+  "collection_name": "rs_rephlo_sites_hnue",
+  "created_at": "2025-11-03T22:45:54.642Z",
+  "updated_at": "2025-11-03T22:46:08.535Z",
+  "version": "2.0.0",
+  "vector_db": "milvus",
+  "milvus_config": {
+    "address": "localhost:19530",
+    "collection_name": "rs_rephlo_sites_hnue",
+    "index_type": "HNSW",
+    "metric_type": "COSINE",
+    "ssl": false
+  },
+  "git_config": {
+    "enabled": true,
+    "branch_isolation": true,
+    "migration_strategy": "copy",
+    "auto_migrate_on_transition": false,
+    "legacy_search_inclusion": true,
+    "transition_handling": "prompt",
+    "file_validation": true,
+    "legacy_retention_days": 30,
+    "cross_branch_search_warning": true
+  },
+  "migration_status": "none",
+  "settings": {
+    "chunk_size": 600,
+    "chunk_overlap": 60,
+    "smart_chunking": {
+      "useSmartChunking": true,
+      "useHybridChunking": true,
+      "maxTokenContextWindow": 200000,
+      "adaptiveWindowScaling": true,
+      "fallbackToCharacterChunking": true,
+      "hybridChunkingOptions": {
+        "enableMethodExtraction": true,
+        "enableStructuralChunks": true,
+        "enableOverlapChunks": true,
+        "enableSignatureIndex": true,
+        "maxMethodSize": 1000,
+        "structuralChunkMultiplier": 2
+      },
+      "tokenizerCache": {
+        "enabled": true,
+        "maxSize": 1000,
+        "ttl": 3600
+      }
+    },
+    "response_limit": 3000,
+    "ascii_only": false,
+    "auto_index": true,
+    "search_score_threshold": 0.3,
+    "search_default_limit": 5
+  },
+  "file_system": {
+    "watch": {
+      "enabled": true,
+      "recursive": true,
+      "batch_timeout": 2,
+      "batch_size": 50,
+      "debounce_window_ms": 100,
+      "max_events_per_minute": 1000,
+      "polling_interval": 10000,
+      "enable_heartbeat": true,
+      "heartbeat_interval": 60000,
+      "ignore_patterns": [
+        ".git/",
+        "__pycache__/",
+        "*.pyc",
+        "*.pyo",
+        "*.tmp",
+        "*.temp",
+        "node_modules/",
+        ".ragsearch/",
+        "*.log",
+        ".DS_Store",
+        "Thumbs.db",
+        "bin/",
+        "obj/",
+        "dist/",
+        "build/",
+        ".orchestration/",
+        "**.min.js",
+        "vendor/"
+      ],
+      "include_patterns": [
+        "*.py",
+        "*.md",
+        "*.txt",
+        "*.js",
+        "*.ts",
+        "*.jsx",
+        "*.tsx",
+        "*.java",
+        "*.c",
+        "*.cs",
+        "*.cpp",
+        "*.h",
+        "*.hpp",
+        "*.go",
+        "*.rs",
+        "*.php",
+        "*.rb",
+        "*.html",
+        "*.css",
+        "*.scss",
+        "*.json",
+        "*.yaml",
+        "*.yml",
+        "*.xml",
+        "*.sql"
+      ]
+    },
+    "sync": {
+      "auto_enabled": false,
+      "batch_size": 100,
+      "retry_attempts": 3,
+      "retry_delay": 5,
+      "max_concurrent": 5,
+      "sync_interval": 300,
+      "incremental_only": false,
+      "validation_interval": 1800,
+      "enable_auto_recovery": true,
+      "recovery_threshold": 3
+    },
+    "detection": {
+      "scan_depth": 10,
+      "use_hashing": true,
+      "cache_manifests": true,
+      "hash_algorithm": "sha256",
+      "manifest_ttl": 3600,
+      "ignore_patterns": [
+        ".git/",
+        "__pycache__/",
+        "*.pyc",
+        "*.pyo",
+        "node_modules/",
+        ".ragsearch/",
+        "*.tmp",
+        "*.temp",
+        "*.log",
+        ".DS_Store",
+        "Thumbs.db"
+      ]
+    },
+    "performance": {
+      "max_memory_mb": 500,
+      "max_cpu_percent": 30,
+      "io_throttle": false,
+      "parallel_workers": 4,
+      "enable_compression": true,
+      "cache_size_mb": 100
+    },
+    "mcp_limits": {
+      "enabled": true,
+      "max_files": 25,
+      "max_size_mb": 5,
+      "warning_threshold": 0.8,
+      "auto_redirect_cli": true
+    }
+  },
+  "embedding_model": "nomic-embed-text",
+  "embedding_dim": 768
+}
