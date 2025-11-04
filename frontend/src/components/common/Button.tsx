@@ -4,23 +4,36 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md text-body font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rephlo-blue focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  cn(
+    // Base layout and typography
+    'inline-flex items-center justify-center rounded-md text-body font-medium',
+    // Enhanced transitions with design tokens
+    'transition-all duration-base ease-out',
+    // Shadow elevation with micro-interactions
+    'shadow-sm hover:shadow-md active:shadow-sm',
+    // Scale feedback on active state
+    'active:scale-95',
+    // Focus states
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rephlo-blue focus-visible:ring-offset-2',
+    // Disabled state
+    'disabled:pointer-events-none disabled:opacity-50'
+  ),
   {
     variants: {
       variant: {
         primary:
-          'bg-rephlo-blue text-white hover:bg-rephlo-blue-600 active:bg-rephlo-blue-700 shadow-sm hover:shadow-md active:translate-y-[1px]',
+          'bg-rephlo-blue text-white hover:bg-rephlo-blue-600 active:bg-rephlo-blue-700',
         secondary:
           'border-2 border-rephlo-blue bg-transparent text-rephlo-blue hover:bg-rephlo-blue/10 active:bg-rephlo-blue/20',
         ghost:
           'bg-transparent text-deep-navy-500 hover:bg-deep-navy-100 active:bg-deep-navy-200',
         destructive:
-          'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 shadow-sm',
+          'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
       },
       size: {
-        default: 'h-10 px-6 py-3',
-        sm: 'h-9 px-4 text-body-sm',
-        lg: 'h-12 px-8 text-body-lg',
+        default: 'h-10 px-lg py-sm',
+        sm: 'h-9 px-md text-body-sm',
+        lg: 'h-12 px-xl py-md text-body-lg',
         icon: 'h-10 w-10',
       },
     },
