@@ -1,0 +1,190 @@
+# Dependency directories
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+*/dist/
+*/build/
+*/out/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.test
+!.env.example
+!.env.development
+
+# Log files
+*.log
+logs/
+*.log.*
+hooks.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output/
+
+# Dependency lock files (optional - you can uncomment to ignore)
+# package-lock.json
+# npm-shrinkwrap.json
+# yarn.lock
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Prisma
+prisma/migrations/
+.prisma/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+uploads/
+test-data/
+
+# Generated files
+*.generated.*
+generated/
+
+# Cache directories
+.cache/
+.npm/
+.eslintcache
+.parcel-cache/
+
+# Next.js
+.next/
+
+# Nuxt.js
+.nuxt/
+
+# Gatsby files
+.cache/
+public/
+
+# Vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Webpack bundles
+webpack-stats.json
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test.local
+.env.production.local
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Test files and artifacts
+test-results/
+test-reports/
+playwright-report/
+test-output/
+
+# Project specific
+extracted-groups*.json
+message-analysis*.html
+*-extracted-groups.json
+*-message-analysis.html
+
+# Docker
+docker-compose.override.yml
+
+# Backup files
+*.backup
+*.bak
+
+# Storybook build output
+storybook-static/
+
+# Turborepo
+.turbo/
+.ragsearch/
+samples.*
+samples-*.*
+sample-*.*
+test-*.*
+hooks.log
+
+extracted-groups*.*
+
+# MCP and local tools
+.mcp.json
+.mcp*.json
+.playwright-mcp/
+
+# Test and debug files
+benchmark-*.js
+debug-*.js
+quick-test.js
+final-fixes.js
+fix-*.js
+ultimate-fix.js
+verify-integration.js
+chain-test.jsonl
+data.jsonl
+build-output.txt
+performance-comparison.md
+nul
+
+# Claude configuration (keep .claude/ directory structure but not configs)
+.claude/*.json
+.claude/settings.json
