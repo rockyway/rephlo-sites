@@ -5,13 +5,13 @@ function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-deep-navy-200 bg-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="border-t border-deep-navy-200 bg-white shadow-sm">
+      <div className="container mx-auto px-lg sm:px-xl lg:px-2xl py-3xl">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2xl">
           {/* Logo & Tagline */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-rephlo-blue to-electric-cyan flex items-center justify-center">
+          <div className="space-y-lg">
+            <div className="flex items-center space-x-sm">
+              <div className="h-8 w-8 rounded-md bg-gradient-rephlo flex items-center justify-center shadow-sm hover:shadow-md transition-shadow duration-base">
                 <span className="text-white font-bold text-lg">R</span>
               </div>
               <span className="text-h4 font-bold text-deep-navy-800">Rephlo</span>
@@ -26,25 +26,25 @@ function Footer() {
 
           {/* Product */}
           <div>
-            <h3 className="text-body font-semibold text-deep-navy-800 mb-4">Product</h3>
-            <ul className="space-y-2">
+            <h3 className="text-body font-semibold text-deep-navy-800 mb-lg">Product</h3>
+            <ul className="space-y-sm">
               <li>
-                <a href="#features" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="#features" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Features
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="#pricing" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Pricing
                 </a>
               </li>
               <li>
-                <a href="#download" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="#download" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Download
                 </a>
               </li>
               <li>
-                <a href="#docs" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="#docs" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Documentation
                 </a>
               </li>
@@ -53,20 +53,20 @@ function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="text-body font-semibold text-deep-navy-800 mb-4">Company</h3>
-            <ul className="space-y-2">
+            <h3 className="text-body font-semibold text-deep-navy-800 mb-lg">Company</h3>
+            <ul className="space-y-sm">
               <li>
-                <a href="#about" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="#about" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   About
                 </a>
               </li>
               <li>
-                <a href="#blog" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="#blog" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Blog
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@rephlo.io" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <a href="mailto:hello@rephlo.io" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Contact
                 </a>
               </li>
@@ -75,15 +75,15 @@ function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-body font-semibold text-deep-navy-800 mb-4">Legal</h3>
-            <ul className="space-y-2">
+            <h3 className="text-body font-semibold text-deep-navy-800 mb-lg">Legal</h3>
+            <ul className="space-y-sm">
               <li>
-                <Link to="/privacy" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <Link to="/privacy" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors">
+                <Link to="/terms" className="text-body-sm text-deep-navy-500 hover:text-rephlo-blue transition-colors duration-base ease-out">
                   Terms of Service
                 </Link>
               </li>
@@ -92,18 +92,18 @@ function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-deep-navy-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="mt-3xl pt-2xl border-t border-deep-navy-200 flex flex-col sm:flex-row justify-between items-center gap-lg">
           <p className="text-caption text-deep-navy-400">
             © {currentYear} Rephlo. All rights reserved.
           </p>
 
           {/* Social Links */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-lg">
             <a
               href="https://twitter.com/rephlo"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-deep-navy-400 hover:text-rephlo-blue transition-colors"
+              className="text-deep-navy-400 hover:text-rephlo-blue transition-all duration-base ease-out hover:scale-110"
               aria-label="Twitter"
             >
               <Twitter className="h-5 w-5" />
@@ -112,7 +112,7 @@ function Footer() {
               href="https://linkedin.com/company/rephlo"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-deep-navy-400 hover:text-rephlo-blue transition-colors"
+              className="text-deep-navy-400 hover:text-rephlo-blue transition-all duration-base ease-out hover:scale-110"
               aria-label="LinkedIn"
             >
               <Linkedin className="h-5 w-5" />
@@ -121,7 +121,7 @@ function Footer() {
               href="https://github.com/rephlo"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-deep-navy-400 hover:text-rephlo-blue transition-colors"
+              className="text-deep-navy-400 hover:text-rephlo-blue transition-all duration-base ease-out hover:scale-110"
               aria-label="GitHub"
             >
               <Github className="h-5 w-5" />

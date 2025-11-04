@@ -42,11 +42,11 @@ const features = [
 
 function Features() {
   return (
-    <section id="features" className="py-20 bg-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-4xl bg-white">
+      <div className="container mx-auto px-lg sm:px-xl lg:px-2xl">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-h1 font-bold text-deep-navy-800 mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-4xl">
+          <h2 className="text-h1 font-bold text-deep-navy-800 mb-lg">
             Write anywhere. Enhance everywhere.
           </h2>
           <p className="text-body-lg text-deep-navy-500">
@@ -56,20 +56,20 @@ function Features() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2xl">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
               <Card
                 key={index}
-                className="transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-default"
+                variant="interactive"
               >
                 <CardHeader>
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-rephlo-blue/10">
-                    <Icon className="h-6 w-6 text-rephlo-blue" />
+                  <div className="mb-lg inline-flex h-12 w-12 items-center justify-center rounded-lg bg-rephlo-blue/10 transition-all duration-base ease-out group-hover:bg-rephlo-blue/20">
+                    <Icon className="h-6 w-6 text-rephlo-blue transition-transform duration-base ease-out group-hover:scale-110" />
                   </div>
                   <CardTitle className="text-h4">{feature.title}</CardTitle>
-                  <CardDescription className="mt-2 text-body">
+                  <CardDescription className="mt-sm text-body">
                     {feature.description}
                   </CardDescription>
                 </CardHeader>

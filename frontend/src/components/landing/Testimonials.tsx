@@ -27,11 +27,11 @@ const testimonials = [
 
 function Testimonials() {
   return (
-    <section className="py-20 bg-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-4xl bg-white">
+      <div className="container mx-auto px-lg sm:px-xl lg:px-2xl">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-h1 font-bold text-deep-navy-800 mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-4xl">
+          <h2 className="text-h1 font-bold text-deep-navy-800 mb-lg">
             Trusted by professionals worldwide
           </h2>
           <p className="text-body-lg text-deep-navy-500">
@@ -40,16 +40,16 @@ function Testimonials() {
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2xl">
           {testimonials.map((testimonial, index) => (
-            <Card key={index} className="relative">
-              <CardContent className="pt-6">
-                <Quote className="h-8 w-8 text-rephlo-blue/20 mb-4" />
-                <blockquote className="text-body text-deep-navy-700 mb-6">
+            <Card key={index} variant="featured" className="relative">
+              <CardContent className="pt-xl">
+                <Quote className="h-8 w-8 text-rephlo-blue/30 mb-lg transition-colors duration-base ease-out" />
+                <blockquote className="text-body text-deep-navy-700 mb-xl">
                   "{testimonial.quote}"
                 </blockquote>
-                <div className="flex items-center gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-rephlo-blue to-electric-cyan flex items-center justify-center text-white font-semibold text-body-sm">
+                <div className="flex items-center gap-md">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-rephlo flex items-center justify-center text-white font-semibold text-body-sm shadow-sm">
                     {testimonial.avatar}
                   </div>
                   <div>

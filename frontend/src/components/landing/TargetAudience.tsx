@@ -34,11 +34,11 @@ const audiences = [
 
 function TargetAudience() {
   return (
-    <section className="py-20 bg-deep-navy-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-4xl bg-deep-navy-50">
+      <div className="container mx-auto px-lg sm:px-xl lg:px-2xl">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-h1 font-bold text-deep-navy-800 mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-4xl">
+          <h2 className="text-h1 font-bold text-deep-navy-800 mb-lg">
             Built for how you work
           </h2>
           <p className="text-body-lg text-deep-navy-500">
@@ -47,21 +47,21 @@ function TargetAudience() {
         </div>
 
         {/* Audience Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2xl">
           {audiences.map((audience, index) => {
             const Icon = audience.icon;
             return (
-              <Card key={index} className="hover:shadow-md transition-shadow">
+              <Card key={index} variant="interactive">
                 <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-electric-cyan/10">
-                      <Icon className="h-6 w-6 text-electric-cyan-600" />
+                  <div className="flex items-start gap-lg">
+                    <div className="flex-shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-electric-cyan/10 transition-all duration-base ease-out group-hover:bg-electric-cyan/20">
+                      <Icon className="h-6 w-6 text-electric-cyan-600 transition-transform duration-base ease-out group-hover:scale-110" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-caption font-semibold text-electric-cyan-600 uppercase tracking-wide mb-2">
+                      <div className="text-caption font-semibold text-electric-cyan-600 uppercase tracking-wide mb-sm">
                         {audience.title}
                       </div>
-                      <CardTitle className="text-h3 mb-3">{audience.headline}</CardTitle>
+                      <CardTitle className="text-h3 mb-md">{audience.headline}</CardTitle>
                       <CardDescription className="text-body">
                         {audience.description}
                       </CardDescription>
