@@ -60,7 +60,7 @@ export const pgPool = new Pool({
 });
 
 // Pool error handling
-pgPool.on('error', (err) => {
+pgPool.on('error', (err: Error) => {
   console.error('Unexpected error on idle PostgreSQL client', err);
   process.exit(-1);
 });
@@ -90,13 +90,13 @@ export async function testDatabaseConnection(): Promise<boolean> {
  * @returns Promise<T> - Result of the transaction
  */
 export async function executeTransaction<T>(
-  callback: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use'>) => Promise<T>
+  callback: Parameters<typeof prisma.$transaction>[0]
 ): Promise<T> {
   return prisma.$transaction(callback, {
     maxWait: 5000, // Maximum wait time to get a connection from the pool
     timeout: 10000, // Maximum time for the transaction to complete
     isolationLevel: 'ReadCommitted', // Default isolation level
-  });
+  }) as Promise<T>;
 }
 
 /**

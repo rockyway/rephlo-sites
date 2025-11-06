@@ -1,111 +1,176 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-import dotenv from 'dotenv';
+/**
+ * Server Startup and Shutdown
+ *
+ * This file handles the server lifecycle:
+ * - Starting the HTTP server
+ * - Graceful shutdown handling (SIGTERM, SIGINT)
+ * - Connection cleanup
+ * - Database connection management (future)
+ * - Redis connection management (future)
+ *
+ * The Express app configuration is handled in app.ts
+ *
+ * Reference: docs/plan/073-dedicated-api-backend-specification.md
+ */
 
-// Import API handlers
-import { trackDownload } from './api/downloads';
-import { submitFeedback } from './api/feedback';
-import { uploadDiagnostic, uploadMiddleware, handleMulterError } from './api/diagnostics';
-import { getLatestVersion } from './api/version';
-import { getAdminMetrics } from './api/admin';
+import http from 'http';
+import app from './app';
+import logger, { loggers } from './utils/logger';
 
-// Load environment variables
-dotenv.config();
+// ===== Configuration =====
 
-const app: Application = express();
-const PORT = process.env.PORT || 3001;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const PORT = parseInt(process.env.PORT || '3001', 10);
+const HOST = process.env.HOST || '0.0.0.0';
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Middleware
-app.use(cors({
-  origin: CORS_ORIGIN,
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+// ===== Create HTTP Server =====
 
-// Health check endpoint
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
+const server = http.createServer(app);
+
+// Track active connections for graceful shutdown
+const connections = new Set<any>();
+
+server.on('connection', (connection) => {
+  connections.add(connection);
+
+  connection.on('close', () => {
+    connections.delete(connection);
   });
 });
 
-// API routes overview
-app.get('/api', (_req: Request, res: Response) => {
-  res.json({
-    message: 'Rephlo Backend API',
-    version: '1.0.0',
-    endpoints: [
-      'POST /api/track-download',
-      'POST /api/feedback',
-      'POST /api/diagnostics',
-      'GET /api/version',
-      'GET /admin/metrics',
-    ],
+// ===== Server Startup =====
+
+/**
+ * Start the HTTP server
+ */
+const startServer = async (): Promise<void> => {
+  try {
+    // TODO: Initialize database connection (Database Schema Agent)
+    // await connectDatabase();
+
+    // TODO: Initialize Redis connection (Rate Limiting & Security Agent)
+    // await connectRedis();
+
+    // Start listening
+    server.listen(PORT, HOST, () => {
+      loggers.system('Server started', {
+        port: PORT,
+        host: HOST,
+        environment: NODE_ENV,
+        pid: process.pid,
+      });
+
+      console.log(`🚀 Rephlo Backend API running on http://${HOST}:${PORT}`);
+      console.log(`📍 Environment: ${NODE_ENV}`);
+      console.log(`🔍 Health check: http://${HOST}:${PORT}/health`);
+      console.log(`📚 API overview: http://${HOST}:${PORT}/`);
+      console.log('');
+      console.log('Press Ctrl+C to stop the server');
+    });
+  } catch (error) {
+    logger.error('Failed to start server', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    process.exit(1);
+  }
+};
+
+// ===== Graceful Shutdown =====
+
+/**
+ * Graceful shutdown handler
+ * Closes all connections and cleans up resources
+ */
+const gracefulShutdown = async (signal: string): Promise<void> => {
+  loggers.system('Shutdown signal received', { signal });
+  console.log(`\n⚠️  ${signal} received. Starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    loggers.system('HTTP server closed');
+    console.log('✓ HTTP server closed');
   });
+
+  // Close all active connections
+  let connectionsClosed = 0;
+  for (const connection of connections) {
+    connection.destroy();
+    connectionsClosed++;
+  }
+
+  if (connectionsClosed > 0) {
+    loggers.system('Active connections closed', { count: connectionsClosed });
+    console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
+  }
+
+  // TODO: Close database connection (Database Schema Agent)
+  // await disconnectDatabase();
+  // console.log('✓ Database connection closed');
+
+  // TODO: Close Redis connection (Rate Limiting & Security Agent)
+  // await disconnectRedis();
+  // console.log('✓ Redis connection closed');
+
+  loggers.system('Graceful shutdown completed');
+  console.log('✓ Graceful shutdown completed');
+
+  process.exit(0);
+};
+
+// ===== Signal Handlers =====
+
+/**
+ * Handle SIGTERM (e.g., from Docker, Kubernetes)
+ */
+process.on('SIGTERM', () => {
+  gracefulShutdown('SIGTERM');
 });
 
-// ===== API Endpoint Routes =====
+/**
+ * Handle SIGINT (e.g., Ctrl+C in terminal)
+ */
+process.on('SIGINT', () => {
+  gracefulShutdown('SIGINT');
+});
 
 /**
- * POST /api/track-download
- * Log download event and return download URL
+ * Handle uncaught exceptions
+ * Log and exit to prevent undefined behavior
  */
-app.post('/api/track-download', trackDownload);
-
-/**
- * POST /api/feedback
- * Submit user feedback
- */
-app.post('/api/feedback', submitFeedback);
-
-/**
- * POST /api/diagnostics
- * Upload diagnostic file (multipart/form-data)
- */
-app.post('/api/diagnostics', uploadMiddleware, handleMulterError, uploadDiagnostic);
-
-/**
- * GET /api/version
- * Get latest app version metadata
- */
-app.get('/api/version', getLatestVersion);
-
-/**
- * GET /admin/metrics
- * Get aggregated metrics for admin dashboard
- */
-app.get('/admin/metrics', getAdminMetrics);
-
-// 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught Exception', {
+    error: error.message,
+    stack: error.stack,
   });
+
+  console.error('💥 Uncaught Exception:', error);
+
+  // Attempt graceful shutdown
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
-// Error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    error: process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message,
+/**
+ * Handle unhandled promise rejections
+ * Log and exit to prevent undefined behavior
+ */
+process.on('unhandledRejection', (reason: any) => {
+  logger.error('Unhandled Promise Rejection', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
   });
+
+  console.error('💥 Unhandled Promise Rejection:', reason);
+
+  // Attempt graceful shutdown
+  gracefulShutdown('UNHANDLED_REJECTION');
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Rephlo Backend API running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 CORS enabled for: ${CORS_ORIGIN}`);
-});
+// ===== Start Server =====
 
-export default app;
+startServer();
+
+// ===== Export for Testing =====
+
+export { server, app };
