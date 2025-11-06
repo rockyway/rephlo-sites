@@ -263,41 +263,28 @@ export class CreditsController {
    *   }
    * }
    */
-  async getRateLimitStatus(_req: Request, res: Response): Promise<void> {
-    logger.info('CreditsController: Getting rate limit status (placeholder)');
+  async getRateLimitStatus(req: Request, res: Response): Promise<void> {
+    const user = (req as any).user;
 
-    // TODO: Implement actual rate limiting logic
-    // This will be implemented by the Rate Limiting & Security Agent
-    // For now, return placeholder data
+    logger.info('CreditsController: Getting rate limit status', {
+      userId: user?.id,
+    });
 
-    const now = new Date();
-    const resetTime = new Date(now.getTime() + 60 * 1000); // 1 minute from now
-    const dayResetTime = new Date(now);
-    dayResetTime.setHours(24, 0, 0, 0); // Next midnight
-
-    const response: RateLimitStatusResponse = {
-      requests_per_minute: {
-        limit: 60,
-        remaining: 45,
-        reset_at: resetTime.toISOString(),
-      },
-      tokens_per_minute: {
-        limit: 100000,
-        remaining: 87500,
-        reset_at: resetTime.toISOString(),
-      },
-      credits_per_day: {
-        limit: 10000,
-        remaining: 7500,
-        reset_at: dayResetTime.toISOString(),
-      },
-    };
-
-    logger.debug(
-      'CreditsController: Rate limit status returned (placeholder data)'
+    // Get user tier from subscription
+    const { getUserTier, getUserRateLimitStatus } = await import(
+      '../middleware/ratelimit.middleware'
     );
+    const tier = getUserTier(req);
 
-    res.status(200).json(response);
+    // Get actual rate limit status
+    const status = await getUserRateLimitStatus(user.id, tier);
+
+    logger.debug('CreditsController: Rate limit status returned', {
+      userId: user.id,
+      tier,
+    });
+
+    res.status(200).json(status);
   }
 }
 

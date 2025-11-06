@@ -25,12 +25,20 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import type Provider from 'oidc-provider';
 import type { PrismaClient } from '@prisma/client';
 
 // Import utilities and middleware
 import logger, { morganStream } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import {
+  createUserRateLimiter,
+  createIPRateLimiter,
+  addRateLimitHeaders,
+  initializeRedisForRateLimiting,
+} from './middleware/ratelimit.middleware';
+
+// Import security configuration
+import { helmetConfig, corsConfig } from './config/security';
 
 // Import OIDC provider configuration
 import { createOIDCProvider } from './config/oidc';
@@ -45,15 +53,7 @@ dotenv.config();
 
 // ===== Configuration Constants =====
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const NODE_ENV = process.env.NODE_ENV || 'development';
-
-// CORS allowed origins (supporting multiple origins)
-const allowedOrigins = [
-  CORS_ORIGIN,
-  'http://localhost:8080', // Desktop app development
-  'textassistant://*', // Desktop app deep links (will be handled separately)
-];
 
 // ===== Application Factory Function =====
 
@@ -68,69 +68,32 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
 
   /**
    * Helmet.js - Set security-related HTTP headers
+   * - Content-Security-Policy (CSP)
+   * - HTTP Strict Transport Security (HSTS)
    * - X-Content-Type-Options: nosniff
-   * - X-Frame-Options: DENY
+   * - X-Frame-Options: sameorigin
    * - X-XSS-Protection: 1; mode=block
-   * - Strict-Transport-Security (HSTS)
-   * - Content-Security-Policy
+   * - Referrer-Policy
+   * - Permissions-Policy
+   *
+   * Configuration imported from config/security.ts
    */
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for login/consent pages
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
-      },
-      // Allow framing from same origin (for embedded content)
-      frameguard: { action: 'sameorigin' },
-    })
-  );
+  app.use(helmet(helmetConfig));
 
   // ===== 2. CORS Configuration =====
 
   /**
    * CORS - Allow cross-origin requests from specified origins
-   * Supports both web and desktop applications
+   * Supports web applications, desktop applications, and deep links
+   *
+   * Configuration imported from config/security.ts
+   * Includes:
+   * - Origin validation with wildcard support
+   * - Credentials handling
+   * - Rate limit headers exposure
+   * - Preflight caching
    */
-  app.use(
-    cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) {
-          return callback(null, true);
-        }
-
-        // Check if origin is in allowed list
-        const isAllowed = allowedOrigins.some((allowedOrigin) => {
-          if (allowedOrigin.includes('*')) {
-            // Handle wildcard patterns (e.g., textassistant://*)
-            const pattern = allowedOrigin.replace('*', '.*');
-            return new RegExp(pattern).test(origin);
-          }
-          return allowedOrigin === origin;
-        });
-
-        if (isAllowed) {
-          callback(null, true);
-        } else {
-          logger.warn('CORS blocked request', { origin });
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-ID'],
-      exposedHeaders: [
-        'X-RateLimit-Limit',
-        'X-RateLimit-Remaining',
-        'X-RateLimit-Reset',
-      ],
-      maxAge: 86400, // 24 hours
-    })
-  );
+  app.use(cors(corsConfig));
 
   // ===== 3. Body Parsers =====
 
@@ -182,14 +145,23 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
     next();
   });
 
-  // ===== 6. Initialize OIDC Provider =====
+  // ===== 6. Initialize Redis for Rate Limiting =====
+
+  /**
+   * Initialize Redis client for distributed rate limiting
+   * Falls back to in-memory store if Redis is unavailable
+   */
+  logger.info('Initializing Redis for rate limiting...');
+  await initializeRedisForRateLimiting();
+
+  // ===== 7. Initialize OIDC Provider =====
 
   /**
    * Initialize OIDC storage table and create provider instance
    */
   logger.info('Initializing OIDC provider...');
   await initializeOIDCStorage(prisma);
-  const oidcProvider: Provider = await createOIDCProvider(prisma);
+  const oidcProvider = await createOIDCProvider(prisma);
 
   // Store provider instance for access in routes
   app.set('oidcProvider', oidcProvider);
@@ -200,7 +172,7 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
 
   logger.info('OIDC provider mounted successfully');
 
-  // ===== 7. Authentication Middleware (for REST API) =====
+  // ===== 8. Authentication Middleware (for REST API) =====
 
   /**
    * Authentication middleware for REST API endpoints
@@ -209,30 +181,43 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
    * OAuth endpoints (/.well-known/*, /oauth/*, /interaction/*) are NOT authenticated
    * as they are handled by the OIDC provider.
    *
-   * Uncomment when you want to protect REST API endpoints:
-   * import { authMiddleware } from './middleware/auth.middleware';
-   * app.use('/v1', authMiddleware);
-   * app.use('/admin', authMiddleware);
+   * Authentication is applied in routes/v1.routes.ts on a per-route basis
+   * to allow for public endpoints (like /v1/subscription-plans)
    */
 
-  // ===== 8. Rate Limiting Middleware Placeholder =====
+  // ===== 9. Rate Limiting Middleware =====
 
   /**
-   * TODO: Rate limiting middleware will be implemented by Rate Limiting & Security Agent
+   * Rate limiting middleware
    *
-   * This middleware will:
-   * - Use Redis for distributed rate limiting
-   * - Apply tier-based limits (free: 10 RPM, pro: 60 RPM, enterprise: 300 RPM)
-   * - Track requests per minute, tokens per minute, credits per day
-   * - Add rate limit headers to responses (X-RateLimit-*)
-   * - Return 429 Too Many Requests when limits are exceeded
+   * Applies tier-based rate limiting to all API endpoints:
+   * - Free tier: 10 requests/minute, 10k tokens/minute, 200 credits/day
+   * - Pro tier: 60 requests/minute, 100k tokens/minute, 5k credits/day
+   * - Enterprise tier: 300 requests/minute, 500k tokens/minute, 50k credits/day
    *
-   * Example:
-   * import { rateLimitMiddleware } from './middleware/ratelimit.middleware';
-   * app.use('/v1', rateLimitMiddleware);
+   * Uses Redis for distributed rate limiting (falls back to memory store if unavailable)
+   * Adds rate limit headers to all responses (X-RateLimit-*)
+   * Returns 429 Too Many Requests when limits are exceeded
    */
 
-  // ===== 9. Routes =====
+  // Add rate limit headers to all responses
+  app.use(addRateLimitHeaders);
+
+  // Apply IP-based rate limiting to OAuth endpoints (unauthenticated)
+  // More restrictive than user-based limits to prevent abuse
+  const ipRateLimiter = createIPRateLimiter(30); // 30 requests/minute per IP
+  app.use('/oauth', ipRateLimiter);
+  app.use('/interaction', ipRateLimiter);
+
+  // Apply user-based rate limiting to REST API endpoints (authenticated)
+  // Tier-based limits will be applied based on user's subscription
+  const userRateLimiter = createUserRateLimiter();
+  app.use('/v1', userRateLimiter);
+  app.use('/admin', userRateLimiter);
+
+  logger.info('Rate limiting middleware configured');
+
+  // ===== 10. Routes =====
 
   /**
    * Mount all application routes
@@ -242,7 +227,7 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
    */
   app.use('/', routes);
 
-  // ===== 10. 404 Handler =====
+  // ===== 11. 404 Handler =====
 
   /**
    * Handle requests to undefined routes
@@ -250,7 +235,7 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
    */
   app.use(notFoundHandler);
 
-  // ===== 11. Error Handler =====
+  // ===== 12. Error Handler =====
 
   /**
    * Centralized error handling middleware
@@ -262,8 +247,8 @@ export async function createApp(prisma: PrismaClient): Promise<Application> {
 
   logger.info('Express application configured', {
     environment: NODE_ENV,
-    corsOrigins: allowedOrigins,
     oidcEnabled: true,
+    rateLimitingEnabled: true,
   });
 
   return app;

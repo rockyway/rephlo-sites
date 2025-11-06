@@ -126,9 +126,19 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
     });
   }
 
-  // TODO: Close Redis connection (Rate Limiting & Security Agent)
-  // await disconnectRedis();
-  // console.log('✓ Redis connection closed');
+  // Close Redis connection (used for rate limiting)
+  try {
+    const { closeRedisForRateLimiting } = await import(
+      './middleware/ratelimit.middleware'
+    );
+    await closeRedisForRateLimiting();
+    loggers.system('Redis connection closed');
+    console.log('✓ Redis connection closed');
+  } catch (error) {
+    logger.error('Error closing Redis connection', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   loggers.system('Graceful shutdown completed');
   console.log('✓ Graceful shutdown completed');
