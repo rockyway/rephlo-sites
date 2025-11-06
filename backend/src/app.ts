@@ -27,6 +27,9 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import type { PrismaClient } from '@prisma/client';
 
+// Import container to access services
+import { container } from './container';
+
 // Import utilities and middleware
 import logger, { morganStream } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
@@ -60,9 +63,13 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 /**
  * Create and configure Express application with OIDC provider
  * This is async because OIDC provider initialization is async
+ * Uses DI container to resolve dependencies
  */
-export async function createApp(prisma: PrismaClient): Promise<Application> {
+export async function createApp(): Promise<Application> {
   const app: Application = express();
+
+  // Resolve Prisma from DI container
+  const prisma = container.resolve<PrismaClient>('PrismaClient');
 
   // ===== 1. Security Middleware =====
 

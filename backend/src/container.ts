@@ -247,15 +247,57 @@ logger.info('DI Container: Controllers registered', {
  */
 export function verifyContainer(): void {
   try {
+    logger.info('DI Container: Running verification...');
+
+    // Check infrastructure
     const prisma = container.resolve<PrismaClient>('PrismaClient');
     const redis = container.resolve<Redis>('RedisConnection');
 
-    logger.info('DI Container: Verified infrastructure dependencies', {
+    logger.info('DI Container: Infrastructure verified', {
       prisma: !!prisma,
       redis: !!redis,
     });
+
+    // Check LLM providers
+    try {
+      const providers = container.resolveAll('ILLMProvider');
+      const providerNames = providers.map((p: any) => p.providerName || 'unknown');
+      logger.info('DI Container: LLM providers verified', {
+        count: providers.length,
+        providers: providerNames,
+      });
+    } catch (error) {
+      logger.warn('DI Container: LLM providers not registered (expected in Phase 2+)');
+    }
+
+    // Check services
+    const servicesToCheck = [
+      'IAuthService',
+      'IUserService',
+      'ICreditService',
+      'IUsageService',
+      'IModelService',
+      'IWebhookService',
+    ];
+
+    const registeredServices: string[] = [];
+    servicesToCheck.forEach((service) => {
+      try {
+        container.resolve(service);
+        registeredServices.push(service);
+      } catch (error) {
+        logger.warn(`DI Container: Service ${service} not registered`);
+      }
+    });
+
+    logger.info('DI Container: Services verified', {
+      registered: registeredServices.length,
+      services: registeredServices,
+    });
+
+    logger.info('DI Container: Verification complete ✅');
   } catch (error) {
-    logger.error('DI Container: Verification failed', {
+    logger.error('DI Container: Verification failed ❌', {
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
@@ -270,23 +312,31 @@ export function verifyContainer(): void {
  * Clean up container resources on shutdown
  */
 export async function disposeContainer(): Promise<void> {
-  try {
-    logger.info('DI Container: Disposing resources...');
+  logger.info('DI Container: Disposing resources...');
 
+  try {
+    // Disconnect Prisma
     const prisma = container.resolve<PrismaClient>('PrismaClient');
     await prisma.$disconnect();
     logger.info('DI Container: Prisma disconnected');
-
-    const redis = container.resolve<Redis>('RedisConnection');
-    await redis.quit();
-    logger.info('DI Container: Redis disconnected');
-
-    logger.info('DI Container: All resources disposed successfully');
   } catch (error) {
-    logger.error('DI Container: Error during disposal', {
+    logger.error('DI Container: Error disconnecting Prisma', {
       error: error instanceof Error ? error.message : String(error),
     });
   }
+
+  try {
+    // Disconnect Redis
+    const redis = container.resolve<Redis>('RedisConnection');
+    await redis.quit();
+    logger.info('DI Container: Redis disconnected');
+  } catch (error) {
+    logger.error('DI Container: Error disconnecting Redis', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  logger.info('DI Container: All resources disposed successfully');
 }
 
 // ============================================================================

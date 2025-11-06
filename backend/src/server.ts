@@ -21,12 +21,12 @@
 import 'reflect-metadata';
 
 // Import container to initialize it
-import { verifyContainer, disposeContainer } from './container';
+import { container, verifyContainer, disposeContainer } from './container';
 
 import http from 'http';
 import { createApp } from './app';
-import { prisma } from './config/database';
 import logger, { loggers } from './utils/logger';
+import { PrismaClient } from '@prisma/client';
 
 // ===== Configuration =====
 
@@ -47,19 +47,20 @@ const connections = new Set<any>();
 const startServer = async (): Promise<void> => {
   try {
     // Verify DI container is properly configured
+    logger.info('Server: Verifying DI container...');
     verifyContainer();
 
-    // Initialize database connection (Prisma handles connection pooling)
-    logger.info('Connecting to database...');
-    await prisma.$connect();
-    logger.info('Database connected successfully');
+    // Get Prisma from DI container
+    const prisma = container.resolve<PrismaClient>('PrismaClient');
 
-    // TODO: Initialize Redis connection (Rate Limiting & Security Agent)
-    // await connectRedis();
+    // Initialize database connection (Prisma handles connection pooling)
+    logger.info('Server: Connecting to database...');
+    await prisma.$connect();
+    logger.info('Server: Database connected successfully');
 
     // Create Express app with OIDC provider
-    logger.info('Creating Express app with OIDC provider...');
-    const app = await createApp(prisma);
+    logger.info('Server: Creating Express application...');
+    const app = await createApp();
 
     // Create HTTP server
     server = http.createServer(app);
@@ -75,12 +76,14 @@ const startServer = async (): Promise<void> => {
 
     // Start listening
     server.listen(PORT, HOST, () => {
-      loggers.system('Server started', {
+      loggers.system('Server: Started successfully', {
         port: PORT,
         host: HOST,
         environment: NODE_ENV,
         pid: process.pid,
       });
+
+      logger.info('Server: Ready to accept requests');
 
       console.log(`🚀 Rephlo Backend API running on http://${HOST}:${PORT}`);
       console.log(`📍 Environment: ${NODE_ENV}`);
@@ -90,8 +93,11 @@ const startServer = async (): Promise<void> => {
       console.log('');
       console.log('Press Ctrl+C to stop the server');
     });
+
+    // Setup graceful shutdown handlers
+    setupGracefulShutdown(server);
   } catch (error) {
-    logger.error('Failed to start server', {
+    logger.error('Server: Failed to start', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
     });
@@ -104,119 +110,78 @@ const startServer = async (): Promise<void> => {
 // ===== Graceful Shutdown =====
 
 /**
- * Graceful shutdown handler
- * Closes all connections and cleans up resources
+ * Setup graceful shutdown handlers
+ * Handles SIGTERM, SIGINT, uncaught exceptions, and unhandled rejections
  */
-const gracefulShutdown = async (signal: string): Promise<void> => {
-  loggers.system('Shutdown signal received', { signal });
-  console.log(`\n⚠️  ${signal} received. Starting graceful shutdown...`);
+function setupGracefulShutdown(server: http.Server): void {
+  const shutdown = async (signal: string) => {
+    loggers.system('Server: Shutdown signal received', { signal });
+    console.log(`\n⚠️  ${signal} received. Starting graceful shutdown...`);
 
-  // Stop accepting new connections
-  server.close(() => {
-    loggers.system('HTTP server closed');
-    console.log('✓ HTTP server closed');
-  });
-
-  // Close all active connections
-  let connectionsClosed = 0;
-  for (const connection of connections) {
-    connection.destroy();
-    connectionsClosed++;
-  }
-
-  if (connectionsClosed > 0) {
-    loggers.system('Active connections closed', { count: connectionsClosed });
-    console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
-  }
-
-  // Close database connection
-  try {
-    await prisma.$disconnect();
-    loggers.system('Database connection closed');
-    console.log('✓ Database connection closed');
-  } catch (error) {
-    logger.error('Error closing database connection', {
-      error: error instanceof Error ? error.message : String(error),
+    // Stop accepting new connections
+    server.close(() => {
+      loggers.system('Server: HTTP server closed');
+      console.log('✓ HTTP server closed');
     });
-  }
 
-  // Close Redis connection (used for rate limiting)
-  try {
-    const { closeRedisForRateLimiting } = await import(
-      './middleware/ratelimit.middleware'
-    );
-    await closeRedisForRateLimiting();
-    loggers.system('Redis connection closed');
-    console.log('✓ Redis connection closed');
-  } catch (error) {
-    logger.error('Error closing Redis connection', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
+    // Close all active connections
+    let connectionsClosed = 0;
+    for (const connection of connections) {
+      connection.destroy();
+      connectionsClosed++;
+    }
 
-  // Dispose DI container resources
-  try {
+    if (connectionsClosed > 0) {
+      loggers.system('Server: Active connections closed', { count: connectionsClosed });
+      console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
+    }
+
+    // Close Redis connection (used for rate limiting)
+    try {
+      const { closeRedisForRateLimiting } = await import('./middleware/ratelimit.middleware');
+      await closeRedisForRateLimiting();
+      loggers.system('Server: Rate limiting Redis connection closed');
+      console.log('✓ Rate limiting Redis connection closed');
+    } catch (error) {
+      logger.error('Server: Error closing rate limiting Redis connection', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Dispose DI container resources (handles Prisma, Redis, etc.)
     await disposeContainer();
     console.log('✓ DI container disposed');
-  } catch (error) {
-    logger.error('Error disposing DI container', {
-      error: error instanceof Error ? error.message : String(error),
+
+    loggers.system('Server: Graceful shutdown complete');
+    console.log('✓ Graceful shutdown complete');
+
+    process.exit(0);
+  };
+
+  // Handle shutdown signals
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error: Error) => {
+    logger.error('Server: Uncaught exception', {
+      error: error.message,
+      stack: error.stack,
     });
-  }
-
-  loggers.system('Graceful shutdown completed');
-  console.log('✓ Graceful shutdown completed');
-
-  process.exit(0);
-};
-
-// ===== Signal Handlers =====
-
-/**
- * Handle SIGTERM (e.g., from Docker, Kubernetes)
- */
-process.on('SIGTERM', () => {
-  gracefulShutdown('SIGTERM');
-});
-
-/**
- * Handle SIGINT (e.g., Ctrl+C in terminal)
- */
-process.on('SIGINT', () => {
-  gracefulShutdown('SIGINT');
-});
-
-/**
- * Handle uncaught exceptions
- * Log and exit to prevent undefined behavior
- */
-process.on('uncaughtException', (error: Error) => {
-  logger.error('Uncaught Exception', {
-    error: error.message,
-    stack: error.stack,
+    console.error('💥 Uncaught Exception:', error);
+    shutdown('uncaughtException');
   });
 
-  console.error('💥 Uncaught Exception:', error);
-
-  // Attempt graceful shutdown
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
-});
-
-/**
- * Handle unhandled promise rejections
- * Log and exit to prevent undefined behavior
- */
-process.on('unhandledRejection', (reason: any) => {
-  logger.error('Unhandled Promise Rejection', {
-    reason: reason instanceof Error ? reason.message : String(reason),
-    stack: reason instanceof Error ? reason.stack : undefined,
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason: any) => {
+    logger.error('Server: Unhandled promise rejection', {
+      reason: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+    });
+    console.error('💥 Unhandled Promise Rejection:', reason);
+    shutdown('unhandledRejection');
   });
-
-  console.error('💥 Unhandled Promise Rejection:', reason);
-
-  // Attempt graceful shutdown
-  gracefulShutdown('UNHANDLED_REJECTION');
-});
+}
 
 // ===== Start Server =====
 
