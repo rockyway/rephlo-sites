@@ -26,7 +26,15 @@ import { submitFeedback } from '../api/feedback';
 import { uploadDiagnostic, uploadMiddleware, handleMulterError } from '../api/diagnostics';
 import { getLatestVersion } from '../api/version';
 
+// Import subscription controller for webhooks
+import { createSubscriptionsController } from '../controllers/subscriptions.controller';
+import { asyncHandler } from '../middleware/error.middleware';
+import { prisma } from '../config/database';
+
 const router = Router();
+
+// Initialize controllers for webhooks
+const subscriptionsController = createSubscriptionsController(prisma);
 
 // ===== Root Routes =====
 
@@ -134,6 +142,20 @@ router.use('/v1', v1Routes);
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);
+
+// ===== Webhook Routes =====
+// Webhook routes must be registered before body parsing middleware
+// Stripe webhook requires raw body for signature verification
+
+/**
+ * POST /webhooks/stripe
+ * Stripe webhook handler
+ * No authentication required - uses signature verification
+ */
+router.post(
+  '/webhooks/stripe',
+  asyncHandler(subscriptionsController.handleStripeWebhook.bind(subscriptionsController))
+);
 
 // ===== Branding Website API Routes (Existing) =====
 // These routes maintain backward compatibility with the existing branding website

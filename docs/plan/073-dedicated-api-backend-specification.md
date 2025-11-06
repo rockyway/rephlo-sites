@@ -27,8 +27,8 @@ The Dedicated API Backend provides a complete LLM service platform with OAuth 2.
 
 ### Base URL
 ```
-Production:  https://api.textassistant.com
-Staging:     https://api-staging.textassistant.com
+Production:  https://api.rephlo.ai
+Staging:     https://api-staging.rephlo.ai
 Development: http://localhost:3000
 ```
 

@@ -11,27 +11,7 @@
       ],
       "env": {}
     },
-    "shadcn": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "shadcn@latest",
-        "mcp"
-      ]
-    },
-    "chrome-devtools": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "chrome-devtools-mcp@latest"
-      ]
-    },
+   
     "ragsearch": {
       "type": "stdio",
       "command": "cmd",
