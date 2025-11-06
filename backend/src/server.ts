@@ -14,7 +14,8 @@
  */
 
 import http from 'http';
-import app from './app';
+import { createApp } from './app';
+import { prisma } from './config/database';
 import logger, { loggers } from './utils/logger';
 
 // ===== Configuration =====
@@ -23,20 +24,10 @@ const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// ===== Create HTTP Server =====
+// ===== Server and Connection Tracking =====
 
-const server = http.createServer(app);
-
-// Track active connections for graceful shutdown
+let server: http.Server;
 const connections = new Set<any>();
-
-server.on('connection', (connection) => {
-  connections.add(connection);
-
-  connection.on('close', () => {
-    connections.delete(connection);
-  });
-});
 
 // ===== Server Startup =====
 
@@ -45,11 +36,29 @@ server.on('connection', (connection) => {
  */
 const startServer = async (): Promise<void> => {
   try {
-    // TODO: Initialize database connection (Database Schema Agent)
-    // await connectDatabase();
+    // Initialize database connection (Prisma handles connection pooling)
+    logger.info('Connecting to database...');
+    await prisma.$connect();
+    logger.info('Database connected successfully');
 
     // TODO: Initialize Redis connection (Rate Limiting & Security Agent)
     // await connectRedis();
+
+    // Create Express app with OIDC provider
+    logger.info('Creating Express app with OIDC provider...');
+    const app = await createApp(prisma);
+
+    // Create HTTP server
+    server = http.createServer(app);
+
+    // Track active connections for graceful shutdown
+    server.on('connection', (connection) => {
+      connections.add(connection);
+
+      connection.on('close', () => {
+        connections.delete(connection);
+      });
+    });
 
     // Start listening
     server.listen(PORT, HOST, () => {
@@ -64,6 +73,7 @@ const startServer = async (): Promise<void> => {
       console.log(`📍 Environment: ${NODE_ENV}`);
       console.log(`🔍 Health check: http://${HOST}:${PORT}/health`);
       console.log(`📚 API overview: http://${HOST}:${PORT}/`);
+      console.log(`🔐 OIDC Discovery: http://${HOST}:${PORT}/.well-known/openid-configuration`);
       console.log('');
       console.log('Press Ctrl+C to stop the server');
     });
@@ -105,9 +115,16 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
     console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
   }
 
-  // TODO: Close database connection (Database Schema Agent)
-  // await disconnectDatabase();
-  // console.log('✓ Database connection closed');
+  // Close database connection
+  try {
+    await prisma.$disconnect();
+    loggers.system('Database connection closed');
+    console.log('✓ Database connection closed');
+  } catch (error) {
+    logger.error('Error closing database connection', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   // TODO: Close Redis connection (Rate Limiting & Security Agent)
   // await disconnectRedis();
@@ -173,4 +190,4 @@ startServer();
 
 // ===== Export for Testing =====
 
-export { server, app };
+export { server };
