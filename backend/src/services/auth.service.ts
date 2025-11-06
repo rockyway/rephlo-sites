@@ -1,5 +1,5 @@
 /**
- * Authentication Service
+ * Authentication Service (Refactored with DI)
  *
  * Handles user authentication logic including:
  * - User registration and login
@@ -9,17 +9,18 @@
  * - Account lookup for OIDC provider
  */
 
+import { injectable, inject } from 'tsyringe';
 import { PrismaClient, User } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import logger from '../utils/logger';
+import { IAuthService } from '../interfaces';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
-export class AuthService {
-  private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+@injectable()
+export class AuthService implements IAuthService {
+  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+    logger.debug('AuthService: Initialized');
   }
 
   /**

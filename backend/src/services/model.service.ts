@@ -1,5 +1,5 @@
 /**
- * Model Management Service
+ * Model Management Service (Refactored with DI)
  *
  * Handles model listing, filtering, and metadata operations.
  * Provides business logic for retrieving available LLM models and their details.
@@ -13,12 +13,14 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (Model APIs - endpoints 1-2)
  */
 
+import { injectable, inject } from 'tsyringe';
 import { PrismaClient, ModelCapability } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   ModelListResponse,
   ModelDetailsResponse,
 } from '../types/model-validation';
+import { IModelService } from '../interfaces';
 
 // =============================================================================
 // In-Memory Cache
@@ -62,11 +64,10 @@ const modelCache = new ModelCache();
 // Model Service Class
 // =============================================================================
 
-export class ModelService {
-  private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+@injectable()
+export class ModelService implements IModelService {
+  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+    logger.debug('ModelService: Initialized');
   }
 
   // ===========================================================================

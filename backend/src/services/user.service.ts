@@ -1,5 +1,5 @@
 /**
- * User Management Service
+ * User Management Service (Refactored with DI)
  *
  * Handles user profile and preferences management operations.
  * Provides business logic for user data retrieval, updates, and preference management.
@@ -7,6 +7,7 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (User APIs)
  */
 
+import { injectable, inject } from 'tsyringe';
 import { PrismaClient, Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import {
@@ -21,16 +22,16 @@ import {
   UserPreferencesResponse,
   DefaultModelResponse,
 } from '../types/user-validation';
+import { IUserService } from '../interfaces';
 
 // =============================================================================
 // User Service Class
 // =============================================================================
 
-export class UserService {
-  private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+@injectable()
+export class UserService implements IUserService {
+  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+    logger.debug('UserService: Initialized');
   }
 
   // ===========================================================================
@@ -488,13 +489,18 @@ export class UserService {
 }
 
 // =============================================================================
-// Export Singleton Instance
+// Factory Function (Deprecated)
 // =============================================================================
 
 /**
  * Create user service instance
  * Factory function to create service with Prisma client
+ *
+ * @deprecated Use container.resolve('IUserService') instead
+ * This factory function is kept for backward compatibility during migration
+ * Will be removed in Phase 4
  */
 export function createUserService(prisma: PrismaClient): UserService {
+  logger.warn('createUserService is deprecated. Use DI container instead.');
   return new UserService(prisma);
 }

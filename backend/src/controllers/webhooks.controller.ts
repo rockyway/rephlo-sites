@@ -13,12 +13,8 @@ import {
   WebhookConfigInput,
   TestWebhookInput,
 } from '../types/webhook-validation';
-import {
-  getWebhookConfig,
-  upsertWebhookConfig,
-  deleteWebhookConfig,
-  queueWebhook,
-} from '../services/webhook.service';
+import { container } from '../container';
+import { IWebhookService } from '../interfaces';
 
 /**
  * GET /v1/webhooks/config
@@ -27,8 +23,9 @@ import {
 export async function getWebhookConfigHandler(req: Request, res: Response) {
   try {
     const userId = req.user!.sub;
+    const webhookService = container.resolve<IWebhookService>('IWebhookService');
 
-    const webhookConfig = await getWebhookConfig(userId);
+    const webhookConfig = await webhookService.getWebhookConfig(userId);
 
     if (!webhookConfig) {
       return res.status(404).json({
@@ -72,12 +69,13 @@ export async function getWebhookConfigHandler(req: Request, res: Response) {
 export async function setWebhookConfigHandler(req: Request, res: Response) {
   try {
     const userId = req.user!.sub;
+    const webhookService = container.resolve<IWebhookService>('IWebhookService');
 
     // Validate request body
     const validatedData = webhookConfigSchema.parse(req.body) as WebhookConfigInput;
 
     // Create or update webhook configuration
-    const webhookConfig = await upsertWebhookConfig(
+    const webhookConfig = await webhookService.upsertWebhookConfig(
       userId,
       validatedData.webhook_url,
       validatedData.webhook_secret
@@ -132,9 +130,10 @@ export async function setWebhookConfigHandler(req: Request, res: Response) {
 export async function deleteWebhookConfigHandler(req: Request, res: Response) {
   try {
     const userId = req.user!.sub;
+    const webhookService = container.resolve<IWebhookService>('IWebhookService');
 
     // Check if webhook config exists
-    const existingConfig = await getWebhookConfig(userId);
+    const existingConfig = await webhookService.getWebhookConfig(userId);
     if (!existingConfig) {
       return res.status(404).json({
         error: {
@@ -144,7 +143,7 @@ export async function deleteWebhookConfigHandler(req: Request, res: Response) {
       });
     }
 
-    await deleteWebhookConfig(userId);
+    await webhookService.deleteWebhookConfig(userId);
 
     logger.info('Webhook configuration deleted', { userId });
 
@@ -174,12 +173,13 @@ export async function deleteWebhookConfigHandler(req: Request, res: Response) {
 export async function testWebhookHandler(req: Request, res: Response) {
   try {
     const userId = req.user!.sub;
+    const webhookService = container.resolve<IWebhookService>('IWebhookService');
 
     // Validate request body
     const validatedData = testWebhookSchema.parse(req.body) as TestWebhookInput;
 
     // Check if webhook config exists
-    const webhookConfig = await getWebhookConfig(userId);
+    const webhookConfig = await webhookService.getWebhookConfig(userId);
     if (!webhookConfig) {
       return res.status(404).json({
         error: {
@@ -193,7 +193,7 @@ export async function testWebhookHandler(req: Request, res: Response) {
     const testData = generateTestPayload(validatedData.event_type, userId);
 
     // Queue test webhook
-    await queueWebhook(userId, validatedData.event_type, testData);
+    await webhookService.queueWebhook(userId, validatedData.event_type, testData);
 
     logger.info('Test webhook queued', {
       userId,

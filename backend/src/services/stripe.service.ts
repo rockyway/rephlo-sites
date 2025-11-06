@@ -15,7 +15,6 @@ import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { syncSubscriptionFromStripe } from './subscription.service';
-import { CreditService } from './credit.service';
 
 // Initialize Stripe client
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -534,7 +533,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
 
       if (dbSubscription) {
         // Allocate credits for the billing period
-        const creditService = new CreditService(prisma);
+        const { createCreditService } = await import('./credit.service');
+        const creditService = createCreditService(prisma);
         const periodStart = new Date(invoice.period_start * 1000);
         const periodEnd = new Date(invoice.period_end * 1000);
 

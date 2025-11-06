@@ -173,24 +173,42 @@ if (registeredProviders.length === 0) {
 }
 
 // ============================================================================
-// Service Registration
+// Service Registration (Phase 3: All Core Services)
 // ============================================================================
 
-import { UsageService } from './services/usage.service';
+import { AuthService } from './services/auth.service';
+import { UserService } from './services/user.service';
 import { CreditService } from './services/credit.service';
+import { UsageService } from './services/usage.service';
+import { ModelService } from './services/model.service';
+import { WebhookService } from './services/webhook.service';
 import { UsageRecorder } from './services/llm/usage-recorder';
 import { LLMService } from './services/llm.service';
 
-// Temporary: Register concrete classes for UsageService and CreditService
-// Will be replaced with interface-based registration in Phase 3
-container.register('IUsageService', { useClass: UsageService });
+// Register core services with interface tokens
+container.register('IAuthService', { useClass: AuthService });
+container.register('IUserService', { useClass: UserService });
 container.register('ICreditService', { useClass: CreditService });
+container.register('IUsageService', { useClass: UsageService });
+container.register('IModelService', { useClass: ModelService });
+container.register('IWebhookService', { useClass: WebhookService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
 container.registerSingleton(LLMService);
 
-logger.info('DI Container: LLM services registered');
+logger.info('DI Container: Core services registered', {
+  services: [
+    'AuthService',
+    'UserService',
+    'CreditService',
+    'UsageService',
+    'ModelService',
+    'WebhookService',
+    'LLMService',
+    'UsageRecorder',
+  ],
+});
 
 // ============================================================================
 // Container Health Check

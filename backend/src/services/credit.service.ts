@@ -26,11 +26,16 @@ import {
   AllocateCreditsInput,
   DeductCreditsInput,
 } from '../types/credit-validation';
-import { queueWebhook } from './webhook.service';
+import { IWebhookService } from '../interfaces';
 
 @injectable()
 export class CreditService {
-  constructor(@inject('PrismaClient') private readonly prisma: PrismaClient) {}
+  constructor(
+    @inject('PrismaClient') private readonly prisma: PrismaClient,
+    @inject('IWebhookService') private readonly webhookService: IWebhookService
+  ) {
+    logger.debug('CreditService: Initialized');
+  }
 
   /**
    * Get current credit balance for a user
@@ -281,7 +286,7 @@ export class CreditService {
     try {
       // Trigger credits.depleted webhook if no credits remaining
       if (remainingCredits === 0) {
-        await queueWebhook(input.userId, 'credits.depleted', {
+        await this.webhookService.queueWebhook(input.userId, 'credits.depleted', {
           user_id: input.userId,
           remaining_credits: 0,
           total_credits: result.totalCredits,
@@ -289,7 +294,7 @@ export class CreditService {
       }
       // Trigger credits.low webhook if below threshold (but not depleted)
       else if (remainingCredits > 0 && remainingCredits <= thresholdCredits) {
-        await queueWebhook(input.userId, 'credits.low', {
+        await this.webhookService.queueWebhook(input.userId, 'credits.low', {
           user_id: input.userId,
           remaining_credits: remainingCredits,
           total_credits: result.totalCredits,
@@ -406,9 +411,18 @@ export class CreditService {
  * Create credit service instance
  * Factory function for dependency injection
  *
+ * @deprecated Use container.resolve('ICreditService') instead
+ * This factory function is kept for backward compatibility during migration
+ * Will be removed in Phase 4
+ *
  * @param prisma - Prisma client instance
  * @returns CreditService instance
  */
 export function createCreditService(prisma: PrismaClient): CreditService {
-  return new CreditService(prisma);
+  logger.warn('createCreditService is deprecated. Use DI container instead.');
+  // Temporary: Create a minimal WebhookService for backward compatibility
+  // This is a hack and will be removed when SubscriptionService and StripeService are refactored
+  const { container } = require('../container');
+  const webhookService = container.resolve('IWebhookService') as IWebhookService;
+  return new CreditService(prisma, webhookService);
 }

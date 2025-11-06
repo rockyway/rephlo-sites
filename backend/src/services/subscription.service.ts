@@ -29,7 +29,6 @@ import {
   calculatePrice,
 } from './stripe.service';
 import { queueWebhook } from './webhook.service';
-import { CreditService } from './credit.service';
 import logger from '../utils/logger';
 
 /**
@@ -186,7 +185,8 @@ export async function createSubscription(
 
     // Allocate credits for the billing period
     try {
-      const creditService = new CreditService(prisma);
+      const { createCreditService } = await import('./credit.service');
+      const creditService = createCreditService(prisma);
       await creditService.allocateCredits({
         userId,
         subscriptionId: subscription.id,
@@ -293,7 +293,8 @@ export async function updateSubscription(
       // Allocate credits for the new plan
       // This creates a new credit record for the updated plan
       try {
-        const creditService = new CreditService(prisma);
+        const { createCreditService } = await import('./credit.service');
+        const creditService = createCreditService(prisma);
         await creditService.allocateCredits({
           userId,
           subscriptionId: updatedSubscription.id,
