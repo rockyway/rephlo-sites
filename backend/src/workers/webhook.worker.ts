@@ -17,6 +17,7 @@ import {
 // Redis connection
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 const connection = new Redis(redisUrl, {
+  password: process.env.REDIS_PASSWORD,
   maxRetriesPerRequest: null, // Required for BullMQ
 });
 

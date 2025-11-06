@@ -15,7 +15,7 @@
  * - Direct SDK interactions (providers handle this)
  */
 
-import { injectable, inject, injectAll } from 'tsyringe';
+import { injectable, inject, container as diContainer } from 'tsyringe';
 import { Response } from 'express';
 import { ILLMProvider } from '../interfaces';
 import {
@@ -32,9 +32,16 @@ export class LLMService {
   private providerMap: Map<string, ILLMProvider>;
 
   constructor(
-    @inject(UsageRecorder) private usageRecorder: UsageRecorder,
-    @injectAll('ILLMProvider') allProviders: ILLMProvider[]
+    @inject(UsageRecorder) private usageRecorder: UsageRecorder
   ) {
+    // Manually resolve providers to handle the case when none are registered
+    let allProviders: ILLMProvider[] = [];
+    try {
+      allProviders = diContainer.resolveAll<ILLMProvider>('ILLMProvider');
+    } catch (error) {
+      logger.warn('LLMService: No providers registered, service will not function until API keys are configured');
+    }
+
     // Build provider map for O(1) lookup
     this.providerMap = new Map(
       allProviders.map((p) => [p.providerName, p])

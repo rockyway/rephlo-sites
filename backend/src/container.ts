@@ -136,25 +136,41 @@ import { AzureOpenAIProvider } from './providers/azure-openai.provider';
 import { AnthropicProvider } from './providers/anthropic.provider';
 import { GoogleProvider } from './providers/google.provider';
 
-// Register all providers (multi-registration for Strategy Pattern)
-container.register('ILLMProvider', { useClass: OpenAIProvider });
+// Register providers conditionally based on available clients
+// This prevents DI errors when API keys are not set
+const registeredProviders: string[] = [];
 
-// Only register Azure OpenAI provider if client is available
-if (process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
-  container.register('ILLMProvider', { useClass: AzureOpenAIProvider });
+// Register OpenAI provider only if client is available
+if (process.env.OPENAI_API_KEY) {
+  container.register('ILLMProvider', { useClass: OpenAIProvider });
+  registeredProviders.push('openai');
 }
 
-container.register('ILLMProvider', { useClass: AnthropicProvider });
-container.register('ILLMProvider', { useClass: GoogleProvider });
-
-const registeredProviders = ['openai', 'anthropic', 'google'];
+// Register Azure OpenAI provider only if client is available
 if (process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
+  container.register('ILLMProvider', { useClass: AzureOpenAIProvider });
   registeredProviders.push('azure-openai');
 }
 
-logger.info('DI Container: LLM providers registered', {
-  providers: registeredProviders,
-});
+// Register Anthropic provider only if client is available
+if (process.env.ANTHROPIC_API_KEY) {
+  container.register('ILLMProvider', { useClass: AnthropicProvider });
+  registeredProviders.push('anthropic');
+}
+
+// Register Google provider only if client is available
+if (process.env.GOOGLE_API_KEY) {
+  container.register('ILLMProvider', { useClass: GoogleProvider });
+  registeredProviders.push('google');
+}
+
+if (registeredProviders.length === 0) {
+  logger.warn('DI Container: No LLM providers registered. Set at least one API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, or AZURE_OPENAI_API_KEY)');
+} else {
+  logger.info('DI Container: LLM providers registered', {
+    providers: registeredProviders,
+  });
+}
 
 // ============================================================================
 // Service Registration

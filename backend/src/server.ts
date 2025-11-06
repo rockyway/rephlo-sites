@@ -96,6 +96,7 @@ const startServer = async (): Promise<void> => {
       stack: error instanceof Error ? error.stack : undefined,
     });
 
+    console.log(error);
     process.exit(1);
   }
 };
