@@ -40,3 +40,97 @@ Total: 10 comprehensive planning documents, 20-day timeline
   - Files modified: 14 files, +631/-296 lines (net +335)
   - Build successful, backward compatibility maintained
 - Next: Phase 4 (Routes/Controllers), Phase 5 (Middleware), Phase 6 (Bootstrap), Phase 7 (Testing)
+
+
+[2025-11-06 14:57:41] DI Refactoring - Backward Compatibility Removed + Phase 4 Complete
+- Removed all backward compatibility code from Phases 1-3:
+  - Removed 12 deprecated function exports (queueWebhook, createCreditService, etc.)
+  - Removed factory functions from webhook, credit, user, llm, usage services
+  - Updated middleware to use DI container (credit.middleware.ts)
+  - Build successful after cleanup
+- Phase 4: Routes & Controllers Refactoring complete:
+  - Refactored 5 controllers to use @injectable() decorator:
+    - UsersController (316 lines, injected IUserService)
+    - ModelsController (366 lines, injected IModelService + LLMService)
+    - CreditsController (288 lines, injected ICreditService + IUsageService)
+    - SubscriptionsController (452 lines, injected PrismaClient)
+    - WebhooksController (295 lines, complete function-to-class conversion)
+  - Updated 2 route files to use container.resolve():
+    - v1.routes.ts: Removed prisma parameter, resolved all controllers from container
+    - routes/index.ts: Updated to use new signature
+  - Registered 5 controllers in container as singletons
+  - Created comprehensive test suite (26 tests in phase4-verification.test.ts)
+  - Files changed: 20 files (+622/-535 lines)
+  - Build successful, all quality gates passed
+- Status: Phases 1-4 complete (Infrastructure, LLM Service, Core Services, Routes/Controllers)
+- Next: Phase 5 (Middleware), Phase 6 (Bootstrap), Phase 7 (Testing)
+
+
+[2025-11-06 15:18:05] DI Refactoring - Phase 5 Complete
+- Phase 5: Middleware Refactoring complete:
+  - Refactored 3 middleware files to use DI container:
+    - credit.middleware.ts: Fixed service resolution pattern (resolve inside middleware functions)
+    - auth.middleware.ts: Removed prisma parameter from requireActiveUser()
+    - ratelimit.middleware.ts: Uses container's Redis connection
+  - Pattern: Services resolved INSIDE returned middleware functions (not at factory level)
+  - Created comprehensive test suite: phase5-verification.test.ts (17 tests, all passing)
+  - Route files: Already using middleware without parameters (no updates needed)
+  - Files changed: 4 files (3 middleware + 1 test file)
+  - Build successful, application running properly
+  - All quality gates passed
+- Status: Phases 1-5 complete (Infrastructure, LLM Service, Core Services, Routes/Controllers, Middleware)
+- Next: Phase 6 (Application Bootstrap), Phase 7 (Testing Infrastructure)
+- Overall Progress: 5/7 phases complete (71%)
+
+## 2025-11-06 - Phase 6: Application Bootstrap - COMPLETE ✅
+
+**Implementation Time:** 2 hours (estimated: 1 day)
+
+### Container Enhancements
+- Enhanced verifyContainer() with comprehensive diagnostics (infrastructure, providers, services)
+- Enhanced disposeContainer() with proper error handling and separate cleanup steps
+- Clear logging for startup verification and shutdown
+
+### Server Entry Point Refactoring (server.ts)
+- Removed direct prisma import from config/database
+- Resolves all dependencies from DI container
+- Implemented setupGracefulShutdown() function
+- Proper logging with 'Server:' prefix
+- Container verification on startup
+- Resource disposal on shutdown
+
+### Application Configuration (app.ts)
+- Removed prisma parameter from createApp()
+- Resolves Prisma from DI container internally
+- Maintains all existing functionality
+- No breaking changes
+
+### Graceful Shutdown
+- Handles SIGTERM, SIGINT, uncaught exceptions, unhandled rejections
+- Closes HTTP server and active connections
+- Closes rate limiting Redis
+- Disposes DI container resources
+- Clear logging for each shutdown step
+
+### Quality Assurance
+- Build succeeds with no TypeScript errors
+- Container verification passes with detailed logs
+- Graceful shutdown tested and working
+- Health check already uses container
+- No global state in application code (except seed.ts)
+
+### Phase 6 Deliverables
+✅ verifyContainer() function enhanced
+✅ disposeContainer() function enhanced
+✅ Entry point refactored with proper bootstrap
+✅ Graceful shutdown working
+✅ All global state removed
+✅ Build successful
+✅ Application runs with proper logging
+
+**Reference:** docs/plan/096-di-phase6-application-bootstrap.md
+**Completion Report:** docs/progress/016-phase6-application-bootstrap-completion.md
+**Commit:** f88059b
+
+**Status:** Phase 6 COMPLETE - Ready for Phase 7 (Testing Infrastructure)
+
