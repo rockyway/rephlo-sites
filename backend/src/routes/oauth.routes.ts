@@ -102,7 +102,7 @@ export function createOAuthRouter(
    * - /oauth/userinfo (user info)
    * - /oauth/jwks (JSON Web Key Set)
    */
-  router.use('/', provider.callback());
+  router.use('/', provider.callback() as any);
 
   return router;
 }

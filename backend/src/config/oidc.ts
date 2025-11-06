@@ -57,24 +57,21 @@ export async function createOIDCProvider(
   }
 
   // OIDC Provider configuration
+  // Note: issuer is passed as first parameter to Provider constructor, not in configuration
   const configuration: Configuration = {
-    // Issuer URL (must match deployment)
-    issuer: OIDC_ISSUER,
-
     // Adapter for persistent storage
     adapter: createOIDCAdapterFactory(prisma) as any,
 
     // Client configuration
     clients: await loadClients(prisma),
 
+    // PKCE (Proof Key for Code Exchange) for public clients
+    pkce: {
+      required: () => true, // Require PKCE for all clients
+    },
+
     // Supported features
     features: {
-      // Enable PKCE (Proof Key for Code Exchange) for public clients
-      pkce: {
-        enabled: true,
-        required: () => true, // Require PKCE for all clients
-      },
-
       // Enable token revocation
       revocation: {
         enabled: true,
@@ -91,12 +88,8 @@ export async function createOIDCProvider(
       },
     },
 
-    // Grant types
-    // authorization_code: Standard OAuth flow
-    // refresh_token: Token refresh
-    grantTypes: ['authorization_code', 'refresh_token'] as any,
-
-    // Response types
+    // Response types supported
+    // 'code' = authorization code flow (used with PKCE)
     responseTypes: ['code'],
 
     // Supported scopes
@@ -137,6 +130,7 @@ export async function createOIDCProvider(
     },
 
     // Cookie configuration
+    // Note: Cookie TTLs are managed through session/interaction TTL settings above
     cookies: {
       keys: OIDC_COOKIE_KEYS,
       long: {
@@ -144,14 +138,12 @@ export async function createOIDCProvider(
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 86400000, // 24 hours
       },
       short: {
         signed: true,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 3600000, // 1 hour
       },
     },
 
@@ -172,18 +164,8 @@ export async function createOIDCProvider(
       },
     },
 
-    // Token endpoint authentication methods
-    // 'none' for public clients (desktop app with PKCE)
-    tokenEndpointAuthMethods: ['none', 'client_secret_basic'],
-
-    // PKCE methods
-    pkceMethods: ['S256'],
-
-    // Subject types
+    // Subject types (public or pairwise)
     subjectTypes: ['public'],
-
-    // ID Token signing algorithm
-    idTokenSigningAlgValues: ['RS256'],
 
     // Render error page
     renderError: async (ctx: any, out: any, error: any) => {
@@ -310,16 +292,16 @@ export async function createOIDCProvider(
     });
   });
 
-  provider.on('refresh_token.issued', (_ctx: any) => {
-    logger.info('OIDC: refresh token issued', {
-      clientId: _ctx.oidc.client?.clientId,
-      userId: _ctx.oidc.session?.accountId,
+  provider.on('refresh_token.saved', (refreshToken: any) => {
+    logger.info('OIDC: refresh token saved', {
+      clientId: refreshToken.clientId,
+      accountId: refreshToken.accountId,
     });
   });
 
-  provider.on('refresh_token.consumed', (_ctx: any) => {
+  provider.on('refresh_token.consumed', (refreshToken: any) => {
     logger.info('OIDC: refresh token consumed', {
-      clientId: _ctx.oidc.client?.clientId,
+      clientId: refreshToken.clientId,
     });
   });
 

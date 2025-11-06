@@ -38,9 +38,10 @@ container.register('PrismaClient', {
  */
 container.register('RedisConnection', {
   useValue: new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    password: process.env.REDIS_PASSWORD,
     maxRetriesPerRequest: null, // Required for BullMQ
     retryStrategy(times) {
-      const delay = Math.min(times * 50, 2000);
+      const delay = Math.min(times * 5, 2000);
       logger.warn(`Redis connection attempt ${times}, retrying in ${delay}ms`);
       return delay;
     },

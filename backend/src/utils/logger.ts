@@ -10,6 +10,9 @@
 
 import winston from 'winston';
 import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const LOG_DIR = process.env.LOG_DIR || 'logs';
 const LOG_LEVEL = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
@@ -30,31 +33,36 @@ const logFormat = winston.format.combine(
 const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.printf(({ timestamp, level, message, ...metadata }) => {
+  winston.format.cli(),
+  // winston.format.printf(({ timestamp, level, message, ...metadata }) => {
+  winston.format.printf(({ timestamp, level, message }) => {
     let msg = `${timestamp} [${level}]: ${message}`;
 
+    // DO NOT NEED META DATA FOR NOW
     // Append metadata if present
-    const metaKeys = Object.keys(metadata);
-    if (metaKeys.length > 0) {
-      // Filter out empty/internal fields
-      const filteredMeta = Object.fromEntries(
-        Object.entries(metadata).filter(([key, value]) =>
-          key !== 'timestamp' &&
-          key !== 'level' &&
-          key !== 'message' &&
-          value !== undefined &&
-          value !== null
-        )
-      );
+    // const metaKeys = Object.keys(metadata);
+    // if (metaKeys.length > 0) {
+    //   // Filter out empty/internal fields
+    //   const filteredMeta = Object.fromEntries(
+    //     Object.entries(metadata).filter(([key, value]) =>
+    //       key !== 'timestamp' &&
+    //       key !== 'level' &&
+    //       key !== 'message' &&
+    //       value !== undefined &&
+    //       value !== null
+    //     )
+    //   );
 
-      if (Object.keys(filteredMeta).length > 0) {
-        msg += ` ${JSON.stringify(filteredMeta)}`;
-      }
-    }
+    //   if (Object.keys(filteredMeta).length > 0) {
+    //     msg += ` ${JSON.stringify(filteredMeta)}`;
+    //   }
+    // }
 
     return msg;
   })
 );
+
+console.log('process.env.NODE_ENV 1', process.env.NODE_ENV);
 
 /**
  * Transports configuration
@@ -97,7 +105,7 @@ if (process.env.NODE_ENV === 'production') {
  */
 const logger = winston.createLogger({
   level: LOG_LEVEL,
-  format: logFormat,
+  format: process.env.NODE_ENV === 'production' ? logFormat : consoleFormat,  
   transports,
   // Don't exit on handled exceptions
   exitOnError: false,

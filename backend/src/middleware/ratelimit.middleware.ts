@@ -65,6 +65,8 @@ export async function initializeRedisForRateLimiting(): Promise<void> {
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   const redisPassword = process.env.REDIS_PASSWORD;
 
+  console.log('redisPassword', redisPassword);
+
   try {
     redisClient = createClient({
       url: redisUrl,
