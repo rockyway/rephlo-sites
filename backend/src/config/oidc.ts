@@ -12,7 +12,8 @@
  * Reference: https://github.com/panva/node-oidc-provider/tree/main/docs
  */
 
-import Provider, { type Configuration, type KoaContextWithOIDC } from 'oidc-provider';
+import Provider from 'oidc-provider';
+import type { Configuration, KoaContextWithOIDC } from 'oidc-provider';
 import { PrismaClient } from '@prisma/client';
 import type { JWK } from 'jose';
 import { createOIDCAdapterFactory } from '../adapters/oidc-adapter';
@@ -61,7 +62,7 @@ export async function createOIDCProvider(
     issuer: OIDC_ISSUER,
 
     // Adapter for persistent storage
-    adapter: createOIDCAdapterFactory(prisma),
+    adapter: createOIDCAdapterFactory(prisma) as any,
 
     // Client configuration
     clients: await loadClients(prisma),
@@ -70,6 +71,7 @@ export async function createOIDCProvider(
     features: {
       // Enable PKCE (Proof Key for Code Exchange) for public clients
       pkce: {
+        enabled: true,
         required: () => true, // Require PKCE for all clients
       },
 
@@ -92,7 +94,7 @@ export async function createOIDCProvider(
     // Grant types
     // authorization_code: Standard OAuth flow
     // refresh_token: Token refresh
-    grantTypes: new Set(['authorization_code', 'refresh_token']),
+    grantTypes: ['authorization_code', 'refresh_token'] as any,
 
     // Response types
     responseTypes: ['code'],

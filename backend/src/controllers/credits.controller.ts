@@ -23,7 +23,6 @@ import {
   CurrentCreditsResponse,
   UsageHistoryResponse,
   UsageStatsResponse,
-  RateLimitStatusResponse,
 } from '../types/credit-validation';
 import logger from '../utils/logger';
 import { badRequestError, notFoundError } from '../middleware/error.middleware';
