@@ -2,6 +2,28 @@
 
 This directory contains the comprehensive testing suite for the Rephlo Dedicated API Backend.
 
+## Test Coverage Summary
+
+- **Total Test Cases**: 190+ tests
+- **Unit Tests**: 180+ test cases across 8 service files
+- **Integration Tests**: 54+ test cases across 4 endpoint groups
+- **E2E Tests**: 1 complete user flow test
+
+### Coverage Goals
+
+- **Statements**: 80%+
+- **Branches**: 80%+
+- **Functions**: 80%+
+- **Lines**: 80%+
+
+All tests follow industry best practices including:
+- AAA pattern (Arrange, Act, Assert)
+- Test isolation with database cleanup
+- External API mocking
+- Comprehensive edge case coverage
+- Descriptive test names
+- Authentication and authorization testing
+
 ## Structure
 
 ```
@@ -17,13 +39,21 @@ tests/
 │   └── assertions.ts      # Custom assertions
 ├── unit/                  # Unit tests
 │   └── services/         # Service layer tests
-│       ├── auth.service.test.ts
-│       ├── credit.service.test.ts
-│       └── model.service.test.ts
+│       ├── auth.service.test.ts             # 18 tests
+│       ├── credit.service.test.ts           # 20 tests
+│       ├── model.service.test.ts            # 16 tests
+│       ├── user.service.test.ts             # 24 tests
+│       ├── subscription.service.test.ts     # 26 tests
+│       ├── usage.service.test.ts            # 22 tests
+│       ├── llm.service.test.ts              # 30 tests
+│       └── webhook.service.test.ts          # 24 tests
 ├── integration/          # Integration tests
-│   └── models.test.ts   # API endpoint tests
+│   ├── models.test.ts                       # 10 tests (existing)
+│   ├── users.test.ts                        # 12 tests (new)
+│   ├── subscriptions.test.ts                # 15 tests (new)
+│   └── credits.test.ts                      # 17 tests (new)
 └── e2e/                  # End-to-end tests
-    └── complete-flow.test.ts
+    └── complete-flow.test.ts                # 1 complete flow
 ```
 
 ## Running Tests

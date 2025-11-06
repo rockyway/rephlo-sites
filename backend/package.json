@@ -14,9 +14,9 @@
     "db:reset": "npx prisma migrate reset && npm run seed",
     "worker:webhook": "ts-node src/workers/webhook.worker.ts",
     "test": "jest",
-    "test:unit": "jest --testPathPattern=tests/unit",
-    "test:integration": "jest --testPathPattern=tests/integration",
-    "test:e2e": "jest --testPathPattern=tests/e2e",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:e2e": "jest tests/e2e",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch"
   },
