@@ -162,6 +162,7 @@ model OAuthClient {
 
 // Subscriptions Table
 // Manages user subscription tiers, billing, and status
+// Enhanced with Stripe integration and cancellation tracking
 model Subscription {
   id                   String             @id @default(uuid()) @db.Uuid
   userId               String             @map("user_id") @db.Uuid
@@ -171,14 +172,23 @@ model Subscription {
   creditsRollover      Boolean            @default(false) @map("credits_rollover")
   priceCents           Int                @map("price_cents")
   billingInterval      String             @map("billing_interval") @db.VarChar(20)
-  stripeSubscriptionId String?            @map("stripe_subscription_id") @db.VarChar(255)
-  stripeCustomerId     String?            @map("stripe_customer_id") @db.VarChar(255)
+
+  // Stripe Integration Fields (Enhanced)
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripeCustomerId     String?            @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripePriceId        String?            @map("stripe_price_id") @db.VarChar(255)
+
+  // Billing Period Fields
   currentPeriodStart   DateTime           @map("current_period_start")
   currentPeriodEnd     DateTime           @map("current_period_end")
   trialEnd             DateTime?          @map("trial_end")
+
+  // Cancellation Tracking (Enhanced)
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  cancelledAt          DateTime?          @map("cancelled_at")
+
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
-  cancelledAt          DateTime?          @map("cancelled_at")
 
   // Relations
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -192,6 +202,7 @@ model Subscription {
 
 // Credits Table
 // Tracks credit allocation and usage per billing period
+// Enhanced with credit type tracking (free vs pro) and monthly allocation
 model Credit {
   id                  String    @id @default(uuid()) @db.Uuid
   userId              String    @map("user_id") @db.Uuid
@@ -201,6 +212,15 @@ model Credit {
   billingPeriodStart  DateTime  @map("billing_period_start")
   billingPeriodEnd    DateTime  @map("billing_period_end")
   isCurrent           Boolean   @default(true) @map("is_current")
+
+  // NEW FIELDS for Enhanced Credits Tracking
+  creditType          String    @default("free") @map("credit_type") @db.VarChar(10)
+    // Values: 'free' | 'pro'
+  monthlyAllocation   Int       @default(2000) @map("monthly_allocation")
+    // Free tier: 2000, Pro tier: configurable
+  resetDayOfMonth     Int       @default(1) @map("reset_day_of_month")
+    // Day of month when credits reset (1-31)
+
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
@@ -211,6 +231,7 @@ model Credit {
 
   @@index([userId])
   @@index([userId, isCurrent])
+  @@index([userId, creditType, isCurrent], name: "idx_credits_user_type_current")
   @@index([billingPeriodStart, billingPeriodEnd])
   @@map("credits")
 }
@@ -274,12 +295,20 @@ model Model {
 
 // User Preferences Table
 // Stores user-specific preferences and default settings
+// Enhanced with notification and alert preferences
 model UserPreference {
   userId               String   @id @map("user_id") @db.Uuid
   defaultModelId       String?  @map("default_model_id") @db.VarChar(100)
   enableStreaming      Boolean  @default(true) @map("enable_streaming")
   maxTokens            Int      @default(4096) @map("max_tokens")
   temperature          Decimal  @default(0.7) @db.Decimal(3, 2)
+
+  // NEW FIELDS for Enhanced User Profile
+  emailNotifications   Boolean  @default(true) @map("email_notifications")
+    // Whether user receives email notifications
+  usageAlerts          Boolean  @default(true) @map("usage_alerts")
+    // Whether user receives usage threshold alerts
+
   preferencesMetadata  Json?    @map("preferences_metadata")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")

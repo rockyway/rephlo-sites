@@ -10,9 +10,12 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
+    '!src/**/__tests__/**',
     '!src/types/**',
     '!src/server.ts',
+    '!src/index.ts',
     '!src/workers/**',
+    '!src/config/**',
   ],
   coverageThreshold: {
     global: {
@@ -27,7 +30,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
   testTimeout: 10000,
   verbose: true,
   forceExit: true,
