@@ -64,6 +64,32 @@ export class MockUserService implements IUserService {
     }
   }
 
+  // Phase 2 enhanced method
+  async getDetailedUserProfile(userId: string): Promise<any | null> {
+    const profile = this.profiles.get(userId);
+    if (!profile) return null;
+
+    return {
+      userId,
+      email: profile.email || 'test@example.com',
+      displayName: profile.displayName || null,
+      subscription: {
+        tier: 'free',
+        status: 'active',
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      },
+      preferences: {
+        defaultModel: null,
+        emailNotifications: true,
+        usageAlerts: true,
+      },
+      accountCreatedAt: profile.createdAt || new Date(),
+      lastLoginAt: profile.lastLoginAt || null,
+    };
+  }
+
   // Test helpers
   clear() {
     this.profiles.clear();

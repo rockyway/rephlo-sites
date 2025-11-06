@@ -486,4 +486,106 @@ export class UserService implements IUserService {
 
     logger.info('UserService: User soft deleted', { userId });
   }
+
+  // ===========================================================================
+  // Enhanced User Profile API Methods (Phase 2)
+  // ===========================================================================
+
+  /**
+   * Get detailed user profile with subscription and preferences
+   * Returns complete user information for API response
+   *
+   * @param userId - User ID
+   * @returns Detailed user profile or null if user not found
+   */
+  async getDetailedUserProfile(userId: string): Promise<any | null> {
+    logger.debug('UserService: Getting detailed user profile', { userId });
+
+    // Query user with subscriptions and preferences
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscriptions: {
+          where: {
+            status: 'active',
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+        userPreferences: true,
+      },
+    });
+
+    if (!user) {
+      logger.warn('UserService: User not found', { userId });
+      return null;
+    }
+
+    // Get active subscription (first item from subscriptions array)
+    const activeSubscription = user.subscriptions && user.subscriptions.length > 0
+      ? user.subscriptions[0]
+      : null;
+
+    // Map subscription data (use defaults if no subscription exists)
+    const subscription: any = activeSubscription
+      ? {
+          tier: activeSubscription.tier as 'free' | 'pro' | 'enterprise',
+          status: activeSubscription.status as
+            | 'active'
+            | 'cancelled'
+            | 'expired'
+            | 'trialing',
+          currentPeriodStart: activeSubscription.currentPeriodStart,
+          currentPeriodEnd: activeSubscription.currentPeriodEnd,
+          cancelAtPeriodEnd: activeSubscription.cancelAtPeriodEnd,
+        }
+      : {
+          // Default free tier subscription
+          tier: 'free' as const,
+          status: 'active' as const,
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        };
+
+    // Map preferences data (use defaults if no preferences exist)
+    const preferences: any = user.userPreferences
+      ? {
+          defaultModel: user.userPreferences.defaultModelId,
+          emailNotifications: user.userPreferences.emailNotifications,
+          usageAlerts: user.userPreferences.usageAlerts,
+        }
+      : {
+          // Default preferences
+          defaultModel: null,
+          emailNotifications: true,
+          usageAlerts: true,
+        };
+
+    // Construct display name from firstName + lastName or null
+    let displayName: string | null = null;
+    if (user.firstName || user.lastName) {
+      displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    }
+
+    const detailedProfile = {
+      userId: user.id,
+      email: user.email,
+      displayName,
+      subscription,
+      preferences,
+      accountCreatedAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+    };
+
+    logger.info('UserService: Detailed user profile retrieved', {
+      userId,
+      tier: subscription.tier,
+      hasPreferences: !!user.userPreferences,
+    });
+
+    return detailedProfile;
+  }
 }

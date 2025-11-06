@@ -405,4 +405,199 @@ export class CreditService {
     const remainingPercentage = 100 - usagePercentage;
     return remainingPercentage <= thresholdPercentage;
   }
+
+  // ===========================================================================
+  // Enhanced Credits API Methods (Phase 2)
+  // ===========================================================================
+
+  /**
+   * Get free credits breakdown for user
+   * Returns monthly allocation, usage, reset date, and days until reset
+   *
+   * @param userId - User ID
+   * @returns Free credits breakdown
+   */
+  async getFreeCreditsBreakdown(userId: string): Promise<any> {
+    logger.debug('CreditService: Getting free credits breakdown', { userId });
+
+    // Query for current free credits (creditType='free', isCurrent=true)
+    const freeCredit = await this.prisma.credit.findFirst({
+      where: {
+        userId,
+        creditType: 'free',
+        isCurrent: true,
+      },
+    });
+
+    if (!freeCredit) {
+      // No free credits exist - return default for free tier
+      const defaultResetDate = this.calculateNextMonthlyReset(1);
+
+      logger.debug('CreditService: No free credits found, returning defaults', {
+        userId,
+      });
+
+      return {
+        remaining: 0,
+        monthlyAllocation: 2000, // Default free tier allocation
+        used: 0,
+        resetDate: defaultResetDate,
+        daysUntilReset: this.calculateDaysUntilReset(defaultResetDate),
+      };
+    }
+
+    const remaining = freeCredit.totalCredits - freeCredit.usedCredits;
+    const resetDate = freeCredit.billingPeriodEnd;
+
+    logger.debug('CreditService: Free credits breakdown retrieved', {
+      userId,
+      remaining,
+      monthlyAllocation: freeCredit.monthlyAllocation,
+      daysUntilReset: this.calculateDaysUntilReset(resetDate),
+    });
+
+    return {
+      remaining,
+      monthlyAllocation: freeCredit.monthlyAllocation,
+      used: freeCredit.usedCredits,
+      resetDate,
+      daysUntilReset: this.calculateDaysUntilReset(resetDate),
+    };
+  }
+
+  /**
+   * Get pro/purchased credits breakdown for user
+   * Aggregates all pro credit records for lifetime statistics
+   *
+   * @param userId - User ID
+   * @returns Pro credits breakdown
+   */
+  async getProCreditsBreakdown(userId: string): Promise<any> {
+    logger.debug('CreditService: Getting pro credits breakdown', { userId });
+
+    // Query all pro credits (creditType='pro')
+    const proCredits = await this.prisma.credit.findMany({
+      where: {
+        userId,
+        creditType: 'pro',
+      },
+    });
+
+    if (proCredits.length === 0) {
+      logger.debug('CreditService: No pro credits found', { userId });
+
+      return {
+        remaining: 0,
+        purchasedTotal: 0,
+        lifetimeUsed: 0,
+      };
+    }
+
+    // Aggregate across all pro credit records
+    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.totalCredits, 0);
+    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.usedCredits, 0);
+    const remaining = purchasedTotal - lifetimeUsed;
+
+    logger.debug('CreditService: Pro credits breakdown retrieved', {
+      userId,
+      remaining,
+      purchasedTotal,
+      lifetimeUsed,
+      recordCount: proCredits.length,
+    });
+
+    return {
+      remaining,
+      purchasedTotal,
+      lifetimeUsed,
+    };
+  }
+
+  /**
+   * Get detailed credits combining free and pro
+   * Complete view of user's credit status for API response
+   *
+   * @param userId - User ID
+   * @returns Detailed credits information
+   */
+  async getDetailedCredits(userId: string): Promise<any> {
+    logger.debug('CreditService: Getting detailed credits', { userId });
+
+    // Fetch both in parallel for performance
+    const [freeCredits, proCredits] = await Promise.all([
+      this.getFreeCreditsBreakdown(userId),
+      this.getProCreditsBreakdown(userId),
+    ]);
+
+    const totalAvailable = freeCredits.remaining + proCredits.remaining;
+
+    logger.info('CreditService: Detailed credits retrieved', {
+      userId,
+      totalAvailable,
+      freeRemaining: freeCredits.remaining,
+      proRemaining: proCredits.remaining,
+    });
+
+    return {
+      freeCredits,
+      proCredits,
+      totalAvailable,
+      lastUpdated: new Date(),
+    };
+  }
+
+  /**
+   * Calculate reset date based on billing period end and reset day
+   * For monthly resets, the reset date is the billingPeriodEnd
+   *
+   * @param billingPeriodEnd - End of current billing period
+   * @param _resetDayOfMonth - Day of month for reset (1-31) - currently unused
+   * @returns Next reset date
+   */
+  calculateResetDate(billingPeriodEnd: Date, _resetDayOfMonth: number): Date {
+    // For monthly resets, the reset date is the billingPeriodEnd
+    // This is already set correctly by the subscription system
+    return billingPeriodEnd;
+  }
+
+  /**
+   * Calculate days until reset date
+   * Returns 0 if already past reset date
+   *
+   * @param resetDate - Reset date
+   * @returns Days until reset (minimum 0)
+   */
+  calculateDaysUntilReset(resetDate: Date): number {
+    const now = new Date();
+    const diffMs = resetDate.getTime() - now.getTime();
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    // Return 0 if already past reset date
+    return Math.max(0, days);
+  }
+
+  // ===========================================================================
+  // Helper Methods
+  // ===========================================================================
+
+  /**
+   * Calculate next monthly reset (first day of next month)
+   * Helper for calculating default reset dates
+   *
+   * @param dayOfMonth - Day of month for reset (1-31)
+   * @returns Next reset date
+   */
+  private calculateNextMonthlyReset(dayOfMonth: number): Date {
+    const now = new Date();
+    let year = now.getFullYear();
+    let month = now.getMonth() + 1; // Next month
+
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+
+    // Create date at midnight UTC
+    return new Date(Date.UTC(year, month, dayOfMonth, 0, 0, 0, 0));
+  }
 }

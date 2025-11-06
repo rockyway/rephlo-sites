@@ -30,6 +30,8 @@ export class MockSubscriptionService implements ISubscriptionService {
       billingInterval: 'monthly',
       stripeSubscriptionId: data.stripeSubscriptionId || null,
       stripeCustomerId: null,
+      stripePriceId: null,
+      cancelAtPeriodEnd: false,
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       trialEnd: null,
