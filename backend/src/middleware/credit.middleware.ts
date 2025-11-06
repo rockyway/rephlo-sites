@@ -36,8 +36,6 @@ import { container } from '../container';
  * @returns Express middleware function
  */
 export function checkCredits() {
-  const creditService = container.resolve<CreditService>('ICreditService');
-
   return async (
     req: Request,
     _res: Response,
@@ -50,6 +48,9 @@ export function checkCredits() {
         logger.error('checkCredits: No user ID in request');
         throw forbiddenError('Authentication required');
       }
+
+      // Resolve service from DI container inside middleware
+      const creditService = container.resolve<CreditService>('ICreditService');
 
       logger.debug('checkCredits: Checking credit availability', { userId });
 
@@ -194,8 +195,6 @@ function estimateCreditsRequired(req: Request): number {
  * @returns Express middleware function
  */
 export function optionalCreditCheck() {
-  const creditService = container.resolve<CreditService>('ICreditService');
-
   return async (
     req: Request,
     _res: Response,
@@ -208,6 +207,9 @@ export function optionalCreditCheck() {
         next();
         return;
       }
+
+      // Resolve service from DI container inside middleware
+      const creditService = container.resolve<CreditService>('ICreditService');
 
       const credit = await creditService.getCurrentCredits(userId);
 
@@ -249,8 +251,6 @@ export function optionalCreditCheck() {
  * @returns Express middleware function
  */
 export function requireActiveSubscription() {
-  const creditService = container.resolve<CreditService>('ICreditService');
-
   return async (
     req: Request,
     _res: Response,
@@ -263,6 +263,9 @@ export function requireActiveSubscription() {
         logger.error('requireActiveSubscription: No user ID in request');
         throw forbiddenError('Authentication required');
       }
+
+      // Resolve service from DI container inside middleware
+      const creditService = container.resolve<CreditService>('ICreditService');
 
       const credit = await creditService.getCurrentCredits(userId);
 

@@ -253,9 +253,9 @@ export function optionalAuth(
  * Use after authMiddleware
  *
  * Example:
- *   app.delete('/account', authMiddleware, requireActiveUser(prisma), handler);
+ *   app.delete('/account', authMiddleware, requireActiveUser(), handler);
  */
-export function requireActiveUser(prisma: PrismaClient) {
+export function requireActiveUser() {
   return async (
     req: Request,
     _res: Response,
@@ -267,6 +267,10 @@ export function requireActiveUser(prisma: PrismaClient) {
     }
 
     try {
+      // Resolve PrismaClient from DI container inside middleware
+      const { container } = await import('../container');
+      const prisma = container.resolve<PrismaClient>('PrismaClient');
+
       const user = await prisma.user.findUnique({
         where: { id: req.user.sub },
         select: { isActive: true, deletedAt: true },

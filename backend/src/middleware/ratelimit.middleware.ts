@@ -24,8 +24,9 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
-import { createClient } from 'redis';
 import logger from '../utils/logger';
+import { container } from '../container';
+import Redis from 'ioredis';
 
 // ===== Rate Limit Configuration =====
 
@@ -55,78 +56,40 @@ export type RateLimitTier = keyof typeof RATE_LIMITS;
 // ===== Redis Client Setup =====
 
 /**
- * Initialize Redis client for rate limiting
- * Falls back to memory store if Redis is unavailable
+ * Get Redis client from DI container
+ * Returns null if Redis is not available
  */
-let redisClient: ReturnType<typeof createClient> | null = null;
-let redisConnected = false;
-
-export async function initializeRedisForRateLimiting(): Promise<void> {
-  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-  const redisPassword = process.env.REDIS_PASSWORD;
-
-  console.log('redisPassword', redisPassword);
-
+function getRedisClient(): Redis | null {
   try {
-    redisClient = createClient({
-      url: redisUrl,
-      password: redisPassword || undefined,
-      socket: {
-        connectTimeout: parseInt(process.env.REDIS_CONNECT_TIMEOUT || '10000'),
-        reconnectStrategy: (retries) => {
-          const maxRetries = parseInt(process.env.REDIS_MAX_RETRIES || '3');
-          if (retries > maxRetries) {
-            logger.error('Redis max retries exceeded for rate limiting', {
-              retries,
-              maxRetries,
-            });
-            return new Error('Redis connection failed');
-          }
-          // Exponential backoff: 50ms, 100ms, 200ms...
-          return Math.min(retries * 50, 3000);
-        },
-      },
-    });
-
-    redisClient.on('error', (err) => {
-      logger.error('Redis client error for rate limiting', { error: err.message });
-      redisConnected = false;
-    });
-
-    redisClient.on('connect', () => {
-      logger.info('Redis client connected for rate limiting');
-      redisConnected = true;
-    });
-
-    redisClient.on('ready', () => {
-      logger.info('Redis client ready for rate limiting');
-      redisConnected = true;
-    });
-
-    await redisClient.connect();
-    logger.info('Redis initialized for rate limiting', { url: redisUrl });
+    const redis = container.resolve<Redis>('RedisConnection');
+    // Check if Redis is connected
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      return redis;
+    }
+    logger.warn('Redis not ready for rate limiting', { status: redis.status });
+    return null;
   } catch (error: any) {
-    logger.error('Failed to initialize Redis for rate limiting', {
+    logger.error('Failed to resolve Redis from container', {
       error: error.message,
     });
-    logger.warn('Rate limiting will use in-memory store (not cluster-safe)');
-    redisClient = null;
-    redisConnected = false;
+    return null;
   }
 }
 
 /**
- * Close Redis connection gracefully
+ * Initialize Redis for rate limiting (compatibility function)
+ * Redis is now initialized in the DI container
+ */
+export async function initializeRedisForRateLimiting(): Promise<void> {
+  logger.info('Rate limiting will use Redis from DI container');
+}
+
+/**
+ * Close Redis connection gracefully (compatibility function)
+ * Redis lifecycle is now managed by the DI container
  */
 export async function closeRedisForRateLimiting(): Promise<void> {
-  if (redisClient) {
-    try {
-      await redisClient.quit();
-      logger.info('Redis client closed for rate limiting');
-    } catch (error: any) {
-      logger.error('Error closing Redis client', { error: error.message });
-    }
-  }
+  logger.info('Redis lifecycle managed by DI container');
 }
 
 // ===== Rate Limit Key Generators =====
@@ -248,15 +211,17 @@ function shouldSkipRateLimit(req: Request): boolean {
  * Uses Redis store if available, falls back to memory store
  */
 export function createUserRateLimiter(): RateLimitRequestHandler {
-  // Create Redis store if Redis is connected
-  const store =
-    redisClient && redisConnected
-      ? new RedisStore({
-          // @ts-ignore - Type mismatch between redis and rate-limit-redis
-          sendCommand: (...args: string[]) => redisClient!.sendCommand(args),
-          prefix: 'rl:user:',
-        })
-      : undefined; // Will use default memory store
+  // Resolve Redis client from DI container
+  const redisClient = getRedisClient();
+
+  // Create Redis store if Redis is available
+  const store = redisClient
+    ? new RedisStore({
+        // @ts-ignore - Type mismatch between ioredis and rate-limit-redis
+        sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)),
+        prefix: 'rl:user:',
+      })
+    : undefined; // Will use default memory store
 
   if (!store) {
     logger.warn(
@@ -298,14 +263,16 @@ export function createUserRateLimiter(): RateLimitRequestHandler {
 export function createIPRateLimiter(
   requestsPerMinute: number = 30
 ): RateLimitRequestHandler {
-  const store =
-    redisClient && redisConnected
-      ? new RedisStore({
-          // @ts-ignore - Type mismatch between redis and rate-limit-redis
-          sendCommand: (...args: string[]) => redisClient!.sendCommand(args),
-          prefix: 'rl:ip:',
-        })
-      : undefined;
+  // Resolve Redis client from DI container
+  const redisClient = getRedisClient();
+
+  const store = redisClient
+    ? new RedisStore({
+        // @ts-ignore - Type mismatch between ioredis and rate-limit-redis
+        sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)),
+        prefix: 'rl:ip:',
+      })
+    : undefined;
 
   return rateLimit({
     windowMs: 60 * 1000,
