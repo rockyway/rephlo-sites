@@ -25,6 +25,7 @@ import {
   AllocateCreditsInput,
   DeductCreditsInput,
 } from '../types/credit-validation';
+import { queueWebhook } from './webhook.service';
 
 export class CreditService {
   constructor(private readonly prisma: PrismaClient) {}
@@ -269,6 +270,39 @@ export class CreditService {
 
       return updatedCredit;
     });
+
+    // Check if credits are depleted or low after deduction
+    const remainingCredits = result.totalCredits - result.usedCredits;
+    const thresholdPercentage = 10; // 10% threshold for low credits warning
+    const thresholdCredits = result.totalCredits * (thresholdPercentage / 100);
+
+    try {
+      // Trigger credits.depleted webhook if no credits remaining
+      if (remainingCredits === 0) {
+        await queueWebhook(input.userId, 'credits.depleted', {
+          user_id: input.userId,
+          remaining_credits: 0,
+          total_credits: result.totalCredits,
+        });
+      }
+      // Trigger credits.low webhook if below threshold (but not depleted)
+      else if (remainingCredits > 0 && remainingCredits <= thresholdCredits) {
+        await queueWebhook(input.userId, 'credits.low', {
+          user_id: input.userId,
+          remaining_credits: remainingCredits,
+          total_credits: result.totalCredits,
+          threshold_percentage: thresholdPercentage,
+        });
+      }
+    } catch (webhookError) {
+      // Don't fail credit deduction if webhook fails
+      logger.error('CreditService: Failed to queue credit webhook', {
+        userId: input.userId,
+        creditId: result.id,
+        remainingCredits,
+        error: webhookError,
+      });
+    }
 
     return result;
   }

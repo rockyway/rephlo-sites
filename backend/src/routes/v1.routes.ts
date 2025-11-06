@@ -6,12 +6,13 @@
  *
  * Endpoint categories:
  * - /v1/users               - User management (implemented)
- * - /v1/models              - Model management (pending)
- * - /v1/completions         - Text completion (pending)
- * - /v1/chat/completions    - Chat completion (pending)
- * - /v1/subscriptions       - Subscription management (pending)
- * - /v1/credits             - Credit management (pending)
- * - /v1/usage               - Usage analytics (pending)
+ * - /v1/models              - Model management (implemented)
+ * - /v1/completions         - Text completion (implemented)
+ * - /v1/chat/completions    - Chat completion (implemented)
+ * - /v1/subscriptions       - Subscription management (implemented)
+ * - /v1/credits             - Credit management (implemented)
+ * - /v1/usage               - Usage analytics (implemented)
+ * - /v1/webhooks            - Webhook configuration (implemented)
  * - /v1/rate-limit          - Rate limit status (pending)
  *
  * Reference: docs/plan/073-dedicated-api-backend-specification.md
@@ -25,6 +26,12 @@ import { createUsersController } from '../controllers/users.controller';
 import { createModelsController } from '../controllers/models.controller';
 import { createSubscriptionsController } from '../controllers/subscriptions.controller';
 import { createCreditsController } from '../controllers/credits.controller';
+import {
+  getWebhookConfigHandler,
+  setWebhookConfigHandler,
+  deleteWebhookConfigHandler,
+  testWebhookHandler,
+} from '../controllers/webhooks.controller';
 
 /**
  * Create v1 router with Prisma client
@@ -280,6 +287,54 @@ export function createV1Router(prisma: PrismaClient): Router {
     '/rate-limit',
     authMiddleware,
     asyncHandler(creditsController.getRateLimitStatus.bind(creditsController))
+  );
+
+  // =============================================================================
+  // Webhook Configuration Routes (Implemented)
+  // =============================================================================
+
+  /**
+   * GET /v1/webhooks/config
+   * Get user's webhook configuration
+   * Requires: Authentication
+   */
+  router.get(
+    '/webhooks/config',
+    authMiddleware,
+    asyncHandler(getWebhookConfigHandler)
+  );
+
+  /**
+   * POST /v1/webhooks/config
+   * Create or update webhook configuration
+   * Requires: Authentication
+   */
+  router.post(
+    '/webhooks/config',
+    authMiddleware,
+    asyncHandler(setWebhookConfigHandler)
+  );
+
+  /**
+   * DELETE /v1/webhooks/config
+   * Delete webhook configuration
+   * Requires: Authentication
+   */
+  router.delete(
+    '/webhooks/config',
+    authMiddleware,
+    asyncHandler(deleteWebhookConfigHandler)
+  );
+
+  /**
+   * POST /v1/webhooks/test
+   * Send a test webhook
+   * Requires: Authentication
+   */
+  router.post(
+    '/webhooks/test',
+    authMiddleware,
+    asyncHandler(testWebhookHandler)
   );
 
   return router;

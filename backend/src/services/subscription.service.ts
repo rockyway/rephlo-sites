@@ -28,6 +28,7 @@ import {
   BillingInterval,
   calculatePrice,
 } from './stripe.service';
+import { queueWebhook } from './webhook.service';
 import logger from '../utils/logger';
 
 /**
@@ -190,6 +191,24 @@ export async function createSubscription(
       credits: plan.creditsPerMonth,
     });
 
+    // Queue webhook for subscription.created event
+    try {
+      await queueWebhook(userId, 'subscription.created', {
+        subscription_id: subscription.id,
+        user_id: userId,
+        tier: subscription.tier,
+        status: subscription.status,
+        credits_per_month: subscription.creditsPerMonth,
+      });
+    } catch (webhookError) {
+      // Don't fail subscription creation if webhook fails
+      logger.error('Failed to queue subscription.created webhook', {
+        userId,
+        subscriptionId: subscription.id,
+        error: webhookError,
+      });
+    }
+
     return subscription;
   } catch (error) {
     logger.error('Failed to create subscription', { userId, planId, error });
@@ -263,6 +282,23 @@ export async function updateSubscription(
         newCredits: newPlan.creditsPerMonth,
       });
 
+      // Queue webhook for subscription.updated event
+      try {
+        await queueWebhook(userId, 'subscription.updated', {
+          subscription_id: updatedSubscription.id,
+          user_id: userId,
+          tier: updatedSubscription.tier,
+          previous_tier: currentSubscription.tier,
+        });
+      } catch (webhookError) {
+        // Don't fail subscription update if webhook fails
+        logger.error('Failed to queue subscription.updated webhook', {
+          userId,
+          subscriptionId: updatedSubscription.id,
+          error: webhookError,
+        });
+      }
+
       return updatedSubscription;
     } else {
       // For free plan upgrades, create new Stripe subscription
@@ -316,6 +352,23 @@ export async function cancelSubscription(
       subscriptionId: updatedSubscription.id,
       cancelAtPeriodEnd,
     });
+
+    // Queue webhook for subscription.cancelled event
+    try {
+      await queueWebhook(userId, 'subscription.cancelled', {
+        subscription_id: updatedSubscription.id,
+        user_id: userId,
+        cancelled_at: updatedSubscription.cancelledAt!.toISOString(),
+        cancel_at_period_end: cancelAtPeriodEnd,
+      });
+    } catch (webhookError) {
+      // Don't fail subscription cancellation if webhook fails
+      logger.error('Failed to queue subscription.cancelled webhook', {
+        userId,
+        subscriptionId: updatedSubscription.id,
+        error: webhookError,
+      });
+    }
 
     return {
       ...updatedSubscription,

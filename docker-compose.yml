@@ -35,13 +35,13 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
-      PORT: 3000
+      PORT: 7150
       DATABASE_URL: postgresql://postgres:postgres@database:5432/rephlo_dev
-      CORS_ORIGIN: http://localhost:5173,http://localhost:4173
+      CORS_ORIGIN: http://localhost:7151,http://localhost:4173
       LOG_LEVEL: debug
       IP_HASH_SALT: dev-salt-not-for-production
     ports:
-      - "3000:3000"
+      - "7150:7150"
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -55,15 +55,15 @@ services:
     restart: unless-stopped
     working_dir: /app
     environment:
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: http://localhost:7150
       VITE_APP_NAME: Rephlo (Dev)
       VITE_APP_TAGLINE: Transform text. Keep your flow.
     ports:
-      - "5173:5173"
+      - "7151:7151"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: sh -c "npm install && npm run dev -- --host"
+    command: sh -c "npm install && npm run dev -- --host --port 7151"
 
 volumes:
   postgres_data:

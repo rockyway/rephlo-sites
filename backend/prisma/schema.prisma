@@ -137,6 +137,7 @@ model User {
   credits         Credit[]
   usageHistory    UsageHistory[]
   userPreferences UserPreference?
+  webhookConfigs  WebhookConfig[]
 
   @@index([email])
   @@index([createdAt])
@@ -288,4 +289,50 @@ model UserPreference {
   defaultModel Model? @relation(fields: [defaultModelId], references: [id])
 
   @@map("user_preferences")
+}
+
+// Webhook Config Table
+// Stores user webhook endpoint configurations for event notifications
+model WebhookConfig {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  webhookUrl    String   @map("webhook_url") @db.VarChar(2048)
+  webhookSecret String   @map("webhook_secret") @db.VarChar(255)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs WebhookLog[]
+
+  @@unique([userId]) // One webhook config per user
+  @@index([userId])
+  @@index([isActive])
+  @@map("webhook_configs")
+}
+
+// Webhook Log Table
+// Tracks webhook delivery attempts, responses, and failures
+model WebhookLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  webhookConfigId String    @map("webhook_config_id") @db.Uuid
+  eventType       String    @map("event_type") @db.VarChar(100)
+  payload         Json
+  status          String    @db.VarChar(20) // "success", "failed", "pending"
+  statusCode      Int?      @map("status_code")
+  responseBody    String?   @map("response_body") @db.Text
+  errorMessage    String?   @map("error_message") @db.Text
+  attempts        Int       @default(1)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+
+  // Relations
+  webhookConfig WebhookConfig @relation(fields: [webhookConfigId], references: [id], onDelete: Cascade)
+
+  @@index([webhookConfigId])
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("webhook_logs")
 }

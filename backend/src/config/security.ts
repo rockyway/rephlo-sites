@@ -224,7 +224,7 @@ export const helmetConfig: Readonly<HelmetOptions> = {
  */
 export const corsAllowedOrigins = [
   // Development
-  process.env.CORS_ORIGIN || 'http://localhost:5173',
+  process.env.CORS_ORIGIN || 'http://localhost:7151',
   'http://localhost:8080', // Desktop app development
   'http://localhost:3000', // Alternative development port
 
