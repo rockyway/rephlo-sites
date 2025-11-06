@@ -18,6 +18,7 @@ import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { ModelService } from '../services/model.service';
 import { LLMService } from '../services/llm.service';
+import { container } from '../container';
 import {
   listModelsQuerySchema,
   textCompletionSchema,
@@ -43,7 +44,8 @@ export class ModelsController {
 
   constructor(prisma: PrismaClient) {
     this.modelService = new ModelService(prisma);
-    this.llmService = new LLMService(prisma);
+    // Resolve LLMService from DI container (Phase 2 refactoring)
+    this.llmService = container.resolve(LLMService);
   }
 
   // ===========================================================================

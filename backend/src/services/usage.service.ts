@@ -17,6 +17,7 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md
  */
 
+import { injectable, inject } from 'tsyringe';
 import { PrismaClient, UsageHistory, UsageOperation } from '@prisma/client';
 import logger from '../utils/logger';
 import {
@@ -69,8 +70,9 @@ export interface UsageStatsResult {
   };
 }
 
+@injectable()
 export class UsageService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(@inject('PrismaClient') private readonly prisma: PrismaClient) {}
 
   /**
    * Record usage for an inference request

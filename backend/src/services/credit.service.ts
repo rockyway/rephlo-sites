@@ -19,6 +19,7 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md
  */
 
+import { injectable, inject } from 'tsyringe';
 import { PrismaClient, Credit, UsageOperation } from '@prisma/client';
 import logger from '../utils/logger';
 import {
@@ -27,8 +28,9 @@ import {
 } from '../types/credit-validation';
 import { queueWebhook } from './webhook.service';
 
+@injectable()
 export class CreditService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(@inject('PrismaClient') private readonly prisma: PrismaClient) {}
 
   /**
    * Get current credit balance for a user
