@@ -13,6 +13,16 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md
  */
 
+/**
+ * CRITICAL: This import must be FIRST
+ * reflect-metadata must be imported before any other imports
+ * for TSyringe decorators to work correctly
+ */
+import 'reflect-metadata';
+
+// Import container to initialize it
+import { verifyContainer, disposeContainer } from './container';
+
 import http from 'http';
 import { createApp } from './app';
 import { prisma } from './config/database';
@@ -36,6 +46,9 @@ const connections = new Set<any>();
  */
 const startServer = async (): Promise<void> => {
   try {
+    // Verify DI container is properly configured
+    verifyContainer();
+
     // Initialize database connection (Prisma handles connection pooling)
     logger.info('Connecting to database...');
     await prisma.$connect();
@@ -136,6 +149,16 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
     console.log('✓ Redis connection closed');
   } catch (error) {
     logger.error('Error closing Redis connection', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Dispose DI container resources
+  try {
+    await disposeContainer();
+    console.log('✓ DI container disposed');
+  } catch (error) {
+    logger.error('Error disposing DI container', {
       error: error instanceof Error ? error.message : String(error),
     });
   }

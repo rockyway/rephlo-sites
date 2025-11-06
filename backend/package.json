@@ -44,7 +44,9 @@
     "pg": "^8.11.3",
     "rate-limit-redis": "^4.2.3",
     "redis": "^4.6.11",
+    "reflect-metadata": "^0.2.2",
     "stripe": "^14.25.0",
+    "tsyringe": "^4.10.0",
     "winston": "^3.11.0",
     "zod": "^3.22.4"
   },
