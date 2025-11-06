@@ -28,8 +28,9 @@ import {
   BillingInterval,
   calculatePrice,
 } from './stripe.service';
-import { queueWebhook } from './webhook.service';
 import logger from '../utils/logger';
+import { container } from '../container';
+import { IWebhookService } from '../interfaces';
 
 /**
  * Get current active subscription for a user
@@ -185,8 +186,7 @@ export async function createSubscription(
 
     // Allocate credits for the billing period
     try {
-      const { createCreditService } = await import('./credit.service');
-      const creditService = createCreditService(prisma);
+      const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
       await creditService.allocateCredits({
         userId,
         subscriptionId: subscription.id,
@@ -209,7 +209,8 @@ export async function createSubscription(
 
     // Queue webhook for subscription.created event
     try {
-      await queueWebhook(userId, 'subscription.created', {
+      const webhookService = container.resolve<IWebhookService>('IWebhookService');
+      await webhookService.queueWebhook(userId, 'subscription.created', {
         subscription_id: subscription.id,
         user_id: userId,
         tier: subscription.tier,
@@ -293,8 +294,7 @@ export async function updateSubscription(
       // Allocate credits for the new plan
       // This creates a new credit record for the updated plan
       try {
-        const { createCreditService } = await import('./credit.service');
-        const creditService = createCreditService(prisma);
+        const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
         await creditService.allocateCredits({
           userId,
           subscriptionId: updatedSubscription.id,
@@ -317,7 +317,8 @@ export async function updateSubscription(
 
       // Queue webhook for subscription.updated event
       try {
-        await queueWebhook(userId, 'subscription.updated', {
+        const webhookService = container.resolve<IWebhookService>('IWebhookService');
+        await webhookService.queueWebhook(userId, 'subscription.updated', {
           subscription_id: updatedSubscription.id,
           user_id: userId,
           tier: updatedSubscription.tier,
@@ -388,7 +389,8 @@ export async function cancelSubscription(
 
     // Queue webhook for subscription.cancelled event
     try {
-      await queueWebhook(userId, 'subscription.cancelled', {
+      const webhookService = container.resolve<IWebhookService>('IWebhookService');
+      await webhookService.queueWebhook(userId, 'subscription.cancelled', {
         subscription_id: updatedSubscription.id,
         user_id: userId,
         cancelled_at: updatedSubscription.cancelledAt!.toISOString(),

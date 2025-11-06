@@ -17,7 +17,7 @@
 
 import { Router, Request, Response } from 'express';
 import oauthRoutes from './oauth.routes';
-import v1Routes from './v1.routes';
+import { createV1Router } from './v1.routes';
 import adminRoutes from './admin.routes';
 
 // Import existing branding website API handlers
@@ -27,15 +27,17 @@ import { uploadDiagnostic, uploadMiddleware, handleMulterError } from '../api/di
 import { getLatestVersion } from '../api/version';
 
 // Import subscription controller for webhooks
-import { createSubscriptionsController } from '../controllers/subscriptions.controller';
+import { SubscriptionsController } from '../controllers/subscriptions.controller';
 import { asyncHandler } from '../middleware/error.middleware';
-import { prisma } from '../config/database';
+import { container } from '../container';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 
 const router = Router();
 
-// Initialize controllers for webhooks
-const subscriptionsController = createSubscriptionsController(prisma);
+// Resolve controllers and Prisma from DI container
+const subscriptionsController = container.resolve(SubscriptionsController);
+const prisma = container.resolve<PrismaClient>('PrismaClient');
 
 // ===== Root Routes =====
 
@@ -157,7 +159,7 @@ router.get('/health/live', (_req: Request, res: Response) => {
 router.use('/', oauthRoutes);
 
 // ===== REST API v1 Routes =====
-router.use('/v1', v1Routes);
+router.use('/v1', createV1Router());
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);

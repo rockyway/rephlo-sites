@@ -5,7 +5,7 @@
  * Ensures users have sufficient credits before processing LLM requests.
  *
  * Usage:
- *   app.post('/v1/completions', authMiddleware, checkCredits(prisma), handler);
+ *   app.post('/v1/completions', authMiddleware, checkCredits(), handler);
  *
  * Integration:
  * - Used by model inference endpoints
@@ -17,10 +17,10 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { createCreditService } from '../services/credit.service';
+import { CreditService } from '../services/credit.service';
 import logger from '../utils/logger';
 import { forbiddenError } from './error.middleware';
+import { container } from '../container';
 
 /**
  * Credit check middleware
@@ -33,11 +33,10 @@ import { forbiddenError } from './error.middleware';
  * 4. Returns 403 error if insufficient credits
  * 5. Attaches credit info to request for downstream handlers
  *
- * @param prisma - Prisma client instance
  * @returns Express middleware function
  */
-export function checkCredits(prisma: PrismaClient) {
-  const creditService = createCreditService(prisma);
+export function checkCredits() {
+  const creditService = container.resolve<CreditService>('ICreditService');
 
   return async (
     req: Request,
@@ -192,11 +191,10 @@ function estimateCreditsRequired(req: Request): number {
  * Logs credit status but doesn't block request if insufficient
  * Useful for non-critical endpoints or testing
  *
- * @param prisma - Prisma client instance
  * @returns Express middleware function
  */
-export function optionalCreditCheck(prisma: PrismaClient) {
-  const creditService = createCreditService(prisma);
+export function optionalCreditCheck() {
+  const creditService = container.resolve<CreditService>('ICreditService');
 
   return async (
     req: Request,
@@ -248,11 +246,10 @@ export function optionalCreditCheck(prisma: PrismaClient) {
  * Check if user has credits (any amount)
  * Simpler check that only validates user has an active subscription
  *
- * @param prisma - Prisma client instance
  * @returns Express middleware function
  */
-export function requireActiveSubscription(prisma: PrismaClient) {
-  const creditService = createCreditService(prisma);
+export function requireActiveSubscription() {
+  const creditService = container.resolve<CreditService>('ICreditService');
 
   return async (
     req: Request,

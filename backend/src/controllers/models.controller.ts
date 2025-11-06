@@ -13,12 +13,11 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (Model APIs)
  */
 
+import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
-import { ModelService } from '../services/model.service';
+import { IModelService } from '../interfaces';
 import { LLMService } from '../services/llm.service';
-import { container } from '../container';
 import {
   listModelsQuerySchema,
   textCompletionSchema,
@@ -38,14 +37,13 @@ import { getUserId } from '../middleware/auth.middleware';
 // Models Controller Class
 // =============================================================================
 
+@injectable()
 export class ModelsController {
-  private modelService: ModelService;
-  private llmService: LLMService;
-
-  constructor(prisma: PrismaClient) {
-    this.modelService = new ModelService(prisma);
-    // Resolve LLMService from DI container (Phase 2 refactoring)
-    this.llmService = container.resolve(LLMService);
+  constructor(
+    @inject('IModelService') private modelService: IModelService,
+    @inject(LLMService) private llmService: LLMService
+  ) {
+    logger.debug('ModelsController: Initialized');
   }
 
   // ===========================================================================
@@ -364,16 +362,4 @@ export class ModelsController {
       throw error;
     }
   }
-}
-
-// =============================================================================
-// Export Factory Function
-// =============================================================================
-
-/**
- * Create models controller instance
- * Factory function to create controller with Prisma client
- */
-export function createModelsController(prisma: PrismaClient): ModelsController {
-  return new ModelsController(prisma);
 }

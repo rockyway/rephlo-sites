@@ -533,8 +533,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
 
       if (dbSubscription) {
         // Allocate credits for the billing period
-        const { createCreditService } = await import('./credit.service');
-        const creditService = createCreditService(prisma);
+        const { container } = await import('../container');
+        const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
         const periodStart = new Date(invoice.period_start * 1000);
         const periodEnd = new Date(invoice.period_end * 1000);
 

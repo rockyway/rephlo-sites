@@ -487,20 +487,3 @@ export class UserService implements IUserService {
     logger.info('UserService: User soft deleted', { userId });
   }
 }
-
-// =============================================================================
-// Factory Function (Deprecated)
-// =============================================================================
-
-/**
- * Create user service instance
- * Factory function to create service with Prisma client
- *
- * @deprecated Use container.resolve('IUserService') instead
- * This factory function is kept for backward compatibility during migration
- * Will be removed in Phase 4
- */
-export function createUserService(prisma: PrismaClient): UserService {
-  logger.warn('createUserService is deprecated. Use DI container instead.');
-  return new UserService(prisma);
-}

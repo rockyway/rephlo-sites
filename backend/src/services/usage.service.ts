@@ -522,14 +522,3 @@ export class UsageService {
     return Math.round(percentageChange * 100) / 100; // Round to 2 decimals
   }
 }
-
-/**
- * Create usage service instance
- * Factory function for dependency injection
- *
- * @param prisma - Prisma client instance
- * @returns UsageService instance
- */
-export function createUsageService(prisma: PrismaClient): UsageService {
-  return new UsageService(prisma);
-}

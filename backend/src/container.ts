@@ -211,6 +211,33 @@ logger.info('DI Container: Core services registered', {
 });
 
 // ============================================================================
+// Controller Registration (Phase 4: Routes & Controllers)
+// ============================================================================
+
+import { UsersController } from './controllers/users.controller';
+import { ModelsController } from './controllers/models.controller';
+import { SubscriptionsController } from './controllers/subscriptions.controller';
+import { CreditsController } from './controllers/credits.controller';
+import { WebhooksController } from './controllers/webhooks.controller';
+
+// Register controllers as singletons for consistent instances
+container.registerSingleton(UsersController);
+container.registerSingleton(ModelsController);
+container.registerSingleton(SubscriptionsController);
+container.registerSingleton(CreditsController);
+container.registerSingleton(WebhooksController);
+
+logger.info('DI Container: Controllers registered', {
+  controllers: [
+    'UsersController',
+    'ModelsController',
+    'SubscriptionsController',
+    'CreditsController',
+    'WebhooksController',
+  ],
+});
+
+// ============================================================================
 // Container Health Check
 // ============================================================================
 

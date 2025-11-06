@@ -13,10 +13,9 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md
  */
 
+import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { CreditService, createCreditService } from '../services/credit.service';
-import { UsageService, createUsageService } from '../services/usage.service';
+import { ICreditService, IUsageService } from '../interfaces';
 import {
   usageQuerySchema,
   usageStatsQuerySchema,
@@ -27,13 +26,13 @@ import {
 import logger from '../utils/logger';
 import { badRequestError, notFoundError } from '../middleware/error.middleware';
 
+@injectable()
 export class CreditsController {
-  private readonly creditService: CreditService;
-  private readonly usageService: UsageService;
-
-  constructor(prisma: PrismaClient) {
-    this.creditService = createCreditService(prisma);
-    this.usageService = createUsageService(prisma);
+  constructor(
+    @inject('ICreditService') private readonly creditService: ICreditService,
+    @inject('IUsageService') private readonly usageService: IUsageService
+  ) {
+    logger.debug('CreditsController: Initialized');
   }
 
   /**
@@ -285,17 +284,4 @@ export class CreditsController {
 
     res.status(200).json(status);
   }
-}
-
-/**
- * Create credits controller instance
- * Factory function for dependency injection
- *
- * @param prisma - Prisma client instance
- * @returns CreditsController instance
- */
-export function createCreditsController(
-  prisma: PrismaClient
-): CreditsController {
-  return new CreditsController(prisma);
 }

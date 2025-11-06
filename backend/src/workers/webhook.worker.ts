@@ -5,14 +5,13 @@
  * Runs as a separate process for scalability and reliability.
  */
 
+import 'reflect-metadata';
 import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import logger from '../utils/logger';
-import {
-  WebhookJobData,
-  sendWebhook,
-  updateWebhookLog,
-} from '../services/webhook.service';
+import { WebhookJobData } from '../services/webhook.service';
+import { container } from '../container';
+import { IWebhookService } from '../interfaces';
 
 // Redis connection
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -39,15 +38,18 @@ async function processWebhook(job: Job<WebhookJobData>): Promise<void> {
   });
 
   try {
+    // Get webhook service from DI container
+    const webhookService = container.resolve<IWebhookService>('IWebhookService');
+
     // Send webhook HTTP POST request
-    const result = await sendWebhook(webhookConfigId, eventType, payload, attempt);
+    const result = await webhookService.sendWebhook(webhookConfigId, eventType, payload, attempt);
 
     // Check if response is successful (2xx status code)
     const isSuccess = result.statusCode >= 200 && result.statusCode < 300;
 
     if (isSuccess) {
       // Update log as success
-      await updateWebhookLog(
+      await webhookService.updateWebhookLog(
         job.id!,
         'success',
         result.statusCode,
@@ -68,7 +70,7 @@ async function processWebhook(job: Job<WebhookJobData>): Promise<void> {
       const errorMessage = `HTTP ${result.statusCode}: ${result.responseBody}`;
 
       // Update log as failed (will retry if attempts remaining)
-      await updateWebhookLog(
+      await webhookService.updateWebhookLog(
         job.id!,
         'failed',
         result.statusCode,
@@ -103,8 +105,11 @@ async function processWebhook(job: Job<WebhookJobData>): Promise<void> {
   } catch (error: any) {
     const errorMessage = error.message || 'Unknown error';
 
+    // Get webhook service from DI container
+    const webhookService = container.resolve<IWebhookService>('IWebhookService');
+
     // Update log with error
-    await updateWebhookLog(
+    await webhookService.updateWebhookLog(
       job.id!,
       'failed',
       undefined,

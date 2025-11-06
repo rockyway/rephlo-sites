@@ -388,17 +388,3 @@ export class LLMService {
     return `${provider} API error`;
   }
 }
-
-// ============================================================================
-// Factory Function (Backward Compatibility)
-// ============================================================================
-
-import { container } from '../container';
-
-/**
- * @deprecated Use container.resolve(LLMService) instead
- * This factory function is kept for backward compatibility during migration
- */
-export function createLLMService(): LLMService {
-  return container.resolve(LLMService);
-}

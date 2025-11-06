@@ -19,34 +19,29 @@
  */
 
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { container } from '../container';
 import { authMiddleware, requireScope } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
 import { checkCredits } from '../middleware/credit.middleware';
-import { createUsersController } from '../controllers/users.controller';
-import { createModelsController } from '../controllers/models.controller';
-import { createSubscriptionsController } from '../controllers/subscriptions.controller';
-import { createCreditsController } from '../controllers/credits.controller';
-import {
-  getWebhookConfigHandler,
-  setWebhookConfigHandler,
-  deleteWebhookConfigHandler,
-  testWebhookHandler,
-} from '../controllers/webhooks.controller';
+import { UsersController } from '../controllers/users.controller';
+import { ModelsController } from '../controllers/models.controller';
+import { SubscriptionsController } from '../controllers/subscriptions.controller';
+import { CreditsController } from '../controllers/credits.controller';
+import { WebhooksController } from '../controllers/webhooks.controller';
 
 /**
- * Create v1 router with Prisma client
- * @param prisma - Prisma client instance
+ * Create v1 router (No parameters needed - uses DI container)
  * @returns Express router
  */
-export function createV1Router(prisma: PrismaClient): Router {
+export function createV1Router(): Router {
   const router = Router();
 
-  // Initialize controllers
-  const usersController = createUsersController(prisma);
-  const modelsController = createModelsController(prisma);
-  const subscriptionsController = createSubscriptionsController(prisma);
-  const creditsController = createCreditsController(prisma);
+  // Resolve controllers from DI container
+  const usersController = container.resolve(UsersController);
+  const modelsController = container.resolve(ModelsController);
+  const subscriptionsController = container.resolve(SubscriptionsController);
+  const creditsController = container.resolve(CreditsController);
+  const webhooksController = container.resolve(WebhooksController);
 
   // =============================================================================
   // User Management Routes (Implemented)
@@ -165,7 +160,7 @@ export function createV1Router(prisma: PrismaClient): Router {
     '/completions',
     authMiddleware,
     requireScope('llm.inference'),
-    checkCredits(prisma),
+    checkCredits(),
     asyncHandler(modelsController.textCompletion.bind(modelsController))
   );
 
@@ -178,7 +173,7 @@ export function createV1Router(prisma: PrismaClient): Router {
     '/chat/completions',
     authMiddleware,
     requireScope('llm.inference'),
-    checkCredits(prisma),
+    checkCredits(),
     asyncHandler(modelsController.chatCompletion.bind(modelsController))
   );
 
@@ -304,7 +299,7 @@ export function createV1Router(prisma: PrismaClient): Router {
   router.get(
     '/webhooks/config',
     authMiddleware,
-    asyncHandler(getWebhookConfigHandler)
+    asyncHandler(webhooksController.getWebhookConfig.bind(webhooksController))
   );
 
   /**
@@ -315,7 +310,7 @@ export function createV1Router(prisma: PrismaClient): Router {
   router.post(
     '/webhooks/config',
     authMiddleware,
-    asyncHandler(setWebhookConfigHandler)
+    asyncHandler(webhooksController.setWebhookConfig.bind(webhooksController))
   );
 
   /**
@@ -326,7 +321,7 @@ export function createV1Router(prisma: PrismaClient): Router {
   router.delete(
     '/webhooks/config',
     authMiddleware,
-    asyncHandler(deleteWebhookConfigHandler)
+    asyncHandler(webhooksController.deleteWebhookConfig.bind(webhooksController))
   );
 
   /**
@@ -337,7 +332,7 @@ export function createV1Router(prisma: PrismaClient): Router {
   router.post(
     '/webhooks/test',
     authMiddleware,
-    asyncHandler(testWebhookHandler)
+    asyncHandler(webhooksController.testWebhook.bind(webhooksController))
   );
 
   return router;
@@ -349,8 +344,6 @@ export function createV1Router(prisma: PrismaClient): Router {
 
 /**
  * Default export for compatibility with existing imports
- * Note: This creates a router without Prisma client, so user routes won't work
- * Use createV1Router(prisma) instead for full functionality
+ * Note: This creates a router using DI container
  */
-import { prisma } from '../config/database';
-export default createV1Router(prisma);
+export default createV1Router();

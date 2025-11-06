@@ -15,10 +15,10 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (User APIs)
  */
 
+import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
-import { UserService } from '../services/user.service';
+import { IUserService } from '../interfaces';
 import {
   updateProfileSchema,
   updatePreferencesSchema,
@@ -39,11 +39,10 @@ import { getUserId } from '../middleware/auth.middleware';
 // Users Controller Class
 // =============================================================================
 
+@injectable()
 export class UsersController {
-  private userService: UserService;
-
-  constructor(prisma: PrismaClient) {
-    this.userService = new UserService(prisma);
+  constructor(@inject('IUserService') private userService: IUserService) {
+    logger.debug('UsersController: Initialized');
   }
 
   // ===========================================================================
@@ -314,18 +313,4 @@ export class UsersController {
 
     res.status(200).json(result);
   }
-}
-
-// =============================================================================
-// Export Factory Function
-// =============================================================================
-
-/**
- * Create users controller instance
- * Factory function to create controller with Prisma client
- */
-export function createUsersController(
-  prisma: PrismaClient
-): UsersController {
-  return new UsersController(prisma);
 }

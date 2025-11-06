@@ -15,6 +15,7 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (Subscription APIs)
  */
 
+import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import {
@@ -41,8 +42,11 @@ import logger from '../utils/logger';
 /**
  * Subscriptions Controller Class
  */
+@injectable()
 export class SubscriptionsController {
-  constructor(private prisma: PrismaClient) {}
+  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+    logger.debug('SubscriptionsController: Initialized');
+  }
 
   /**
    * GET /v1/subscriptions/me
@@ -445,11 +449,4 @@ export class SubscriptionsController {
       });
     }
   }
-}
-
-/**
- * Create subscriptions controller instance
- */
-export function createSubscriptionsController(prisma: PrismaClient): SubscriptionsController {
-  return new SubscriptionsController(prisma);
 }

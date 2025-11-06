@@ -406,23 +406,3 @@ export class CreditService {
     return remainingPercentage <= thresholdPercentage;
   }
 }
-
-/**
- * Create credit service instance
- * Factory function for dependency injection
- *
- * @deprecated Use container.resolve('ICreditService') instead
- * This factory function is kept for backward compatibility during migration
- * Will be removed in Phase 4
- *
- * @param prisma - Prisma client instance
- * @returns CreditService instance
- */
-export function createCreditService(prisma: PrismaClient): CreditService {
-  logger.warn('createCreditService is deprecated. Use DI container instead.');
-  // Temporary: Create a minimal WebhookService for backward compatibility
-  // This is a hack and will be removed when SubscriptionService and StripeService are refactored
-  const { container } = require('../container');
-  const webhookService = container.resolve('IWebhookService') as IWebhookService;
-  return new CreditService(prisma, webhookService);
-}
