@@ -22,6 +22,9 @@ import { PrismaClient } from '@prisma/client';
 import { authMiddleware, requireScope } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
 import { createUsersController } from '../controllers/users.controller';
+import { createModelsController } from '../controllers/models.controller';
+import { createSubscriptionsController } from '../controllers/subscriptions.controller';
+import { createCreditsController } from '../controllers/credits.controller';
 
 /**
  * Create v1 router with Prisma client
@@ -33,6 +36,9 @@ export function createV1Router(prisma: PrismaClient): Router {
 
   // Initialize controllers
   const usersController = createUsersController(prisma);
+  const modelsController = createModelsController(prisma);
+  const subscriptionsController = createSubscriptionsController(prisma);
+  const creditsController = createCreditsController(prisma);
 
   // =============================================================================
   // User Management Routes (Implemented)
@@ -111,202 +117,170 @@ export function createV1Router(prisma: PrismaClient): Router {
   );
 
   // =============================================================================
-  // Model Management Routes (Placeholder)
+  // Model Management Routes (Implemented)
   // =============================================================================
 
   /**
    * GET /v1/models
-   * List available models
+   * List available models with optional filters
+   * Requires: Authentication, models.read scope
    */
-  router.get('/models', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Model listing not yet implemented. This endpoint will be implemented by the Model Service Agent.',
-      },
-    });
-  });
+  router.get(
+    '/models',
+    authMiddleware,
+    requireScope('models.read'),
+    asyncHandler(modelsController.listModels.bind(modelsController))
+  );
 
   /**
    * GET /v1/models/:modelId
-   * Get model details
+   * Get detailed information about a specific model
+   * Requires: Authentication, models.read scope
    */
-  router.get('/models/:modelId', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Model details not yet implemented. This endpoint will be implemented by the Model Service Agent.',
-      },
-    });
-  });
+  router.get(
+    '/models/:modelId',
+    authMiddleware,
+    requireScope('models.read'),
+    asyncHandler(modelsController.getModelDetails.bind(modelsController))
+  );
 
   // =============================================================================
-  // Inference Routes (Placeholder)
+  // Inference Routes (Implemented)
   // =============================================================================
 
   /**
    * POST /v1/completions
-   * Text completion
+   * Execute text completion request
+   * Requires: Authentication, llm.inference scope
    */
-  router.post('/completions', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Text completion not yet implemented. This endpoint will be implemented by the Model Service Agent.',
-      },
-    });
-  });
+  router.post(
+    '/completions',
+    authMiddleware,
+    requireScope('llm.inference'),
+    asyncHandler(modelsController.textCompletion.bind(modelsController))
+  );
 
   /**
    * POST /v1/chat/completions
-   * Chat completion
+   * Execute chat completion request
+   * Requires: Authentication, llm.inference scope
    */
-  router.post('/chat/completions', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Chat completion not yet implemented. This endpoint will be implemented by the Model Service Agent.',
-      },
-    });
-  });
+  router.post(
+    '/chat/completions',
+    authMiddleware,
+    requireScope('llm.inference'),
+    asyncHandler(modelsController.chatCompletion.bind(modelsController))
+  );
 
   // =============================================================================
-  // Subscription Routes (Placeholder)
+  // Subscription Routes (Implemented)
   // =============================================================================
-
-  /**
-   * GET /v1/subscriptions/me
-   * Get current subscription
-   */
-  router.get('/subscriptions/me', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Subscription retrieval not yet implemented. This endpoint will be implemented by the Subscription Management Agent.',
-      },
-    });
-  });
 
   /**
    * GET /v1/subscription-plans
    * List subscription plans
+   * No authentication required - public endpoint
    */
-  router.get('/subscription-plans', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Subscription plans not yet implemented. This endpoint will be implemented by the Subscription Management Agent.',
-      },
-    });
-  });
+  router.get(
+    '/subscription-plans',
+    asyncHandler(subscriptionsController.listSubscriptionPlans.bind(subscriptionsController))
+  );
+
+  /**
+   * GET /v1/subscriptions/me
+   * Get current subscription
+   * Requires: Authentication
+   */
+  router.get(
+    '/subscriptions/me',
+    authMiddleware,
+    asyncHandler(subscriptionsController.getCurrentSubscription.bind(subscriptionsController))
+  );
 
   /**
    * POST /v1/subscriptions
    * Create subscription
+   * Requires: Authentication
    */
-  router.post('/subscriptions', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Subscription creation not yet implemented. This endpoint will be implemented by the Subscription Management Agent.',
-      },
-    });
-  });
+  router.post(
+    '/subscriptions',
+    authMiddleware,
+    asyncHandler(subscriptionsController.createSubscription.bind(subscriptionsController))
+  );
+
+  /**
+   * PATCH /v1/subscriptions/me
+   * Update subscription (upgrade/downgrade)
+   * Requires: Authentication
+   */
+  router.patch(
+    '/subscriptions/me',
+    authMiddleware,
+    asyncHandler(subscriptionsController.updateSubscription.bind(subscriptionsController))
+  );
 
   /**
    * POST /v1/subscriptions/me/cancel
    * Cancel subscription
+   * Requires: Authentication
    */
-  router.post('/subscriptions/me/cancel', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Subscription cancellation not yet implemented. This endpoint will be implemented by the Subscription Management Agent.',
-      },
-    });
-  });
-
-  /**
-   * PATCH /v1/subscriptions/me
-   * Update subscription
-   */
-  router.patch('/subscriptions/me', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Subscription update not yet implemented. This endpoint will be implemented by the Subscription Management Agent.',
-      },
-    });
-  });
+  router.post(
+    '/subscriptions/me/cancel',
+    authMiddleware,
+    asyncHandler(subscriptionsController.cancelSubscription.bind(subscriptionsController))
+  );
 
   // =============================================================================
-  // Credit & Usage Routes (Placeholder)
+  // Credit & Usage Routes (Implemented)
   // =============================================================================
 
   /**
    * GET /v1/credits/me
-   * Get current credits
+   * Get current user credits
+   * Requires: Authentication, credits.read scope
    */
-  router.get('/credits/me', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Credit retrieval not yet implemented. This endpoint will be implemented by the Credit & Usage Tracking Agent.',
-      },
-    });
-  });
+  router.get(
+    '/credits/me',
+    authMiddleware,
+    requireScope('credits.read'),
+    asyncHandler(creditsController.getCurrentCredits.bind(creditsController))
+  );
 
   /**
    * GET /v1/usage
-   * Get usage history
+   * Get usage history with filtering and pagination
+   * Requires: Authentication, credits.read scope
    */
-  router.get('/usage', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Usage history not yet implemented. This endpoint will be implemented by the Credit & Usage Tracking Agent.',
-      },
-    });
-  });
+  router.get(
+    '/usage',
+    authMiddleware,
+    requireScope('credits.read'),
+    asyncHandler(creditsController.getUsageHistory.bind(creditsController))
+  );
 
   /**
    * GET /v1/usage/stats
-   * Get usage statistics
+   * Get usage statistics with aggregation
+   * Requires: Authentication, credits.read scope
    */
-  router.get('/usage/stats', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Usage statistics not yet implemented. This endpoint will be implemented by the Credit & Usage Tracking Agent.',
-      },
-    });
-  });
+  router.get(
+    '/usage/stats',
+    authMiddleware,
+    requireScope('credits.read'),
+    asyncHandler(creditsController.getUsageStats.bind(creditsController))
+  );
 
   /**
    * GET /v1/rate-limit
-   * Check rate limit status
+   * Get rate limit status (placeholder)
+   * Requires: Authentication
+   * Note: Full implementation pending Rate Limiting & Security Agent
    */
-  router.get('/rate-limit', (_req, res) => {
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message:
-          'Rate limit status not yet implemented. This endpoint will be implemented by the Rate Limiting & Security Agent.',
-      },
-    });
-  });
+  router.get(
+    '/rate-limit',
+    authMiddleware,
+    asyncHandler(creditsController.getRateLimitStatus.bind(creditsController))
+  );
 
   return router;
 }

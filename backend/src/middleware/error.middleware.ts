@@ -84,8 +84,15 @@ export const unauthorizedError = (message: string = 'Missing or invalid access t
 /**
  * Forbidden error creator
  */
-export const forbiddenError = (message: string = 'Insufficient permissions'): ApiError => {
-  return createApiError(message, 403, 'forbidden');
+export const forbiddenError = (message: string = 'Insufficient permissions', details?: Record<string, any>): ApiError => {
+  return createApiError(message, 403, 'forbidden', details);
+};
+
+/**
+ * Bad request error creator
+ */
+export const badRequestError = (message: string = 'Invalid request', details?: Record<string, any>): ApiError => {
+  return createApiError(message, 400, 'invalid_request', details);
 };
 
 /**
