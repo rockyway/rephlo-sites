@@ -23,7 +23,6 @@ import {
   createSubscription,
   updateSubscription,
   cancelSubscription,
-  syncSubscriptionFromStripe,
 } from '../services/subscription.service';
 import {
   verifyWebhookSignature,
@@ -421,19 +420,8 @@ export class SubscriptionsController {
       // Verify webhook signature
       const event = verifyWebhookSignature(req.body, signature);
 
-      // Process webhook event
-      await handleStripeWebhook(event);
-
-      // Sync subscription if needed
-      if (
-        event.type.startsWith('customer.subscription.') ||
-        event.type.startsWith('invoice.payment_')
-      ) {
-        const subscription = (event.data.object as any).subscription;
-        if (subscription) {
-          await syncSubscriptionFromStripe(subscription, this.prisma);
-        }
-      }
+      // Process webhook event (this now handles all database syncing internally)
+      await handleStripeWebhook(event, this.prisma);
 
       res.json({ received: true });
     } catch (error: any) {

@@ -22,6 +22,7 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authMiddleware, requireScope } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
+import { checkCredits } from '../middleware/credit.middleware';
 import { createUsersController } from '../controllers/users.controller';
 import { createModelsController } from '../controllers/models.controller';
 import { createSubscriptionsController } from '../controllers/subscriptions.controller';
@@ -158,24 +159,26 @@ export function createV1Router(prisma: PrismaClient): Router {
   /**
    * POST /v1/completions
    * Execute text completion request
-   * Requires: Authentication, llm.inference scope
+   * Requires: Authentication, llm.inference scope, sufficient credits
    */
   router.post(
     '/completions',
     authMiddleware,
     requireScope('llm.inference'),
+    checkCredits(prisma),
     asyncHandler(modelsController.textCompletion.bind(modelsController))
   );
 
   /**
    * POST /v1/chat/completions
    * Execute chat completion request
-   * Requires: Authentication, llm.inference scope
+   * Requires: Authentication, llm.inference scope, sufficient credits
    */
   router.post(
     '/chat/completions',
     authMiddleware,
     requireScope('llm.inference'),
+    checkCredits(prisma),
     asyncHandler(modelsController.chatCompletion.bind(modelsController))
   );
 

@@ -25,7 +25,10 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+import { UsageService } from './usage.service';
+import { CreditService } from './credit.service';
 import {
   TextCompletionRequest,
   ChatCompletionRequest,
@@ -71,6 +74,20 @@ initializeClients();
 // =============================================================================
 
 export class LLMService {
+  private usageService: UsageService;
+  private creditService: CreditService;
+
+  constructor(prisma?: PrismaClient) {
+    if (prisma) {
+      this.usageService = new UsageService(prisma);
+      this.creditService = new CreditService(prisma);
+    } else {
+      // For backward compatibility, create dummy services
+      this.usageService = null as any;
+      this.creditService = null as any;
+    }
+  }
+
   // ===========================================================================
   // Text Completion Operations
   // ===========================================================================
@@ -126,8 +143,36 @@ export class LLMService {
         credits: response.usage.credits_used,
       });
 
-      // TODO: Record usage in database (will be implemented by Credit & Usage Tracking agent)
-      // await this.recordUsage(userId, request.model, 'completion', response.usage, duration);
+      // Record usage in database
+      if (this.usageService && this.creditService) {
+        try {
+          const credit = await this.creditService.getCurrentCredits(userId);
+          if (credit) {
+            await this.usageService.recordUsage({
+              userId,
+              creditId: credit.id,
+              modelId: request.model,
+              operation: 'completion',
+              creditsUsed: response.usage.credits_used,
+              inputTokens: response.usage.prompt_tokens,
+              outputTokens: response.usage.completion_tokens,
+              totalTokens: response.usage.total_tokens,
+              requestDurationMs: duration,
+              requestMetadata: {
+                provider: modelProvider,
+                temperature: request.temperature,
+                max_tokens: request.max_tokens,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error('LLMService: Failed to record usage', {
+            userId,
+            model: request.model,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
 
       return response;
     } catch (error) {
@@ -199,8 +244,37 @@ export class LLMService {
         credits: creditsUsed,
       });
 
-      // TODO: Record usage in database
-      // await this.recordUsage(userId, request.model, 'completion', { totalTokens, creditsUsed }, duration);
+      // Record usage in database
+      if (this.usageService && this.creditService) {
+        try {
+          const credit = await this.creditService.getCurrentCredits(userId);
+          if (credit) {
+            await this.usageService.recordUsage({
+              userId,
+              creditId: credit.id,
+              modelId: request.model,
+              operation: 'completion',
+              creditsUsed,
+              inputTokens: Math.ceil(totalTokens * 0.3),
+              outputTokens: Math.ceil(totalTokens * 0.7),
+              totalTokens,
+              requestDurationMs: duration,
+              requestMetadata: {
+                provider: modelProvider,
+                temperature: request.temperature,
+                max_tokens: request.max_tokens,
+                streaming: true,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error('LLMService: Failed to record usage', {
+            userId,
+            model: request.model,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
 
       // Send [DONE] marker
       res.write('data: [DONE]\n\n');
@@ -275,8 +349,37 @@ export class LLMService {
         credits: response.usage.credits_used,
       });
 
-      // TODO: Record usage in database
-      // await this.recordUsage(userId, request.model, 'chat', response.usage, duration);
+      // Record usage in database
+      if (this.usageService && this.creditService) {
+        try {
+          const credit = await this.creditService.getCurrentCredits(userId);
+          if (credit) {
+            await this.usageService.recordUsage({
+              userId,
+              creditId: credit.id,
+              modelId: request.model,
+              operation: 'chat',
+              creditsUsed: response.usage.credits_used,
+              inputTokens: response.usage.prompt_tokens,
+              outputTokens: response.usage.completion_tokens,
+              totalTokens: response.usage.total_tokens,
+              requestDurationMs: duration,
+              requestMetadata: {
+                provider: modelProvider,
+                temperature: request.temperature,
+                max_tokens: request.max_tokens,
+                messages_count: request.messages.length,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error('LLMService: Failed to record usage', {
+            userId,
+            model: request.model,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
 
       return response;
     } catch (error) {
@@ -348,8 +451,38 @@ export class LLMService {
         credits: creditsUsed,
       });
 
-      // TODO: Record usage in database
-      // await this.recordUsage(userId, request.model, 'chat', { totalTokens, creditsUsed }, duration);
+      // Record usage in database
+      if (this.usageService && this.creditService) {
+        try {
+          const credit = await this.creditService.getCurrentCredits(userId);
+          if (credit) {
+            await this.usageService.recordUsage({
+              userId,
+              creditId: credit.id,
+              modelId: request.model,
+              operation: 'chat',
+              creditsUsed,
+              inputTokens: Math.ceil(totalTokens * 0.3),
+              outputTokens: Math.ceil(totalTokens * 0.7),
+              totalTokens,
+              requestDurationMs: duration,
+              requestMetadata: {
+                provider: modelProvider,
+                temperature: request.temperature,
+                max_tokens: request.max_tokens,
+                messages_count: request.messages.length,
+                streaming: true,
+              },
+            });
+          }
+        } catch (error) {
+          logger.error('LLMService: Failed to record usage', {
+            userId,
+            model: request.model,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
 
       // Send [DONE] marker
       res.write('data: [DONE]\n\n');
@@ -1001,7 +1134,8 @@ export class LLMService {
 
 /**
  * Create LLM service instance
+ * @param prisma - Optional Prisma client for usage recording
  */
-export function createLLMService(): LLMService {
-  return new LLMService();
+export function createLLMService(prisma?: PrismaClient): LLMService {
+  return new LLMService(prisma);
 }

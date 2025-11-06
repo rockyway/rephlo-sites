@@ -12,7 +12,10 @@
  */
 
 import Stripe from 'stripe';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+import { syncSubscriptionFromStripe } from './subscription.service';
+import { CreditService } from './credit.service';
 
 // Initialize Stripe client
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -380,30 +383,32 @@ export function verifyWebhookSignature(
 
 /**
  * Handle Stripe webhook event
+ * @param event - Stripe event object
+ * @param prisma - Prisma client for database operations
  */
-export async function handleStripeWebhook(event: Stripe.Event): Promise<void> {
+export async function handleStripeWebhook(event: Stripe.Event, prisma: PrismaClient): Promise<void> {
   logger.info('Processing Stripe webhook event', { eventType: event.type });
 
   try {
     switch (event.type) {
       case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription, prisma);
         break;
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, prisma);
         break;
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, prisma);
         break;
 
       case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, prisma);
         break;
 
       case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, prisma);
         break;
 
       default:
@@ -423,63 +428,188 @@ export async function handleStripeWebhook(event: Stripe.Event): Promise<void> {
 /**
  * Handle subscription.created event
  */
-async function handleSubscriptionCreated(subscription: Stripe.Subscription): Promise<void> {
+async function handleSubscriptionCreated(subscription: Stripe.Subscription, prisma: PrismaClient): Promise<void> {
   logger.info('Handling subscription.created event', {
     subscriptionId: subscription.id,
     customerId: subscription.customer,
   });
 
-  // TODO: Sync subscription to database
-  // This will be called by the subscription service
+  try {
+    // Sync subscription to database
+    await syncSubscriptionFromStripe(subscription.id, prisma);
+    logger.info('Subscription synced to database', {
+      subscriptionId: subscription.id,
+    });
+  } catch (error) {
+    logger.error('Failed to sync subscription to database', {
+      subscriptionId: subscription.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }
 
 /**
  * Handle subscription.updated event
  */
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription, prisma: PrismaClient): Promise<void> {
   logger.info('Handling subscription.updated event', {
     subscriptionId: subscription.id,
     status: subscription.status,
   });
 
-  // TODO: Sync subscription status to database
-  // This will be called by the subscription service
+  try {
+    // Sync subscription status to database
+    await syncSubscriptionFromStripe(subscription.id, prisma);
+    logger.info('Subscription status synced to database', {
+      subscriptionId: subscription.id,
+      status: subscription.status,
+    });
+  } catch (error) {
+    logger.error('Failed to sync subscription status', {
+      subscriptionId: subscription.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }
 
 /**
  * Handle subscription.deleted event
  */
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription, prisma: PrismaClient): Promise<void> {
   logger.info('Handling subscription.deleted event', {
     subscriptionId: subscription.id,
   });
 
-  // TODO: Mark subscription as cancelled in database
-  // This will be called by the subscription service
+  try {
+    // Find and mark subscription as cancelled
+    const dbSubscription = await prisma.subscription.findFirst({
+      where: { stripeSubscriptionId: subscription.id },
+    });
+
+    if (dbSubscription) {
+      await prisma.subscription.update({
+        where: { id: dbSubscription.id },
+        data: {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      logger.info('Subscription marked as cancelled in database', {
+        subscriptionId: subscription.id,
+        dbSubscriptionId: dbSubscription.id,
+      });
+    } else {
+      logger.warn('Subscription not found in database', {
+        subscriptionId: subscription.id,
+      });
+    }
+  } catch (error) {
+    logger.error('Failed to mark subscription as cancelled', {
+      subscriptionId: subscription.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }
 
 /**
  * Handle invoice.payment_succeeded event
  */
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: PrismaClient): Promise<void> {
   logger.info('Handling invoice.payment_succeeded event', {
     invoiceId: invoice.id,
     subscriptionId: invoice.subscription,
   });
 
-  // TODO: Allocate credits for the billing period
-  // This will be called by the subscription service
+  try {
+    // Only allocate credits if this is a subscription invoice
+    if (invoice.subscription && typeof invoice.subscription === 'string') {
+      // Find subscription in database
+      const dbSubscription = await prisma.subscription.findFirst({
+        where: { stripeSubscriptionId: invoice.subscription },
+      });
+
+      if (dbSubscription) {
+        // Allocate credits for the billing period
+        const creditService = new CreditService(prisma);
+        const periodStart = new Date(invoice.period_start * 1000);
+        const periodEnd = new Date(invoice.period_end * 1000);
+
+        await creditService.allocateCredits({
+          userId: dbSubscription.userId,
+          subscriptionId: dbSubscription.id,
+          totalCredits: dbSubscription.creditsPerMonth,
+          billingPeriodStart: periodStart,
+          billingPeriodEnd: periodEnd,
+        });
+
+        logger.info('Credits allocated for successful payment', {
+          invoiceId: invoice.id,
+          subscriptionId: dbSubscription.id,
+          userId: dbSubscription.userId,
+          credits: dbSubscription.creditsPerMonth,
+        });
+      } else {
+        logger.warn('Subscription not found for invoice', {
+          invoiceId: invoice.id,
+          stripeSubscriptionId: invoice.subscription,
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to allocate credits for invoice payment', {
+      invoiceId: invoice.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }
 
 /**
  * Handle invoice.payment_failed event
  */
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: PrismaClient): Promise<void> {
   logger.error('Handling invoice.payment_failed event', {
     invoiceId: invoice.id,
     subscriptionId: invoice.subscription,
   });
 
-  // TODO: Handle payment failure (suspend subscription, notify user)
-  // This will be called by the subscription service
+  try {
+    // Suspend subscription on payment failure
+    if (invoice.subscription && typeof invoice.subscription === 'string') {
+      const dbSubscription = await prisma.subscription.findFirst({
+        where: { stripeSubscriptionId: invoice.subscription },
+      });
+
+      if (dbSubscription) {
+        await prisma.subscription.update({
+          where: { id: dbSubscription.id },
+          data: {
+            status: 'suspended',
+            updatedAt: new Date(),
+          },
+        });
+
+        logger.info('Subscription suspended due to payment failure', {
+          invoiceId: invoice.id,
+          subscriptionId: dbSubscription.id,
+          userId: dbSubscription.userId,
+        });
+      } else {
+        logger.warn('Subscription not found for failed payment', {
+          invoiceId: invoice.id,
+          stripeSubscriptionId: invoice.subscription,
+        });
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to handle payment failure', {
+      invoiceId: invoice.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
 }

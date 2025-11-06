@@ -30,6 +30,7 @@ import { getLatestVersion } from '../api/version';
 import { createSubscriptionsController } from '../controllers/subscriptions.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { prisma } from '../config/database';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -103,20 +104,38 @@ router.get('/health', (_req: Request, res: Response) => {
  * GET /health/ready
  * Readiness check endpoint
  * Checks database connectivity and other critical dependencies
- *
- * NOTE: Database check will be implemented by Database Schema Agent
  */
-router.get('/health/ready', (_req: Request, res: Response) => {
-  // TODO: Add database connectivity check
-  // TODO: Add Redis connectivity check
-  // For now, return basic readiness
-  res.json({
-    status: 'ready',
+router.get('/health/ready', async (_req: Request, res: Response) => {
+  const checks: any = {
+    database: 'healthy',
+    redis: 'not_configured',
+  };
+
+  let isReady = true;
+
+  // Check database connectivity
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = 'healthy';
+  } catch (error) {
+    checks.database = 'unhealthy';
+    isReady = false;
+    logger.error('Database health check failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+
+  // Check Redis connectivity (if configured)
+  // Note: Redis initialization will be added by Rate Limiting & Security Agent
+  // For now, we just mark it as not configured
+  if (process.env.REDIS_URL) {
+    checks.redis = 'not_implemented';
+  }
+
+  res.status(isReady ? 200 : 503).json({
+    status: isReady ? 'ready' : 'not_ready',
     timestamp: new Date().toISOString(),
-    checks: {
-      database: 'not_implemented',
-      redis: 'not_implemented',
-    },
+    checks,
   });
 });
 

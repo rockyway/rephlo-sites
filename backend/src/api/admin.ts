@@ -40,10 +40,21 @@ import { sendSuccess, sendServerError } from '../utils/responses';
  *   }
  * }
  */
-export async function getAdminMetrics(_req: Request, res: Response): Promise<Response> {
+export async function getAdminMetrics(req: Request, res: Response): Promise<Response> {
   try {
-    // TODO: Add authentication check in v1.1
-    // For now, metrics are publicly accessible
+    // Simple admin authentication check
+    // In production, this should use proper admin role/scope validation
+    const authHeader = req.headers.authorization;
+    const adminToken = process.env.ADMIN_TOKEN;
+
+    if (adminToken && authHeader !== `Bearer ${adminToken}`) {
+      return res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Admin authentication required',
+        },
+      });
+    }
 
     // Aggregate download counts by OS
     const downloadsByOS = await prisma.download.groupBy({

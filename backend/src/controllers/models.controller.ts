@@ -43,7 +43,7 @@ export class ModelsController {
 
   constructor(prisma: PrismaClient) {
     this.modelService = new ModelService(prisma);
-    this.llmService = new LLMService();
+    this.llmService = new LLMService(prisma);
   }
 
   // ===========================================================================
@@ -191,12 +191,8 @@ export class ModelsController {
         throw notFoundError(`Model '${request.model}' not found or unavailable`);
       }
 
-      // TODO: Check credit balance before proceeding
-      // This will be implemented by the Credit & Usage Tracking agent
-      // const hasCredits = await creditService.checkAvailableCredits(userId, estimatedCredits);
-      // if (!hasCredits) {
-      //   throw insufficientCreditsError('Not enough credits for this request');
-      // }
+      // Credit balance check is handled by checkCredits middleware
+      // req.creditInfo contains: { creditId, remainingCredits, estimatedCredits }
 
       // Execute completion request
       if (request.stream) {
@@ -313,11 +309,8 @@ export class ModelsController {
         throw notFoundError(`Model '${request.model}' not found or unavailable`);
       }
 
-      // TODO: Check credit balance before proceeding
-      // const hasCredits = await creditService.checkAvailableCredits(userId, estimatedCredits);
-      // if (!hasCredits) {
-      //   throw insufficientCreditsError('Not enough credits for this request');
-      // }
+      // Credit balance check is handled by checkCredits middleware
+      // req.creditInfo contains: { creditId, remainingCredits, estimatedCredits }
 
       // Execute completion request
       if (request.stream) {

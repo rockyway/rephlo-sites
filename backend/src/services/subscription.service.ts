@@ -29,6 +29,7 @@ import {
   calculatePrice,
 } from './stripe.service';
 import { queueWebhook } from './webhook.service';
+import { CreditService } from './credit.service';
 import logger from '../utils/logger';
 
 /**
@@ -183,13 +184,28 @@ export async function createSubscription(
       planId,
     });
 
-    // TODO: Allocate credits for the billing period
-    // This should call the credit service to create a credit record
-    logger.info('TODO: Allocate credits for subscription', {
-      userId,
-      subscriptionId: subscription.id,
-      credits: plan.creditsPerMonth,
-    });
+    // Allocate credits for the billing period
+    try {
+      const creditService = new CreditService(prisma);
+      await creditService.allocateCredits({
+        userId,
+        subscriptionId: subscription.id,
+        totalCredits: plan.creditsPerMonth,
+        billingPeriodStart: now,
+        billingPeriodEnd: periodEnd,
+      });
+      logger.info('Credits allocated for new subscription', {
+        userId,
+        subscriptionId: subscription.id,
+        credits: plan.creditsPerMonth,
+      });
+    } catch (error) {
+      logger.error('Failed to allocate credits for subscription', {
+        userId,
+        subscriptionId: subscription.id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
 
     // Queue webhook for subscription.created event
     try {
@@ -274,13 +290,29 @@ export async function updateSubscription(
         newPlanId,
       });
 
-      // TODO: Adjust credits for the new plan
-      // This should call the credit service to update credit allocation
-      logger.info('TODO: Adjust credits for updated subscription', {
-        userId,
-        subscriptionId: updatedSubscription.id,
-        newCredits: newPlan.creditsPerMonth,
-      });
+      // Allocate credits for the new plan
+      // This creates a new credit record for the updated plan
+      try {
+        const creditService = new CreditService(prisma);
+        await creditService.allocateCredits({
+          userId,
+          subscriptionId: updatedSubscription.id,
+          totalCredits: newPlan.creditsPerMonth,
+          billingPeriodStart: periodStart,
+          billingPeriodEnd: periodEnd,
+        });
+        logger.info('Credits allocated for updated subscription', {
+          userId,
+          subscriptionId: updatedSubscription.id,
+          newCredits: newPlan.creditsPerMonth,
+        });
+      } catch (error) {
+        logger.error('Failed to allocate credits for updated subscription', {
+          userId,
+          subscriptionId: updatedSubscription.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
 
       // Queue webhook for subscription.updated event
       try {
