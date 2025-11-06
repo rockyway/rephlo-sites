@@ -284,4 +284,73 @@ export class CreditsController {
 
     res.status(200).json(status);
   }
+
+  /**
+   * GET /api/user/credits
+   * Get detailed credit usage information
+   *
+   * Returns separate breakdown of free credits (monthly allocation with reset date)
+   * and pro credits (purchased credits with lifetime usage)
+   *
+   * Response 200:
+   * {
+   *   "freeCredits": {
+   *     "remaining": 1500,
+   *     "monthlyAllocation": 2000,
+   *     "used": 500,
+   *     "resetDate": "2025-12-01T00:00:00Z",
+   *     "daysUntilReset": 25
+   *   },
+   *   "proCredits": {
+   *     "remaining": 5000,
+   *     "purchasedTotal": 10000,
+   *     "lifetimeUsed": 5000
+   *   },
+   *   "totalAvailable": 6500,
+   *   "lastUpdated": "2025-11-06T14:30:00Z"
+   * }
+   */
+  async getDetailedCredits(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.sub;
+
+    logger.info('CreditsController: Getting detailed credits breakdown', { userId });
+
+    try {
+      // Fetch detailed credits from service
+      const detailedCredits = await this.creditService.getDetailedCredits(userId);
+
+      // Format response according to API specification
+      const response = {
+        freeCredits: {
+          remaining: detailedCredits.freeCredits.remaining,
+          monthlyAllocation: detailedCredits.freeCredits.monthlyAllocation,
+          used: detailedCredits.freeCredits.used,
+          resetDate: detailedCredits.freeCredits.resetDate.toISOString(),
+          daysUntilReset: detailedCredits.freeCredits.daysUntilReset
+        },
+        proCredits: {
+          remaining: detailedCredits.proCredits.remaining,
+          purchasedTotal: detailedCredits.proCredits.purchasedTotal,
+          lifetimeUsed: detailedCredits.proCredits.lifetimeUsed
+        },
+        totalAvailable: detailedCredits.totalAvailable,
+        lastUpdated: detailedCredits.lastUpdated.toISOString()
+      };
+
+      logger.info('CreditsController: Detailed credits retrieved successfully', {
+        userId,
+        totalAvailable: response.totalAvailable,
+        freeRemaining: response.freeCredits.remaining,
+        proRemaining: response.proCredits.remaining
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('CreditsController: Failed to get detailed credits', {
+        userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
 }

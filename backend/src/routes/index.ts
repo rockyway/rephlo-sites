@@ -18,6 +18,7 @@
 import { Router, Request, Response } from 'express';
 import oauthRoutes from './oauth.routes';
 import { createV1Router } from './v1.routes';
+import { createAPIRouter } from './api.routes';
 import adminRoutes from './admin.routes';
 
 // Import existing branding website API handlers
@@ -67,6 +68,10 @@ router.get('/', (_req: Request, res: Response) => {
         credits: '/v1/credits',
         usage: '/v1/usage',
         users: '/v1/users',
+      },
+      enhanced_api: {
+        user_profile: '/api/user/profile',
+        detailed_credits: '/api/user/credits',
       },
       admin: {
         metrics: '/admin/metrics',
@@ -160,6 +165,10 @@ router.use('/', oauthRoutes);
 
 // ===== REST API v1 Routes =====
 router.use('/v1', createV1Router());
+
+// ===== Enhanced API Routes (Phase 3) =====
+// Enhanced endpoints with detailed user profile and credit information
+router.use('/api', createAPIRouter());
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);

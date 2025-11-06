@@ -313,4 +313,87 @@ export class UsersController {
 
     res.status(200).json(result);
   }
+
+  // ===========================================================================
+  // Enhanced User Profile Endpoint (Phase 3)
+  // ===========================================================================
+
+  /**
+   * GET /api/user/profile
+   * Get authenticated user's profile and account information
+   *
+   * Returns complete user profile including email, subscription tier/status,
+   * preferences, and account timestamps
+   *
+   * Response 200:
+   * {
+   *   "userId": "usr_abc123xyz",
+   *   "email": "user@example.com",
+   *   "displayName": "John Doe",
+   *   "subscription": {
+   *     "tier": "pro",
+   *     "status": "active",
+   *     "currentPeriodStart": "2025-11-01T00:00:00Z",
+   *     "currentPeriodEnd": "2025-12-01T00:00:00Z",
+   *     "cancelAtPeriodEnd": false
+   *   },
+   *   "preferences": {
+   *     "defaultModel": "gpt-5",
+   *     "emailNotifications": true,
+   *     "usageAlerts": true
+   *   },
+   *   "accountCreatedAt": "2024-01-15T10:30:00Z",
+   *   "lastLoginAt": "2025-11-06T08:00:00Z"
+   * }
+   */
+  async getUserProfile(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.sub;
+
+    logger.info('UsersController: Getting user profile', { userId });
+
+    try {
+      // Fetch detailed user profile from service
+      const userProfile = await this.userService.getDetailedUserProfile(userId);
+
+      if (!userProfile) {
+        logger.warn('UsersController: User not found', { userId });
+        throw notFoundError('User profile not found');
+      }
+
+      // Format response according to API specification
+      const response = {
+        userId: userProfile.userId,
+        email: userProfile.email,
+        displayName: userProfile.displayName || userProfile.email.split('@')[0], // Fallback to email username
+        subscription: {
+          tier: userProfile.subscription.tier,
+          status: userProfile.subscription.status,
+          currentPeriodStart: userProfile.subscription.currentPeriodStart?.toISOString() || null,
+          currentPeriodEnd: userProfile.subscription.currentPeriodEnd?.toISOString() || null,
+          cancelAtPeriodEnd: userProfile.subscription.cancelAtPeriodEnd
+        },
+        preferences: {
+          defaultModel: userProfile.preferences.defaultModel,
+          emailNotifications: userProfile.preferences.emailNotifications,
+          usageAlerts: userProfile.preferences.usageAlerts
+        },
+        accountCreatedAt: userProfile.accountCreatedAt.toISOString(),
+        lastLoginAt: userProfile.lastLoginAt?.toISOString() || null
+      };
+
+      logger.info('UsersController: User profile retrieved successfully', {
+        userId,
+        tier: response.subscription.tier,
+        status: response.subscription.status
+      });
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.error('UsersController: Failed to get user profile', {
+        userId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
 }
