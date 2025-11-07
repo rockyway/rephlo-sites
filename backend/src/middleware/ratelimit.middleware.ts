@@ -23,6 +23,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
+import { ipKeyGenerator } from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
 import logger from '../utils/logger';
 import { container } from '../container';
@@ -247,7 +248,9 @@ export function createUserRateLimiter(): RateLimitRequestHandler {
         return getUserRateLimitKey(user.id, tier);
       }
       // Fallback to IP-based rate limiting for unauthenticated requests
-      return getIPRateLimitKey(req.ip || 'unknown');
+      // Use ipKeyGenerator helper for proper IPv6 handling
+      const ipKey = ipKeyGenerator(req.ip || 'unknown');
+      return getIPRateLimitKey(ipKey);
     },
     // Skip failed requests (don't count errors against rate limit)
     skipFailedRequests: false,
@@ -301,13 +304,11 @@ export function createIPRateLimiter(
       });
     },
     keyGenerator: (req: Request): string => {
-      // Extract real IP from X-Forwarded-For header (when behind proxy)
-      const forwardedFor = req.headers['x-forwarded-for'];
-      if (forwardedFor) {
-        const ips = (forwardedFor as string).split(',').map((ip) => ip.trim());
-        return getIPRateLimitKey(ips[0]); // Use first IP (original client)
-      }
-      return getIPRateLimitKey(req.ip || 'unknown');
+      // Use ipKeyGenerator helper for proper IPv6 handling
+      // Note: ipKeyGenerator normalizes IPv6 addresses to prevent bypass attacks
+      const ip = req.ip || 'unknown';
+      const ipKey = ipKeyGenerator(ip);
+      return getIPRateLimitKey(ipKey);
     },
   });
 }
