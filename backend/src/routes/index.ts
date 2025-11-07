@@ -20,6 +20,7 @@ import oauthRoutes from './oauth.routes';
 import { createV1Router } from './v1.routes';
 import { createAPIRouter } from './api.routes';
 import adminRoutes from './admin.routes';
+import { createSwaggerRouter } from './swagger.routes';
 
 // Import existing branding website API handlers
 import { trackDownload } from '../api/downloads';
@@ -48,10 +49,21 @@ const prisma = container.resolve<PrismaClient>('PrismaClient');
  */
 router.get('/', (_req: Request, res: Response) => {
   res.json({
-    message: 'Rephlo Backend API',
+    name: 'Rephlo Backend API',
     version: '2.0.0',
-    documentation: 'https://docs.rephlo.ai',
+    description: 'Backend API with Enhanced Credits and User Profile endpoints',
+    documentation: '/api-docs',
+    health: '/health',
     endpoints: {
+      documentation: {
+        swagger_ui: '/api-docs',
+        openapi_spec: '/api-docs/swagger.json',
+      },
+      health: {
+        basic: '/health',
+        ready: '/health/ready',
+        live: '/health/live',
+      },
       oauth: {
         discovery: '/.well-known/openid-configuration',
         authorize: '/oauth/authorize',
@@ -60,7 +72,7 @@ router.get('/', (_req: Request, res: Response) => {
         userinfo: '/oauth/userinfo',
         jwks: '/oauth/jwks',
       },
-      api_v1: {
+      v1: {
         models: '/v1/models',
         completions: '/v1/completions',
         chat: '/v1/chat/completions',
@@ -69,9 +81,10 @@ router.get('/', (_req: Request, res: Response) => {
         usage: '/v1/usage',
         users: '/v1/users',
       },
-      enhanced_api: {
+      api: {
         user_profile: '/api/user/profile',
         detailed_credits: '/api/user/credits',
+        oauth_token_enhance: '/oauth/token/enhance',
       },
       admin: {
         metrics: '/admin/metrics',
@@ -94,12 +107,36 @@ router.get('/', (_req: Request, res: Response) => {
  * Health check endpoint
  * Returns server status and basic diagnostics
  */
-router.get('/health', (_req: Request, res: Response) => {
+router.get('/health', async (_req: Request, res: Response) => {
+  const checks: any = {
+    database: 'unknown',
+    redis: 'not_configured',
+    di_container: 'initialized',
+  };
+
+  // Check database connectivity
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = 'connected';
+  } catch (error) {
+    checks.database = 'disconnected';
+    logger.warn('Health check: Database connectivity failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+
+  // Check Redis connectivity (if configured)
+  if (process.env.REDIS_URL) {
+    checks.redis = 'configured';
+  }
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
     environment: process.env.NODE_ENV || 'development',
-    uptime: process.uptime(),
+    version: '2.0.0',
+    services: checks,
     memory: {
       used: Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100,
       total: Math.round((process.memoryUsage().heapTotal / 1024 / 1024) * 100) / 100,
@@ -169,6 +206,9 @@ router.use('/v1', createV1Router());
 // ===== Enhanced API Routes (Phase 3) =====
 // Enhanced endpoints with detailed user profile and credit information
 router.use('/api', createAPIRouter());
+
+// ===== API Documentation (Swagger UI) =====
+router.use('/api-docs', createSwaggerRouter());
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);
