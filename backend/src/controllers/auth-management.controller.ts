@@ -172,7 +172,7 @@ export class AuthManagementController {
       const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
 
       // 6. Generate email verification token
-      const { hashedToken, expiry } = generateEmailVerificationToken(24); // 24 hours
+      const { token, hashedToken, expiry } = generateEmailVerificationToken(24); // 24 hours
 
       // 7. Create user record
       const user = await this.prisma.user.create({
@@ -202,6 +202,7 @@ export class AuthManagementController {
       logger.info('TODO: Send verification email', {
         userId: user.id,
         email: user.email,
+        verificationToken: token, // TEMPORARY: Log token for testing
       });
 
       // 9. Return success response (201 Created)
@@ -427,7 +428,7 @@ export class AuthManagementController {
       // 3. If user exists, generate reset token
       if (user) {
         // Generate password reset token (1 hour expiry)
-        const { hashedToken, expiry } = generatePasswordResetToken(1);
+        const { token, hashedToken, expiry } = generatePasswordResetToken(1);
 
         // Update user with reset token
         await this.prisma.user.update({
@@ -453,6 +454,7 @@ export class AuthManagementController {
         logger.info('TODO: Send password reset email', {
           userId: user.id,
           email: user.email,
+          resetToken: token, // TEMPORARY: Log token for testing
         });
       } else {
         // Log attempt for non-existent email (security monitoring)

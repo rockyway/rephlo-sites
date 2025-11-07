@@ -21,6 +21,8 @@ import { createAPIRouter } from './api.routes';
 import adminRoutes from './admin.routes';
 import { createSwaggerRouter } from './swagger.routes';
 import { createBrandingRouter } from './branding.routes';
+import { createAuthRouter } from './auth.routes';
+import { createSocialAuthRouter } from './social-auth.routes';
 
 // Import subscription controller for webhooks
 import { SubscriptionsController } from '../controllers/subscriptions.controller';
@@ -58,6 +60,12 @@ router.get('/', (_req: Request, res: Response) => {
         ready: '/health/ready',
         live: '/health/live',
       },
+      auth: {
+        register: '/auth/register',
+        verify_email: '/auth/verify-email',
+        forgot_password: '/auth/forgot-password',
+        reset_password: '/auth/reset-password',
+      },
       oauth: {
         discovery: '/.well-known/openid-configuration',
         authorize: '/oauth/authorize',
@@ -65,6 +73,8 @@ router.get('/', (_req: Request, res: Response) => {
         revoke: '/oauth/revoke',
         userinfo: '/oauth/userinfo',
         jwks: '/oauth/jwks',
+        google_authorize: '/oauth/google/authorize',
+        google_callback: '/oauth/google/callback',
       },
       v1: {
         models: '/v1/models',
@@ -202,6 +212,15 @@ router.use('/api-docs', createSwaggerRouter());
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);
+
+// ===== Authentication Routes =====
+// User registration, email verification, password reset
+router.use('/auth', createAuthRouter());
+
+// ===== Social Authentication Routes =====
+// OAuth integration with external providers (Google)
+// Note: Mounts under /oauth/* to follow OAuth convention
+router.use('/oauth', createSocialAuthRouter());
 
 // ===== Webhook Routes =====
 // Webhook routes must be registered before body parsing middleware

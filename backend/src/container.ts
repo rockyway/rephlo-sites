@@ -221,6 +221,8 @@ import { CreditsController } from './controllers/credits.controller';
 import { WebhooksController } from './controllers/webhooks.controller';
 import { AdminController } from './controllers/admin.controller';
 import { BrandingController } from './controllers/branding.controller';
+import { AuthManagementController } from './controllers/auth-management.controller';
+import { SocialAuthController } from './controllers/social-auth.controller';
 
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
@@ -230,6 +232,8 @@ container.registerSingleton(CreditsController);
 container.registerSingleton(WebhooksController);
 container.registerSingleton(AdminController);
 container.registerSingleton(BrandingController);
+container.registerSingleton(AuthManagementController);
+container.registerSingleton(SocialAuthController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [
@@ -240,6 +244,8 @@ logger.info('DI Container: Controllers registered', {
     'WebhooksController',
     'AdminController',
     'BrandingController',
+    'AuthManagementController',
+    'SocialAuthController',
   ],
 });
 
