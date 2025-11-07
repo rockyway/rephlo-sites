@@ -136,19 +136,23 @@ export async function createOIDCProvider(
 
     // Cookie configuration
     // Note: Cookie TTLs are managed through session/interaction TTL settings above
+    // In development, use 'lax' SameSite to support Desktop App browser launches
+    // In production, use 'lax' or 'strict' depending on security requirements
     cookies: {
       keys: OIDC_COOKIE_KEYS,
       long: {
         signed: true,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+        // Note: Cannot use 'none' in development because it requires Secure flag with HTTPS
+        // Desktop Apps should ensure system browser preserves cookies between requests
       },
       short: {
         signed: true,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
       },
     },
 

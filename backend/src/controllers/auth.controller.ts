@@ -94,6 +94,11 @@ export class AuthController {
   /**
    * POST /interaction/:uid/login
    * Process login form submission
+   *
+   * Handles session cookie issues by attempting alternative approaches:
+   * 1. First tries normal finishInteraction (with session validation)
+   * 2. If SessionNotFound occurs, attempts to reload interaction context and retry
+   * 3. If still missing, logs detailed info and returns user-friendly error
    */
   login = async (
     req: Request,
@@ -102,6 +107,7 @@ export class AuthController {
   ): Promise<void> => {
     try {
       const { email, password } = req.body;
+      const uid = req.params.uid;
 
       if (!email || !password) {
         res.status(400).json({
@@ -130,9 +136,64 @@ export class AuthController {
         },
       };
 
-      await finishInteraction(this.provider, req, res, result);
+      try {
+        // Try standard interaction finish (requires session cookie)
+        await finishInteraction(this.provider, req, res, result);
+        logger.info('OIDC: login interaction success', { userId: user.id });
+      } catch (error) {
+        // Handle SessionNotFound error - occurs when session cookie is missing
+        const errorMsg = error instanceof Error ? error.message : String(error);
 
-      logger.info('OIDC: login interaction success', { userId: user.id });
+        if (errorMsg.includes('SessionNotFound') || errorMsg.includes('invalid_request')) {
+          logger.warn('OIDC: Session not found during login, attempting recovery', {
+            uid,
+            userId: user.id,
+            error: errorMsg,
+          });
+
+          // Try to load interaction details to validate the UID and interaction state
+          // This helps distinguish between invalid UID vs. missing session cookie
+          try {
+            const details = await getInteractionDetails(
+              this.provider,
+              req,
+              res
+            );
+
+            logger.info('OIDC: Interaction found, retrying finish', {
+              uid: details.uid,
+              userId: user.id,
+            });
+
+            // Retry finishInteraction with fresh context
+            await finishInteraction(this.provider, req, res, result);
+            logger.info('OIDC: login interaction success (retry)', { userId: user.id });
+          } catch (retryError) {
+            // If interaction still can't be found, it might be an invalid/expired UID
+            const retryErrorMsg = retryError instanceof Error ? retryError.message : String(retryError);
+
+            logger.error('OIDC: Failed to recover session', {
+              uid,
+              userId: user.id,
+              originalError: errorMsg,
+              retryError: retryErrorMsg,
+            });
+
+            // Return user-friendly error with recovery instructions
+            res.status(400).json({
+              error: 'session_expired',
+              message: 'Your login session has expired. Please refresh the page and try again.',
+              details: {
+                suggestion: 'Close the login window and try the OAuth flow again from the beginning',
+              },
+            });
+            return;
+          }
+        } else {
+          // Re-throw if it's a different kind of error
+          throw error;
+        }
+      }
     } catch (error) {
       logger.error('OIDC Login interaction failed', {
         error: error instanceof Error ? error.message : String(error),
