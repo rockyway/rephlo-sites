@@ -16,17 +16,11 @@
  */
 
 import { Router, Request, Response } from 'express';
-import oauthRoutes from './oauth.routes';
 import { createV1Router } from './v1.routes';
 import { createAPIRouter } from './api.routes';
 import adminRoutes from './admin.routes';
 import { createSwaggerRouter } from './swagger.routes';
-
-// Import existing branding website API handlers
-import { trackDownload } from '../api/downloads';
-import { submitFeedback } from '../api/feedback';
-import { uploadDiagnostic, uploadMiddleware, handleMulterError } from '../api/diagnostics';
-import { getLatestVersion } from '../api/version';
+import { createBrandingRouter } from './branding.routes';
 
 // Import subscription controller for webhooks
 import { SubscriptionsController } from '../controllers/subscriptions.controller';
@@ -195,12 +189,8 @@ router.get('/health/live', (_req: Request, res: Response) => {
   });
 });
 
-// ===== OAuth/OIDC Routes =====
-// OIDC Discovery is at root level: /.well-known/openid-configuration
-// All other OAuth routes are under /oauth
-router.use('/', oauthRoutes);
-
 // ===== REST API v1 Routes =====
+// Note: OAuth/OIDC routes are mounted in app.ts after application routes
 router.use('/v1', createV1Router());
 
 // ===== Enhanced API Routes (Phase 3) =====
@@ -227,48 +217,10 @@ router.post(
   asyncHandler(subscriptionsController.handleStripeWebhook.bind(subscriptionsController))
 );
 
-// ===== Branding Website API Routes (Existing) =====
-// These routes maintain backward compatibility with the existing branding website
-
-/**
- * POST /api/track-download
- * Log download event and return download URL
- */
-router.post('/api/track-download', trackDownload);
-
-/**
- * POST /api/feedback
- * Submit user feedback
- */
-router.post('/api/feedback', submitFeedback);
-
-/**
- * POST /api/diagnostics
- * Upload diagnostic file (multipart/form-data)
- */
-router.post('/api/diagnostics', uploadMiddleware, handleMulterError, uploadDiagnostic);
-
-/**
- * GET /api/version
- * Get latest app version metadata
- */
-router.get('/api/version', getLatestVersion);
-
-/**
- * GET /api
- * Branding API overview (for backward compatibility)
- */
-router.get('/api', (_req: Request, res: Response) => {
-  res.json({
-    message: 'Rephlo Branding Website API',
-    version: '1.0.0',
-    endpoints: [
-      'POST /api/track-download',
-      'POST /api/feedback',
-      'POST /api/diagnostics',
-      'GET /api/version',
-    ],
-  });
-});
+// ===== Branding Website API Routes =====
+// Public branding website endpoints (no authentication required)
+// Migrated to BrandingController with DI pattern
+// Note: Must mount at /api prefix to maintain backward compatibility
+router.use('/api', createBrandingRouter());
 
 export default router;
