@@ -452,6 +452,544 @@ paths:
   # AUTHENTICATION ENDPOINTS
   # =============================================================================
 
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user account
+      description: |
+        Register a new user account with email verification.
+
+        **Rate Limit**: 5 requests per hour per IP address
+
+        **Password Requirements**:
+        - Minimum 8 characters
+        - At least 1 uppercase letter
+        - At least 1 lowercase letter
+        - At least 1 number
+        - At least 1 special character (!@#$%^&*)
+
+        **Username Requirements**:
+        - 3-30 characters
+        - Alphanumeric and underscore only
+        - Must be unique
+
+        **Flow**:
+        1. Validate request data
+        2. Check email and username uniqueness
+        3. Hash password with bcrypt
+        4. Create user record in database
+        5. Generate email verification token (TODO: Send verification email in Phase 4)
+        6. Return 201 Created with user ID
+
+        **Note**: User must verify email before first login
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+            example:
+              email: "user@example.com"
+              password: "SecurePass123!"
+              username: "john_doe"
+              firstName: "John"
+              lastName: "Doe"
+              acceptedTerms: true
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+              example:
+                id: "clx9a8b7c6d5e4f3g2h1"
+                email: "user@example.com"
+                emailVerified: false
+                message: "Registration successful. Please check your email to verify your account."
+        '400':
+          description: Validation error or weak password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [validation_error, weak_password]
+                      message:
+                        type: string
+                      details:
+                        type: object
+              examples:
+                validationError:
+                  value:
+                    error:
+                      code: "validation_error"
+                      message: "Registration validation failed"
+                      details:
+                        errors:
+                          - "email: Invalid email format"
+                          - "password: Password must be at least 8 characters"
+                weakPassword:
+                  value:
+                    error:
+                      code: "weak_password"
+                      message: "Password does not meet strength requirements"
+                      details:
+                        errors:
+                          - "Password must contain at least one uppercase letter"
+                          - "Password must contain at least one special character"
+        '409':
+          description: Email or username already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [email_exists, username_taken]
+                      message:
+                        type: string
+              examples:
+                emailExists:
+                  value:
+                    error:
+                      code: "email_exists"
+                      message: "An account with this email already exists"
+                usernameTaken:
+                  value:
+                    error:
+                      code: "username_taken"
+                      message: "This username is already taken"
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/verify-email:
+    post:
+      tags:
+        - Authentication
+      summary: Verify email address
+      description: |
+        Verify user email with verification token.
+
+        **Rate Limit**: 10 requests per hour per IP address
+
+        **Token Details**:
+        - 64-character hexadecimal string
+        - Valid for 24 hours
+        - Single-use (invalidated after verification)
+        - Securely hashed in database
+
+        **Flow**:
+        1. Validate token and email
+        2. Check token expiration
+        3. Verify token matches stored hash
+        4. Mark email as verified
+        5. Clear verification token
+
+        **Note**: Already verified emails will return 400 error
+      operationId: verifyEmail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+            example:
+              token: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"
+              email: "user@example.com"
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+              example:
+                success: true
+                message: "Email verified successfully. You can now log in."
+        '400':
+          description: Invalid token, expired, or already verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [validation_error, invalid_token, already_verified, no_token, token_expired]
+                      message:
+                        type: string
+              examples:
+                invalidToken:
+                  value:
+                    error:
+                      code: "invalid_token"
+                      message: "Invalid verification token or email"
+                alreadyVerified:
+                  value:
+                    error:
+                      code: "already_verified"
+                      message: "Email is already verified"
+                tokenExpired:
+                  value:
+                    error:
+                      code: "token_expired"
+                      message: "Verification token has expired. Please request a new one."
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "invalid_token"
+                      message:
+                        type: string
+                        example: "Invalid verification token or email"
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: |
+        Request password reset token via email.
+
+        **Rate Limit**: 3 requests per hour per IP address
+
+        **Security Features**:
+        - Always returns success (prevents email enumeration)
+        - Token valid for 1 hour
+        - Single-use token
+        - Invalidates previous reset tokens
+
+        **Token Details**:
+        - 64-character hexadecimal string
+        - Securely hashed in database
+        - Expires after 1 hour
+
+        **Flow**:
+        1. Validate email format
+        2. Find user (don't reveal if exists)
+        3. Generate reset token (if user exists)
+        4. Store hashed token with expiry
+        5. TODO Phase 4: Send reset email
+        6. Return generic success message
+
+        **Note**: Email is always sent to prevent user enumeration attacks
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            example:
+              email: "user@example.com"
+      responses:
+        '200':
+          description: Success response (always returned)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+              example:
+                success: true
+                message: "If an account exists with this email, a password reset link has been sent."
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "validation_error"
+                      message:
+                        type: string
+                        example: "Forgot password validation failed"
+                      details:
+                        type: object
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      description: |
+        Complete password reset using token from forgot-password request.
+
+        **Rate Limit**: 3 requests per hour per IP address
+
+        **Password Requirements**:
+        - Minimum 8 characters
+        - At least 1 uppercase letter
+        - At least 1 lowercase letter
+        - At least 1 number
+        - At least 1 special character (!@#$%^&*)
+
+        **Flow**:
+        1. Validate token, email, and new password
+        2. Check token expiration (1 hour)
+        3. Verify token matches stored hash
+        4. Hash new password
+        5. Update password and clear reset token
+        6. Update lastPasswordChange timestamp
+        7. TODO Phase 4: Send confirmation email
+        8. TODO: Invalidate all existing sessions
+
+        **Security**:
+        - Single-use token (cleared after use)
+        - Password strength validation
+        - All sessions should be invalidated
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            example:
+              token: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"
+              email: "user@example.com"
+              newPassword: "NewSecurePass123!"
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericSuccessResponse'
+              example:
+                success: true
+                message: "Password reset successfully. Please log in with your new password."
+        '400':
+          description: Invalid token, expired, or weak password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        enum: [validation_error, invalid_token, no_token, token_expired, weak_password]
+                      message:
+                        type: string
+                      details:
+                        type: object
+              examples:
+                invalidToken:
+                  value:
+                    error:
+                      code: "invalid_token"
+                      message: "Invalid reset token or email"
+                tokenExpired:
+                  value:
+                    error:
+                      code: "token_expired"
+                      message: "Password reset token has expired. Please request a new one."
+                weakPassword:
+                  value:
+                    error:
+                      code: "weak_password"
+                      message: "New password does not meet strength requirements"
+                      details:
+                        errors:
+                          - "Password must contain at least one uppercase letter"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "invalid_token"
+                      message:
+                        type: string
+                        example: "Invalid reset token or email"
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /oauth/google/authorize:
+    get:
+      tags:
+        - Authentication
+      summary: Initiate Google OAuth login
+      description: |
+        Initiate Google OAuth 2.0 authorization flow.
+
+        **Rate Limit**: 10 requests per minute per IP address
+
+        **Flow**:
+        1. Generate random state parameter (CSRF protection)
+        2. Build Google OAuth authorization URL
+        3. Redirect user to Google's consent screen
+
+        **Scopes Requested**:
+        - `userinfo.profile` - User's profile information
+        - `userinfo.email` - User's email address
+
+        **Security**:
+        - CSRF protection via state parameter
+        - Offline access for refresh tokens
+        - Force consent screen to ensure refresh token
+
+        **Response**: HTTP 302 redirect to Google
+
+        **Error Handling**: Redirects to `/login?error=google_oauth_not_configured` if credentials missing
+      operationId: googleOAuthAuthorize
+      security: []
+      responses:
+        '302':
+          description: Redirect to Google OAuth consent screen
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "https://accounts.google.com/o/oauth2/v2/auth?client_id=...&redirect_uri=...&response_type=code&scope=...&state=...&access_type=offline&prompt=consent"
+        '500':
+          description: Google OAuth not configured
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "/login?error=google_oauth_not_configured"
+
+  /oauth/google/callback:
+    get:
+      tags:
+        - Authentication
+      summary: Handle Google OAuth callback
+      description: |
+        Handle Google OAuth callback after user authorizes.
+
+        **Rate Limit**: 10 requests per minute per IP address
+
+        **Flow**:
+        1. Verify state parameter (CSRF protection)
+        2. Exchange authorization code for access token
+        3. Fetch user profile from Google
+        4. Verify email is confirmed by Google
+        5. Find existing user or create new user:
+           - By Google ID (existing Google user)
+           - By email (link to existing account)
+           - Create new user from profile
+        6. Mark email as verified (trust Google)
+        7. TODO Phase 3: Create OIDC session
+        8. Redirect to app with success
+
+        **User Creation**:
+        - Email marked as verified (trust Google)
+        - Username generated from email
+        - Random password hash (not used)
+        - authProvider set to 'google'
+
+        **Account Linking**:
+        - Existing email/password users can link Google account
+        - Google ID added to existing user record
+
+        **Response**: HTTP 302 redirect to login page with status
+      operationId: googleOAuthCallback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from Google
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: CSRF protection token
+        - name: error
+          in: query
+          schema:
+            type: string
+          description: Error code if user denied access
+      responses:
+        '302':
+          description: Redirect to app with status
+          headers:
+            Location:
+              schema:
+                type: string
+              examples:
+                success:
+                  value: "/login?google_success=true&user_id=clx9a8b7c6d5e4f3g2h1"
+                  summary: Successful Google login
+                error:
+                  value: "/login?error=google_oauth_failed"
+                  summary: User denied access or error occurred
+        '500':
+          description: OAuth callback error
+          headers:
+            Location:
+              schema:
+                type: string
+              examples:
+                missingCode:
+                  value: "/login?error=missing_code"
+                  summary: Authorization code missing
+                invalidState:
+                  value: "/login?error=invalid_state"
+                  summary: State parameter missing or invalid
+                emailNotVerified:
+                  value: "/login?error=email_not_verified"
+                  summary: Google account email not verified
+                userCreationFailed:
+                  value: "/login?error=user_creation_failed"
+                  summary: Failed to create/find user
+
   /oauth/token/enhance:
     post:
       tags:
@@ -2006,6 +2544,163 @@ components:
         Example: `Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...`
 
   schemas:
+    # =============================================================================
+    # AUTHENTICATION SCHEMAS
+    # =============================================================================
+
+    RegistrationRequest:
+      type: object
+      required:
+        - email
+        - password
+        - username
+        - firstName
+        - lastName
+        - acceptedTerms
+      properties:
+        email:
+          type: string
+          format: email
+          description: Valid email address (must be unique)
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 100
+          description: |
+            Password must meet the following requirements:
+            - Minimum 8 characters
+            - At least 1 uppercase letter
+            - At least 1 lowercase letter
+            - At least 1 number
+            - At least 1 special character (!@#$%^&*)
+          example: "SecurePass123!"
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          pattern: '^[a-zA-Z0-9_]+$'
+          description: Username (3-30 chars, alphanumeric + underscore, must be unique)
+          example: "john_doe"
+        firstName:
+          type: string
+          minLength: 1
+          description: User's first name
+          example: "John"
+        lastName:
+          type: string
+          minLength: 1
+          description: User's last name
+          example: "Doe"
+        acceptedTerms:
+          type: boolean
+          enum: [true]
+          description: User must accept terms of service (must be true)
+          example: true
+
+    RegistrationResponse:
+      type: object
+      required:
+        - id
+        - email
+        - emailVerified
+        - message
+      properties:
+        id:
+          type: string
+          description: Unique user ID
+          example: "clx9a8b7c6d5e4f3g2h1"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        emailVerified:
+          type: boolean
+          description: Email verification status (false for new registrations)
+          example: false
+        message:
+          type: string
+          description: Success message with next steps
+          example: "Registration successful. Please check your email to verify your account."
+
+    EmailVerificationRequest:
+      type: object
+      required:
+        - token
+        - email
+      properties:
+        token:
+          type: string
+          minLength: 64
+          maxLength: 64
+          pattern: '^[a-f0-9]{64}$'
+          description: 64-character hexadecimal verification token
+          example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"
+        email:
+          type: string
+          format: email
+          description: Email address to verify
+          example: "user@example.com"
+
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address for password reset
+          example: "user@example.com"
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - email
+        - newPassword
+      properties:
+        token:
+          type: string
+          minLength: 64
+          maxLength: 64
+          pattern: '^[a-f0-9]{64}$'
+          description: 64-character hexadecimal reset token
+          example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2"
+        email:
+          type: string
+          format: email
+          description: Email address of account to reset
+          example: "user@example.com"
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 100
+          description: |
+            New password must meet the following requirements:
+            - Minimum 8 characters
+            - At least 1 uppercase letter
+            - At least 1 lowercase letter
+            - At least 1 number
+            - At least 1 special character (!@#$%^&*)
+          example: "NewSecurePass123!"
+
+    GenericSuccessResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Human-readable success message
+          example: "Operation completed successfully"
+
     # =============================================================================
     # USER SCHEMAS
     # =============================================================================
