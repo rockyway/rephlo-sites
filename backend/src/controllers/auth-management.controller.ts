@@ -36,6 +36,7 @@ import {
   isTokenExpired,
 } from '../utils/token-generator';
 import { validatePasswordStrength } from '../utils/password-strength';
+import { IEmailService } from '../services/email/email.service.interface';
 import bcrypt from 'bcrypt';
 
 const BCRYPT_SALT_ROUNDS = 12;
@@ -73,8 +74,11 @@ function errorResponse(code: string, message: string, statusCode: number = 400, 
 
 @injectable()
 export class AuthManagementController {
-  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
-    logger.debug('AuthManagementController: Initialized');
+  constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
+    @inject('IEmailService') private emailService: IEmailService
+  ) {
+    logger.debug('AuthManagementController: Initialized with email service');
   }
 
   // ===========================================================================
@@ -197,15 +201,10 @@ export class AuthManagementController {
         username: user.username,
       });
 
-      // TODO Phase 4: Send verification email
-      // await emailService.sendVerificationEmail(email, token);
-      logger.info('TODO: Send verification email', {
-        userId: user.id,
-        email: user.email,
-        verificationToken: token, // TEMPORARY: Log token for testing
-      });
+      // 9. Send verification email (async - don't block registration on email failure)
+      await this.emailService.sendVerificationEmail(email, token, username);
 
-      // 9. Return success response (201 Created)
+      // 10. Return success response (201 Created)
       const response = successResponse(
         {
           id: user.id,
@@ -449,13 +448,8 @@ export class AuthManagementController {
           resetCount: user.passwordResetCount + 1,
         });
 
-        // TODO Phase 4: Send password reset email
-        // await emailService.sendPasswordResetEmail(email, token);
-        logger.info('TODO: Send password reset email', {
-          userId: user.id,
-          email: user.email,
-          resetToken: token, // TEMPORARY: Log token for testing
-        });
+        // Send password reset email (async - don't block on email failure)
+        await this.emailService.sendPasswordResetEmail(email, token, user.username || user.email);
       } else {
         // Log attempt for non-existent email (security monitoring)
         logger.warn('Password reset requested for non-existent email', {
@@ -616,16 +610,12 @@ export class AuthManagementController {
         email: user.email,
       });
 
-      // TODO Phase 4: Send password changed confirmation email
-      // await emailService.sendPasswordChangedEmail(email);
-      logger.info('TODO: Send password changed confirmation email', {
-        userId: user.id,
-        email: user.email,
-      });
+      // 10. Send password changed confirmation email (async - don't block on email failure)
+      await this.emailService.sendPasswordChangedEmail(email, user.username || user.email);
 
       // TODO: Optionally invalidate all existing sessions/tokens for this user
 
-      // 10. Return success response
+      // 11. Return success response
       const response = successResponse({
         success: true,
         message: 'Password reset successfully. Please log in with your new password.',

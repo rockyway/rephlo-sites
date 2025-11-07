@@ -184,6 +184,8 @@ import { ModelService } from './services/model.service';
 import { WebhookService } from './services/webhook.service';
 import { UsageRecorder } from './services/llm/usage-recorder';
 import { LLMService } from './services/llm.service';
+import { IEmailService } from './services/email/email.service.interface';
+import { SendGridEmailService } from './services/email/sendgrid-email.service';
 
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
@@ -192,6 +194,9 @@ container.register('ICreditService', { useClass: CreditService });
 container.register('IUsageService', { useClass: UsageService });
 container.register('IModelService', { useClass: ModelService });
 container.register('IWebhookService', { useClass: WebhookService });
+
+// Register Email Service (Phase 4)
+container.register<IEmailService>('IEmailService', { useClass: SendGridEmailService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -205,6 +210,7 @@ logger.info('DI Container: Core services registered', {
     'UsageService',
     'ModelService',
     'WebhookService',
+    'EmailService',
     'LLMService',
     'UsageRecorder',
   ],
