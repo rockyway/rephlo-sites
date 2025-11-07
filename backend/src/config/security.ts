@@ -23,6 +23,8 @@ import { HelmetOptions } from 'helmet';
 const isProduction = process.env.NODE_ENV === 'production';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+// Development mode: no HTTPS requirement
+
 // ===== Content Security Policy =====
 
 /**
@@ -76,10 +78,10 @@ const contentSecurityPolicy = {
 
     // Frame ancestors (controls who can embed this site)
     frameAncestors: ["'self'"],
-
-    // Upgrade insecure requests (HTTP -> HTTPS) in production
-    ...(isProduction ? { upgradeInsecureRequests: [] } : {}),
   },
+
+  // Upgrade insecure requests (HTTP -> HTTPS) in production - NOT set in development
+  reportOnly: false, // Enforce CSP, not report-only
 
   // Report CSP violations (production only)
   ...(isProduction && process.env.CSP_REPORT_URI
@@ -207,7 +209,8 @@ const otherHeaders = {
  * Export this for use in app.ts
  */
 export const helmetConfig: Readonly<HelmetOptions> = {
-  contentSecurityPolicy,
+  // Disable CSP in development to avoid HTTPS upgrade issues
+  contentSecurityPolicy: isDevelopment ? false : contentSecurityPolicy,
   hsts,
   referrerPolicy,
   frameguard,
