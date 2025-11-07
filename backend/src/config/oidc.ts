@@ -164,6 +164,15 @@ export async function createOIDCProvider(
       },
     },
 
+    // Routes configuration - use standard OAuth 2.0 paths
+    routes: {
+      authorization: '/oauth/authorize',
+      token: '/oauth/token',
+      userinfo: '/oauth/userinfo',
+      revocation: '/oauth/revoke',
+      jwks: '/oauth/jwks',
+    },
+
     // Subject types (public or pairwise)
     subjectTypes: ['public'],
 
