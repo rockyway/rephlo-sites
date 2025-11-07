@@ -132,6 +132,26 @@ model User {
   isActive           Boolean   @default(true) @map("is_active")
   deletedAt          DateTime? @map("deleted_at")
 
+  // Email Verification Fields
+  emailVerificationToken       String?   @map("email_verification_token") @db.VarChar(255)
+  emailVerificationTokenExpiry DateTime? @map("email_verification_token_expiry")
+
+  // Password Reset Fields
+  passwordResetToken           String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetTokenExpiry     DateTime? @map("password_reset_token_expiry")
+
+  // Account Management Fields
+  deactivatedAt                DateTime? @map("deactivated_at")
+
+  // Social Auth Fields
+  googleId                     String?   @unique @map("google_id") @db.VarChar(255)
+  googleProfileUrl             String?   @map("google_profile_url") @db.Text
+  authProvider                 String    @default("local") @map("auth_provider") @db.VarChar(50)
+
+  // Security/Audit Fields
+  lastPasswordChange           DateTime? @map("last_password_change")
+  passwordResetCount           Int       @default(0) @map("password_reset_count")
+
   // Relations
   subscriptions   Subscription[]
   credits         Credit[]
@@ -141,6 +161,7 @@ model User {
 
   @@index([email])
   @@index([createdAt])
+  @@index([googleId])
   @@map("users")
 }
 

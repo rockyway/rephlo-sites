@@ -34,6 +34,21 @@ export class MockAuthService implements IAuthService {
       lastLoginAt: null,
       deletedAt: null,
       profilePictureUrl: null,
+      // Email verification fields
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
+      // Password reset fields
+      passwordResetToken: null,
+      passwordResetTokenExpiry: null,
+      // Account management fields
+      deactivatedAt: null,
+      // Social auth fields
+      googleId: null,
+      googleProfileUrl: null,
+      authProvider: 'local',
+      // Security/audit fields
+      lastPasswordChange: null,
+      passwordResetCount: 0,
     };
 
     this.users.set(user.id, user);
