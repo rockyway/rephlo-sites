@@ -16,44 +16,12 @@
  * Reference: docs/plan/102-api-consolidation-plan.md
  */
 
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { container } from '../container';
 import { asyncHandler } from '../middleware/error.middleware';
-import rateLimit from 'express-rate-limit';
+import { createIPRateLimiter } from '../middleware/ratelimit.middleware';
 import { BrandingController } from '../controllers/branding.controller';
 import logger from '../utils/logger';
-
-/**
- * Create IP-based rate limiter for branding endpoints
- * Prevents abuse of public API endpoints
- *
- * @param maxRequests Maximum requests per minute per IP
- * @returns Express rate limiter middleware
- */
-function createIPRateLimiter(maxRequests: number) {
-  return rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: maxRequests,
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Legacy error format for backward compatibility
-    message: {
-      success: false,
-      error: `Too many requests, please try again later. Limit: ${maxRequests} requests per minute.`,
-    },
-    handler: (req: Request, res: Response) => {
-      logger.warn('Rate limit exceeded for branding endpoint', {
-        ip: req.ip,
-        path: req.path,
-        forwarded: req.headers['x-forwarded-for'],
-      });
-      res.status(429).json({
-        success: false,
-        error: `Too many requests, please try again later. Limit: ${maxRequests} requests per minute.`,
-      });
-    },
-  });
-}
 
 /**
  * Create branding router

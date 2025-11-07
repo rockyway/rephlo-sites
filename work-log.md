@@ -349,3 +349,13 @@ IPv6 addresses can be represented multiple ways (e.g., ::1, 0:0:0:0:0:0:0:1), al
 - Installed swagger-ui-express and yamljs dependencies
 - Build verification: Successful
 - Server needs restart to apply changes: npm run dev
+
+## 2025-11-06 - API Consolidation Phase 1 Complete
+- ✅ Created BrandingController with DI pattern for legacy branding endpoints
+- ✅ Created branding.routes.ts with IPv6-safe rate limiting
+- ✅ Migrated 4 endpoints: track-download, feedback, version, diagnostics
+- ✅ Maintained backward-compatible response format {success:true, data:...}
+- ✅ Tested all migrated endpoints - working correctly
+- ✅ Removed legacy files: diagnostics.ts, downloads.ts, feedback.ts, version.ts
+- 📝 admin.ts remains for Phase 2 modernization
+- 📍 Next: Swagger documentation update (Phase 2)

@@ -1,26 +1,40 @@
 openapi: 3.0.3
 info:
-  title: Text Assistant Enhanced API
+  title: Rephlo Backend API
   description: |
-    Enhanced API endpoints for desktop application integration.
+    Complete REST API documentation for the Rephlo Backend system.
 
-    These endpoints provide detailed credit information, user profile data,
-    and enhanced OAuth token responses for efficient client integration.
+    This API provides endpoints for:
+    - OAuth 2.0 / OpenID Connect authentication
+    - AI model inference and management
+    - User profile and preferences
+    - Credit and usage tracking
+    - Subscription management
+    - Webhook configuration
+    - Public branding website endpoints
+    - Administrative endpoints
 
     ## Authentication
-    All endpoints require Bearer token authentication using JWT access tokens
-    obtained through the OAuth 2.0 flow.
+    Most endpoints require Bearer token authentication using JWT access tokens
+    obtained through the OAuth 2.0 authorization flow.
 
     ## Rate Limiting
-    - GET /api/user/credits: 60 requests/minute
-    - GET /api/user/profile: 30 requests/minute
-    - POST /oauth/token/enhance: 30 requests/minute
+    Rate limits vary by endpoint and are documented per endpoint.
+    Rate limit headers are included in responses:
+    - `X-RateLimit-Limit` - Maximum requests per window
+    - `X-RateLimit-Remaining` - Remaining requests
+    - `X-RateLimit-Reset` - Time when the limit resets
 
-    ## Scopes
+    ## OAuth Scopes
+    - `openid` - OpenID Connect basic scope
+    - `profile` - User profile information
+    - `email` - User email address
+    - `user.info` - Access to user profile and preferences
     - `credits.read` - Access to credit information
-    - `user.info` - Access to user profile information
+    - `models.read` - Access to model information
+    - `llm.inference` - Permission to make inference requests
 
-  version: 1.1.0
+  version: 2.0.0
   contact:
     name: API Support
     url: https://textassistant.com/support
@@ -31,156 +45,331 @@ servers:
     description: Production API
   - url: https://staging-api.textassistant.com
     description: Staging API
-  - url: http://localhost:3000
+  - url: http://localhost:7150
     description: Local Development
 
 security:
   - bearerAuth: []
 
 tags:
+  - name: Health
+    description: Health check and status endpoints
+  - name: Branding
+    description: Public branding website endpoints (no authentication)
+  - name: Authentication
+    description: OAuth 2.0 / OIDC authentication endpoints
+  - name: Users
+    description: User profile and preferences management
   - name: Credits
-    description: Credit balance and usage information
-  - name: User Profile
-    description: User account and profile information
-  - name: OAuth Enhancement
-    description: Enhanced OAuth token responses
+    description: Credit balance and usage tracking
+  - name: Models
+    description: Available AI models and inference endpoints
+  - name: Subscriptions
+    description: Subscription plans and management
+  - name: Webhooks
+    description: User webhook configuration
+  - name: Admin
+    description: Administrative endpoints (requires admin role)
 
 paths:
-  /api/user/credits:
+  # =============================================================================
+  # HEALTH & INFO ENDPOINTS
+  # =============================================================================
+
+  /:
     get:
       tags:
-        - Credits
-      summary: Get detailed credit information
-      description: |
-        Retrieve detailed credit usage information for the authenticated user.
-
-        Returns separate breakdown of:
-        - Free credits (monthly allocation with reset date)
-        - Pro credits (purchased credits with lifetime usage)
-
-        **Caching Recommendation**: Cache this response for 5 minutes on the client side.
-        Re-fetch after credit-consuming API calls or on app startup if cached data > 5 minutes old.
-
-        **Rate Limit**: 60 requests per minute
-
-      operationId: getDetailedCredits
-      security:
-        - bearerAuth: [credits.read]
+        - Health
+      summary: API overview
+      description: Get API information and available endpoints
+      operationId: getApiOverview
+      security: []
       responses:
         '200':
-          description: Successful response with detailed credit breakdown
+          description: API overview response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DetailedCreditsResponse'
-              examples:
-                freeTierUser:
-                  summary: Free tier user
-                  value:
-                    freeCredits:
-                      remaining: 1500
-                      monthlyAllocation: 2000
-                      used: 500
-                      resetDate: "2025-12-01T00:00:00Z"
-                      daysUntilReset: 25
-                    proCredits:
-                      remaining: 0
-                      purchasedTotal: 0
-                      lifetimeUsed: 0
-                    totalAvailable: 1500
-                    lastUpdated: "2025-11-06T14:30:00Z"
-                proTierUser:
-                  summary: Pro tier user with purchased credits
-                  value:
-                    freeCredits:
-                      remaining: 2000
-                      monthlyAllocation: 2000
-                      used: 0
-                      resetDate: "2025-12-01T00:00:00Z"
-                      daysUntilReset: 25
-                    proCredits:
-                      remaining: 5000
-                      purchasedTotal: 10000
-                      lifetimeUsed: 5000
-                    totalAvailable: 7000
-                    lastUpdated: "2025-11-06T14:30:00Z"
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "Rephlo Backend API"
+                  version:
+                    type: string
+                    example: "2.0.0"
+                  description:
+                    type: string
+                  documentation:
+                    type: string
+                    example: "/api-docs"
+                  health:
+                    type: string
+                    example: "/health"
+                  endpoints:
+                    type: object
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Returns server status and diagnostics
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Health check response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: integer
+                    description: Server uptime in seconds
+                  environment:
+                    type: string
+                    example: "production"
+                  version:
+                    type: string
+                  services:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "connected"
+                      redis:
+                        type: string
+                        example: "configured"
+                      di_container:
+                        type: string
+                        example: "initialized"
+                  memory:
+                    type: object
+                    properties:
+                      used:
+                        type: number
+                      total:
+                        type: number
+
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      description: Checks database connectivity and critical dependencies
+      operationId: getReadiness
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ready"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  checks:
+                    type: object
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "not_ready"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  checks:
+                    type: object
+
+  /health/live:
+    get:
+      tags:
+        - Health
+      summary: Liveness check
+      description: Simple check to verify the server is running
+      operationId: getLiveness
+      security: []
+      responses:
+        '200':
+          description: Server is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "alive"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  # =============================================================================
+  # BRANDING ENDPOINTS (Public, no authentication)
+  # =============================================================================
+
+  /api/track-download:
+    post:
+      tags:
+        - Branding
+      summary: Track download event
+      description: |
+        Track download events with OS, user agent, and hashed IP.
+
+        **Rate Limit**: 100 requests per minute per IP
+      operationId: trackDownload
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - os
+              properties:
+                os:
+                  type: string
+                  enum: [windows, macos, linux]
+                  description: Operating system
+            example:
+              os: "windows"
+      responses:
+        '200':
+          description: Download tracked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      downloadUrl:
+                        type: string
+                      downloadId:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '429':
           $ref: '#/components/responses/RateLimitError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /api/user/profile:
-    get:
+  /api/feedback:
+    post:
       tags:
-        - User Profile
-      summary: Get user profile and account information
+        - Branding
+      summary: Submit user feedback
       description: |
-        Retrieve authenticated user's complete profile including:
-        - Email and display name
-        - Subscription tier and status
-        - User preferences (default model, notification settings)
-        - Account timestamps
+        Submit user feedback to the system.
 
-        **Caching Recommendation**: Cache this response for 1 hour on the client side.
-        Re-fetch only when profile data is explicitly needed (e.g., settings page).
-
-        **Rate Limit**: 30 requests per minute
-
-      operationId: getUserProfile
-      security:
-        - bearerAuth: [user.info]
+        **Rate Limit**: 100 requests per minute per IP
+      operationId: submitFeedback
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  description: Feedback message
+                email:
+                  type: string
+                  format: email
+                  description: Optional email for follow-up
+                userId:
+                  type: string
+                  description: Optional user ID
+            example:
+              message: "Great application! Would love to see feature X."
+              email: "user@example.com"
       responses:
-        '200':
-          description: Successful response with user profile
+        '201':
+          description: Feedback submitted successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfileResponse'
-              examples:
-                proUser:
-                  summary: Pro tier user profile
-                  value:
-                    userId: "usr_abc123xyz"
-                    email: "user@example.com"
-                    displayName: "John Doe"
-                    subscription:
-                      tier: "pro"
-                      status: "active"
-                      currentPeriodStart: "2025-11-01T00:00:00Z"
-                      currentPeriodEnd: "2025-12-01T00:00:00Z"
-                      cancelAtPeriodEnd: false
-                    preferences:
-                      defaultModel: "gpt-5"
-                      emailNotifications: true
-                      usageAlerts: true
-                    accountCreatedAt: "2024-01-15T10:30:00Z"
-                    lastLoginAt: "2025-11-06T08:00:00Z"
-                freeUser:
-                  summary: Free tier user profile
-                  value:
-                    userId: "usr_def456uvw"
-                    email: "newuser@example.com"
-                    displayName: "Jane Smith"
-                    subscription:
-                      tier: "free"
-                      status: "active"
-                      currentPeriodStart: "2025-11-01T00:00:00Z"
-                      currentPeriodEnd: "2025-12-01T00:00:00Z"
-                      cancelAtPeriodEnd: false
-                    preferences:
-                      defaultModel: "gpt-4"
-                      emailNotifications: true
-                      usageAlerts: true
-                    accountCreatedAt: "2025-10-15T14:20:00Z"
-                    lastLoginAt: "2025-11-06T09:15:00Z"
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      feedbackId:
+                        type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/version:
+    get:
+      tags:
+        - Branding
+      summary: Get latest app version
+      description: |
+        Get latest app version metadata including download URL and changelog.
+
+        **Rate Limit**: 100 requests per minute per IP
+      operationId: getLatestVersion
+      security: []
+      responses:
+        '200':
+          description: Version information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+                        example: "1.2.0"
+                      releaseDate:
+                        type: string
+                        format: date-time
+                      downloadUrl:
+                        type: string
+                      changelog:
+                        type: string
         '404':
           $ref: '#/components/responses/NotFoundError'
         '429':
@@ -188,10 +377,85 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/diagnostics:
+    post:
+      tags:
+        - Branding
+      summary: Upload diagnostic file
+      description: |
+        Upload diagnostic files for troubleshooting.
+
+        **Max File Size**: 5MB
+
+        **Allowed Types**: .json, .log, .txt, .zip
+
+        **Rate Limit**: 100 requests per minute per IP
+      operationId: uploadDiagnostic
+      security: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Diagnostic file
+                userId:
+                  type: string
+                  description: Optional user ID
+      responses:
+        '201':
+          description: Diagnostic file uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      diagnosticId:
+                        type: string
+                      fileSize:
+                        type: integer
+        '400':
+          description: Invalid file type or size
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================================================
+  # AUTHENTICATION ENDPOINTS
+  # =============================================================================
+
   /oauth/token/enhance:
     post:
       tags:
-        - OAuth Enhancement
+        - Authentication
       summary: Enhance OAuth token with user data and credits
       description: |
         Enhance an OAuth token response with user profile and/or credit information.
@@ -206,7 +470,7 @@ paths:
         **Rate Limit**: 30 requests per minute
 
       operationId: enhanceTokenResponse
-      security: []  # No bearer auth required - uses access_token in body
+      security: []
       requestBody:
         required: true
         content:
@@ -276,6 +540,1017 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  # =============================================================================
+  # USER ENDPOINTS
+  # =============================================================================
+
+  /api/user/profile:
+    get:
+      tags:
+        - Users
+      summary: Get detailed user profile
+      description: |
+        Retrieve authenticated user's complete profile including:
+        - Email and display name
+        - Subscription tier and status
+        - User preferences (default model, notification settings)
+        - Account timestamps
+
+        **Caching Recommendation**: Cache this response for 1 hour on the client side.
+        Re-fetch only when profile data is explicitly needed (e.g., settings page).
+
+        **Rate Limit**: 30 requests per minute
+
+      operationId: getUserProfile
+      security:
+        - bearerAuth: [user.info]
+      responses:
+        '200':
+          description: Successful response with user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+              examples:
+                proUser:
+                  summary: Pro tier user profile
+                  value:
+                    userId: "usr_abc123xyz"
+                    email: "user@example.com"
+                    displayName: "John Doe"
+                    subscription:
+                      tier: "pro"
+                      status: "active"
+                      currentPeriodStart: "2025-11-01T00:00:00Z"
+                      currentPeriodEnd: "2025-12-01T00:00:00Z"
+                      cancelAtPeriodEnd: false
+                    preferences:
+                      defaultModel: "gpt-5"
+                      emailNotifications: true
+                      usageAlerts: true
+                    accountCreatedAt: "2024-01-15T10:30:00Z"
+                    lastLoginAt: "2025-11-06T08:00:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user/credits:
+    get:
+      tags:
+        - Credits
+      summary: Get detailed credit information
+      description: |
+        Retrieve detailed credit usage information for the authenticated user.
+
+        Returns separate breakdown of:
+        - Free credits (monthly allocation with reset date)
+        - Pro credits (purchased credits with lifetime usage)
+
+        **Caching Recommendation**: Cache this response for 5 minutes on the client side.
+        Re-fetch after credit-consuming API calls or on app startup if cached data > 5 minutes old.
+
+        **Rate Limit**: 60 requests per minute
+
+      operationId: getDetailedCredits
+      security:
+        - bearerAuth: [credits.read]
+      responses:
+        '200':
+          description: Successful response with detailed credit breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedCreditsResponse'
+              examples:
+                freeTierUser:
+                  summary: Free tier user
+                  value:
+                    freeCredits:
+                      remaining: 1500
+                      monthlyAllocation: 2000
+                      used: 500
+                      resetDate: "2025-12-01T00:00:00Z"
+                      daysUntilReset: 25
+                    proCredits:
+                      remaining: 0
+                      purchasedTotal: 0
+                      lifetimeUsed: 0
+                    totalAvailable: 1500
+                    lastUpdated: "2025-11-06T14:30:00Z"
+                proTierUser:
+                  summary: Pro tier user with purchased credits
+                  value:
+                    freeCredits:
+                      remaining: 2000
+                      monthlyAllocation: 2000
+                      used: 0
+                      resetDate: "2025-12-01T00:00:00Z"
+                      daysUntilReset: 25
+                    proCredits:
+                      remaining: 5000
+                      purchasedTotal: 10000
+                      lifetimeUsed: 5000
+                    totalAvailable: 7000
+                    lastUpdated: "2025-11-06T14:30:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user
+      description: Get current user profile
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: [user.info]
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Update current user's profile information
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: [user.info]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Display name
+                email:
+                  type: string
+                  format: email
+                  description: Email address
+      responses:
+        '200':
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/users/me/preferences:
+    get:
+      tags:
+        - Users
+      summary: Get user preferences
+      description: Get user preferences and settings
+      operationId: getUserPreferences
+      security:
+        - bearerAuth: [user.info]
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    patch:
+      tags:
+        - Users
+      summary: Update user preferences
+      description: Update user preferences and settings
+      operationId: updateUserPreferences
+      security:
+        - bearerAuth: [user.info]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/users/me/preferences/model:
+    get:
+      tags:
+        - Users
+      summary: Get default model
+      description: Get user's default AI model preference
+      operationId: getDefaultModel
+      security:
+        - bearerAuth: [user.info]
+      responses:
+        '200':
+          description: Default model
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  defaultModel:
+                    type: string
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Users
+      summary: Set default model
+      description: Set user's default AI model preference
+      operationId: setDefaultModel
+      security:
+        - bearerAuth: [user.info]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelId
+              properties:
+                modelId:
+                  type: string
+                  description: Model identifier
+      responses:
+        '200':
+          description: Default model set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  defaultModel:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # =============================================================================
+  # MODELS & INFERENCE ENDPOINTS
+  # =============================================================================
+
+  /v1/models:
+    get:
+      tags:
+        - Models
+      summary: List available models
+      description: |
+        Get list of available AI models with optional filtering.
+
+        **Rate Limit**: 60 requests per minute
+      operationId: listModels
+      security:
+        - bearerAuth: [models.read]
+      parameters:
+        - name: tier
+          in: query
+          schema:
+            type: string
+            enum: [free, pro, enterprise]
+          description: Filter by subscription tier
+        - name: modality
+          in: query
+          schema:
+            type: string
+            enum: [text, image, audio, video]
+          description: Filter by model modality
+      responses:
+        '200':
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Model'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/models/{modelId}:
+    get:
+      tags:
+        - Models
+      summary: Get model details
+      description: Get detailed information about a specific model
+      operationId: getModelDetails
+      security:
+        - bearerAuth: [models.read]
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Model identifier
+      responses:
+        '200':
+          description: Model details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/completions:
+    post:
+      tags:
+        - Models
+      summary: Text completion
+      description: |
+        Execute text completion request.
+
+        **Requires**: Sufficient credits
+
+        **Rate Limit**: Based on subscription tier
+      operationId: textCompletion
+      security:
+        - bearerAuth: [llm.inference]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - model
+                - prompt
+              properties:
+                model:
+                  type: string
+                  description: Model ID
+                prompt:
+                  type: string
+                  description: Input prompt
+                max_tokens:
+                  type: integer
+                  description: Maximum tokens to generate
+                temperature:
+                  type: number
+                  description: Sampling temperature (0-2)
+                stream:
+                  type: boolean
+                  description: Enable streaming
+      responses:
+        '200':
+          description: Completion response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  model:
+                    type: string
+                  choices:
+                    type: array
+                    items:
+                      type: object
+                  usage:
+                    type: object
+                    properties:
+                      prompt_tokens:
+                        type: integer
+                      completion_tokens:
+                        type: integer
+                      total_tokens:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '402':
+          description: Insufficient credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /v1/chat/completions:
+    post:
+      tags:
+        - Models
+      summary: Chat completion
+      description: |
+        Execute chat completion request with conversation history.
+
+        **Requires**: Sufficient credits
+
+        **Rate Limit**: Based on subscription tier
+      operationId: chatCompletion
+      security:
+        - bearerAuth: [llm.inference]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - model
+                - messages
+              properties:
+                model:
+                  type: string
+                  description: Model ID
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [system, user, assistant]
+                      content:
+                        type: string
+                max_tokens:
+                  type: integer
+                temperature:
+                  type: number
+                stream:
+                  type: boolean
+      responses:
+        '200':
+          description: Chat completion response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  model:
+                    type: string
+                  choices:
+                    type: array
+                    items:
+                      type: object
+                  usage:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '402':
+          description: Insufficient credits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  # =============================================================================
+  # SUBSCRIPTION ENDPOINTS
+  # =============================================================================
+
+  /v1/subscription-plans:
+    get:
+      tags:
+        - Subscriptions
+      summary: List subscription plans
+      description: Get available subscription plans (public endpoint)
+      operationId: listSubscriptionPlans
+      security: []
+      responses:
+        '200':
+          description: List of subscription plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        tier:
+                          type: string
+                          enum: [free, pro, enterprise]
+                        price:
+                          type: number
+                        currency:
+                          type: string
+                        interval:
+                          type: string
+                          enum: [month, year]
+                        features:
+                          type: array
+                          items:
+                            type: string
+
+  /v1/subscriptions/me:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get current subscription
+      description: Get authenticated user's current subscription
+      operationId: getCurrentSubscription
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    patch:
+      tags:
+        - Subscriptions
+      summary: Update subscription
+      description: Upgrade or downgrade subscription
+      operationId: updateSubscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planId
+              properties:
+                planId:
+                  type: string
+                  description: Target subscription plan ID
+      responses:
+        '200':
+          description: Subscription updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionInfo'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/subscriptions:
+    post:
+      tags:
+        - Subscriptions
+      summary: Create subscription
+      description: Create new subscription for authenticated user
+      operationId: createSubscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - planId
+              properties:
+                planId:
+                  type: string
+                paymentMethodId:
+                  type: string
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionInfo'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/subscriptions/me/cancel:
+    post:
+      tags:
+        - Subscriptions
+      summary: Cancel subscription
+      description: Cancel current subscription (effective at period end)
+      operationId: cancelSubscription
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionInfo'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # =============================================================================
+  # CREDITS & USAGE ENDPOINTS
+  # =============================================================================
+
+  /v1/credits/me:
+    get:
+      tags:
+        - Credits
+      summary: Get current credits
+      description: Get authenticated user's credit balance
+      operationId: getCurrentCredits
+      security:
+        - bearerAuth: [credits.read]
+      responses:
+        '200':
+          description: Current credits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCredits:
+                    type: integer
+                  freeCredits:
+                    type: integer
+                  proCredits:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/usage:
+    get:
+      tags:
+        - Credits
+      summary: Get usage history
+      description: |
+        Get usage history with filtering and pagination.
+
+        **Rate Limit**: 60 requests per minute
+      operationId: getUsageHistory
+      security:
+        - bearerAuth: [credits.read]
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Start date for filtering
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: End date for filtering
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of records to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: Usage history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  usage:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                        model:
+                          type: string
+                        creditsUsed:
+                          type: integer
+                        operation:
+                          type: string
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/usage/stats:
+    get:
+      tags:
+        - Credits
+      summary: Get usage statistics
+      description: Get aggregated usage statistics
+      operationId: getUsageStats
+      security:
+        - bearerAuth: [credits.read]
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month, year]
+            default: month
+          description: Aggregation period
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                  totalCreditsUsed:
+                    type: integer
+                  totalRequests:
+                    type: integer
+                  byModel:
+                    type: object
+                  byDate:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/rate-limit:
+    get:
+      tags:
+        - Credits
+      summary: Get rate limit status
+      description: Get current rate limit status for authenticated user
+      operationId: getRateLimitStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Rate limit status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  limit:
+                    type: integer
+                  remaining:
+                    type: integer
+                  reset:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # =============================================================================
+  # WEBHOOK ENDPOINTS
+  # =============================================================================
+
+  /v1/webhooks/config:
+    get:
+      tags:
+        - Webhooks
+      summary: Get webhook configuration
+      description: Get user's webhook configuration
+      operationId: getWebhookConfig
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Webhook configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: No webhook configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Webhooks
+      summary: Create or update webhook configuration
+      description: Create or update webhook configuration
+      operationId: setWebhookConfig
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - events
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: Webhook endpoint URL
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum: [completion.created, credit.depleted, subscription.updated]
+                  description: Events to subscribe to
+                secret:
+                  type: string
+                  description: Webhook signing secret
+      responses:
+        '200':
+          description: Webhook configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    delete:
+      tags:
+        - Webhooks
+      summary: Delete webhook configuration
+      description: Delete webhook configuration
+      operationId: deleteWebhookConfig
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Webhook configuration deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/webhooks/test:
+    post:
+      tags:
+        - Webhooks
+      summary: Send test webhook
+      description: Send a test webhook to configured endpoint
+      operationId: testWebhook
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Test webhook sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: No webhook configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # =============================================================================
+  # ADMIN ENDPOINTS
+  # =============================================================================
+
+  /admin/metrics:
+    get:
+      tags:
+        - Admin
+      summary: Get system metrics
+      description: |
+        Get aggregated system metrics and analytics.
+
+        **Requires**: Admin authentication
+      operationId: getAdminMetrics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      active:
+                        type: integer
+                      new:
+                        type: integer
+                  downloads:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      byPlatform:
+                        type: object
+                  feedback:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      recent:
+                        type: integer
+                  diagnostics:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                  subscriptions:
+                    type: object
+                    properties:
+                      active:
+                        type: integer
+                      byTier:
+                        type: object
+                  usage:
+                    type: object
+                    properties:
+                      totalCredits:
+                        type: integer
+                      totalRequests:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -288,6 +1563,90 @@ components:
         Example: `Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...`
 
   schemas:
+    # =============================================================================
+    # USER SCHEMAS
+    # =============================================================================
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserProfileResponse:
+      type: object
+      required:
+        - userId
+        - email
+        - displayName
+        - subscription
+        - preferences
+        - accountCreatedAt
+      properties:
+        userId:
+          type: string
+          description: Unique user identifier
+          example: "usr_abc123xyz"
+        email:
+          type: string
+          format: email
+          description: User's email address (verified)
+          example: "user@example.com"
+        displayName:
+          type: string
+          description: User's display name
+          example: "John Doe"
+        subscription:
+          $ref: '#/components/schemas/SubscriptionInfo'
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        accountCreatedAt:
+          type: string
+          format: date-time
+          description: When account was created
+          example: "2024-01-15T10:30:00Z"
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last successful login timestamp
+          example: "2025-11-06T08:00:00Z"
+
+    UserPreferences:
+      type: object
+      required:
+        - emailNotifications
+        - usageAlerts
+      properties:
+        defaultModel:
+          type: string
+          nullable: true
+          description: User's preferred default model
+          example: "gpt-5"
+        emailNotifications:
+          type: boolean
+          description: Email notification preference
+          example: true
+        usageAlerts:
+          type: boolean
+          description: Usage alert preference
+          example: true
+
+    # =============================================================================
+    # CREDITS SCHEMAS
+    # =============================================================================
+
     DetailedCreditsResponse:
       type: object
       required:
@@ -361,44 +1720,9 @@ components:
           description: Pro credits used across lifetime
           example: 5000
 
-    UserProfileResponse:
-      type: object
-      required:
-        - userId
-        - email
-        - displayName
-        - subscription
-        - preferences
-        - accountCreatedAt
-      properties:
-        userId:
-          type: string
-          description: Unique user identifier
-          example: "usr_abc123xyz"
-        email:
-          type: string
-          format: email
-          description: User's email address (verified)
-          example: "user@example.com"
-        displayName:
-          type: string
-          description: User's display name
-          example: "John Doe"
-        subscription:
-          $ref: '#/components/schemas/SubscriptionInfo'
-        preferences:
-          $ref: '#/components/schemas/UserPreferences'
-        accountCreatedAt:
-          type: string
-          format: date-time
-          description: When account was created
-          example: "2024-01-15T10:30:00Z"
-        lastLoginAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Last successful login timestamp
-          example: "2025-11-06T08:00:00Z"
+    # =============================================================================
+    # SUBSCRIPTION SCHEMAS
+    # =============================================================================
 
     SubscriptionInfo:
       type: object
@@ -434,25 +1758,57 @@ components:
           description: Whether subscription cancels at period end
           example: false
 
-    UserPreferences:
+    # =============================================================================
+    # MODEL SCHEMAS
+    # =============================================================================
+
+    Model:
       type: object
-      required:
-        - emailNotifications
-        - usageAlerts
       properties:
-        defaultModel:
+        id:
           type: string
-          nullable: true
-          description: User's preferred default model
-          example: "gpt-5"
-        emailNotifications:
+        name:
+          type: string
+        description:
+          type: string
+        modality:
+          type: string
+          enum: [text, image, audio, video]
+        tier:
+          type: string
+          enum: [free, pro, enterprise]
+        costPerToken:
+          type: number
+        maxTokens:
+          type: integer
+        contextWindow:
+          type: integer
+
+    # =============================================================================
+    # WEBHOOK SCHEMAS
+    # =============================================================================
+
+    WebhookConfig:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        active:
           type: boolean
-          description: Email notification preference
-          example: true
-        usageAlerts:
-          type: boolean
-          description: Usage alert preference
-          example: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # =============================================================================
+    # OAUTH SCHEMAS
+    # =============================================================================
 
     EnhanceTokenRequest:
       type: object
@@ -560,6 +1916,10 @@ components:
           type: integer
           example: 7000
 
+    # =============================================================================
+    # ERROR SCHEMAS
+    # =============================================================================
+
     ErrorResponse:
       type: object
       required:
@@ -595,7 +1955,7 @@ components:
             error_description: "Invalid or malformed access token"
 
     ForbiddenError:
-      description: Access forbidden (e.g., subscription expired)
+      description: Access forbidden (e.g., subscription expired, insufficient permissions)
       content:
         application/json:
           schema:
@@ -619,7 +1979,7 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error: "not_found"
-            error_description: "User profile not found"
+            error_description: "Resource not found"
 
     BadRequestError:
       description: Bad request (invalid parameters)
@@ -629,7 +1989,7 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
           example:
             error: "invalid_request"
-            error_description: "At least one of include_user_data or include_credits must be true"
+            error_description: "Invalid request parameters"
 
     RateLimitError:
       description: Rate limit exceeded
