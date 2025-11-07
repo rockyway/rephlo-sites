@@ -224,7 +224,7 @@ export const helmetConfig: Readonly<HelmetOptions> = {
  */
 export const corsAllowedOrigins = [
   // Development
-  process.env.CORS_ORIGIN || 'http://localhost:7151',
+  process.env.CORS_ORIGIN || 'http://localhost:7150', // Backend server (changed from 7151 to 7150)
   'http://localhost:8080', // Desktop app development
   'http://localhost:3000', // Alternative development port
 
@@ -272,6 +272,13 @@ export function isOriginAllowed(origin: string | undefined): boolean {
  */
 export const corsConfig = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // In development, allow all origins for easier testing
+    if (isDevelopment) {
+      callback(null, true);
+      return;
+    }
+
+    // In production, validate against allowlist
     if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {

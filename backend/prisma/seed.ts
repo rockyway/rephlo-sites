@@ -28,7 +28,7 @@ async function main() {
       clientName: 'Text Assistant Desktop',
       clientSecretHash: null, // Public client, no secret needed
       redirectUris: ['http://localhost:8080/callback'],
-      grantTypes: ['authorization_code', 'refresh_token'],
+      grantTypes: ['authorization_code'], // refresh_token is built-in
       responseTypes: ['code'],
       scope: 'openid email profile llm.inference models.read user.info credits.read',
       isActive: true,

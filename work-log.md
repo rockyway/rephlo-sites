@@ -627,3 +627,36 @@ Reference: docs/plan/104-phase4-email-testing-completion.md
 
 \n## 2025-11-07 - Phase 4 Implementation Complete\n\n### Summary\n- Email service integrated with SendGrid (5 templates)\n- Comprehensive testing suite: 152/159 tests passing (95.6%)\n  - Password strength: 50/50 ✅\n  - Token generator: 58/58 ✅\n  - Auth management controller: 28/28 ✅\n  - Social auth controller: 16/23 (7 minor fixes needed)\n- Redis rate limiting verified and operational\n- Google OAuth setup documented\n- Frontend Google login button created\n- Test data generation with 10 user personas\n\n### Files Created\n- Email service (7 files, 1,695 lines)\n- Test suite (6 files, 3,970 lines)\n- Documentation (12 files, 3,500+ lines)\n- Frontend components (2 files, 400 lines)\n- Total: 50+ files, 11,500+ lines\n\n### Next Steps\n- Fix 7 social auth controller test mocks (optional)\n- Configure SendGrid API key\n- Configure Google OAuth credentials\n- Seed test data\n
 \n## Enhanced Seed Data for Desktop App Testing\n\n### Additional Test Data Added:\n\n1. **Usage History** (6 records):\n   - 3 records for developer@example.com (GPT-5, Claude, Gemini)\n   - 3 records for pro@example.com (various models, timestamps)\n   - Includes: token counts, request duration, metadata\n   - Tests: /v1/usage and /v1/usage/stats endpoints\n\n2. **Webhook Configurations** (2 configs):\n   - developer@example.com: https://webhook.site/developer-test-endpoint\n   - pro@example.com: https://api.example.com/webhooks/rephlo\n   - Tests: /v1/webhooks/config endpoints\n\n3. **Webhook Logs** (5 records):\n   - 2 successful deliveries for developer\n   - 3 mixed status logs for pro (success, failed, pending)\n   - Tests: Webhook delivery tracking and retry logic\n\n### Desktop App Testing:\n- OAuth2/OIDC authentication (no API keys needed)\n- Use any test user with OAuth flow\n- Test all /v1/* API endpoints with seeded data\n- Usage tracking automatically records to database\n\nAll data is idempotent and can be re-seeded safely.\n
+
+## 2025-11-07 - Fixed OAuth /oauth/authorize 404 and grant_types validation error
+- Fixed route mounting: Social auth router moved from /oauth prefix to root mount to prevent intercepting OIDC endpoints
+- Updated social auth routes to use full /oauth/google/* paths
+- Fixed OAuth client grant_types: Changed from ['authorization_code', 'refresh_token'] to ['authorization_code'] only (refresh tokens are built-in)
+- Verified: /oauth/authorize now returns 303 redirect to interaction page as expected
+
+## 2025-11-07 - Fixed OIDC login interaction and test data
+- Disabled devInteractions in OIDC config (backend/src/config/oidc.ts:76-78) - now uses custom login page
+- Fixed seed script grant_types: Changed from ['authorization_code', 'refresh_token'] to ['authorization_code'] (backend/prisma/seed.ts:31)
+- Verified test user credentials: developer@example.com / User@123 are correct and working
+- Login page now accessible at /interaction/{uid} with proper authentication flow
+## 2025-11-07 - Fixed critical cookie issue in OIDC login page
+- Added credentials: 'same-origin' to fetch() calls in login.html (lines 234, 280)
+- This ensures OIDC session cookies are included in authentication requests
+- Without cookies, OIDC provider returns SessionNotFound error
+- Login should now work correctly from Desktop App
+
+## 2025-11-07 14:40 - OAuth Login Flow Verification
+
+✅ Created comprehensive test script (test-complete-login-flow.js) that validates entire OAuth login flow
+✅ Test proves backend is working correctly - login succeeds with developer@example.com/User@123
+✅ Added cache-control headers to login/consent pages to prevent browser caching issues
+✅ Headers: Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
+
+**Key Fixes Applied:**
+1. credentials: 'same-origin' in both fetch calls (lines 234, 280 in login.html)
+2. Cache-control headers in auth.controller.ts (lines 57-61, 67-71)
+
+**Files Modified:**
+- backend/src/views/login.html (cookie credentials)
+- backend/src/controllers/auth.controller.ts (cache headers)
+- backend/test-complete-login-flow.js (new test script)

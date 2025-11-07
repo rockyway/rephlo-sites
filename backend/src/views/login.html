@@ -230,7 +230,9 @@
     // Load interaction data
     async function loadInteractionData() {
       try {
-        const response = await fetch(`/interaction/${uid}/data`);
+        const response = await fetch(`/interaction/${uid}/data`, {
+          credentials: 'same-origin'
+        });
         if (response.ok) {
           const data = await response.json();
           document.getElementById('clientName').textContent = data.client.clientName;
@@ -275,21 +277,32 @@
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'same-origin',
+          redirect: 'follow', // Auto-follow redirects
           body: JSON.stringify(formData),
         });
 
+        // Check if request was successful
         if (response.ok) {
-          // Success - OIDC provider will redirect
+          // Login successful - OIDC provider will have redirected us
+          // The page should have loaded the consent or callback
           window.location.reload();
         } else {
-          const error = await response.json();
-          showError(error.message || 'Invalid credentials. Please try again.');
+          // Error response (4xx, 5xx)
+          try {
+            const error = await response.json();
+            showError(error.message || 'Invalid credentials. Please try again.');
+          } catch {
+            // If response is not JSON, show generic error
+            showError('Authentication failed. Please try again.');
+          }
 
           // Re-enable button
           submitBtn.disabled = false;
           submitText.textContent = 'Sign In';
         }
       } catch (error) {
+        console.error('Login error:', error);
         showError('An error occurred. Please try again.');
         submitBtn.disabled = false;
         submitText.textContent = 'Sign In';

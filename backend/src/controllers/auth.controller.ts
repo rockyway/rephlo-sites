@@ -53,12 +53,22 @@ export class AuthController {
 
       // Route to appropriate interaction
       if (prompt.name === 'login') {
-        // Render login page
+        // Render login page with no-cache headers to prevent browser caching
+        res.set({
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        });
         res.sendFile(
           path.join(__dirname, '../views/login.html')
         );
       } else if (prompt.name === 'consent') {
-        // Render consent page
+        // Render consent page with no-cache headers
+        res.set({
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        });
         res.sendFile(
           path.join(__dirname, '../views/consent.html')
         );

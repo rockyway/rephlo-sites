@@ -72,6 +72,11 @@ export async function createOIDCProvider(
 
     // Supported features
     features: {
+      // Disable default devInteractions (we use custom interaction pages)
+      devInteractions: {
+        enabled: false,
+      },
+
       // Enable token revocation
       revocation: {
         enabled: true,
