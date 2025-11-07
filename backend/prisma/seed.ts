@@ -6,7 +6,7 @@
  * Usage: npx prisma db seed
  */
 
-import { PrismaClient, ModelCapability, SubscriptionTier, SubscriptionStatus } from '@prisma/client';
+import { PrismaClient, ModelCapability, SubscriptionTier, SubscriptionStatus, UsageOperation } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -410,7 +410,7 @@ async function main() {
   // =============================================================================
   // Seed Credits
   // =============================================================================
-  console.log('\n[5/5] Seeding Credits...');
+  console.log('\n[5/8] Seeding Credits...');
 
   // Free User Credits (2000 monthly, 500 used)
   const existingFreeCredit = await prisma.credit.findFirst({
@@ -494,9 +494,298 @@ async function main() {
   console.log(`  ✓ Created pro credits for ${proUser.email}: 5000 remaining (5000 used of 10000)`);
 
   // =============================================================================
+  // Seed Usage History
+  // =============================================================================
+  console.log('\n[6/8] Seeding Usage History...');
+
+  // Developer User - Active API usage
+  const developerUsageRecords = [
+    {
+      userId: developerUser.id,
+      creditId: null,
+      modelId: 'gpt-5',
+      operation: UsageOperation.chat,
+      creditsUsed: 50,
+      inputTokens: 1000,
+      outputTokens: 500,
+      totalTokens: 1500,
+      requestDurationMs: 2345,
+      requestMetadata: {
+        temperature: 0.7,
+        max_tokens: 500,
+        endpoint: '/v1/chat/completions'
+      },
+      createdAt: new Date('2025-11-06T10:00:00Z'),
+    },
+    {
+      userId: developerUser.id,
+      creditId: null,
+      modelId: 'claude-3.5-sonnet',
+      operation: UsageOperation.completion,
+      creditsUsed: 30,
+      inputTokens: 800,
+      outputTokens: 400,
+      totalTokens: 1200,
+      requestDurationMs: 1876,
+      requestMetadata: {
+        temperature: 0.5,
+        max_tokens: 400,
+        endpoint: '/v1/completions'
+      },
+      createdAt: new Date('2025-11-06T11:30:00Z'),
+    },
+    {
+      userId: developerUser.id,
+      creditId: null,
+      modelId: 'gemini-2.0-pro',
+      operation: UsageOperation.chat,
+      creditsUsed: 20,
+      inputTokens: 500,
+      outputTokens: 300,
+      totalTokens: 800,
+      requestDurationMs: 1234,
+      requestMetadata: {
+        temperature: 0.8,
+        max_tokens: 300,
+        endpoint: '/v1/chat/completions'
+      },
+      createdAt: new Date('2025-11-06T13:15:00Z'),
+    },
+  ];
+
+  for (const record of developerUsageRecords) {
+    await prisma.usageHistory.create({ data: record });
+  }
+  console.log(`  ✓ Created ${developerUsageRecords.length} usage records for ${developerUser.email}`);
+
+  // Pro User - High usage with various models
+  const proUserUsageRecords = [
+    {
+      userId: proUser.id,
+      creditId: null,
+      modelId: 'gpt-5',
+      operation: UsageOperation.chat,
+      creditsUsed: 100,
+      inputTokens: 2000,
+      outputTokens: 1000,
+      totalTokens: 3000,
+      requestDurationMs: 3456,
+      requestMetadata: {
+        temperature: 0.7,
+        max_tokens: 1000,
+        endpoint: '/v1/chat/completions'
+      },
+      createdAt: new Date('2025-11-05T08:00:00Z'),
+    },
+    {
+      userId: proUser.id,
+      creditId: null,
+      modelId: 'claude-3.5-sonnet',
+      operation: UsageOperation.chat,
+      creditsUsed: 75,
+      inputTokens: 1500,
+      outputTokens: 800,
+      totalTokens: 2300,
+      requestDurationMs: 2987,
+      requestMetadata: {
+        temperature: 0.6,
+        max_tokens: 800,
+        endpoint: '/v1/chat/completions'
+      },
+      createdAt: new Date('2025-11-05T14:30:00Z'),
+    },
+    {
+      userId: proUser.id,
+      creditId: null,
+      modelId: 'gemini-2.0-pro',
+      operation: UsageOperation.completion,
+      creditsUsed: 40,
+      inputTokens: 1000,
+      outputTokens: 600,
+      totalTokens: 1600,
+      requestDurationMs: 1654,
+      requestMetadata: {
+        temperature: 0.9,
+        max_tokens: 600,
+        endpoint: '/v1/completions'
+      },
+      createdAt: new Date('2025-11-06T09:45:00Z'),
+    },
+  ];
+
+  for (const record of proUserUsageRecords) {
+    await prisma.usageHistory.create({ data: record });
+  }
+  console.log(`  ✓ Created ${proUserUsageRecords.length} usage records for ${proUser.email}`);
+
+  // =============================================================================
+  // Seed Webhook Configurations
+  // =============================================================================
+  console.log('\n[7/8] Seeding Webhook Configurations...');
+
+  let devWebhookConfig;
+  let proWebhookConfig;
+
+  try {
+    // Developer User - Active webhook config
+    devWebhookConfig = await prisma.webhookConfig.create({
+    data: {
+      userId: developerUser.id,
+      webhookUrl: 'https://webhook.site/developer-test-endpoint',
+      webhookSecret: 'whsec_dev_test_secret_abc123',
+      isActive: true,
+    },
+  });
+    console.log(`  ✓ Created webhook config for ${developerUser.email}`);
+
+    // Pro User - Active webhook config with custom endpoint
+    proWebhookConfig = await prisma.webhookConfig.create({
+      data: {
+        userId: proUser.id,
+        webhookUrl: 'https://api.example.com/webhooks/rephlo',
+        webhookSecret: 'whsec_pro_secure_token_xyz789',
+        isActive: true,
+      },
+    });
+    console.log(`  ✓ Created webhook config for ${proUser.email}`);
+  } catch (error) {
+    console.log(`  ⚠ Skipped webhook configs (table may not exist yet)`);
+  }
+
+  // =============================================================================
+  // Seed Webhook Logs
+  // =============================================================================
+  console.log('\n[8/8] Seeding Webhook Logs...');
+
+  if (devWebhookConfig && proWebhookConfig) {
+    try {
+      // Developer User - Successful webhook deliveries
+      const devWebhookLogs = [
+    {
+      webhookConfigId: devWebhookConfig.id,
+      eventType: 'usage.threshold_reached',
+      payload: {
+        userId: developerUser.id,
+        event: 'usage.threshold_reached',
+        data: {
+          threshold: 0.8,
+          creditsUsed: 1600,
+          creditsTotal: 2000,
+          timestamp: '2025-11-06T10:00:00Z'
+        }
+      },
+      status: 'success',
+      statusCode: 200,
+      responseBody: '{"received": true}',
+      attempts: 1,
+      createdAt: new Date('2025-11-06T10:00:05Z'),
+      completedAt: new Date('2025-11-06T10:00:06Z'),
+    },
+    {
+      webhookConfigId: devWebhookConfig.id,
+      eventType: 'usage.recorded',
+      payload: {
+        userId: developerUser.id,
+        event: 'usage.recorded',
+        data: {
+          modelId: 'gpt-5',
+          creditsUsed: 50,
+          timestamp: '2025-11-06T10:00:00Z'
+        }
+      },
+      status: 'success',
+      statusCode: 200,
+      responseBody: '{"received": true}',
+      attempts: 1,
+      createdAt: new Date('2025-11-06T10:00:01Z'),
+      completedAt: new Date('2025-11-06T10:00:02Z'),
+    },
+  ];
+
+  for (const log of devWebhookLogs) {
+    await prisma.webhookLog.create({ data: log });
+  }
+  console.log(`  ✓ Created ${devWebhookLogs.length} webhook logs for ${developerUser.email}`);
+
+  // Pro User - Mix of successful and failed deliveries
+  const proWebhookLogs = [
+    {
+      webhookConfigId: proWebhookConfig.id,
+      eventType: 'subscription.updated',
+      payload: {
+        userId: proUser.id,
+        event: 'subscription.updated',
+        data: {
+          tier: 'pro',
+          status: 'active',
+          timestamp: '2025-11-05T08:00:00Z'
+        }
+      },
+      status: 'success',
+      statusCode: 200,
+      responseBody: '{"status": "ok"}',
+      attempts: 1,
+      createdAt: new Date('2025-11-05T08:00:01Z'),
+      completedAt: new Date('2025-11-05T08:00:02Z'),
+    },
+    {
+      webhookConfigId: proWebhookConfig.id,
+      eventType: 'usage.recorded',
+      payload: {
+        userId: proUser.id,
+        event: 'usage.recorded',
+        data: {
+          modelId: 'claude-3.5-sonnet',
+          creditsUsed: 75,
+          timestamp: '2025-11-05T14:30:00Z'
+        }
+      },
+      status: 'failed',
+      statusCode: 500,
+      responseBody: '{"error": "Internal Server Error"}',
+      errorMessage: 'HTTP 500: Webhook endpoint returned server error',
+      attempts: 3,
+      createdAt: new Date('2025-11-05T14:30:01Z'),
+      completedAt: new Date('2025-11-05T14:30:15Z'),
+    },
+    {
+      webhookConfigId: proWebhookConfig.id,
+      eventType: 'usage.threshold_reached',
+      payload: {
+        userId: proUser.id,
+        event: 'usage.threshold_reached',
+        data: {
+          threshold: 0.9,
+          creditsUsed: 1800,
+          creditsTotal: 2000,
+          timestamp: '2025-11-06T09:45:00Z'
+        }
+      },
+      status: 'pending',
+      statusCode: null,
+      responseBody: null,
+      errorMessage: null,
+      attempts: 0,
+      createdAt: new Date('2025-11-06T09:45:01Z'),
+      completedAt: null,
+    },
+  ];
+
+      for (const log of proWebhookLogs) {
+        await prisma.webhookLog.create({ data: log });
+      }
+      console.log(`  ✓ Created ${proWebhookLogs.length} webhook logs for ${proUser.email}`);
+    } catch (error) {
+      console.log(`  ⚠ Skipped webhook logs (table may not exist yet)`);
+    }
+  } else {
+    console.log(`  ⚠ Skipped webhook logs (webhook configs not created)`);
+  }
+
+  // =============================================================================
   // Seed User Preferences
   // =============================================================================
-  console.log('\n[6/6] Seeding User Preferences...');
+  console.log('\n[9/9] Seeding User Preferences...');
 
   // Free User Preferences
   await prisma.userPreference.upsert({
@@ -539,6 +828,14 @@ async function main() {
   console.log(`  👤 Test Users: 10 (1 admin + 5 regular + 2 OAuth + 2 legacy)`);
   console.log(`  💳 Subscriptions: 2 (1 free tier, 1 pro tier)`);
   console.log(`  💰 Credit Records: 3 (1 free, 2 pro)`);
+  console.log(`  📊 Usage History: 6 records (3 developer, 3 pro)`);
+  if (devWebhookConfig && proWebhookConfig) {
+    console.log(`  🔔 Webhook Configs: 2 (developer, pro)`);
+    console.log(`  📝 Webhook Logs: 5 (2 developer success, 3 pro mixed)`);
+  } else {
+    console.log(`  🔔 Webhook Configs: Skipped (table not found)`);
+    console.log(`  📝 Webhook Logs: Skipped (table not found)`);
+  }
   console.log(`  ⚙️  User Preferences: 2`);
 
   console.log('\n=============================================================================');
