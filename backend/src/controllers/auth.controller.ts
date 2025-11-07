@@ -32,6 +32,9 @@ export class AuthController {
    * GET /interaction/:uid
    * Entry point for OIDC interaction
    * Determines if login or consent is needed
+   *
+   * For consent prompts, checks if client should skip consent screen before rendering page.
+   * This allows first-party trusted apps to auto-approve without user interaction.
    */
   interaction = async (
     req: Request,
@@ -45,12 +48,13 @@ export class AuthController {
         res
       );
 
-      const { uid, prompt, params } = details;
+      const { uid, prompt, params, session } = details;
 
       logger.info('OIDC Interaction started', {
         uid,
         prompt: prompt.name,
         clientId: params.client_id,
+        hasSession: !!session?.accountId,
       });
 
       // Route to appropriate interaction
@@ -65,6 +69,20 @@ export class AuthController {
           path.join(__dirname, '../views/login.html')
         );
       } else if (prompt.name === 'consent') {
+        // Check if client should auto-approve consent before rendering page
+        const shouldAutoApprove = await this.checkShouldAutoApproveConsent(params, session);
+
+        if (shouldAutoApprove) {
+          // Auto-approve consent without rendering page
+          logger.info('OIDC: Auto-approving consent (skipping consent page)', {
+            uid,
+            clientId: params.client_id,
+            userId: session?.accountId,
+          });
+          await this.autoApproveConsent(req, res, details);
+          return; // Important: return early after handling
+        }
+
         // Render consent page with no-cache headers
         res.set({
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -197,9 +215,8 @@ export class AuthController {
         }
       }
 
-      // Check if client should auto-approve consent
-      // This is handled in a separate step after successful login
-      await this.tryAutoApproveConsent(req, res, user.id);
+      // Note: Auto-consent is now handled in the interaction() method when prompt is 'consent'
+      // This ensures we intercept the consent prompt before rendering the page
     } catch (error) {
       logger.error('OIDC Login interaction failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -400,41 +417,23 @@ export class AuthController {
   };
 
   /**
-   * Auto-approve consent for first-party trusted apps
-   *
-   * After successful login, checks if the OAuth client should skip the consent screen.
-   * If enabled, automatically approves all requested scopes without user interaction.
-   * This is safe for first-party apps (e.g., official desktop client) but should NOT
-   * be enabled for third-party applications that require explicit user consent.
+   * Check if a client should auto-approve consent based on configuration
+   * Returns true if the client has skipConsentScreen enabled in its config
    */
-  private tryAutoApproveConsent = async (
-    req: Request,
-    res: Response,
-    userId: string
-  ): Promise<void> => {
+  private checkShouldAutoApproveConsent = async (
+    params: any,
+    session: any
+  ): Promise<boolean> => {
     try {
-      const details = await getInteractionDetails(
-        this.provider,
-        req,
-        res
-      );
-
-      const {
-        prompt: { name },
-        params,
-        session,
-      } = details;
-
-      // Only auto-approve if interaction prompt is 'consent'
-      if (name !== 'consent') {
-        logger.debug('OIDC: Not a consent prompt, skipping auto-approve', {
-          prompt: name,
+      // Session must exist to auto-approve (user must be logged in)
+      if (!session?.accountId) {
+        logger.debug('OIDC: No session found, cannot auto-approve consent', {
           clientId: params.client_id,
         });
-        return;
+        return false;
       }
 
-      // Load client configuration to check skipConsentScreen setting
+      // Load client from provider
       const client = await this.provider.Client.find(
         params.client_id as string
       );
@@ -443,7 +442,7 @@ export class AuthController {
         logger.warn('OIDC: Client not found for auto-consent check', {
           clientId: params.client_id,
         });
-        return;
+        return false;
       }
 
       // Get client config from database
@@ -455,7 +454,7 @@ export class AuthController {
         logger.warn('OIDC: OAuth client not found in database', {
           clientId: client.clientId,
         });
-        return;
+        return false;
       }
 
       // Check if skipConsentScreen is enabled in config
@@ -466,21 +465,52 @@ export class AuthController {
         logger.debug('OIDC: skipConsentScreen not enabled, user must approve consent', {
           clientId: client.clientId,
         });
-        return;
+        return false;
       }
 
-      // Auto-approve consent for all requested scopes
-      logger.info('OIDC: Auto-approving consent for first-party app', {
-        clientId: client.clientId,
-        userId,
+      return true;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.warn('OIDC: Error checking auto-consent config', {
+        clientId: params.client_id,
+        error: errorMsg,
       });
+      return false;
+    }
+  };
+
+  /**
+   * Auto-approve consent for first-party trusted apps
+   * Called when a consent prompt is encountered and the client config allows auto-approval
+   * This bypasses the consent screen and automatically grants all requested scopes
+   */
+  private autoApproveConsent = async (
+    req: Request,
+    res: Response,
+    details: any
+  ): Promise<void> => {
+    try {
+      const {
+        prompt: { name },
+        params,
+        session,
+      } = details;
+
+      // Verify this is a consent prompt
+      if (name !== 'consent') {
+        logger.warn('OIDC: autoApproveConsent called for non-consent prompt', {
+          prompt: name,
+          clientId: params.client_id,
+        });
+        return;
+      }
 
       // Get requested scopes
       const requestedScopes = (params.scope as string)?.split(' ') || [];
 
       // Create grant with all requested scopes
       const grant = new this.provider.Grant({
-        accountId: session?.accountId || userId,
+        accountId: session?.accountId,
         clientId: params.client_id as string,
       });
 
@@ -500,20 +530,19 @@ export class AuthController {
       await finishInteraction(this.provider, req, res, result);
 
       logger.info('OIDC: Auto-consent approved successfully', {
-        clientId: client.clientId,
-        userId,
+        clientId: params.client_id,
+        userId: session?.accountId,
         grantId,
         scopes: requestedScopes,
       });
     } catch (error) {
-      // Log but don't fail the login if auto-consent fails
-      // User will see the consent screen if auto-approve fails
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.warn('OIDC: Auto-consent approval failed (user will see consent screen)', {
-        userId,
+      logger.error('OIDC: Auto-consent approval failed', {
+        clientId: details?.params?.client_id,
         error: errorMsg,
       });
-      // Don't rethrow - let the normal consent flow handle this
+      // Re-throw so the interaction() method can handle the error
+      throw error;
     }
   };
 }
