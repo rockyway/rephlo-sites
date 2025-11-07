@@ -4,6 +4,7 @@ import Landing from '@/pages/Landing'
 import Admin from '@/pages/Admin'
 import Privacy from '@/pages/Privacy'
 import Terms from '@/pages/Terms'
+import OAuthCallback from '@/pages/auth/OAuthCallback'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
         </Routes>
       </Router>
     </ThemeProvider>

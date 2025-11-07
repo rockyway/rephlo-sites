@@ -1,13 +1,18 @@
 /**
  * Prisma Database Seed Script
  * Pre-populates essential reference data for the Dedicated API Backend
+ * Including comprehensive test data for authentication testing
  *
  * Usage: npx prisma db seed
  */
 
 import { PrismaClient, ModelCapability, SubscriptionTier, SubscriptionStatus } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
+
+// Salt rounds for password hashing (12 is recommended for production)
+const SALT_ROUNDS = 12;
 
 async function main() {
   console.log('Starting database seeding...');
@@ -140,9 +145,181 @@ async function main() {
   // =============================================================================
   // Seed Test Users with Subscriptions and Credits
   // =============================================================================
-  console.log('\n[3/5] Seeding Test Users...');
+  console.log('\n[3/10] Seeding Test Users...');
 
-  // Test User 1: Free Tier User
+  // =============================================================================
+  // ADMIN USER
+  // =============================================================================
+  console.log('\n  📋 Admin User:');
+  const adminPassword = await bcrypt.hash('Admin@123', SALT_ROUNDS);
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@rephlo.com' },
+    update: {},
+    create: {
+      email: 'admin@rephlo.com',
+      emailVerified: true,
+      username: 'admin',
+      passwordHash: adminPassword,
+      firstName: 'Admin',
+      lastName: 'User',
+      isActive: true,
+      authProvider: 'local',
+      lastLoginAt: new Date('2025-11-06T08:00:00Z'),
+    },
+  });
+  console.log(`    ✓ Admin: ${adminUser.email} / Admin@123`);
+
+  // =============================================================================
+  // REGULAR USERS (5 personas)
+  // =============================================================================
+  console.log('\n  👥 Regular Users:');
+
+  // User 1: Developer - Active, verified, with API usage
+  const devPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
+  const developerUser = await prisma.user.upsert({
+    where: { email: 'developer@example.com' },
+    update: {},
+    create: {
+      email: 'developer@example.com',
+      emailVerified: true,
+      username: 'dev_user',
+      passwordHash: devPassword,
+      firstName: 'Dev',
+      lastName: 'Developer',
+      isActive: true,
+      authProvider: 'local',
+      lastLoginAt: new Date('2025-11-06T10:30:00Z'),
+    },
+  });
+  console.log(`    ✓ Developer: ${developerUser.email} / User@123`);
+
+  // User 2: Tester - Active but email not verified
+  const testerPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
+  const testerUser = await prisma.user.upsert({
+    where: { email: 'tester@example.com' },
+    update: {},
+    create: {
+      email: 'tester@example.com',
+      emailVerified: false, // Not verified
+      username: 'test_user',
+      passwordHash: testerPassword,
+      firstName: 'Test',
+      lastName: 'Tester',
+      isActive: true,
+      authProvider: 'local',
+      emailVerificationToken: 'test_verification_token_12345',
+      emailVerificationTokenExpiry: new Date('2025-11-10T00:00:00Z'),
+      lastLoginAt: new Date('2025-11-05T14:20:00Z'),
+    },
+  });
+  console.log(`    ✓ Tester: ${testerUser.email} / User@123 (Email NOT verified)`);
+
+  // User 3: Designer - Active, verified, recent signup
+  const designerPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
+  const designerUser = await prisma.user.upsert({
+    where: { email: 'designer@example.com' },
+    update: {},
+    create: {
+      email: 'designer@example.com',
+      emailVerified: true,
+      username: 'designer_pro',
+      passwordHash: designerPassword,
+      firstName: 'Sarah',
+      lastName: 'Designer',
+      isActive: true,
+      authProvider: 'local',
+      lastLoginAt: new Date('2025-11-06T09:15:00Z'),
+    },
+  });
+  console.log(`    ✓ Designer: ${designerUser.email} / User@123`);
+
+  // User 4: Manager - Deactivated account
+  const managerPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
+  const managerUser = await prisma.user.upsert({
+    where: { email: 'manager@example.com' },
+    update: {},
+    create: {
+      email: 'manager@example.com',
+      emailVerified: true,
+      username: 'manager_user',
+      passwordHash: managerPassword,
+      firstName: 'John',
+      lastName: 'Manager',
+      isActive: false, // Deactivated
+      authProvider: 'local',
+      deactivatedAt: new Date('2025-11-03T16:00:00Z'),
+      lastLoginAt: new Date('2025-11-03T15:45:00Z'),
+    },
+  });
+  console.log(`    ✓ Manager: ${managerUser.email} / User@123 (DEACTIVATED)`);
+
+  // User 5: Support - Active, with password reset token
+  const supportPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
+  const supportUser = await prisma.user.upsert({
+    where: { email: 'support@example.com' },
+    update: {},
+    create: {
+      email: 'support@example.com',
+      emailVerified: true,
+      username: 'support_agent',
+      passwordHash: supportPassword,
+      firstName: 'Support',
+      lastName: 'Agent',
+      isActive: true,
+      authProvider: 'local',
+      passwordResetToken: 'reset_token_abc123xyz',
+      passwordResetTokenExpiry: new Date('2025-11-07T12:00:00Z'),
+      lastLoginAt: new Date('2025-11-06T08:30:00Z'),
+    },
+  });
+  console.log(`    ✓ Support: ${supportUser.email} / User@123 (Has password reset token)`);
+
+  // =============================================================================
+  // OAUTH USERS (Google)
+  // =============================================================================
+  console.log('\n  🔐 OAuth Users:');
+
+  // OAuth User 1: Google authenticated user
+  const googleUser = await prisma.user.upsert({
+    where: { email: 'googleuser@gmail.com' },
+    update: {},
+    create: {
+      email: 'googleuser@gmail.com',
+      emailVerified: true, // Google verifies emails
+      username: 'google_user',
+      firstName: 'Google',
+      lastName: 'User',
+      googleId: 'mock_google_id_123456789',
+      googleProfileUrl: 'https://lh3.googleusercontent.com/a/default-user',
+      authProvider: 'google',
+      isActive: true,
+      lastLoginAt: new Date('2025-11-06T11:00:00Z'),
+    },
+  });
+  console.log(`    ✓ Google User: ${googleUser.email} (OAuth)`);
+
+  // OAuth User 2: Mixed auth (started with email, linked Google)
+  const mixedAuthPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
+  const mixedAuthUser = await prisma.user.upsert({
+    where: { email: 'mixed@example.com' },
+    update: {},
+    create: {
+      email: 'mixed@example.com',
+      emailVerified: true,
+      username: 'mixed_auth_user',
+      passwordHash: mixedAuthPassword, // Has password
+      googleId: 'mock_google_id_987654321', // Also linked Google
+      googleProfileUrl: 'https://lh3.googleusercontent.com/a/mixed-user',
+      authProvider: 'local', // Original provider
+      firstName: 'Mixed',
+      lastName: 'Auth',
+      isActive: true,
+      lastLoginAt: new Date('2025-11-06T07:45:00Z'),
+    },
+  });
+  console.log(`    ✓ Mixed Auth: ${mixedAuthUser.email} / User@123 (Local + Google)`);
+
+  // Legacy users from original seed (kept for backward compatibility)
   const freeUser = await prisma.user.upsert({
     where: { email: 'free@example.com' },
     update: {},
@@ -153,12 +330,12 @@ async function main() {
       firstName: 'Free',
       lastName: 'User',
       isActive: true,
+      authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
     },
   });
-  console.log(`  ✓ Created/Updated user: ${freeUser.email} (${freeUser.id})`);
+  console.log(`    ✓ Free Tier: ${freeUser.email} (Legacy)`);
 
-  // Test User 2: Pro Tier User
   const proUser = await prisma.user.upsert({
     where: { email: 'pro@example.com' },
     update: {},
@@ -169,10 +346,11 @@ async function main() {
       firstName: 'Pro',
       lastName: 'User',
       isActive: true,
+      authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
     },
   });
-  console.log(`  ✓ Created/Updated user: ${proUser.email} (${proUser.id})`);
+  console.log(`    ✓ Pro Tier: ${proUser.email} (Legacy)`);
 
   // =============================================================================
   // Seed Subscriptions
@@ -352,17 +530,59 @@ async function main() {
   });
   console.log(`  ✓ Created preferences for ${proUser.email}`);
 
-  console.log('\n✓ Database seeding completed successfully!');
-  console.log('\nSeeded data:');
-  console.log(`  - ${oauthClients.length} OAuth client(s)`);
-  console.log(`  - ${models.length} LLM model(s)`);
-  console.log(`  - 2 test users (free@example.com, pro@example.com)`);
-  console.log(`  - 2 subscriptions (1 free tier, 1 pro tier)`);
-  console.log(`  - 3 credit records (1 free, 2 pro)`);
-  console.log(`  - 2 user preferences`);
-  console.log('\nTest User Login Credentials:');
-  console.log('  Free Tier: free@example.com');
-  console.log('  Pro Tier:  pro@example.com');
+  console.log('\n✅ Database seeding completed successfully!');
+  console.log('\n=============================================================================');
+  console.log('SEEDED DATA SUMMARY');
+  console.log('=============================================================================');
+  console.log(`  📦 OAuth Clients: ${oauthClients.length}`);
+  console.log(`  🤖 LLM Models: ${models.length}`);
+  console.log(`  👤 Test Users: 10 (1 admin + 5 regular + 2 OAuth + 2 legacy)`);
+  console.log(`  💳 Subscriptions: 2 (1 free tier, 1 pro tier)`);
+  console.log(`  💰 Credit Records: 3 (1 free, 2 pro)`);
+  console.log(`  ⚙️  User Preferences: 2`);
+
+  console.log('\n=============================================================================');
+  console.log('TEST USER CREDENTIALS');
+  console.log('=============================================================================');
+  console.log('\n🔐 Admin Account:');
+  console.log('  Email:    admin@rephlo.com');
+  console.log('  Password: Admin@123');
+  console.log('  Notes:    Full admin access, all permissions');
+
+  console.log('\n👥 Regular Users (Password: User@123):');
+  console.log('  1. developer@example.com   - Active, verified, developer persona');
+  console.log('  2. tester@example.com      - Active, NOT verified (test email verification)');
+  console.log('  3. designer@example.com    - Active, verified, designer persona');
+  console.log('  4. manager@example.com     - DEACTIVATED (test deactivation flow)');
+  console.log('  5. support@example.com     - Active, has password reset token');
+
+  console.log('\n🔐 OAuth Users:');
+  console.log('  1. googleuser@gmail.com    - Google OAuth only (no password)');
+  console.log('  2. mixed@example.com       - Local + Google linked (Password: User@123)');
+
+  console.log('\n📊 Legacy Users (Backward Compatibility):');
+  console.log('  1. free@example.com        - Free tier user (no password)');
+  console.log('  2. pro@example.com         - Pro tier user (no password)');
+
+  console.log('\n=============================================================================');
+  console.log('TESTING SCENARIOS');
+  console.log('=============================================================================');
+  console.log('✅ Normal Login:           Use developer@example.com / User@123');
+  console.log('❌ Unverified Email:       Use tester@example.com / User@123');
+  console.log('❌ Deactivated Account:    Use manager@example.com / User@123');
+  console.log('🔑 Password Reset:         Use support@example.com (has active reset token)');
+  console.log('🌐 Google OAuth:           Use googleuser@gmail.com (OAuth only)');
+  console.log('🔗 Mixed Auth:             Use mixed@example.com / User@123 (can also use Google)');
+  console.log('👑 Admin Access:           Use admin@rephlo.com / Admin@123');
+
+  console.log('\n=============================================================================');
+  console.log('NEXT STEPS');
+  console.log('=============================================================================');
+  console.log('1. Start backend:  cd backend && npm run dev');
+  console.log('2. Start frontend: cd frontend && npm run dev');
+  console.log('3. Test login with any of the credentials above');
+  console.log('4. For Google OAuth: Configure credentials in .env (see docs/guides/010-google-oauth-setup.md)');
+  console.log('=============================================================================\n');
 }
 
 main()
