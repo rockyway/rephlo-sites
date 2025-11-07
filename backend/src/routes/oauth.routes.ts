@@ -24,7 +24,9 @@ import { Router, Request, Response } from 'express';
 import type Provider from 'oidc-provider';
 import { PrismaClient } from '@prisma/client';
 import { AuthController } from '../controllers/auth.controller';
+import { OAuthController } from '../controllers/oauth.controller';
 import { asyncHandler } from '../middleware/error.middleware';
+import { container } from '../container';
 import express from 'express';
 
 /**
@@ -36,6 +38,9 @@ export function createOAuthRouter(
 ): Router {
   const router = Router();
   const authController = new AuthController(provider, prisma);
+
+  // Resolve OAuthController from DI container
+  const oauthController = container.resolve(OAuthController);
 
   // =========================================================================
   // OIDC INTERACTION ENDPOINTS
@@ -101,8 +106,37 @@ export function createOAuthRouter(
    * - /oauth/revoke (token revocation)
    * - /oauth/userinfo (user info)
    * - /oauth/jwks (JSON Web Key Set)
+   *
+   * Note: Enhanced token response (include_user_data, include_credits) is handled
+   * via custom endpoints below to maintain compatibility with OIDC provider.
    */
   router.use('/', provider.callback() as any);
+
+  // =========================================================================
+  // ENHANCED TOKEN DATA ENDPOINTS (Post-Token Exchange)
+  // =========================================================================
+
+  /**
+   * POST /oauth/token/enhance
+   * Enhance a token response with user data and credits
+   * This is called by the client after receiving a token from /oauth/token
+   *
+   * Request body:
+   * - access_token: The access token received from /oauth/token
+   * - include_user_data: 'true' to include user profile and subscription
+   * - include_credits: 'true' to include credit information
+   *
+   * Response:
+   * - user: User profile, subscription, and credits (if include_user_data=true)
+   * - credits: Credit information (if include_credits=true)
+   */
+  router.post(
+    '/oauth/token/enhance',
+    express.json(),
+    asyncHandler(async (req: Request, res: Response, next: any) => {
+      await oauthController.enhanceTokenResponse(req, res, next);
+    })
+  );
 
   return router;
 }

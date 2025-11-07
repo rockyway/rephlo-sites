@@ -10,13 +10,13 @@
 
 import 'reflect-metadata';
 import request from 'supertest';
-import { Express } from 'express';
+import { Application } from 'express';
 import { createApp } from '../../app';
 import { container } from '../../container';
 import { PrismaClient } from '@prisma/client';
 
 describe('GET /api/user/profile', () => {
-  let app: Express;
+  let app: Application;
   let prisma: PrismaClient;
   let authToken: string;
   let testUserId: string;
@@ -46,6 +46,9 @@ describe('GET /api/user/profile', () => {
         userId: testUserId,
         tier: 'pro',
         status: 'active',
+        creditsPerMonth: 10000,
+        priceCents: 1999,
+        billingInterval: 'monthly',
         currentPeriodStart: new Date('2025-11-01T00:00:00Z'),
         currentPeriodEnd: new Date('2025-12-01T00:00:00Z'),
         cancelAtPeriodEnd: false,
@@ -54,11 +57,10 @@ describe('GET /api/user/profile', () => {
     });
 
     // Create user preferences
-    await prisma.userPreferences.create({
+    await prisma.userPreference.create({
       data: {
-        id: 'test-preferences-profile',
         userId: testUserId,
-        defaultModel: 'gpt-5',
+        defaultModelId: 'gpt-5',
         emailNotifications: true,
         usageAlerts: true,
       },
@@ -70,7 +72,7 @@ describe('GET /api/user/profile', () => {
 
   afterAll(async () => {
     // Cleanup test data
-    await prisma.userPreferences.deleteMany({ where: { userId: testUserId } });
+    await prisma.userPreference.deleteMany({ where: { userId: testUserId } });
     await prisma.subscription.deleteMany({ where: { userId: testUserId } });
     await prisma.user.delete({ where: { id: testUserId } });
     await prisma.$disconnect();
@@ -172,13 +174,17 @@ describe('GET /api/user/profile', () => {
           userId: userNoNames.id,
           tier: 'free',
           status: 'active',
+          creditsPerMonth: 2000,
+          priceCents: 0,
+          billingInterval: 'monthly',
+          currentPeriodStart: new Date('2025-11-01T00:00:00Z'),
+          currentPeriodEnd: new Date('2025-12-01T00:00:00Z'),
           stripePriceId: 'price_free',
         },
       });
 
-      await prisma.userPreferences.create({
+      await prisma.userPreference.create({
         data: {
-          id: 'pref-no-names',
           userId: userNoNames.id,
         },
       });
@@ -200,7 +206,7 @@ describe('GET /api/user/profile', () => {
       expect(response.body.displayName).toBe('nonames'); // Fallback to email username
 
       // Cleanup
-      await prisma.userPreferences.deleteMany({ where: { userId: userNoNames.id } });
+      await prisma.userPreference.deleteMany({ where: { userId: userNoNames.id } });
       await prisma.subscription.deleteMany({ where: { userId: userNoNames.id } });
       await prisma.user.delete({ where: { id: userNoNames.id } });
     });
@@ -284,13 +290,17 @@ describe('GET /api/user/profile', () => {
           userId: userFreeTier.id,
           tier: 'free',
           status: 'active',
+          creditsPerMonth: 2000,
+          priceCents: 0,
+          billingInterval: 'monthly',
+          currentPeriodStart: new Date('2025-11-01T00:00:00Z'),
+          currentPeriodEnd: new Date('2025-12-01T00:00:00Z'),
           stripePriceId: 'price_free',
         },
       });
 
-      await prisma.userPreferences.create({
+      await prisma.userPreference.create({
         data: {
-          id: 'pref-free-tier',
           userId: userFreeTier.id,
         },
       });
@@ -313,7 +323,7 @@ describe('GET /api/user/profile', () => {
       expect(response.body.subscription.status).toBe('active');
 
       // Cleanup
-      await prisma.userPreferences.deleteMany({ where: { userId: userFreeTier.id } });
+      await prisma.userPreference.deleteMany({ where: { userId: userFreeTier.id } });
       await prisma.subscription.deleteMany({ where: { userId: userFreeTier.id } });
       await prisma.user.delete({ where: { id: userFreeTier.id } });
     });
@@ -335,13 +345,17 @@ describe('GET /api/user/profile', () => {
           userId: userNoLogin.id,
           tier: 'free',
           status: 'active',
+          creditsPerMonth: 2000,
+          priceCents: 0,
+          billingInterval: 'monthly',
+          currentPeriodStart: new Date('2025-11-01T00:00:00Z'),
+          currentPeriodEnd: new Date('2025-12-01T00:00:00Z'),
           stripePriceId: 'price_free',
         },
       });
 
-      await prisma.userPreferences.create({
+      await prisma.userPreference.create({
         data: {
-          id: 'pref-no-login',
           userId: userNoLogin.id,
         },
       });
@@ -363,7 +377,7 @@ describe('GET /api/user/profile', () => {
       expect(response.body.lastLoginAt).toBeNull();
 
       // Cleanup
-      await prisma.userPreferences.deleteMany({ where: { userId: userNoLogin.id } });
+      await prisma.userPreference.deleteMany({ where: { userId: userNoLogin.id } });
       await prisma.subscription.deleteMany({ where: { userId: userNoLogin.id } });
       await prisma.user.delete({ where: { id: userNoLogin.id } });
     });

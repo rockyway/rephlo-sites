@@ -10,13 +10,13 @@
 
 import 'reflect-metadata';
 import request from 'supertest';
-import { Express } from 'express';
+import { Application } from 'express';
 import { createApp } from '../../app';
 import { container } from '../../container';
 import { PrismaClient } from '@prisma/client';
 
 describe('GET /api/user/credits', () => {
-  let app: Express;
+  let app: Application;
   let prisma: PrismaClient;
   let authToken: string;
   let testUserId: string;

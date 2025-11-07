@@ -1,0 +1,659 @@
+openapi: 3.0.3
+info:
+  title: Text Assistant Enhanced API
+  description: |
+    Enhanced API endpoints for desktop application integration.
+
+    These endpoints provide detailed credit information, user profile data,
+    and enhanced OAuth token responses for efficient client integration.
+
+    ## Authentication
+    All endpoints require Bearer token authentication using JWT access tokens
+    obtained through the OAuth 2.0 flow.
+
+    ## Rate Limiting
+    - GET /api/user/credits: 60 requests/minute
+    - GET /api/user/profile: 30 requests/minute
+    - POST /oauth/token/enhance: 30 requests/minute
+
+    ## Scopes
+    - `credits.read` - Access to credit information
+    - `user.info` - Access to user profile information
+
+  version: 1.1.0
+  contact:
+    name: API Support
+    url: https://textassistant.com/support
+    email: support@textassistant.com
+
+servers:
+  - url: https://api.textassistant.com
+    description: Production API
+  - url: https://staging-api.textassistant.com
+    description: Staging API
+  - url: http://localhost:3000
+    description: Local Development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Credits
+    description: Credit balance and usage information
+  - name: User Profile
+    description: User account and profile information
+  - name: OAuth Enhancement
+    description: Enhanced OAuth token responses
+
+paths:
+  /api/user/credits:
+    get:
+      tags:
+        - Credits
+      summary: Get detailed credit information
+      description: |
+        Retrieve detailed credit usage information for the authenticated user.
+
+        Returns separate breakdown of:
+        - Free credits (monthly allocation with reset date)
+        - Pro credits (purchased credits with lifetime usage)
+
+        **Caching Recommendation**: Cache this response for 5 minutes on the client side.
+        Re-fetch after credit-consuming API calls or on app startup if cached data > 5 minutes old.
+
+        **Rate Limit**: 60 requests per minute
+
+      operationId: getDetailedCredits
+      security:
+        - bearerAuth: [credits.read]
+      responses:
+        '200':
+          description: Successful response with detailed credit breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedCreditsResponse'
+              examples:
+                freeTierUser:
+                  summary: Free tier user
+                  value:
+                    freeCredits:
+                      remaining: 1500
+                      monthlyAllocation: 2000
+                      used: 500
+                      resetDate: "2025-12-01T00:00:00Z"
+                      daysUntilReset: 25
+                    proCredits:
+                      remaining: 0
+                      purchasedTotal: 0
+                      lifetimeUsed: 0
+                    totalAvailable: 1500
+                    lastUpdated: "2025-11-06T14:30:00Z"
+                proTierUser:
+                  summary: Pro tier user with purchased credits
+                  value:
+                    freeCredits:
+                      remaining: 2000
+                      monthlyAllocation: 2000
+                      used: 0
+                      resetDate: "2025-12-01T00:00:00Z"
+                      daysUntilReset: 25
+                    proCredits:
+                      remaining: 5000
+                      purchasedTotal: 10000
+                      lifetimeUsed: 5000
+                    totalAvailable: 7000
+                    lastUpdated: "2025-11-06T14:30:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user/profile:
+    get:
+      tags:
+        - User Profile
+      summary: Get user profile and account information
+      description: |
+        Retrieve authenticated user's complete profile including:
+        - Email and display name
+        - Subscription tier and status
+        - User preferences (default model, notification settings)
+        - Account timestamps
+
+        **Caching Recommendation**: Cache this response for 1 hour on the client side.
+        Re-fetch only when profile data is explicitly needed (e.g., settings page).
+
+        **Rate Limit**: 30 requests per minute
+
+      operationId: getUserProfile
+      security:
+        - bearerAuth: [user.info]
+      responses:
+        '200':
+          description: Successful response with user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+              examples:
+                proUser:
+                  summary: Pro tier user profile
+                  value:
+                    userId: "usr_abc123xyz"
+                    email: "user@example.com"
+                    displayName: "John Doe"
+                    subscription:
+                      tier: "pro"
+                      status: "active"
+                      currentPeriodStart: "2025-11-01T00:00:00Z"
+                      currentPeriodEnd: "2025-12-01T00:00:00Z"
+                      cancelAtPeriodEnd: false
+                    preferences:
+                      defaultModel: "gpt-5"
+                      emailNotifications: true
+                      usageAlerts: true
+                    accountCreatedAt: "2024-01-15T10:30:00Z"
+                    lastLoginAt: "2025-11-06T08:00:00Z"
+                freeUser:
+                  summary: Free tier user profile
+                  value:
+                    userId: "usr_def456uvw"
+                    email: "newuser@example.com"
+                    displayName: "Jane Smith"
+                    subscription:
+                      tier: "free"
+                      status: "active"
+                      currentPeriodStart: "2025-11-01T00:00:00Z"
+                      currentPeriodEnd: "2025-12-01T00:00:00Z"
+                      cancelAtPeriodEnd: false
+                    preferences:
+                      defaultModel: "gpt-4"
+                      emailNotifications: true
+                      usageAlerts: true
+                    accountCreatedAt: "2025-10-15T14:20:00Z"
+                    lastLoginAt: "2025-11-06T09:15:00Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /oauth/token/enhance:
+    post:
+      tags:
+        - OAuth Enhancement
+      summary: Enhance OAuth token with user data and credits
+      description: |
+        Enhance an OAuth token response with user profile and/or credit information.
+
+        This endpoint is called immediately after obtaining an access token from `/oauth/token`
+        to retrieve initial user data in a single request, reducing round trips.
+
+        **Use Cases:**
+        - Initial login: Call with `include_user_data=true` to get profile + credits
+        - Token refresh: Call with `include_credits=true` to get updated credits only
+
+        **Rate Limit**: 30 requests per minute
+
+      operationId: enhanceTokenResponse
+      security: []  # No bearer auth required - uses access_token in body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnhanceTokenRequest'
+            examples:
+              fullEnhancement:
+                summary: Get user data and credits
+                value:
+                  access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  include_user_data: "true"
+                  include_credits: "false"
+              creditsOnly:
+                summary: Get only credits
+                value:
+                  access_token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  include_user_data: "false"
+                  include_credits: "true"
+      responses:
+        '200':
+          description: Enhanced token response with requested data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnhancedTokenResponse'
+              examples:
+                withUserData:
+                  summary: With user data and credits
+                  value:
+                    user:
+                      userId: "usr_abc123xyz"
+                      email: "user@example.com"
+                      displayName: "John Doe"
+                      subscription:
+                        tier: "pro"
+                        status: "active"
+                      credits:
+                        freeCredits:
+                          remaining: 2000
+                          monthlyAllocation: 2000
+                          resetDate: "2025-12-01T00:00:00Z"
+                        proCredits:
+                          remaining: 5000
+                          purchasedTotal: 10000
+                        totalAvailable: 7000
+                withCreditsOnly:
+                  summary: With credits only
+                  value:
+                    credits:
+                      freeCredits:
+                        remaining: 1450
+                        monthlyAllocation: 2000
+                        resetDate: "2025-12-01T00:00:00Z"
+                      proCredits:
+                        remaining: 4800
+                        purchasedTotal: 10000
+                      totalAvailable: 6250
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT access token obtained from OAuth 2.0 authorization flow.
+
+        Example: `Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+  schemas:
+    DetailedCreditsResponse:
+      type: object
+      required:
+        - freeCredits
+        - proCredits
+        - totalAvailable
+        - lastUpdated
+      properties:
+        freeCredits:
+          $ref: '#/components/schemas/FreeCreditsInfo'
+        proCredits:
+          $ref: '#/components/schemas/ProCreditsInfo'
+        totalAvailable:
+          type: integer
+          description: Total credits available (free + pro)
+          example: 6500
+        lastUpdated:
+          type: string
+          format: date-time
+          description: Timestamp when this data was calculated
+          example: "2025-11-06T14:30:00Z"
+
+    FreeCreditsInfo:
+      type: object
+      required:
+        - remaining
+        - monthlyAllocation
+        - used
+        - resetDate
+        - daysUntilReset
+      properties:
+        remaining:
+          type: integer
+          description: Free credits available this month
+          example: 1500
+        monthlyAllocation:
+          type: integer
+          description: Total free credits allocated per month
+          example: 2000
+        used:
+          type: integer
+          description: Free credits used this month
+          example: 500
+        resetDate:
+          type: string
+          format: date-time
+          description: When free credits reset to monthlyAllocation
+          example: "2025-12-01T00:00:00Z"
+        daysUntilReset:
+          type: integer
+          description: Days until reset (convenience field)
+          example: 25
+
+    ProCreditsInfo:
+      type: object
+      required:
+        - remaining
+        - purchasedTotal
+        - lifetimeUsed
+      properties:
+        remaining:
+          type: integer
+          description: Purchased/pro credits remaining
+          example: 5000
+        purchasedTotal:
+          type: integer
+          description: Total pro credits ever purchased
+          example: 10000
+        lifetimeUsed:
+          type: integer
+          description: Pro credits used across lifetime
+          example: 5000
+
+    UserProfileResponse:
+      type: object
+      required:
+        - userId
+        - email
+        - displayName
+        - subscription
+        - preferences
+        - accountCreatedAt
+      properties:
+        userId:
+          type: string
+          description: Unique user identifier
+          example: "usr_abc123xyz"
+        email:
+          type: string
+          format: email
+          description: User's email address (verified)
+          example: "user@example.com"
+        displayName:
+          type: string
+          description: User's display name
+          example: "John Doe"
+        subscription:
+          $ref: '#/components/schemas/SubscriptionInfo'
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+        accountCreatedAt:
+          type: string
+          format: date-time
+          description: When account was created
+          example: "2024-01-15T10:30:00Z"
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last successful login timestamp
+          example: "2025-11-06T08:00:00Z"
+
+    SubscriptionInfo:
+      type: object
+      required:
+        - tier
+        - status
+        - cancelAtPeriodEnd
+      properties:
+        tier:
+          type: string
+          enum: [free, pro, enterprise]
+          description: Subscription level
+          example: "pro"
+        status:
+          type: string
+          enum: [active, cancelled, expired, trialing]
+          description: Subscription status
+          example: "active"
+        currentPeriodStart:
+          type: string
+          format: date-time
+          nullable: true
+          description: Current billing period start
+          example: "2025-11-01T00:00:00Z"
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          nullable: true
+          description: Current billing period end
+          example: "2025-12-01T00:00:00Z"
+        cancelAtPeriodEnd:
+          type: boolean
+          description: Whether subscription cancels at period end
+          example: false
+
+    UserPreferences:
+      type: object
+      required:
+        - emailNotifications
+        - usageAlerts
+      properties:
+        defaultModel:
+          type: string
+          nullable: true
+          description: User's preferred default model
+          example: "gpt-5"
+        emailNotifications:
+          type: boolean
+          description: Email notification preference
+          example: true
+        usageAlerts:
+          type: boolean
+          description: Usage alert preference
+          example: true
+
+    EnhanceTokenRequest:
+      type: object
+      required:
+        - access_token
+      properties:
+        access_token:
+          type: string
+          description: JWT access token from /oauth/token
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        include_user_data:
+          type: string
+          enum: ["true", "false"]
+          default: "false"
+          description: Include full user profile and credits
+          example: "true"
+        include_credits:
+          type: string
+          enum: ["true", "false"]
+          default: "false"
+          description: Include only credits (without full profile)
+          example: "true"
+
+    EnhancedTokenResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/EnhancedUserData'
+        credits:
+          $ref: '#/components/schemas/EnhancedCreditsData'
+
+    EnhancedUserData:
+      type: object
+      required:
+        - userId
+        - email
+        - displayName
+        - subscription
+        - credits
+      properties:
+        userId:
+          type: string
+          example: "usr_abc123xyz"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        displayName:
+          type: string
+          example: "John Doe"
+        subscription:
+          type: object
+          required:
+            - tier
+            - status
+          properties:
+            tier:
+              type: string
+              enum: [free, pro, enterprise]
+              example: "pro"
+            status:
+              type: string
+              enum: [active, cancelled, expired, trialing]
+              example: "active"
+        credits:
+          $ref: '#/components/schemas/EnhancedCreditsData'
+
+    EnhancedCreditsData:
+      type: object
+      required:
+        - freeCredits
+        - proCredits
+        - totalAvailable
+      properties:
+        freeCredits:
+          type: object
+          required:
+            - remaining
+            - monthlyAllocation
+            - resetDate
+          properties:
+            remaining:
+              type: integer
+              example: 2000
+            monthlyAllocation:
+              type: integer
+              example: 2000
+            resetDate:
+              type: string
+              format: date-time
+              example: "2025-12-01T00:00:00Z"
+        proCredits:
+          type: object
+          required:
+            - remaining
+            - purchasedTotal
+          properties:
+            remaining:
+              type: integer
+              example: 5000
+            purchasedTotal:
+              type: integer
+              example: 10000
+        totalAvailable:
+          type: integer
+          example: 7000
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - error_description
+      properties:
+        error:
+          type: string
+          description: Error code
+        error_description:
+          type: string
+          description: Human-readable error description
+
+  responses:
+    UnauthorizedError:
+      description: Invalid or expired access token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "unauthorized"
+            error_description: "Invalid or expired access token"
+
+    InvalidTokenError:
+      description: Invalid token format or structure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "invalid_token"
+            error_description: "Invalid or malformed access token"
+
+    ForbiddenError:
+      description: Access forbidden (e.g., subscription expired)
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  renewUrl:
+                    type: string
+                    description: URL to renew subscription
+          example:
+            error: "subscription_expired"
+            error_description: "Your subscription has expired. Please renew to continue."
+            renewUrl: "https://textassistant.com/subscribe?plan=pro"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "not_found"
+            error_description: "User profile not found"
+
+    BadRequestError:
+      description: Bad request (invalid parameters)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "invalid_request"
+            error_description: "At least one of include_user_data or include_credits must be true"
+
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ErrorResponse'
+              - type: object
+                properties:
+                  retry_after:
+                    type: integer
+                    description: Seconds until rate limit resets
+          example:
+            error: "rate_limit_exceeded"
+            error_description: "Too many requests. Please try again later."
+            retry_after: 60
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "internal_server_error"
+            error_description: "An unexpected error occurred. Please try again later."
