@@ -145,6 +145,7 @@ export async function createOIDCProvider(
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+        path: '/', // Critical: Ensure cookies are sent to all routes including /interaction and /oauth
         // Note: Cannot use 'none' in development because it requires Secure flag with HTTPS
         // Desktop Apps should ensure system browser preserves cookies between requests
       },
@@ -153,6 +154,7 @@ export async function createOIDCProvider(
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
+        path: '/', // Critical: Ensure cookies are sent to all routes
       },
     },
 
