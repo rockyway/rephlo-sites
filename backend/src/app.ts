@@ -173,11 +173,7 @@ export async function createApp(): Promise<Application> {
   // Store provider instance for access in routes
   app.set('oidcProvider', oidcProvider);
 
-  // Mount OIDC provider routes
-  const oauthRouter = createOAuthRouter(oidcProvider, prisma);
-  app.use('/', oauthRouter);
-
-  logger.info('OIDC provider mounted successfully');
+  logger.info('OIDC Provider initialized');
 
   // ===== 8. Authentication Middleware (for REST API) =====
 
@@ -230,9 +226,22 @@ export async function createApp(): Promise<Application> {
    * Mount all application routes
    * Routes are organized by prefix in routes/index.ts
    *
-   * Note: OAuth routes are already mounted above via OIDC provider
+   * IMPORTANT: Application routes must be mounted BEFORE OIDC provider
+   * to prevent the OIDC catch-all from intercepting health/api routes
    */
   app.use('/', routes);
+
+  /**
+   * Mount OIDC provider routes AFTER application routes
+   * OIDC provider handles:
+   * - /.well-known/* (OpenID discovery)
+   * - /oauth/* (token endpoints)
+   * - /interaction/* (consent/login)
+   */
+  const oauthRouter = createOAuthRouter(oidcProvider, prisma);
+  app.use('/', oauthRouter);
+
+  logger.info('OIDC provider mounted successfully');
 
   // ===== 11. 404 Handler =====
 
