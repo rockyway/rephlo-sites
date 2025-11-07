@@ -32,6 +32,11 @@ async function main() {
       responseTypes: ['code'],
       scope: 'openid email profile llm.inference models.read user.info credits.read',
       isActive: true,
+      config: {
+        skipConsentScreen: true, // First-party trusted app, auto-approve consent
+        description: 'Official desktop application for Text Assistant',
+        tags: ['desktop-app', 'official'],
+      },
     },
   ];
 
@@ -45,6 +50,7 @@ async function main() {
         responseTypes: client.responseTypes,
         scope: client.scope,
         isActive: client.isActive,
+        config: client.config,
       },
       create: client,
     });

@@ -20,10 +20,12 @@ import path from 'path';
 export class AuthController {
   private provider: Provider;
   private authService: AuthService;
+  private prisma: PrismaClient;
 
   constructor(provider: Provider, prisma: PrismaClient) {
     this.provider = provider;
     this.authService = new AuthService(prisma);
+    this.prisma = prisma;
   }
 
   /**
@@ -194,6 +196,10 @@ export class AuthController {
           throw error;
         }
       }
+
+      // Check if client should auto-approve consent
+      // This is handled in a separate step after successful login
+      await this.tryAutoApproveConsent(req, res, user.id);
     } catch (error) {
       logger.error('OIDC Login interaction failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -390,6 +396,124 @@ export class AuthController {
         error: error instanceof Error ? error.message : String(error),
       });
       next(error);
+    }
+  };
+
+  /**
+   * Auto-approve consent for first-party trusted apps
+   *
+   * After successful login, checks if the OAuth client should skip the consent screen.
+   * If enabled, automatically approves all requested scopes without user interaction.
+   * This is safe for first-party apps (e.g., official desktop client) but should NOT
+   * be enabled for third-party applications that require explicit user consent.
+   */
+  private tryAutoApproveConsent = async (
+    req: Request,
+    res: Response,
+    userId: string
+  ): Promise<void> => {
+    try {
+      const details = await getInteractionDetails(
+        this.provider,
+        req,
+        res
+      );
+
+      const {
+        prompt: { name },
+        params,
+        session,
+      } = details;
+
+      // Only auto-approve if interaction prompt is 'consent'
+      if (name !== 'consent') {
+        logger.debug('OIDC: Not a consent prompt, skipping auto-approve', {
+          prompt: name,
+          clientId: params.client_id,
+        });
+        return;
+      }
+
+      // Load client configuration to check skipConsentScreen setting
+      const client = await this.provider.Client.find(
+        params.client_id as string
+      );
+
+      if (!client) {
+        logger.warn('OIDC: Client not found for auto-consent check', {
+          clientId: params.client_id,
+        });
+        return;
+      }
+
+      // Get client config from database
+      const dbClient = await this.prisma.oAuthClient.findUnique({
+        where: { clientId: client.clientId },
+      });
+
+      if (!dbClient) {
+        logger.warn('OIDC: OAuth client not found in database', {
+          clientId: client.clientId,
+        });
+        return;
+      }
+
+      // Check if skipConsentScreen is enabled in config
+      const config = (dbClient.config as any) || {};
+      const shouldSkipConsent = config.skipConsentScreen === true;
+
+      if (!shouldSkipConsent) {
+        logger.debug('OIDC: skipConsentScreen not enabled, user must approve consent', {
+          clientId: client.clientId,
+        });
+        return;
+      }
+
+      // Auto-approve consent for all requested scopes
+      logger.info('OIDC: Auto-approving consent for first-party app', {
+        clientId: client.clientId,
+        userId,
+      });
+
+      // Get requested scopes
+      const requestedScopes = (params.scope as string)?.split(' ') || [];
+
+      // Create grant with all requested scopes
+      const grant = new this.provider.Grant({
+        accountId: session?.accountId || userId,
+        clientId: params.client_id as string,
+      });
+
+      // Add OIDC scopes
+      grant.addOIDCScope(requestedScopes.join(' '));
+
+      // Save grant
+      const grantId = await grant.save();
+
+      // Complete consent interaction automatically
+      const result = {
+        consent: {
+          grantId,
+        },
+      };
+
+      await finishInteraction(this.provider, req, res, result);
+
+      logger.info('OIDC: Auto-consent approved successfully', {
+        clientId: client.clientId,
+        userId,
+        grantId,
+        scopes: requestedScopes,
+      });
+    } catch (error) {
+      // Log but don't fail the login if auto-consent fails
+      // User will see the consent screen if auto-approve fails
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.warn('OIDC: Auto-consent approval failed (user will see consent screen)', {
+        userId,
+        error: errorMsg,
+      });
+      // Don't rethrow - let the normal consent flow handle this
     }
   };
 }

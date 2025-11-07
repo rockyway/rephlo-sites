@@ -686,3 +686,62 @@ The backend OAuth login was already working correctly. Three issues prevented it
 - Frontend browser redirect issue is environment-specific (DevTools Chromium)
 - Actual browsers and desktop app will work correctly
 - OAuth flow is production-ready
+
+## Session 4: Desktop App SessionNotFound Error Fix - November 7, 2025
+
+### Issue
+Desktop App users getting "SessionNotFound: invalid_request" error when attempting OAuth login. Error trace showed provider couldn't find interaction session during login POST request.
+
+### Root Cause
+OIDC provider sets session cookie when `/oauth/authorize` is called, but the session cookie wasn't being sent in the login POST request to `/interaction/{uid}/login`. This occurs in Desktop App scenarios where the system browser may not preserve cookies across the OAuth redirect chain, or when launching a fresh browser instance without proper cookie inheritance.
+
+### Analysis Performed
+- Read auth controller, OIDC configuration, error handling middleware
+- Confirmed test script proves backend OAuth flow works end-to-end
+- Identified auth controller's login method calls `finishInteraction` which internally validates session
+- Determined issue is specific to Desktop App's system browser cookie handling
+
+### Solution Implemented
+
+**1. Auth Controller Error Recovery** (`backend/src/controllers/auth.controller.ts`)
+- Enhanced `login()` method with graceful SessionNotFound handling
+- Implements recovery strategy:
+  1. Try normal `finishInteraction()` (standard flow with session validation)
+  2. If SessionNotFound, attempt to reload interaction details and retry
+  3. If still missing, return user-friendly error with recovery instructions
+- Added detailed diagnostic logging to track which requests have session issues
+- Maintains security while improving robustness
+
+**2. OIDC Configuration Documentation** (`backend/src/config/oidc.ts`)
+- Clarified cookie configuration for development vs production
+- Explained why `sameSite: 'lax'` is used (allows same-origin form submissions)
+- Noted that `sameSite: 'none'` requires HTTPS/Secure flag (not suitable for HTTP localhost)
+- Added comments about Desktop App expectations for cookie preservation
+
+### Verification
+- ✅ TypeScript build successful with no errors
+- ✅ Test script (`test-oauth-with-consent.js`) passes - proves complete OAuth flow works
+- ✅ Browser testing shows login page loads and form submission works correctly
+- ✅ Auth controller gracefully handles SessionNotFound errors
+- ✅ Commit: 0ae6365 - "fix(auth): Handle SessionNotFound errors during OAuth login"
+
+### Documentation
+Created comprehensive troubleshooting document: `docs/troubleshooting/002-desktop-app-sessionnotfound-fix.md`
+- Root cause analysis with flow diagram
+- Solution explanation
+- Testing verification
+- Monitoring/debugging guidance
+- Remaining items for Desktop App side
+
+### Impact
+- Desktop App users will now see helpful error messages instead of raw OIDC errors
+- Server will attempt to recover from missing session scenarios
+- Better diagnostics through enhanced logging
+- No breaking changes to API or database
+
+### Next Steps for Desktop App
+The Desktop App should ensure system browser preserves cookies:
+1. Verify browser instance stores Set-Cookie headers from `/oauth/authorize`
+2. Ensure login POST request includes stored session cookie
+3. Handle recovery error by instructing users to retry OAuth flow
+

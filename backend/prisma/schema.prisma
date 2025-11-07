@@ -167,6 +167,7 @@ model User {
 
 // OAuth Clients Table
 // Stores OAuth 2.0 client configurations (e.g., desktop app, web app)
+// Uses JSON config field for extensibility without schema migrations
 model OAuthClient {
   clientId       String   @id @map("client_id") @db.VarChar(255)
   clientName     String   @map("client_name") @db.VarChar(255)
@@ -176,7 +177,17 @@ model OAuthClient {
   responseTypes  String[] @map("response_types")
   scope          String?  @db.Text
   isActive       Boolean  @default(true) @map("is_active")
+  config         Json     @default("{}") @map("config")
+  // Flexible JSON field for client-specific configuration:
+  // {
+  //   "skipConsentScreen": true,          // Skip consent & auto-approve after login
+  //   "allowedOrigins": ["https://..."],  // Additional CORS origins
+  //   "description": "...",                // Client description
+  //   "tags": ["tag1", "tag2"],            // For categorization
+  //   "...": "..."                         // Any future fields
+  // }
   createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("oauth_clients")
 }
