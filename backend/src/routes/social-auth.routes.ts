@@ -62,7 +62,7 @@ export function createSocialAuthRouter(): Router {
    * Security: Uses state parameter to prevent CSRF attacks
    */
   router.get(
-    '/google/authorize',
+    '/oauth/google/authorize',
     oauthLimiter,
     asyncHandler(socialAuthController.googleAuthorize.bind(socialAuthController))
   );
@@ -107,7 +107,7 @@ export function createSocialAuthRouter(): Router {
    * - google_oauth_callback_failed: Unexpected error during callback
    */
   router.get(
-    '/google/callback',
+    '/oauth/google/callback',
     oauthLimiter,
     asyncHandler(socialAuthController.googleCallback.bind(socialAuthController))
   );

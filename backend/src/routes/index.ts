@@ -219,8 +219,8 @@ router.use('/auth', createAuthRouter());
 
 // ===== Social Authentication Routes =====
 // OAuth integration with external providers (Google)
-// Note: Mounts under /oauth/* to follow OAuth convention
-router.use('/oauth', createSocialAuthRouter());
+// Note: Social auth routes are now mounted at root to avoid conflicts with OIDC provider
+router.use('/', createSocialAuthRouter());
 
 // ===== Webhook Routes =====
 // Webhook routes must be registered before body parsing middleware
