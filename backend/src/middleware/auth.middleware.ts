@@ -52,7 +52,7 @@ export function authMiddleware(
     logger.warn('Auth middleware: missing authorization header', {
       path: req.path,
     });
-    throw unauthorizedError('Missing authorization header');
+    return next(unauthorizedError('Missing authorization header'));
   }
 
   const parts = authHeader.split(' ');
@@ -61,7 +61,7 @@ export function authMiddleware(
     logger.warn('Auth middleware: invalid authorization header format', {
       path: req.path,
     });
-    throw unauthorizedError('Invalid authorization header format');
+    return next(unauthorizedError('Invalid authorization header format'));
   }
 
   const token = parts[1];
@@ -91,7 +91,8 @@ export function authMiddleware(
         path: req.path,
         error: error.message,
       });
-      throw unauthorizedError('Invalid or expired token');
+      // Pass error to Express error handling middleware instead of throwing
+      return next(unauthorizedError('Invalid or expired token'));
     });
 }
 
