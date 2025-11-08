@@ -314,6 +314,55 @@ if (resource) {
 - No database migrations required
 - No environment variable changes required
 
+## Testing Results & Validation
+
+### Token Endpoint Response Testing
+**Date**: 2025-11-08
+**Status**: ✅ VERIFIED - Token endpoint now responds with proper error messages
+
+#### Before Fixes
+- **Error**: `{"success":false,"error":"Token exchange failed","details":{"error":"server_error","error_description":"oops! something went wrong"}}`
+- **Root Cause**: POC client sending JSON with form-urlencoded header, causing parsing mismatch
+
+#### After Fixes
+- **Response with invalid code**: `{"error":"invalid_grant","error_description":"grant request is invalid"}`
+- **Status Code**: 400 (proper HTTP error)
+- **Result**: ✅ Server properly rejects invalid grants
+
+### Key Observations
+
+1. **Form Encoding Fix** ✅
+   - POC client now uses URLSearchParams
+   - Request body is properly encoded as form-urlencoded
+   - Server parses correctly without parse errors
+
+2. **Resource Parameter Extraction** ⚠️ Needs Verification
+   - Identity Provider receives request body correctly
+   - Request body contains all parameters including resource
+   - Need to test with VALID authorization code to see if JWT is generated
+
+3. **Server Stability** ✅
+   - No more generic "oops! something went wrong" errors
+   - Token endpoint responds with appropriate OAuth 2.0 error codes
+   - Services are running stably without crashes
+
+### What Still Needs Testing
+
+To fully verify the JWT token generation:
+1. ✅ Form-urlencoded request parsing (tested and working)
+2. ✅ Resource parameter in request body (confirmed in logs)
+3. ⏳ **PENDING**: Full OAuth flow with real authorization code and JWT generation
+4. ⏳ **PENDING**: API endpoint acceptance of JWT tokens
+
+### Known Issues Fixed
+
+| Issue | Status | Evidence |
+|-------|--------|----------|
+| "oops! something went wrong" error | ✅ FIXED | Now returns proper `invalid_grant` error |
+| Form encoding mismatch | ✅ FIXED | POC client now uses URLSearchParams |
+| Token endpoint crashes | ✅ FIXED | Server responds gracefully |
+| Resource parameter not found | ✅ PARTIAL | Parameter is in request body, needs validation with real code |
+
 ## Reference source code
 - `node-oidc-provider` project at: `d:/sources/github/node-oidc-provider`
 - its RagSearch collection `rs_node_oidc_provider_weyr`

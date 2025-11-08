@@ -324,6 +324,25 @@ export async function createOIDCProvider(
       resource = oidc.ctx.request.body.resource;
     }
 
+    // Also check for the parameter in various other context locations
+    if (oidc?.ctx?.request?.body) {
+      const bodyKeys = Object.keys(oidc.ctx.request.body);
+      console.log('🔍 OIDC AccessToken.save - Request body keys:', bodyKeys);
+      console.log('🔍 Full body:', JSON.stringify(oidc.ctx.request.body));
+
+      logger.debug('OIDC: Checking request body', {
+        keys: bodyKeys,
+        body: JSON.stringify(oidc.ctx.request.body),
+      });
+    }
+
+    console.log('🔍 OIDC AccessToken.save called with:', {
+      hasResource: !!resource,
+      resource: resource,
+      clientId: oidc?.client?.clientId,
+      ctxBodyKeys: Object.keys(oidc?.ctx?.request?.body || {}),
+    });
+
     logger.debug('OIDC: AccessToken.save called', {
       hasOidc: !!oidc,
       hasParams: !!oidc?.params,
@@ -332,6 +351,7 @@ export async function createOIDCProvider(
       clientId: oidc?.client?.clientId,
       hasCtx: !!oidc?.ctx,
       ctxBodyKeys: Object.keys(oidc?.ctx?.request?.body || {}),
+      fullRequestBody: oidc?.ctx?.request?.body ? JSON.stringify(oidc.ctx.request.body) : 'no body',
     });
 
     if (resource) {
