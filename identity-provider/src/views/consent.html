@@ -337,7 +337,7 @@
     }
 
     // Handle form submission
-    document.getElementById('consentForm').addEventListener('submit', async (e) => {
+    document.getElementById('consentForm').addEventListener('submit', (e) => {
       e.preventDefault();
 
       const submitBtn = document.getElementById('submitBtn');
@@ -351,31 +351,22 @@
       const checkboxes = document.querySelectorAll('input[name="scopes"]:checked');
       const scopes = Array.from(checkboxes).map(cb => cb.value);
 
-      try {
-        const response = await fetch(`/interaction/${uid}/consent`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ scopes }),
-        });
+      // Create a hidden form and submit it via POST
+      // This allows the backend to do a proper redirect without CORS issues
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/interaction/${uid}/consent`;
 
-        if (response.ok) {
-          // Success - OIDC provider will redirect
-          window.location.reload();
-        } else {
-          const error = await response.json();
-          alert(error.message || 'Failed to grant consent');
+      scopes.forEach(scope => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'scopes';
+        input.value = scope;
+        form.appendChild(input);
+      });
 
-          // Re-enable button
-          submitBtn.disabled = false;
-          submitText.textContent = 'Authorize';
-        }
-      } catch (error) {
-        alert('An error occurred. Please try again.');
-        submitBtn.disabled = false;
-        submitText.textContent = 'Authorize';
-      }
+      document.body.appendChild(form);
+      form.submit();
     });
 
     // Deny consent

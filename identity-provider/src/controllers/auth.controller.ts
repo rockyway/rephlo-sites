@@ -69,19 +69,19 @@ export class AuthController {
           path.join(__dirname, '../views/login.html')
         );
       } else if (prompt.name === 'consent') {
-        // Check if client should auto-approve consent before rendering page
-        const shouldAutoApprove = await this.checkShouldAutoApproveConsent(params, session);
+        // TEMPORARILY DISABLED: Check if client should auto-approve consent before rendering page
+        // const shouldAutoApprove = await this.checkShouldAutoApproveConsent(params, session);
 
-        if (shouldAutoApprove) {
-          // Auto-approve consent without rendering page
-          logger.info('OIDC: Auto-approving consent (skipping consent page)', {
-            uid,
-            clientId: params.client_id,
-            userId: session?.accountId,
-          });
-          await this.autoApproveConsent(req, res, details);
-          return; // Important: return early after handling
-        }
+        // if (shouldAutoApprove) {
+        //   // Auto-approve consent without rendering page
+        //   logger.info('OIDC: Auto-approving consent (skipping consent page)', {
+        //     uid,
+        //     clientId: params.client_id,
+        //     userId: session?.accountId,
+        //   });
+        //   await this.autoApproveConsent(req, res, details);
+        //   return; // Important: return early after handling
+        // }
 
         // Render consent page with no-cache headers
         res.set({
@@ -255,12 +255,19 @@ export class AuthController {
         return;
       }
 
-      // Get granted scopes from form
-      const grantedScopes = req.body.scopes
-        ? Array.isArray(req.body.scopes)
+      // Get granted scopes from form (handles both JSON and form-encoded)
+      let grantedScopes = [];
+      if (req.body.scopes) {
+        grantedScopes = Array.isArray(req.body.scopes)
           ? req.body.scopes
-          : [req.body.scopes]
-        : [];
+          : [req.body.scopes];
+      }
+
+      logger.info('OIDC Consent endpoint received', {
+        userId: session?.accountId,
+        clientId: params.client_id,
+        grantedScopes,
+      });
 
       // Validate scopes
       const requestedScopes = (params.scope as string)?.split(' ') || [];

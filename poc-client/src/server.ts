@@ -275,18 +275,18 @@ app.get('/api/test/credits', async (req: Request, res: Response) => {
  */
 app.get('/api/test/health', async (req: Request, res: Response) => {
   try {
-    const response = await axios.get(`${RESOURCE_API_URL}/v1/health`);
+    const response = await axios.get(`${RESOURCE_API_URL}/health`);
 
     res.json({
       success: true,
-      endpoint: '/v1/health',
+      endpoint: '/health',
       statusCode: response.status,
       data: response.data,
     });
   } catch (error: any) {
     res.status(error.response?.status || 500).json({
       success: false,
-      endpoint: '/v1/health',
+      endpoint: '/health',
       statusCode: error.response?.status,
       error: error.response?.data?.message || error.message,
     });

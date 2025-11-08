@@ -193,9 +193,12 @@ export async function createOIDCProvider(
     },
 
     // Interaction URL for login/consent
+    // IMPORTANT: Must be absolute URL (including protocol and host) so browsers redirect correctly
+    // without getting confused about which domain the interaction endpoint is on
     interactions: {
       url: async (_ctx: KoaContextWithOIDC, interaction: any) => {
-        return `/interaction/${interaction.uid}`;
+        const issuer = process.env.OIDC_ISSUER || 'http://localhost:7151';
+        return `${issuer}/interaction/${interaction.uid}`;
       },
     },
 
