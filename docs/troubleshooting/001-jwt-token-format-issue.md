@@ -1,9 +1,9 @@
 # JWT Token Format Issue - Investigation & Resolution
 
-**Status**: ✅ RESOLVED (Fix Applied)
+**Status**: 🔄 IN PROGRESS (Secondary Issue Encountered)
 **Created**: 2025-11-08
 **Last Updated**: 2025-11-08
-**Priority**: 🔴 CRITICAL (but FIXED)
+**Priority**: 🔴 CRITICAL
 
 ## Problem Statement
 
@@ -188,7 +188,94 @@ All services must be running:
 - OAuth flow completes but is non-functional for API access
 - POC client shows "JWT Token: ⚠ Not a valid JWT" warning
 
+## Secondary Issue Encountered & Resolution
+
+### Error After Applying Resource Parameter Fix
+**Time**: 2025-11-08 (after resource parameter was added to POC client)
+**Error Message**: `{"success":false,"error":"Token exchange failed","details":{"error":"server_error","error_description":"oops! something went wrong"}}`
+**Trigger**: Token exchange at `/oauth/token` endpoint after user logs in and grants consent
+
+### Root Cause Analysis - Part 2
+
+The initial fix added the resource parameter to the POC client, but there were TWO issues preventing it from working:
+
+#### Issue 2a: Form URL-Encoding Format ❌
+**Problem**: POC client was setting `Content-Type: application/x-www-form-urlencoded` but sending JSON data
+**Location**: `poc-client/src/server.ts` lines 126-140
+**Fix**: Changed from JSON object to URLSearchParams
+```typescript
+// ❌ BROKEN: Sending JSON with form-urlencoded header
+const tokenResponse = await axios.post(url,
+  { grant_type, code, resource, ... },
+  { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+);
+
+// ✅ FIXED: Properly serialized form data
+const tokenData = new URLSearchParams();
+tokenData.append('grant_type', 'authorization_code');
+tokenData.append('resource', 'https://api.textassistant.local');
+// ... append other fields ...
+
+const tokenResponse = await axios.post(url, tokenData, {
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+});
+```
+
+#### Issue 2b: Resource Parameter Not Extracted from Request Body ❌
+**Problem**: OIDC provider middleware wasn't extracting the resource parameter from the form-encoded token request body
+**Location**: `identity-provider/src/config/oidc.ts` lines 309-396
+**Fixes Applied**:
+1. Added `resource` to `extraParams` to allow it at the authorization endpoint
+2. Enhanced AccessToken.save middleware to check both:
+   - `oidc?.params?.resource` (if it was captured)
+   - `oidc?.ctx?.request?.body?.resource` (fallback for token endpoint)
+3. Added error handling to prevent exceptions from propagating
+4. Made the middleware more defensive with proper logging
+
+```typescript
+// BEFORE: Only checked oidc?.params?.resource
+if (oidc && oidc.params && oidc.params.resource) {
+  const { resource } = oidc.params;
+  // ...
+}
+
+// AFTER: Checks both sources and has fallback
+let resource = oidc?.params?.resource;
+if (!resource && oidc?.ctx?.request?.body?.resource) {
+  resource = oidc.ctx.request.body.resource;  // ← New fallback
+}
+
+if (resource) {
+  try {
+    // ... resolve resourceServer ...
+  } catch (error) {
+    logger.error('Failed to attach resourceServer', { error });
+    // Don't throw - let token be issued anyway
+  }
+}
+```
+
+### Fixes Applied
+
+**Commit 1**: Fixed POC client token request serialization
+- File: `poc-client/src/server.ts` (lines 125-141)
+- Changed from JSON to URLSearchParams
+- Ensures `resource` parameter is properly encoded in request body
+
+**Commit 2**: Enhanced Identity Provider resource parameter handling
+- File: `identity-provider/src/config/oidc.ts` (lines 297-396)
+- Added `'resource'` to `extraParams` array
+- Enhanced AccessToken.save middleware to check request body
+- Improved error handling to be non-fatal
+- Better logging for debugging
+
+### Current Status
+
+**Services Restarted**:
+- ✅ POC Client rebuilt and running (port 8080)
+- ✅ Identity Provider rebuilt and running (port 7151)
+- Ready for testing end-to-end OAuth flow
+
 ## Reference source code
 - `node-oidc-provider` project at: `d:/sources/github/node-oidc-provider`
 - its RagSearch collection `rs_node_oidc_provider_weyr`
-  

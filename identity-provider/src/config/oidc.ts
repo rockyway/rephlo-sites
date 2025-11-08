@@ -97,20 +97,26 @@ export async function createOIDCProvider(
 
       // Enable resource indicators to support JWT access tokens
       // Resources are identified by a string (e.g., 'api', 'resource-server')
-      // Without resource indicator in request, default resource is used
+      // When a resource parameter is included in the authorization request,
+      // this function will be called and should return JWT token configuration
       resourceIndicators: {
         enabled: true,
-        // Return resource server configuration for any resource indicator
+        // Return resource server configuration for the requested resource
         async getResourceServerInfo(ctx: any, resourceIndicator: string, client: any) {
-          // For OAuth flows without explicit resource indicator,
-          // return a default resource that produces JWT tokens
-          // All requests default to this if no explicit indicator is provided
+          logger.info(`OIDC: Resource indicator requested: ${resourceIndicator}`);
+
+          // Always return JWT token configuration for valid resources
+          // This ensures access tokens are JWT format instead of opaque reference tokens
           return {
+            // Scopes available for this resource
             scope: 'openid email profile llm.inference models.read user.info credits.read',
-            accessTokenFormat: 'jwt', // Use JWT instead of opaque tokens
-            audience: 'https://api.textassistant.local', // Audience claim in JWT
+            // CRITICAL: Force JWT format instead of default opaque tokens
+            accessTokenFormat: 'jwt',
+            // JWT audience claim - identifies the intended recipient
+            audience: 'https://api.textassistant.local',
+            // JWT signing configuration
             jwt: {
-              sign: { alg: 'RS256' }, // Use RS256 signing algorithm
+              sign: { alg: 'RS256' }, // RS256 is configured in jwks above
             },
           };
         },
@@ -289,16 +295,94 @@ export async function createOIDCProvider(
     },
 
     // Extra params allowed in authorization request
-    extraParams: ['code_challenge', 'code_challenge_method'],
+    extraParams: ['code_challenge', 'code_challenge_method', 'resource'],
 
     // Extra client metadata
     extraClientMetadata: {
       properties: ['client_name'],
     },
-  };
+
+    // Token endpoint customization to accept resource parameter
+    extraTokenEndpointResponseProperties: ['resource'],
+  } as any;
 
   // Create provider instance
   const provider = new Provider(OIDC_ISSUER, configuration);
+
+  // CRITICAL FIX: Middleware to attach resourceServer to tokens for JWT format support
+  // This intercepts token generation and resolves the resource server configuration
+  // allowing tokens to be issued in JWT format instead of opaque reference tokens
+  const originalOnIssueAccessToken = provider.AccessToken.prototype.save;
+  provider.AccessToken.prototype.save = async function(this: any): Promise<string> {
+    const { oidc } = this;
+
+    // The resource parameter may be in the params or we need to get it from the context
+    let resource = oidc?.params?.resource;
+
+    // If not in params, try to get from the request body via the context
+    if (!resource && oidc?.ctx?.request?.body?.resource) {
+      resource = oidc.ctx.request.body.resource;
+    }
+
+    logger.debug('OIDC: AccessToken.save called', {
+      hasOidc: !!oidc,
+      hasParams: !!oidc?.params,
+      hasResource: !!resource,
+      resource: resource,
+      clientId: oidc?.client?.clientId,
+      hasCtx: !!oidc?.ctx,
+      ctxBodyKeys: Object.keys(oidc?.ctx?.request?.body || {}),
+    });
+
+    if (resource) {
+      try {
+        // Resolve the resource server configuration
+        const resourceIndicators = configuration.features?.resourceIndicators as any;
+        if (resourceIndicators?.getResourceServerInfo) {
+          const resourceServer = await resourceIndicators.getResourceServerInfo(
+            oidc?.ctx || oidc?.provider?.ctx,
+            resource,
+            oidc?.client
+          );
+
+          if (resourceServer) {
+            // Attach to token so it uses JWT format
+            this.resourceServer = resourceServer;
+            logger.info('OIDC: ResourceServer attached to access token', {
+              resource,
+              format: resourceServer.accessTokenFormat,
+              clientId: oidc?.client?.clientId,
+              hasResourceServer: !!this.resourceServer,
+            });
+          } else {
+            logger.warn('OIDC: getResourceServerInfo returned falsy value', {
+              resource,
+              clientId: oidc?.client?.clientId,
+            });
+          }
+        } else {
+          logger.warn('OIDC: resourceIndicators.getResourceServerInfo not found', {
+            resource,
+          });
+        }
+      } catch (error) {
+        logger.error('OIDC: Failed to attach resourceServer to token', {
+          resource,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        // Don't throw - let the token be issued anyway
+      }
+    } else {
+      logger.debug('OIDC: No resource parameter found in token request', {
+        hasParams: !!oidc?.params,
+        ctxRequestBodyKeys: Object.keys(oidc?.ctx?.request?.body || {}),
+      });
+    }
+
+    // Call the original save method
+    return originalOnIssueAccessToken.call(this) as Promise<string>;
+  };
 
   // Event listeners for logging
   provider.on('authorization.success', (_ctx: any) => {

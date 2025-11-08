@@ -1293,3 +1293,61 @@ Token obtained is a reference token (opaque), not a JWT. To get JWT tokens, the 
 2. Investigate JWT token format to serve JWT instead of reference tokens
 3. Update POC client to decode and display JWT payload when received
 
+
+## Session: JWT Token Format Issue - Investigation and Diagnostic Work
+
+**Date**: 2025-11-08  
+**Issue**: OAuth flow successfully completes but returns opaque reference tokens (40 chars) instead of JWT tokens. All API endpoints return 401 Unauthorized because they expect JWT tokens.
+
+### Key Findings
+
+1. **OAuth Flow Works**: 
+   - ✅ Login redirects to Identity Provider correctly
+   - ✅ User authentication succeeds  
+   - ✅ Consent flow works
+   - ✅ Authorization code exchange succeeds
+   - ❌ BUT: Token received is opaque reference token, not JWT
+
+2. **Opaque Token Format**: 
+   - Token: `2syALQiPH452hCsRS9XoImUEah79t7ALxDX2RRfacHj` (40 characters)
+   - Expected JWT format: `header.payload.signature` (3 base64-encoded parts separated by dots)
+   - This causes all API authentication to fail with 401
+
+3. **resourceIndicators Configuration**:
+   - Feature is **enabled** in identity-provider/src/config/oidc.ts (lines 98-123)
+   - `accessTokenFormat: 'jwt'` is **correctly set**
+   - POC client **is sending** resource parameter: `https://api.textassistant.local`
+   - BUT: getResourceServerInfo function may not be called, or configuration not being honored
+
+4. **Root Cause**: 
+   - oidc-provider v9.5.2 may require the resource parameter to be properly validated/registered before the resourceIndicators feature triggers
+   - Without explicit resource registration or validation, the library defaults to opaque token behavior
+
+### Attempted Fixes
+
+1. ✅ Added resource parameter to POC client authorization request (poc-client/src/server.ts:92)
+2. ✅ Configured resourceIndicators feature with JWT format (identity-provider/src/config/oidc.ts:98-123)
+3. ✅ Added logging to resourceIndicators.getResourceServerInfo to debug if function is called
+4. ⏳ Restarted Identity Provider with logging to test OAuth flow again
+
+### Next Steps to Complete Investigation
+
+1. **Monitor logs**: Check if "OIDC: Resource indicator requested" appears in Identity Provider logs
+   - If YES: Function IS called, but JWT not being generated → Configuration issue
+   - If NO: Function NOT called → Resource validation issue
+
+2. **Alternative approach**: Consider using oidc-provider's token customizer middleware instead of resourceIndicators
+
+3. **Testing plan**:
+   - Clear cache and re-run OAuth flow
+   - Check console output for resource indicator log message
+   - If JWT still not generated, try alternative token format configuration
+
+### Files Modified This Session
+
+- `identity-provider/src/config/oidc.ts`: Added logging to resourceIndicators function
+
+### Status
+
+🔄 **In Progress**: Awaiting next OAuth flow test with logging to determine if resourceIndicators feature is being invoked.
+

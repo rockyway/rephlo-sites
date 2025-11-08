@@ -123,17 +123,18 @@ app.get('/callback', async (req: Request, res: Response) => {
     }
 
     // Step 3: Exchange code for token
+    // RFC 8707: Include resource parameter to request JWT tokens
+    const tokenData = new URLSearchParams();
+    tokenData.append('grant_type', 'authorization_code');
+    tokenData.append('code', String(code));
+    tokenData.append('client_id', CLIENT_ID);
+    tokenData.append('redirect_uri', CLIENT_REDIRECT_URI);
+    tokenData.append('code_verifier', session.codeVerifier);
+    tokenData.append('resource', 'https://api.textassistant.local');
+
     const tokenResponse = await axios.post(
       `${IDENTITY_PROVIDER_URL}/oauth/token`,
-      {
-        grant_type: 'authorization_code',
-        code: code,
-        client_id: CLIENT_ID,
-        redirect_uri: CLIENT_REDIRECT_URI,
-        code_verifier: session.codeVerifier,
-        // RFC 8707: Include resource parameter to request JWT tokens
-        resource: 'https://api.textassistant.local',
-      },
+      tokenData,
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       }

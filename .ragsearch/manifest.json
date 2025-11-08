@@ -10,8 +10,30 @@
       "chunk_count": 12,
       "file_type": "markdown",
       "last_indexed": "2025-11-03T22:46:07.440Z"
+    },
+    "4170acc73fb565e7": {
+      "source": "D:\\sources\\work\\rephlo-sites\\backend\\DATABASE_SCHEMA_DELIVERABLES.md",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\backend\\DATABASE_SCHEMA_DELIVERABLES.md",
+      "content_hash": "1a8c45521474fb00ddba08e505beda2d07a7aa221f7799a5cc54506171702b42",
+      "file_size": 13729,
+      "modified_time": "2025-11-06T01:28:30.906Z",
+      "chunk_count": 5,
+      "file_type": "markdown",
+      "last_indexed": "2025-11-08T17:31:44.831Z"
+    },
+    "5ba1f5b07d75c8df": {
+      "source": "D:\\sources\\work\\rephlo-sites\\backend\\QUICK_START.md",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\backend\\QUICK_START.md",
+      "content_hash": "cc443c236bed8b3ba57a8ffff1c32a15d38376172eb7a76739049ff62c14f1aa",
+      "file_size": 4709,
+      "modified_time": "2025-11-04T00:09:07.970Z",
+      "chunk_count": 2,
+      "file_type": "markdown",
+      "last_indexed": "2025-11-08T17:33:05.158Z"
     }
   },
-  "last_updated": "2025-11-03T22:46:07.440Z",
+  "last_updated": "2025-11-08T17:33:05.158Z",
   "version": "1.0.0"
 }

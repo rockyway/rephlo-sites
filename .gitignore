@@ -163,6 +163,8 @@ samples-*.*
 sample-*.*
 test-*.*
 hooks.log
+.archived
+
 
 extracted-groups*.*
 
