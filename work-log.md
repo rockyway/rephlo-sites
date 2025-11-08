@@ -1173,3 +1173,58 @@ Successfully completed Phase 3 integration testing for the 3-tier architecture. 
 **Documentation:** Created docs/progress/024-phase3-integration-testing.md with comprehensive test results.
 
 **Status:** ✅ Ready for Phase 4 (Desktop App integration)
+
+## 2025-11-08 - JWT Access Token Configuration
+
+**Status**: ✅ COMPLETE
+
+**Issue**: Identity Provider was returning opaque reference tokens instead of JWT access tokens.
+- User reported: `Authorization: Bearer D49okA6F7RsfNvvm6-80ouePdWhWTHpdMNI9kTty8uu` (opaque token)
+- Required: JWT format tokens with structure `header.payload.signature`
+
+**Solution Implemented**:
+1. Enabled `resourceIndicators` feature in OIDC provider configuration
+2. Implemented `getResourceServerInfo()` function that returns:
+   - `accessTokenFormat: 'jwt'` - Forces JWT tokens
+   - `audience: 'https://api.textassistant.local'` - Adds audience claim
+   - `jwt.sign: { alg: 'RS256' }` - Uses RS256 signing
+
+**Files Modified**:
+- `identity-provider/src/config/oidc.ts` (lines 98-117)
+
+**Changes Made**:
+```typescript
+resourceIndicators: {
+  enabled: true,
+  async getResourceServerInfo(ctx, resourceIndicator, client) {
+    return {
+      scope: 'openid email profile llm.inference models.read user.info credits.read',
+      accessTokenFormat: 'jwt',        // JWT instead of opaque
+      audience: 'https://api.textassistant.local',
+      jwt: {
+        sign: { alg: 'RS256' },
+      },
+    };
+  },
+}
+```
+
+**Verification**:
+- ✅ Identity Provider builds without errors
+- ✅ Service starts successfully on port 7151
+- ✅ OIDC configuration endpoint responds correctly
+- ✅ JWKS endpoint returns RS256 key
+- ✅ Resource indicators feature enabled
+
+**Benefits**:
+- JWT tokens are self-contained and can be validated locally
+- Resource API no longer needs introspection calls for every request
+- Faster token validation due to local JWT verification
+- Standard OAuth 2.0 resource indicator support
+
+**Next Steps**:
+- Desktop App should now receive JWT access tokens in OAuth response
+- JWT tokens can be decoded and validated using RS256 public key from JWKS endpoint
+- Introspection endpoint still available as fallback
+
+**Commit**: 6a4b3a5 - feat(oidc): Configure JWT access tokens instead of opaque reference tokens
