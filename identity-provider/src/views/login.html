@@ -188,7 +188,7 @@
 
       <div class="error-message" id="errorMessage"></div>
 
-      <form id="loginForm">
+      <form id="loginForm" method="POST" action="" enctype="application/x-www-form-urlencoded">
         <div class="form-group">
           <label for="email">Email Address</label>
           <input
@@ -255,58 +255,21 @@
     }
 
     // Handle form submission
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError();
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      // Don't prevent default - let the form submit normally
+      // This allows the browser to handle the POST request and follow redirects
 
       const submitBtn = document.getElementById('submitBtn');
       const submitText = document.getElementById('submitText');
 
-      // Disable button and show loading
+      // Just show loading state
       submitBtn.disabled = true;
       submitText.innerHTML = '<span class="loading-spinner"></span>Signing in...';
 
-      const formData = {
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-      };
+      // Set the form action to the login endpoint
+      document.getElementById('loginForm').action = `/interaction/${uid}/login`;
 
-      try {
-        const response = await fetch(`/interaction/${uid}/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'same-origin',
-          redirect: 'follow', // Auto-follow redirects
-          body: JSON.stringify(formData),
-        });
-
-        // Check if request was successful
-        if (response.ok) {
-          // Login successful - OIDC provider will have redirected us
-          // The page should have loaded the consent or callback
-          window.location.reload();
-        } else {
-          // Error response (4xx, 5xx)
-          try {
-            const error = await response.json();
-            showError(error.message || 'Invalid credentials. Please try again.');
-          } catch {
-            // If response is not JSON, show generic error
-            showError('Authentication failed. Please try again.');
-          }
-
-          // Re-enable button
-          submitBtn.disabled = false;
-          submitText.textContent = 'Sign In';
-        }
-      } catch (error) {
-        console.error('Login error:', error);
-        showError('An error occurred. Please try again.');
-        submitBtn.disabled = false;
-        submitText.textContent = 'Sign In';
-      }
+      // Form will submit naturally and browser will handle redirects
     });
 
     // Abort login

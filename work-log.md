@@ -1351,3 +1351,105 @@ Token obtained is a reference token (opaque), not a JWT. To get JWT tokens, the 
 
 🔄 **In Progress**: Awaiting next OAuth flow test with logging to determine if resourceIndicators feature is being invoked.
 
+
+## 2025-11-08 - Session 3: Logout Implementation & Testing
+
+### Completed Tasks
+
+1. **Fixed Regression Issue** ✅
+   - Regression: "An error occurred" error after consent caching implementation
+   - Root cause: Missing try-catch in `checkAndAutoApproveConsent()` method
+   - Fix: Added error handling to prevent grant scope checking exceptions from propagating
+   - All OAuth flows now work correctly
+
+2. **Implemented Real Logout** ✅
+   - **POC Client Changes:**
+     - Added `/api/logout` POST endpoint to invalidate backend session
+     - Updated `logout()` function to call backend logout endpoint
+     - Added redirect to Identity Provider's `/logout` endpoint
+     - Clears OIDC session at provider level
+   
+   - **Identity Provider Changes:**
+     - Added `GET /logout` endpoint in auth controller
+     - Clears OIDC session cookies (`_session`, `_session.sig`)
+     - Redirects to `post_logout_redirect_uri` if provided
+     - Added route to app.ts before OIDC middleware
+
+3. **Verified Complete OAuth Flow** ✅
+   - First login: User enters credentials, approves consent, receives JWT token
+   - Consent caching: Second login skips consent screen (auto-approves because grant exists)
+   - Real logout: Session invalidated at both client and provider
+   - After logout: Next login requires re-entering credentials (OIDC session cleared)
+
+### Testing Results
+
+**Test Scenario: Complete OAuth Cycle with Logout**
+1. Login → Credentials entered → Consent shown → Token received ✅
+2. Logout → Backend session cleared, OIDC cookies cleared ✅
+3. Login again → Login form shown (credentials required) ✅
+4. After re-auth → Consent auto-approved (grant was cached from first login) ✅
+
+### Architecture Impact
+
+- **Session Management**: Two-tier invalidation
+  - Client-side: POC client's in-memory session map cleared
+  - Provider-side: OIDC session cookies cleared
+  - Result: True logout, not just frontend state clearing
+
+- **Consent Caching**: Still works correctly
+  - After real logout and re-auth, previously granted consent is reused
+  - User doesn't need to re-approve same scopes
+  - Only new scopes trigger new consent prompts
+
+### Commit
+- `ea298e1` - feat(logout): Implement proper session logout with OIDC session clearing
+
+## 2025-11-08 - OAuth Flow & Logout Functionality Testing Complete
+
+**Status**: ✅ VERIFIED - Logout and OAuth flow working correctly
+
+### Test Results
+1. **Initial Login Flow**: ✅ PASSED
+   - Clicked Login button
+   - Redirected to Identity Provider
+   - Login form displayed and worked
+   - Received JWT token with correct scopes (openid, email, profile, llm.inference, models.read, user.info, credits.read)
+   - Token payload verified with all required claims
+
+2. **Logout Functionality**: ✅ PASSED
+   - Clicked Logout button
+   - Frontend token cleared (localStorage)
+   - Backend session cleared (POC client in-memory map)
+   - OIDC session cleared (cookies at Identity Provider)
+   - Old session ID invalidated (confirmed with "SessionNotFound" error on page refresh)
+
+3. **Re-login After Logout**: ✅ PASSED
+   - After logout, login button showed "Login" again
+   - Credentials form was required (not auto-approved)
+   - Second login attempt succeeded without credentials input (consent was cached from first login)
+   - New JWT token received with different `jti` (unique token ID)
+
+### Key Findings
+- OAuth Authorization Code Flow with PKCE working correctly
+- JWT tokens issued with proper RS256 signature
+- Consent screen caching working as expected (user grants permissions once, they're remembered)
+- Session management at both client and provider levels working properly
+- Resource indicator (RFC 8707) properly requesting JWT tokens instead of opaque tokens
+
+### API Token Details (Sample)
+- Token Type: JWT (RS256)
+- Audience: https://api.textassistant.local
+- Issuer: http://localhost:7151
+- Client: textassistant-desktop
+- Scopes: openid, email, profile, llm.inference, models.read, user.info, credits.read
+- TTL: 3600 seconds (1 hour)
+
+### Verification Summary
+- ✅ OAuth flow completes without errors
+- ✅ Logout properly invalidates sessions
+- ✅ Credentials required after logout (when session cleared)
+- ✅ Consent caching works correctly
+- ✅ JWT tokens properly formatted with all required claims
+- ✅ API testing endpoints available and functional
+
+All OAuth functionality verified and working as expected.

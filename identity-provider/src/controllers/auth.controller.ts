@@ -35,6 +35,8 @@ export class AuthController {
    *
    * For consent prompts, checks if client should skip consent screen before rendering page.
    * This allows first-party trusted apps to auto-approve without user interaction.
+   *
+   * Handles SessionNotFound errors by redirecting to restart the OAuth flow.
    */
   interaction = async (
     req: Request,
@@ -108,8 +110,51 @@ export class AuthController {
         });
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Handle SessionNotFound - occurs after logout when user tries to access stale interaction UID
+      if (errorMsg.includes('SessionNotFound') || errorMsg.includes('invalid_request')) {
+        logger.warn('OIDC Interaction session not found (likely after logout)', {
+          uid: req.params.uid,
+          error: errorMsg,
+        });
+
+        // Return a user-friendly HTML page that instructs the user to start fresh
+        res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Session Expired</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              .error-box { background: #fee; border: 1px solid #fcc; padding: 20px; border-radius: 5px; }
+              h1 { color: #c33; }
+              p { margin: 10px 0; }
+              a { color: #06c; text-decoration: none; font-weight: bold; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <div class="error-box">
+              <h1>Session Expired</h1>
+              <p>Your login session has expired. This happens when:</p>
+              <ul>
+                <li>You logged out</li>
+                <li>The session was cleared</li>
+                <li>Too much time has passed</li>
+              </ul>
+              <p><strong>Please close this window and start the login process again.</strong></p>
+              <p>If you have the client open, click the "Login" button to initiate a fresh OAuth flow.</p>
+            </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      // For other errors, pass to error handler
       logger.error('OIDC Interaction failed', {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMsg,
       });
       next(error);
     }
@@ -162,6 +207,7 @@ export class AuthController {
 
       try {
         // Try standard interaction finish (requires session cookie)
+        // This will cause the server to redirect the browser to the callback URL
         await finishInteraction(this.provider, req, res, result);
         logger.info('OIDC: login interaction success', { userId: user.id });
       } catch (error) {
