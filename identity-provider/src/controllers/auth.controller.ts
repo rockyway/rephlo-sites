@@ -69,19 +69,23 @@ export class AuthController {
           path.join(__dirname, '../views/login.html')
         );
       } else if (prompt.name === 'consent') {
-        // TEMPORARILY DISABLED: Check if client should auto-approve consent before rendering page
-        // const shouldAutoApprove = await this.checkShouldAutoApproveConsent(params, session);
+        // Check if consent was previously granted and skip screen if appropriate
+        const shouldAutoApprove = await this.checkAndAutoApproveConsent(
+          params,
+          session,
+          details
+        );
 
-        // if (shouldAutoApprove) {
-        //   // Auto-approve consent without rendering page
-        //   logger.info('OIDC: Auto-approving consent (skipping consent page)', {
-        //     uid,
-        //     clientId: params.client_id,
-        //     userId: session?.accountId,
-        //   });
-        //   await this.autoApproveConsent(req, res, details);
-        //   return; // Important: return early after handling
-        // }
+        if (shouldAutoApprove) {
+          // Auto-approve consent without rendering page
+          logger.info('OIDC: Auto-approving consent (skipping consent page)', {
+            uid,
+            clientId: params.client_id,
+            userId: session?.accountId,
+          });
+          await this.autoApproveConsent(req, res, details);
+          return; // Important: return early after handling
+        }
 
         // Render consent page with no-cache headers
         res.set({
@@ -292,8 +296,19 @@ export class AuthController {
           });
 
       if (grant) {
-        // Add granted scopes to grant
-        grant.addOIDCScope(grantedScopes.join(' '));
+        // Only add scopes that weren't already granted (for updates to existing grants)
+        const existingOIDCScope = grant.getOIDCScope();
+        const existingScopes = existingOIDCScope ? existingOIDCScope.split(' ') : [];
+        const newScopes = grantedScopes.filter((s: string) => !existingScopes.includes(s));
+
+        if (newScopes.length > 0) {
+          grant.addOIDCScope(newScopes.join(' '));
+          logger.debug('OIDC: Added new scopes to grant', {
+            userId: session?.accountId,
+            clientId: params.client_id,
+            newScopes,
+          });
+        }
 
         // Add granted resources (if any)
         if (promptDetails?.missingResourceScopes) {
@@ -304,7 +319,7 @@ export class AuthController {
           }
         }
 
-        // Save grant
+        // Save grant - this persists the consent for future use (consent caching)
         const grantId = await grant.save();
 
         // Complete consent interaction
@@ -316,10 +331,11 @@ export class AuthController {
 
         await finishInteraction(this.provider, req, res, result);
 
-        logger.info('OIDC Consent granted', {
+        logger.info('OIDC Consent granted and saved for future use', {
           userId: session?.accountId,
           clientId: params.client_id,
-          scopes: grantedScopes,
+          grantedScopes,
+          isUpdate: !!details.grantId,
         });
       } else {
         throw new Error('Failed to create grant');
@@ -424,12 +440,14 @@ export class AuthController {
   };
 
   /**
-   * Check if a client should auto-approve consent based on configuration
-   * Returns true if the client has skipConsentScreen enabled in its config
+   * Check if consent should be auto-approved based on:
+   * 1. Client configuration (skipConsentScreen flag)
+   * 2. Previously granted scopes (if user already consented to same scopes, don't ask again)
    */
-  private checkShouldAutoApproveConsent = async (
+  private checkAndAutoApproveConsent = async (
     params: any,
-    session: any
+    session: any,
+    details: any
   ): Promise<boolean> => {
     try {
       // Session must exist to auto-approve (user must be logged in)
@@ -464,18 +482,49 @@ export class AuthController {
         return false;
       }
 
-      // Check if skipConsentScreen is enabled in config
       const config = (dbClient.config as any) || {};
       const shouldSkipConsent = config.skipConsentScreen === true;
 
-      if (!shouldSkipConsent) {
-        logger.debug('OIDC: skipConsentScreen not enabled, user must approve consent', {
-          clientId: client.clientId,
-        });
-        return false;
+      // Get requested scopes from params
+      const requestedScopes = (params.scope as string)?.split(' ') || [];
+
+      // Check if user has previously granted these scopes to this client
+      const existingGrant = details.grantId
+        ? await this.provider.Grant.find(details.grantId)
+        : null;
+
+      if (existingGrant) {
+        // Check if existing grant already covers all requested OIDC scopes
+        const grantedOIDCScope = existingGrant.getOIDCScope();
+        const grantedScopesArray = grantedOIDCScope ? grantedOIDCScope.split(' ') : [];
+        const allScopesGranted = requestedScopes.every((scope: string) =>
+          grantedScopesArray.includes(scope)
+        );
+
+        if (allScopesGranted) {
+          logger.info('OIDC: User already granted these scopes, skipping consent screen', {
+            clientId: client.clientId,
+            userId: session.accountId,
+            requestedScopes,
+            grantedScopes: grantedScopesArray,
+          });
+          return true;
+        }
       }
 
-      return true;
+      // If skipConsentScreen is enabled, auto-approve regardless of previous grant
+      if (shouldSkipConsent) {
+        logger.info('OIDC: Client has skipConsentScreen enabled, auto-approving consent', {
+          clientId: client.clientId,
+          userId: session.accountId,
+        });
+        return true;
+      }
+
+      logger.debug('OIDC: User must review and approve consent', {
+        clientId: client.clientId,
+      });
+      return false;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.warn('OIDC: Error checking auto-consent config', {
@@ -487,8 +536,10 @@ export class AuthController {
   };
 
   /**
-   * Auto-approve consent for first-party trusted apps
-   * Called when a consent prompt is encountered and the client config allows auto-approval
+   * Auto-approve consent for first-party trusted apps or previously consented scopes
+   * Called when a consent prompt is encountered and either:
+   * 1. The client config has skipConsentScreen enabled, OR
+   * 2. The user previously granted the same scopes (consent caching)
    * This bypasses the consent screen and automatically grants all requested scopes
    */
   private autoApproveConsent = async (
@@ -498,7 +549,7 @@ export class AuthController {
   ): Promise<void> => {
     try {
       const {
-        prompt: { name },
+        prompt: { name, details: promptDetails },
         params,
         session,
       } = details;
@@ -515,14 +566,40 @@ export class AuthController {
       // Get requested scopes
       const requestedScopes = (params.scope as string)?.split(' ') || [];
 
-      // Create grant with all requested scopes
-      const grant = new this.provider.Grant({
-        accountId: session?.accountId,
-        clientId: params.client_id as string,
-      });
+      // Get or create grant
+      const grant = details.grantId
+        ? await this.provider.Grant.find(details.grantId)
+        : new this.provider.Grant({
+            accountId: session?.accountId,
+            clientId: params.client_id as string,
+          });
 
-      // Add OIDC scopes
-      grant.addOIDCScope(requestedScopes.join(' '));
+      if (!grant) {
+        throw new Error('Failed to create or retrieve grant');
+      }
+
+      // Add OIDC scopes (only add new scopes, don't duplicate)
+      const existingOIDCScope = grant.getOIDCScope();
+      const existingScopes = existingOIDCScope ? existingOIDCScope.split(' ') : [];
+      const newScopes = requestedScopes.filter((s: string) => !existingScopes.includes(s));
+
+      if (newScopes.length > 0) {
+        grant.addOIDCScope(newScopes.join(' '));
+        logger.debug('OIDC: Added new scopes to existing grant', {
+          clientId: params.client_id,
+          newScopes,
+          allScopes: requestedScopes,
+        });
+      }
+
+      // Add resource scopes if provided (RFC 8707)
+      if (promptDetails?.missingResourceScopes) {
+        for (const [indicator, scopes] of Object.entries(
+          promptDetails.missingResourceScopes
+        )) {
+          grant.addResourceScope(indicator, (scopes as string[]).join(' '));
+        }
+      }
 
       // Save grant
       const grantId = await grant.save();
@@ -540,7 +617,8 @@ export class AuthController {
         clientId: params.client_id,
         userId: session?.accountId,
         grantId,
-        scopes: requestedScopes,
+        requestedScopes,
+        isUpdate: !!details.grantId,
       });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
