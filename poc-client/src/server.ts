@@ -177,6 +177,44 @@ app.get('/api/session/:sessionId', (req: Request, res: Response) => {
 });
 
 /**
+ * Logout endpoint
+ * POST /api/logout
+ * Invalidates session and clears token storage
+ */
+app.post('/api/logout', (req: Request, res: Response) => {
+  try {
+    const sessionId = req.cookies?.poc_session_id;
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'No session found' });
+    }
+
+    const session = sessions.get(sessionId);
+    if (session) {
+      // Clear token and session data
+      session.token = undefined;
+      session.tokenPayload = undefined;
+      // Remove session from store
+      sessions.delete(sessionId);
+    }
+
+    // Clear session cookie
+    res.clearCookie('poc_session_id');
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Logout failed',
+      details: error.message,
+    });
+  }
+});
+
+/**
  * Test endpoint: Get user profile
  * GET /api/test/users/me
  */

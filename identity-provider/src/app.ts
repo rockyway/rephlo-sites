@@ -60,6 +60,9 @@ export async function createApp(prisma: PrismaClient) {
   app.get('/interaction/:uid/abort', authController.abort);
   app.get('/interaction/:uid/data', authController.getInteractionData);
 
+  // Logout route - clears OIDC session
+  app.get('/logout', authController.logout);
+
   // OIDC provider middleware (handles all OAuth endpoints)
   app.use('/', oidcProvider.callback());
 

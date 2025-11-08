@@ -383,6 +383,38 @@ export class AuthController {
   };
 
   /**
+   * GET /logout
+   * Logout endpoint - clears OIDC session and redirects to post_logout_redirect_uri
+   */
+  logout = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const postLogoutRedirectUri = req.query.post_logout_redirect_uri as string;
+
+      // Clear OIDC session by setting cookie to expire
+      res.clearCookie('_session.sig', { path: '/', httpOnly: true, secure: false });
+      res.clearCookie('_session', { path: '/', httpOnly: true, secure: false });
+
+      logger.info('OIDC Logout completed');
+
+      // Redirect to the post_logout_redirect_uri if provided
+      if (postLogoutRedirectUri) {
+        res.redirect(postLogoutRedirectUri);
+      } else {
+        res.json({ success: true, message: 'Logged out successfully' });
+      }
+    } catch (error) {
+      logger.error('Logout failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      next(error);
+    }
+  };
+
+  /**
    * GET /interaction/:uid/data
    * Get interaction data for client-side rendering
    */
@@ -494,21 +526,30 @@ export class AuthController {
         : null;
 
       if (existingGrant) {
-        // Check if existing grant already covers all requested OIDC scopes
-        const grantedOIDCScope = existingGrant.getOIDCScope();
-        const grantedScopesArray = grantedOIDCScope ? grantedOIDCScope.split(' ') : [];
-        const allScopesGranted = requestedScopes.every((scope: string) =>
-          grantedScopesArray.includes(scope)
-        );
+        try {
+          // Check if existing grant already covers all requested OIDC scopes
+          const grantedOIDCScope = existingGrant.getOIDCScope();
+          const grantedScopesArray = grantedOIDCScope ? grantedOIDCScope.split(' ') : [];
+          const allScopesGranted = requestedScopes.every((scope: string) =>
+            grantedScopesArray.includes(scope)
+          );
 
-        if (allScopesGranted) {
-          logger.info('OIDC: User already granted these scopes, skipping consent screen', {
+          if (allScopesGranted) {
+            logger.info('OIDC: User already granted these scopes, skipping consent screen', {
+              clientId: client.clientId,
+              userId: session.accountId,
+              requestedScopes,
+              grantedScopes: grantedScopesArray,
+            });
+            return true;
+          }
+        } catch (grantError) {
+          const grantErrorMsg = grantError instanceof Error ? grantError.message : String(grantError);
+          logger.warn('OIDC: Error checking existing grant scopes', {
             clientId: client.clientId,
-            userId: session.accountId,
-            requestedScopes,
-            grantedScopes: grantedScopesArray,
+            error: grantErrorMsg,
           });
-          return true;
+          // Continue with consent screen if grant check fails
         }
       }
 
