@@ -40,32 +40,50 @@ export interface JWKSResponse {
 /**
  * Token Introspection Service
  * Validates tokens by calling the Identity Provider
+ * Authenticates as a confidential client (API server) when calling introspection endpoint
  */
 export class TokenIntrospectionService {
   private identityProviderUrl: string;
+  private apiClientId: string;
+  private apiClientSecret: string;
 
-  constructor(identityProviderUrl: string) {
+  constructor(
+    identityProviderUrl: string,
+    apiClientId: string = process.env.API_CLIENT_ID || 'textassistant-api',
+    apiClientSecret: string = process.env.API_CLIENT_SECRET || 'api-client-secret-dev'
+  ) {
     if (!identityProviderUrl) {
       throw new Error('IDENTITY_PROVIDER_URL environment variable is required');
     }
     this.identityProviderUrl = identityProviderUrl;
+    this.apiClientId = apiClientId;
+    this.apiClientSecret = apiClientSecret;
+
     logger.info('TokenIntrospectionService initialized', {
       identityProviderUrl: this.identityProviderUrl,
+      apiClientId: this.apiClientId,
     });
   }
 
   /**
    * Introspect token via Identity Provider
    * This is the authoritative validation method
+   * Authenticates as a confidential client using HTTP Basic Auth
    */
   async introspectToken(token: string): Promise<IntrospectionResponse> {
     try {
+      // Create Basic Auth header from client credentials
+      const credentials = Buffer.from(
+        `${this.apiClientId}:${this.apiClientSecret}`
+      ).toString('base64');
+
       const response = await fetch(
         `${this.identityProviderUrl}/oauth/introspect`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${credentials}`,
           },
           body: new URLSearchParams({
             token: token,

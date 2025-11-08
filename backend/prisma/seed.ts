@@ -38,6 +38,24 @@ async function main() {
         tags: ['desktop-app', 'official'],
       },
     },
+    {
+      // API Server client for introspection authentication
+      // The Resource API (port 7150) uses this to authenticate against
+      // the Identity Provider's introspection endpoint
+      clientId: 'textassistant-api',
+      clientName: 'Text Assistant API Server',
+      clientSecretHash: await bcrypt.hash('api-client-secret-dev', SALT_ROUNDS), // Hashed for security
+      redirectUris: [], // Server-to-server, no redirect needed
+      grantTypes: ['client_credentials'], // Server-to-server authentication
+      responseTypes: [],
+      scope: 'introspect', // Only needs introspection scope
+      isActive: true,
+      config: {
+        description: 'Confidential client for Resource API server-to-server communication',
+        tags: ['api-server', 'introspection', 'internal'],
+        isConfidential: true,
+      },
+    },
   ];
 
   for (const client of oauthClients) {

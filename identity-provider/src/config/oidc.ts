@@ -95,9 +95,25 @@ export async function createOIDCProvider(
         enabled: false,
       },
 
-      // Enable resource indicators (optional)
+      // Enable resource indicators to support JWT access tokens
+      // Resources are identified by a string (e.g., 'api', 'resource-server')
+      // Without resource indicator in request, default resource is used
       resourceIndicators: {
-        enabled: false,
+        enabled: true,
+        // Return resource server configuration for any resource indicator
+        async getResourceServerInfo(ctx: any, resourceIndicator: string, client: any) {
+          // For OAuth flows without explicit resource indicator,
+          // return a default resource that produces JWT tokens
+          // All requests default to this if no explicit indicator is provided
+          return {
+            scope: 'openid email profile llm.inference models.read user.info credits.read',
+            accessTokenFormat: 'jwt', // Use JWT instead of opaque tokens
+            audience: 'https://api.textassistant.local', // Audience claim in JWT
+            jwt: {
+              sign: { alg: 'RS256' }, // Use RS256 signing algorithm
+            },
+          };
+        },
       },
     },
 
