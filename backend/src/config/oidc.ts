@@ -273,22 +273,6 @@ export async function createOIDCProvider(
   // Create provider instance
   const provider = new Provider(OIDC_ISSUER, configuration);
 
-  // Override AccessToken format to use JWT for better API compatibility
-  // This allows API servers to verify tokens without round-trips to introspection endpoint
-  const AccessTokenClass = provider.AccessToken;
-  const originalSave = AccessTokenClass.prototype.save;
-
-  AccessTokenClass.prototype.save = async function(this: any) {
-    // Force JWT format for access tokens by simulating a ResourceServer configuration
-    if (!this.resourceServer) {
-      this.resourceServer = {
-        accessTokenFormat: 'jwt',
-        audience: 'api', // Required for JWT access tokens
-      };
-    }
-    return originalSave.call(this);
-  };
-
   // Event listeners for logging
   provider.on('authorization.success', (_ctx: any) => {
     logger.info('OIDC: authorization success', {

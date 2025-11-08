@@ -1018,3 +1018,57 @@ The implementation is:
 - Created test tool: backend/test-jwt-decode.js for JWT token analysis
 - Recommendations: Ensure backend is running, get decrypted token from logs, verify JWT format
 
+
+## Session: OAuth JWT Access Token Implementation
+
+### Problem
+- OIDC provider was issuing opaque access tokens (reference tokens stored in database)
+- API endpoints expected JWT tokens that could be verified with public key
+- 401 errors when trying to use access tokens at `/api/user/credits`
+
+### Root Cause
+- node-oidc-provider v9.5.2 defaults to `accessTokenFormat: 'opaque'` unless a ResourceServer specifies otherwise
+- The AccessTokenFormat function in has_format.js checks: `token.resourceServer?.accessTokenFormat ?? 'opaque'`
+
+### Solution Implemented
+**Modified:** `backend/src/config/oidc.ts`
+
+Added code after provider creation to override AccessToken format:
+```typescript
+// Override AccessToken format to use JWT for better API compatibility
+const AccessTokenClass = provider.AccessToken;
+const originalSave = AccessTokenClass.prototype.save;
+
+AccessTokenClass.prototype.save = async function(this: any) {
+  // Force JWT format for access tokens by simulating a ResourceServer configuration
+  if (!this.resourceServer) {
+    this.resourceServer = {
+      accessTokenFormat: 'jwt',
+      audience: 'api', // Required for JWT access tokens
+    };
+  }
+  return originalSave.call(this);
+};
+```
+
+### How It Works
+1. When an access token is generated, the override checks if a ResourceServer exists
+2. If not present, it injects a default ResourceServer with `accessTokenFormat: 'jwt'`
+3. This causes the OIDC provider to use JWT format instead of opaque format
+4. The audience claim is set to 'api' (required by node-oidc-provider for JWT access tokens)
+
+### Benefits
+- Access tokens are now self-contained JWTs that can be verified using the provider's public key
+- Eliminates need for server-side token introspection
+- Desktop applications can verify tokens directly
+- External APIs can validate tokens without calling back to the auth server
+- Aligns with OAuth 2.0 best practices for public clients
+
+### Testing
+- Build: ✅ Successful (no TypeScript errors)
+- Server Start: ✅ Successful (OIDC Provider initialized)
+- Next: Test OAuth flow with Postman to confirm JWT tokens are issued
+
+### Commit
+- `2c17b8c` - fix: Override OIDC AccessToken format to issue JWT tokens instead of opaque tokens
+

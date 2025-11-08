@@ -398,6 +398,7 @@ Production environment variables:
 - JWT access tokens with RSA256 signing
 - Refresh tokens with secure rotation
 - Scope-based authorization
+- the referred node-oidc-provider project at : d:\sources\github\node-oidc-provider, its RagSearch collectio:n rs_node_oidc_provider_weyr
 
 ### Rate Limiting
 

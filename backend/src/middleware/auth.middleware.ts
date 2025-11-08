@@ -97,35 +97,86 @@ export function authMiddleware(
 }
 
 /**
- * Verify JWT token using OIDC provider's public key
+ * Verify JWT token using OIDC provider's public key or introspect opaque token
  */
 async function verifyJWT(token: string): Promise<JWTPayload> {
-  if (!OIDC_JWKS_PRIVATE_KEY) {
-    throw new Error('OIDC_JWKS_PRIVATE_KEY not configured');
+  // First, check if it's a JWT token (has 3 parts)
+  const parts = token.split('.');
+
+  if (parts.length === 3) {
+    // It's a JWT, verify it
+    if (!OIDC_JWKS_PRIVATE_KEY) {
+      throw new Error('OIDC_JWKS_PRIVATE_KEY not configured');
+    }
+
+    // Parse JWKS private key to get public key for verification
+    const privateJwk = JSON.parse(OIDC_JWKS_PRIVATE_KEY);
+
+    // Extract public key components from private key
+    const publicJwk = {
+      kty: privateJwk.kty,
+      n: privateJwk.n,
+      e: privateJwk.e,
+      alg: privateJwk.alg,
+      kid: privateJwk.kid,
+      use: privateJwk.use,
+    };
+
+    const publicKey = await importJWK(publicJwk, 'RS256');
+
+    // Verify JWT
+    const { payload } = await jwtVerify(token, publicKey, {
+      issuer: OIDC_ISSUER,
+      algorithms: ['RS256'],
+    });
+
+    return payload;
+  } else {
+    // It's an opaque token, introspect it with the OIDC provider
+    // Opaque access tokens must be validated via the introspection endpoint
+    logger.debug('Introspecting opaque access token');
+
+    try {
+      const response = await fetch(`${OIDC_ISSUER}/oauth/introspect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token: token,
+        }).toString(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Introspection failed: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as any;
+
+      // Check if token is active
+      if (!data.active) {
+        throw new Error('Token is not active or has expired');
+      }
+
+      // Convert introspection response to JWTPayload format
+      const payload: JWTPayload = {
+        sub: data.sub,
+        aud: data.aud,
+        client_id: data.client_id,
+        exp: data.exp,
+        iat: data.iat,
+        scope: data.scope,
+        email: data.email,
+      };
+
+      return payload;
+    } catch (error) {
+      logger.error('Token introspection failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new Error('Failed to introspect token');
+    }
   }
-
-  // Parse JWKS private key to get public key for verification
-  const privateJwk = JSON.parse(OIDC_JWKS_PRIVATE_KEY);
-
-  // Extract public key components from private key
-  const publicJwk = {
-    kty: privateJwk.kty,
-    n: privateJwk.n,
-    e: privateJwk.e,
-    alg: privateJwk.alg,
-    kid: privateJwk.kid,
-    use: privateJwk.use,
-  };
-
-  const publicKey = await importJWK(publicJwk, 'RS256');
-
-  // Verify JWT
-  const { payload } = await jwtVerify(token, publicKey, {
-    issuer: OIDC_ISSUER,
-    algorithms: ['RS256'],
-  });
-
-  return payload;
 }
 
 /**
