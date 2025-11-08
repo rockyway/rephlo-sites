@@ -131,6 +131,8 @@ app.get('/callback', async (req: Request, res: Response) => {
         client_id: CLIENT_ID,
         redirect_uri: CLIENT_REDIRECT_URI,
         code_verifier: session.codeVerifier,
+        // RFC 8707: Include resource parameter to request JWT tokens
+        resource: 'https://api.textassistant.local',
       },
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
