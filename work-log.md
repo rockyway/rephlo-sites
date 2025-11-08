@@ -1009,3 +1009,12 @@ The implementation is:
   - ✅ No server crashes when fetching /api/user/models
   - ✅ Credits and models load successfully
 
+
+[2025-11-08T02:11:24Z] OAuth Token 401 Investigation
+- Investigated user report of 401 error when calling /api/user/credits after OAuth login
+- Root cause: Backend server was not accessible when API call was made (connection refused)
+- Secondary issue: User provided encrypted token instead of actual JWT (token storage uses encryption)
+- Created comprehensive investigation report: docs/troubleshooting/002-oauth-token-401-investigation.md
+- Created test tool: backend/test-jwt-decode.js for JWT token analysis
+- Recommendations: Ensure backend is running, get decrypted token from logs, verify JWT format
+

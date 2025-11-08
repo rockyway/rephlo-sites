@@ -62,7 +62,8 @@ export async function createOIDCProvider(
     // Adapter for persistent storage
     adapter: createOIDCAdapterFactory(prisma) as any,
 
-    // Client configuration
+    // Client configuration - loaded at startup
+    // Note: To update redirect URIs after startup, restart the server
     clients: await loadClients(prisma),
 
     // PKCE (Proof Key for Code Exchange) for public clients
