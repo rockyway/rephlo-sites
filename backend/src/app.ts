@@ -10,14 +10,18 @@
  * 2. CORS
  * 3. Body Parsers
  * 4. HTTP Logging (Morgan)
- * 5. OIDC Provider (OAuth/Authentication)
- * 6. Authentication Middleware (for REST API endpoints)
- * 7. Rate Limiting Placeholder
- * 8. Routes
- * 9. 404 Handler
- * 10. Error Handler
+ * 5. Request ID
+ * 6. Redis for Rate Limiting
+ * 7. Authentication Middleware (for REST API endpoints)
+ * 8. Rate Limiting
+ * 9. Routes
+ * 10. 404 Handler
+ * 11. Error Handler
  *
- * Reference: docs/plan/073-dedicated-api-backend-specification.md
+ * Note: OIDC provider has been moved to separate Identity Provider service (port 7151)
+ * This backend is now a simplified Resource API that validates tokens via introspection.
+ *
+ * Reference: docs/plan/106-implementation-roadmap.md (Phase 2)
  */
 
 import express, { Application } from 'express';
@@ -25,17 +29,12 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import type { PrismaClient } from '@prisma/client';
-
-// Import container to access services
-import { container } from './container';
 
 // Import utilities and middleware
 import logger, { morganStream } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import {
   createUserRateLimiter,
-  createIPRateLimiter,
   addRateLimitHeaders,
   initializeRedisForRateLimiting,
 } from './middleware/ratelimit.middleware';
@@ -43,12 +42,7 @@ import {
 // Import security configuration
 import { helmetConfig, corsConfig } from './config/security';
 
-// Import OIDC provider configuration
-import { createOIDCProvider } from './config/oidc';
-import { initializeOIDCStorage } from './adapters/oidc-adapter';
-
 // Import routes
-import { createOAuthRouter } from './routes/oauth.routes';
 import routes from './routes';
 
 // Load environment variables
@@ -61,15 +55,11 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // ===== Application Factory Function =====
 
 /**
- * Create and configure Express application with OIDC provider
- * This is async because OIDC provider initialization is async
- * Uses DI container to resolve dependencies
+ * Create and configure Express application
+ * This is async because Redis initialization is async
  */
 export async function createApp(): Promise<Application> {
   const app: Application = express();
-
-  // Resolve Prisma from DI container
-  const prisma = container.resolve<PrismaClient>('PrismaClient');
 
   // ===== 1. Security Middleware =====
 
@@ -161,34 +151,19 @@ export async function createApp(): Promise<Application> {
   logger.info('Initializing Redis for rate limiting...');
   await initializeRedisForRateLimiting();
 
-  // ===== 7. Initialize OIDC Provider =====
-
-  /**
-   * Initialize OIDC storage table and create provider instance
-   */
-  logger.info('Initializing OIDC provider...');
-  await initializeOIDCStorage(prisma);
-  const oidcProvider = await createOIDCProvider(prisma);
-
-  // Store provider instance for access in routes
-  app.set('oidcProvider', oidcProvider);
-
-  logger.info('OIDC Provider initialized');
-
-  // ===== 8. Authentication Middleware (for REST API) =====
+  // ===== 7. Authentication Middleware (for REST API) =====
 
   /**
    * Authentication middleware for REST API endpoints
    *
    * This middleware validates JWT tokens for /v1/* and /admin/* routes.
-   * OAuth endpoints (/.well-known/*, /oauth/*, /interaction/*) are NOT authenticated
-   * as they are handled by the OIDC provider.
+   * Tokens are validated via the Identity Provider service.
    *
    * Authentication is applied in routes/v1.routes.ts on a per-route basis
    * to allow for public endpoints (like /v1/subscription-plans)
    */
 
-  // ===== 9. Rate Limiting Middleware =====
+  // ===== 8. Rate Limiting Middleware =====
 
   /**
    * Rate limiting middleware
@@ -206,12 +181,6 @@ export async function createApp(): Promise<Application> {
   // Add rate limit headers to all responses
   app.use(addRateLimitHeaders);
 
-  // Apply IP-based rate limiting to OAuth endpoints (unauthenticated)
-  // More restrictive than user-based limits to prevent abuse
-  const ipRateLimiter = createIPRateLimiter(30); // 30 requests/minute per IP
-  app.use('/oauth', ipRateLimiter);
-  app.use('/interaction', ipRateLimiter);
-
   // Apply user-based rate limiting to REST API endpoints (authenticated)
   // Tier-based limits will be applied based on user's subscription
   const userRateLimiter = createUserRateLimiter();
@@ -220,30 +189,17 @@ export async function createApp(): Promise<Application> {
 
   logger.info('Rate limiting middleware configured');
 
-  // ===== 10. Routes =====
+  // ===== 9. Routes =====
 
   /**
    * Mount all application routes
    * Routes are organized by prefix in routes/index.ts
-   *
-   * IMPORTANT: Application routes must be mounted BEFORE OIDC provider
-   * to prevent the OIDC catch-all from intercepting health/api routes
    */
   app.use('/', routes);
 
-  /**
-   * Mount OIDC provider routes AFTER application routes
-   * OIDC provider handles:
-   * - /.well-known/* (OpenID discovery)
-   * - /oauth/* (token endpoints)
-   * - /interaction/* (consent/login)
-   */
-  const oauthRouter = createOAuthRouter(oidcProvider, prisma);
-  app.use('/', oauthRouter);
+  logger.info('Routes mounted successfully');
 
-  logger.info('OIDC provider mounted successfully');
-
-  // ===== 11. 404 Handler =====
+  // ===== 10. 404 Handler =====
 
   /**
    * Handle requests to undefined routes
@@ -251,7 +207,7 @@ export async function createApp(): Promise<Application> {
    */
   app.use(notFoundHandler);
 
-  // ===== 12. Error Handler =====
+  // ===== 11. Error Handler =====
 
   /**
    * Centralized error handling middleware
@@ -263,7 +219,6 @@ export async function createApp(): Promise<Application> {
 
   logger.info('Express application configured', {
     environment: NODE_ENV,
-    oidcEnabled: true,
     rateLimitingEnabled: true,
   });
 

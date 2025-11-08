@@ -55,49 +55,50 @@ The backend implementation is substantially complete and functional across all c
 - **DevOps/Infrastructure**: Deployment, scaling, monitoring requirements
 - **Security Teams**: Authentication, data protection, compliance requirements
 
-### High-Level Service Architecture
+### High-Level Service Architecture (New 3-Tier Design)
+
+**Status**: Architecture redesigned to separate identity provider from resource API.
 
 ```
-┌──────────────────────────────────┐
-│    Frontend / Desktop App         │
-│  (OAuth 2.0/OIDC Client)         │
-└────────────┬──────────────────────┘
-             │
-        HTTPS / TLS
-             │
-┌────────────▼──────────────────────┐
-│    API Gateway + Load Balancer    │
-│  (Rate Limiting, Request Routing) │
-└────────────┬──────────────────────┘
-             │
-    ┌────────┴────────┐
-    │                 │
-┌───▼────┐    ┌──────▼───┐
-│  OIDC  │    │ REST API │
-│Provider│    │ Endpoints│
-└───┬────┘    └──────┬───┘
-    │                │
-    └────────┬───────┘
-             │
-        ┌────▼─────────────────────┐
-        │   Services Layer         │
-        │ • AuthService            │
-        │ • UserService            │
-        │ • SubscriptionService    │
-        │ • CreditService          │
-        │ • UsageService           │
-        │ • ModelService           │
-        │ • LLMService (multi-provider)
-        │ • WebhookService         │
-        └────┬─────────────────────┘
-             │
-        ┌────▼──────────┐
-        │   Data Layer  │
-        │ • PostgreSQL  │
-        │ • Redis Cache │
-        │ • BullMQ Jobs │
-        └───────────────┘
+┌──────────────────────────────────────┐
+│    Frontend / Desktop App            │
+│    (OAuth 2.0/OIDC Public Client)    │
+└─────┬──────────────────────┬─────────┘
+      │                      │
+      │ OAuth 2.0 Login Flow │ Token Introspection
+      │                      │ (validate access tokens)
+      │                      │
+  ┌───▼────────────────────┐ ┌──────────▼──────────────┐
+  │  Identity Provider      │ │  Resource API Server    │
+  │  (Separate Service)     │ │  (Simplified)           │
+  │  Port: 7151             │ │  Port: 7150             │
+  │                         │ │                         │
+  │ • Login/Logout          │ │ • User endpoints        │
+  │ • Token issuance        │ │ • Model listing         │
+  │ • Token refresh         │ │ • LLM requests          │
+  │ • Token validation      │ │ • Credit management     │
+  │ • JWKS endpoint         │ │ • Subscription mgmt     │
+  │ • Userinfo endpoint     │ │ • Usage tracking        │
+  │ • OIDC discovery        │ │ • Webhook delivery      │
+  │ • OAuth introspection   │ │                         │
+  └─────────┬───────────────┘ └──────────┬──────────────┘
+            │                             │
+            └─────────────────┬───────────┘
+                              │
+                        ┌─────▼─────────────────────┐
+                        │   Shared Data Layer       │
+                        │ • PostgreSQL (shared)     │
+                        │ • Redis Cache             │
+                        │ • BullMQ Jobs             │
+                        └───────────────────────────┘
 ```
+
+**Key Benefits of 3-Tier Architecture**:
+- **Separation of Concerns**: Identity provider handles auth, API handles resources
+- **Independent Scaling**: Each service scales based on its workload
+- **Better Testing**: Services can be tested in isolation
+- **Reusability**: Identity Provider can serve other applications
+- **Simpler API**: No OIDC provider complexity in resource server
 
 ---
 
@@ -1158,23 +1159,25 @@ Response
 
 ### External Service Integration
 
-#### PostgreSQL Database
+#### PostgreSQL Database (Shared)
 
-**Role**: Primary data store for users, subscriptions, credits, usage
+**Role**: Primary data store for both Identity Provider and Resource API services
 
 **Configuration**:
 ```
 Connection string: postgresql://user:password@host:5432/textassistant
-Pool size: 20
+Pool size: 10 per service (20 total when both services connected)
 Connection timeout: 30s
 Idle timeout: 30s
 ```
 
 **Schema**: 11 tables with full relationships defined
+- Identity Provider uses: `users`, `oidc_models` (OIDC state)
+- Resource API uses: All tables except `oidc_models` (or uses them minimally)
 
-#### Redis Cache
+#### Redis Cache (Shared)
 
-**Role**: Session storage, rate limit counters, caching
+**Role**: Session storage, rate limit counters, caching for both services
 
 **Configuration**:
 ```
@@ -1183,19 +1186,60 @@ Key prefix: rephlo:
 ```
 
 **Uses**:
-- OIDC session storage
-- Rate limit windows
-- Model metadata cache
+- Identity Provider: OAuth/OIDC session storage
+- Resource API: Rate limit windows, model metadata cache
+- Both: Token caching (optional, for performance)
 
-#### OAuth 2.0 / OIDC Provider
+#### Identity Provider Service (Separate)
 
-**Role**: Identity provider using node-oidc-provider v9.5.2
+**Role**: Dedicated OAuth 2.0 / OpenID Connect provider using node-oidc-provider v9.5.2
+
+**Port**: 7151
 
 **Configuration**:
-- Issuer: `https://api.rephlo.ai`
-- Algorithm: RS256
-- Session cookies: Secure, HttpOnly
-- PKCE: Required for all flows
+- Issuer: `http://localhost:7151` (or `https://identity.yourdomain.com` in production)
+- Algorithm: RS256 for JWT signing
+- Session cookies: Secure, HttpOnly, path=`/`
+- PKCE: Required for all authorization requests
+
+**Responsibilities**:
+- User authentication (login form)
+- Authorization endpoint (`GET /oauth/authorize`)
+- Token endpoint (`POST /oauth/token`)
+- Token introspection endpoint (`POST /oauth/introspect`)
+- JWKS endpoint (`GET /oauth/jwks`)
+- User info endpoint (`GET /oauth/userinfo`)
+- OpenID Connect discovery (`GET /.well-known/openid-configuration`)
+
+**Token Format**:
+- Access tokens: JWT (RS256 signed)
+- Refresh tokens: Opaque tokens stored in database
+- Token lifetime: 1 hour access, 30 days refresh
+
+#### Resource API Service Integration with Identity Provider
+
+**How Token Validation Works**:
+1. Client calls Resource API with `Authorization: Bearer <token>`
+2. API's auth middleware attempts JWT verification:
+   - Fetch JWKS from Identity Provider (`/oauth/jwks`)
+   - Verify token signature using RS256
+   - If JWT verification succeeds → request processed
+3. If JWT verification fails (or token is opaque):
+   - API calls Identity Provider introspection endpoint
+   - Request: `POST /oauth/introspect` with token
+   - Response: `{ active: true/false, sub, scope, exp, ... }`
+   - If active → request processed
+   - If not active → 401 Unauthorized
+
+**Service-to-Service Communication**:
+```
+Resource API → Identity Provider
+- HTTPS (if over public network) or HTTP (if internal)
+- Base URL: IDENTITY_PROVIDER_URL environment variable
+- Endpoints called:
+  - GET /oauth/jwks (cached, refreshed every 5 minutes)
+  - POST /oauth/introspect (for token validation)
+```
 
 #### LLM Provider APIs
 
@@ -1730,37 +1774,115 @@ Example:
 
 ## Operational Requirements
 
+### Three-Tier Architecture Services
+
+**Reference**: See `docs/plan/105-three-tier-architecture-redesign.md` and `docs/plan/106-implementation-roadmap.md` for detailed architecture and migration strategy.
+
+#### 1. Identity Provider Service
+- **Repository**: New `identity-provider/` project (Node.js + Express)
+- **Port**: 7151
+- **Responsibilities**: OAuth 2.0/OIDC provider, token issuance, user authentication
+- **Key Features**:
+  - Login/logout endpoints
+  - Authorization and token endpoints
+  - Token introspection (RFC 7662)
+  - JWKS endpoint for public key distribution
+  - OpenID Connect discovery
+  - Shared PostgreSQL database with API
+
+#### 2. Resource API Service
+- **Repository**: Current `backend/` project (Node.js + Express + TypeScript)
+- **Port**: 7150
+- **Responsibilities**: REST API for LLM platform, token validation, business logic
+- **Key Features**:
+  - User management endpoints
+  - LLM request routing
+  - Subscription and credit management
+  - Usage tracking and analytics
+  - Webhook delivery
+  - Token validation via introspection calls to Identity Provider
+
+#### 3. Desktop Application
+- **Repository**: Separate desktop app project (Electron/React)
+- **Responsibilities**: OAuth 2.0 client, UI, local session management
+- **OAuth Configuration**: Points to Identity Provider (port 7151)
+
 ### Deployment Targets
 
 #### Development Environment
 
 ```
+Two services running locally:
+
+Service 1: Identity Provider
 - Node.js 20 LTS
+- Port: 7151
+- Database: PostgreSQL 16 (shared with API)
+- Redis: 7 (shared with API)
+- Run: cd identity-provider && npm run dev
+
+Service 2: Resource API
+- Node.js 20 LTS
+- Port: 7150
+- Database: PostgreSQL 16 (shared with Identity Provider)
+- Redis: 7 (shared with Identity Provider)
+- Run: cd backend && npm run dev
+
+Shared Infrastructure:
 - PostgreSQL 16 (local or Docker)
 - Redis 7 (Docker)
-- Ports: 7150 (backend), 7151 (frontend)
 ```
 
 #### Staging Environment
 
 ```
-- Node.js 20 LTS on Ubuntu 22.04
-- Managed PostgreSQL (RDS/Cloud SQL)
-- Managed Redis (ElastiCache/Memorystore)
+Two services behind API Gateway:
+
+Service 1: Identity Provider
+- Node.js 20 LTS on Ubuntu 22.04 (2+ instances)
+- Load balancer on port 7151
+- Session affinity not required (stateless)
+- Shared PostgreSQL (RDS/Cloud SQL)
+- Shared Redis (ElastiCache/Memorystore)
+
+Service 2: Resource API
+- Node.js 20 LTS on Ubuntu 22.04 (2+ instances)
+- Load balancer on port 7150
+- Shared PostgreSQL (RDS/Cloud SQL)
+- Shared Redis (ElastiCache/Memorystore)
 - SSL/TLS certificates
-- 2+ instances behind load balancer
+- Health checks for both services
+- Graceful shutdown (drain connections)
 ```
 
 #### Production Environment
 
 ```
-- Node.js 20 LTS on managed platform
-- High-availability PostgreSQL with read replicas
-- Redis cluster for caching
+Two services with high availability:
+
+Service 1: Identity Provider
+- Node.js 20 LTS on managed platform (3+ instances)
+- Load balancer on port 7151 (internal or private)
+- Auto-scaling: Scale based on auth request volume
+- Shared high-availability PostgreSQL with read replicas
+- Shared Redis cluster for caching
 - SSL/TLS certificates (auto-renewal)
-- 3+ instances for redundancy
-- CDN for static assets
 - Monitoring and alerting
+
+Service 2: Resource API
+- Node.js 20 LTS on managed platform (3+ instances)
+- Load balancer on port 7150 (public or behind API Gateway)
+- Auto-scaling: Scale based on API request volume
+- Shared high-availability PostgreSQL with read replicas
+- Shared Redis cluster for caching
+- SSL/TLS certificates (auto-renewal)
+- CDN for static assets (if applicable)
+- Monitoring and alerting
+
+Communication:
+- Internal network connectivity between services
+- Service discovery (DNS or service registry)
+- HTTPS for inter-service communication (if over public network)
 ```
 
 ### Versioning Strategy
@@ -1790,21 +1912,48 @@ Example:
 
 ### Configuration Management
 
-#### Environment Variables (Required)
+#### Environment Variables - Identity Provider Service
 
 ```bash
-# Database
-DATABASE_URL=postgresql://user:password@host:5432/db
-DATABASE_POOL_SIZE=20
+# Server
+NODE_ENV=development
+PORT=7151
 
-# Redis
+# Database (shared with API)
+DATABASE_URL=postgresql://user:password@host:5432/textassistant
+DATABASE_POOL_SIZE=10
+
+# Redis (shared with API)
 REDIS_URL=redis://host:6379
 REDIS_PASSWORD=
 
-# OIDC
-OIDC_ISSUER=https://api.rephlo.ai
-OIDC_JWKS_PRIVATE_KEY=<RS256-private-key>
+# OIDC Provider Configuration
+OIDC_ISSUER=http://localhost:7151 (or https://identity.yourdomain.com in production)
+OIDC_JWKS_PRIVATE_KEY=<RS256-private-key-in-JWK-format>
 OIDC_COOKIE_KEYS=["key1","key2"]
+
+# Logging
+LOG_LEVEL=info
+```
+
+#### Environment Variables - Resource API Service
+
+```bash
+# Server
+NODE_ENV=development
+PORT=7150
+
+# Database (shared with Identity Provider)
+DATABASE_URL=postgresql://user:password@host:5432/textassistant
+DATABASE_POOL_SIZE=10
+
+# Redis (shared with Identity Provider)
+REDIS_URL=redis://host:6379
+REDIS_PASSWORD=
+
+# Identity Provider Integration
+IDENTITY_PROVIDER_URL=http://localhost:7151
+# (Use https://identity.yourdomain.com in production)
 
 # Stripe
 STRIPE_SECRET_KEY=sk_test_...
@@ -1821,7 +1970,6 @@ RATE_LIMIT_PRO_RPM=60
 RATE_LIMIT_ENTERPRISE_RPM=300
 
 # Security
-JWT_SECRET=<strong-secret>
 WEBHOOK_SECRET=<webhook-signing-secret>
 
 # Monitoring
@@ -2198,27 +2346,65 @@ These features are NOT implemented because:
 
 ## Summary
 
-The **Dedicated API Service Backend** is a production-ready, comprehensive LLM platform backend with:
+The **Dedicated API Service Backend** is now transitioning to a **3-tier architecture** with separate Identity Provider and Resource API services:
 
+### Architecture Overview
+
+**Previous**: Monolithic backend combining OIDC provider + REST API
+**New**: 3-tier separation (Desktop App → Identity Provider → Resource API)
+
+### Implementation Status
+
+**Resource API Service** (backend/):
 - **95% Implementation Complete**: Core functionality fully implemented, minor integrations pending
-- **Standards-Compliant**: OAuth 2.0/OIDC, REST API, OpenAPI documentation
+- **Standards-Compliant**: OAuth 2.0 integration, REST API, OpenAPI documentation
 - **Enterprise-Ready**: Multi-provider support, subscription management, webhook system
-- **Secure**: Bcrypt password hashing, RS256 JWT, rate limiting, input validation
-- **Scalable**: Stateless design, database connection pooling, Redis caching, horizontal scaling
-- **Well-Tested**: 80%+ test coverage, 244+ tests, comprehensive documentation
+- **Secure**: Bcrypt password hashing, rate limiting, input validation
+- **Scalable**: Stateless design, database connection pooling, Redis caching
+- **Well-Tested**: 80%+ test coverage, 244+ tests
 
-**Next Steps**:
-1. Complete integration work (credit enforcement, webhook queue)
-2. Perform load testing and optimization
-3. Deploy to staging for comprehensive testing
-4. Implement Phase 2 enhancements (registration, social login)
-5. Deploy to production with monitoring
+**Identity Provider Service** (identity-provider/):
+- **New Service**: To be created from extracted OIDC code
+- **Technology**: Node.js + Express + node-oidc-provider v9.5.2
+- **Port**: 7151 (separate from API)
+- **Responsibilities**: OAuth 2.0/OIDC authentication, token issuance, user auth
+- **Timeline**: 3-5 days for setup and integration
 
-**Timeline to Production**: 2-3 weeks with focused integration effort
+### Key Benefits of New Architecture
+
+1. **Separation of Concerns**: Identity provider handles auth, API handles resources
+2. **Independent Scaling**: Each service scales based on workload (login volume vs API requests)
+3. **Better Testing**: Services can be tested in isolation
+4. **Reusability**: Identity Provider can serve multiple client applications
+5. **Simplified API**: Resource API no longer contains OIDC provider complexity
+
+### Migration Path
+
+**Phase 1 (Days 1-2)**: Create and test Identity Provider service
+**Phase 2 (Days 3-4)**: Simplify Resource API (remove OIDC)
+**Phase 3 (Days 5-6)**: Integration testing (both services)
+**Phase 4 (Days 7-8)**: Desktop App updates
+**Phase 5 (Days 9-10)**: Final integration and validation
+**Phase 6 (Days 11-15)**: Documentation and cleanup
+
+**Total Timeline**: 10-15 days (see `docs/plan/106-implementation-roadmap.md`)
+
+### Next Steps
+
+1. **Implement Phase 1**: Create Identity Provider service (extract OIDC code)
+2. **Implement Phase 2**: Simplify Resource API (remove OIDC, add token introspection)
+3. **Complete Phase 3**: Integration testing with both services running
+4. **Update Desktop App**: Redirect OAuth to Identity Provider (port 7151)
+5. **Documentation**: Update deployment guides for two-service setup
+
+**Timeline to Production**: 2-4 weeks with focused implementation effort
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-11-07
-**Status**: Ready for Implementation & Staging Deployment
-**Next Review**: After production integration work completion
+**Document Version**: 2.0.0 (Updated for 3-Tier Architecture)
+**Last Updated**: 2025-11-08
+**Status**: Architecture Redesigned, Ready for Implementation
+**Previous Version**: 1.0.0 (monolithic design)
+**Reference Documents**:
+- `docs/plan/105-three-tier-architecture-redesign.md` - Detailed architecture
+- `docs/plan/106-implementation-roadmap.md` - Implementation plan

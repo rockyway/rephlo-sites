@@ -1,10 +1,10 @@
-# Text Assistant Backend API
+# Text Assistant Resource API
 
-Backend API server for Text Assistant desktop application, providing OAuth authentication, credit management, user profiles, and LLM inference endpoints.
+Simplified backend API server for Text Assistant desktop application, providing user management, credit tracking, and LLM inference endpoints. This service validates tokens issued by the separate Identity Provider service.
 
 ## Features
 
-- **OAuth 2.0 Authentication** with PKCE for desktop applications
+- **Token Validation** via Identity Provider introspection
 - **Credit Management** with detailed breakdown (free vs. pro credits)
 - **User Profile & Preferences** with subscription tier information
 - **LLM Inference API** supporting multiple model providers
@@ -12,12 +12,21 @@ Backend API server for Text Assistant desktop application, providing OAuth authe
 - **Rate Limiting & Security** with tier-based limits
 - **Dependency Injection** architecture using TSyringe
 
+## Architecture
+
+This backend is now a **Resource API** that:
+- Does NOT handle OAuth authentication flows (handled by Identity Provider on port 7151)
+- Validates access tokens via JWT verification (cached JWKS) or introspection
+- Provides business logic and data access for authenticated users
+
+For OAuth authentication, see the separate `identity-provider` service.
+
 ## Technology Stack
 
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Express.js
-- **Authentication**: OIDC Provider (OAuth 2.0 with PKCE)
-- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT validation + Token introspection
+- **Database**: PostgreSQL with Prisma ORM (shared with Identity Provider)
 - **Dependency Injection**: TSyringe
 - **Testing**: Jest with integration tests
 - **API Documentation**: OpenAPI 3.0 (Swagger)
@@ -27,7 +36,8 @@ Backend API server for Text Assistant desktop application, providing OAuth authe
 ### Prerequisites
 
 - Node.js 16+ and npm
-- PostgreSQL 14+
+- PostgreSQL 14+ (shared with Identity Provider)
+- **Identity Provider service** running on port 7151
 - Access to OpenAI, Anthropic, or other LLM provider APIs
 
 ### Installation
@@ -40,25 +50,60 @@ npm install
 cp .env.example .env
 # Edit .env with your configuration
 
-# Set up database
-npm run db:migrate
-npm run db:seed
+# IMPORTANT: Ensure Identity Provider is running first
+cd ../identity-provider
+npm run dev
 
-# Build TypeScript
+# In a new terminal, start Resource API
+cd ../backend
 npm run build
-
-# Start development server
 npm run dev
 ```
 
 ### Environment Variables
 
-See `.env.example` for required configuration:
+See `.env` for required configuration:
 
-- **Database**: `DATABASE_URL`
-- **OAuth**: `OIDC_ISSUER`, `OIDC_JWKS_URI`, `CLIENT_ID`, `CLIENT_SECRET`
+- **Identity Provider**: `IDENTITY_PROVIDER_URL=http://localhost:7151` (development)
+- **Database**: `DATABASE_URL` (shared with Identity Provider)
 - **API Keys**: Provider-specific keys (OpenAI, Anthropic, etc.)
-- **Server**: `PORT`, `NODE_ENV`, `CORS_ORIGIN`
+- **Server**: `PORT=7150`, `NODE_ENV`, `CORS_ORIGIN`
+- **Redis**: `REDIS_URL`, `REDIS_PASSWORD` (for rate limiting)
+
+### Token Validation
+
+The Resource API validates tokens in two ways:
+
+1. **JWT Verification (Primary)** - Fast, uses cached JWKS from Identity Provider
+   - Public keys fetched from `http://localhost:7151/oauth/jwks`
+   - Cached for 5 minutes to reduce Identity Provider load
+   - Verifies signature, issuer, and expiration
+
+2. **Token Introspection (Fallback)** - Authoritative validation
+   - Calls `http://localhost:7151/oauth/introspect`
+   - Used when JWT verification fails
+   - Slower but guaranteed accurate
+
+### Running Both Services
+
+**Development:**
+```bash
+# Terminal 1 - Identity Provider
+cd identity-provider
+npm run dev
+# Listening on port 7151
+
+# Terminal 2 - Resource API
+cd backend
+npm run dev
+# Listening on port 7150
+```
+
+**Production:**
+```bash
+# Use environment variable to point to production Identity Provider
+IDENTITY_PROVIDER_URL=https://identity.yourdomain.com npm start
+```
 
 ## API Endpoints
 

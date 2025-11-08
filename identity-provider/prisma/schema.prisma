@@ -1,0 +1,399 @@
+// Prisma Schema for Rephlo Backend
+// Database: PostgreSQL
+// Generated: November 2025
+// Updated: November 2025 - Added Dedicated API Backend schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// BRANDING WEBSITE MODELS (Legacy - Preserved)
+// =============================================================================
+
+// Download Tracking Model
+// Tracks each download event by OS platform
+model Download {
+  id        String   @id @default(cuid())
+  os        String   // "windows", "macos", "linux"
+  timestamp DateTime @default(now())
+  userAgent String?  // Optional browser/client user agent
+  ipHash    String?  // Hashed IP for anonymity and privacy
+
+  @@index([os])
+  @@index([timestamp])
+  @@map("downloads")
+}
+
+// Feedback Submission Model
+// Stores user feedback from website or desktop app
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?  // Optional user ID from desktop app
+  message   String   @db.VarChar(1000) // Max 1000 characters per PRD
+  email     String?  // Optional email for follow-up
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([email])
+  @@map("feedbacks")
+}
+
+// Diagnostic Data Model
+// Tracks diagnostic log file submissions
+// Note: Actual files stored in cloud storage (S3), only metadata here
+model Diagnostic {
+  id        String   @id @default(cuid())
+  userId    String?  // Optional user ID from desktop app
+  filePath  String   // Path to file in cloud storage (e.g., S3 key)
+  fileSize  Int      // File size in bytes (max 5MB = 5242880 per PRD)
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([userId])
+  @@map("diagnostics")
+}
+
+// App Version Model
+// Manages release version metadata and download URLs
+model AppVersion {
+  id          String   @id @default(cuid())
+  version     String   @unique // e.g., "1.0.0", "1.1.0-beta"
+  releaseDate DateTime // When this version was released
+  downloadUrl String   // URL to binary file (e.g., S3, GitHub Releases)
+  changelog   String   @db.Text // Markdown-formatted release notes
+  isLatest    Boolean  @default(true) // Flag for current production version
+  createdAt   DateTime @default(now())
+
+  @@index([isLatest])
+  @@map("app_versions")
+}
+
+// =============================================================================
+// DEDICATED API BACKEND MODELS (New)
+// =============================================================================
+
+// Enums for subscription and usage tracking
+enum SubscriptionTier {
+  free
+  pro
+  enterprise
+
+  @@map("subscription_tier")
+}
+
+enum SubscriptionStatus {
+  active
+  cancelled
+  expired
+  suspended
+
+  @@map("subscription_status")
+}
+
+enum UsageOperation {
+  completion
+  chat
+  embedding
+  function_call
+
+  @@map("usage_operation")
+}
+
+enum ModelCapability {
+  text
+  vision
+  function_calling
+  code
+  long_context
+
+  @@map("model_capability")
+}
+
+// Users Table
+// Stores user account information for authentication and profile management
+model User {
+  id                 String    @id @default(uuid()) @db.Uuid
+  email              String    @unique @db.VarChar(255)
+  emailVerified      Boolean   @default(false) @map("email_verified")
+  username           String?   @db.VarChar(100)
+  passwordHash       String?   @map("password_hash") @db.VarChar(255)
+  firstName          String?   @map("first_name") @db.VarChar(100)
+  lastName           String?   @map("last_name") @db.VarChar(100)
+  profilePictureUrl  String?   @map("profile_picture_url") @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  lastLoginAt        DateTime? @map("last_login_at")
+  isActive           Boolean   @default(true) @map("is_active")
+  deletedAt          DateTime? @map("deleted_at")
+
+  // Email Verification Fields
+  emailVerificationToken       String?   @map("email_verification_token") @db.VarChar(255)
+  emailVerificationTokenExpiry DateTime? @map("email_verification_token_expiry")
+
+  // Password Reset Fields
+  passwordResetToken           String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetTokenExpiry     DateTime? @map("password_reset_token_expiry")
+
+  // Account Management Fields
+  deactivatedAt                DateTime? @map("deactivated_at")
+
+  // Social Auth Fields
+  googleId                     String?   @unique @map("google_id") @db.VarChar(255)
+  googleProfileUrl             String?   @map("google_profile_url") @db.Text
+  authProvider                 String    @default("local") @map("auth_provider") @db.VarChar(50)
+
+  // Security/Audit Fields
+  lastPasswordChange           DateTime? @map("last_password_change")
+  passwordResetCount           Int       @default(0) @map("password_reset_count")
+
+  // Relations
+  subscriptions   Subscription[]
+  credits         Credit[]
+  usageHistory    UsageHistory[]
+  userPreferences UserPreference?
+  webhookConfigs  WebhookConfig[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@index([googleId])
+  @@map("users")
+}
+
+// OAuth Clients Table
+// Stores OAuth 2.0 client configurations (e.g., desktop app, web app)
+// Uses JSON config field for extensibility without schema migrations
+model OAuthClient {
+  clientId       String   @id @map("client_id") @db.VarChar(255)
+  clientName     String   @map("client_name") @db.VarChar(255)
+  clientSecretHash String? @map("client_secret_hash") @db.VarChar(255)
+  redirectUris   String[] @map("redirect_uris")
+  grantTypes     String[] @map("grant_types")
+  responseTypes  String[] @map("response_types")
+  scope          String?  @db.Text
+  isActive       Boolean  @default(true) @map("is_active")
+  config         Json     @default("{}") @map("config")
+  // Flexible JSON field for client-specific configuration:
+  // {
+  //   "skipConsentScreen": true,          // Skip consent & auto-approve after login
+  //   "allowedOrigins": ["https://..."],  // Additional CORS origins
+  //   "description": "...",                // Client description
+  //   "tags": ["tag1", "tag2"],            // For categorization
+  //   "...": "..."                         // Any future fields
+  // }
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("oauth_clients")
+}
+
+// Subscriptions Table
+// Manages user subscription tiers, billing, and status
+// Enhanced with Stripe integration and cancellation tracking
+model Subscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  tier                 SubscriptionTier
+  status               SubscriptionStatus @default(active)
+  creditsPerMonth      Int                @map("credits_per_month")
+  creditsRollover      Boolean            @default(false) @map("credits_rollover")
+  priceCents           Int                @map("price_cents")
+  billingInterval      String             @map("billing_interval") @db.VarChar(20)
+
+  // Stripe Integration Fields (Enhanced)
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripeCustomerId     String?            @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripePriceId        String?            @map("stripe_price_id") @db.VarChar(255)
+
+  // Billing Period Fields
+  currentPeriodStart   DateTime           @map("current_period_start")
+  currentPeriodEnd     DateTime           @map("current_period_end")
+  trialEnd             DateTime?          @map("trial_end")
+
+  // Cancellation Tracking (Enhanced)
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+  cancelledAt          DateTime?          @map("cancelled_at")
+
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits Credit[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+// Credits Table
+// Tracks credit allocation and usage per billing period
+// Enhanced with credit type tracking (free vs pro) and monthly allocation
+model Credit {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  subscriptionId      String?   @map("subscription_id") @db.Uuid
+  totalCredits        Int       @map("total_credits")
+  usedCredits         Int       @default(0) @map("used_credits")
+  billingPeriodStart  DateTime  @map("billing_period_start")
+  billingPeriodEnd    DateTime  @map("billing_period_end")
+  isCurrent           Boolean   @default(true) @map("is_current")
+
+  // NEW FIELDS for Enhanced Credits Tracking
+  creditType          String    @default("free") @map("credit_type") @db.VarChar(10)
+    // Values: 'free' | 'pro'
+  monthlyAllocation   Int       @default(2000) @map("monthly_allocation")
+    // Free tier: 2000, Pro tier: configurable
+  resetDayOfMonth     Int       @default(1) @map("reset_day_of_month")
+    // Day of month when credits reset (1-31)
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  usageHistory UsageHistory[]
+
+  @@index([userId])
+  @@index([userId, isCurrent])
+  @@index([userId, creditType, isCurrent], name: "idx_credits_user_type_current")
+  @@index([billingPeriodStart, billingPeriodEnd])
+  @@map("credits")
+}
+
+// Usage History Table
+// Records detailed usage logs for each API request
+model UsageHistory {
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @map("user_id") @db.Uuid
+  creditId           String?         @map("credit_id") @db.Uuid
+  modelId            String          @map("model_id") @db.VarChar(100)
+  operation          UsageOperation
+  creditsUsed        Int             @map("credits_used")
+  inputTokens        Int?            @map("input_tokens")
+  outputTokens       Int?            @map("output_tokens")
+  totalTokens        Int?            @map("total_tokens")
+  requestDurationMs  Int?            @map("request_duration_ms")
+  requestMetadata    Json?           @map("request_metadata")
+  createdAt          DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credit Credit? @relation(fields: [creditId], references: [id], onDelete: SetNull)
+  model  Model   @relation(fields: [modelId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([modelId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("usage_history")
+}
+
+// Models Table
+// Stores available LLM models with pricing and capability information
+model Model {
+  id                         String            @id @db.VarChar(100)
+  name                       String            @db.VarChar(255)
+  displayName                String            @map("display_name") @db.VarChar(255)
+  provider                   String            @db.VarChar(100)
+  description                String?           @db.Text
+  capabilities               ModelCapability[]
+  contextLength              Int               @map("context_length")
+  maxOutputTokens            Int?              @map("max_output_tokens")
+  inputCostPerMillionTokens  Int               @map("input_cost_per_million_tokens")
+  outputCostPerMillionTokens Int               @map("output_cost_per_million_tokens")
+  creditsPer1kTokens         Int               @map("credits_per_1k_tokens")
+  isAvailable                Boolean           @default(true) @map("is_available")
+  isDeprecated               Boolean           @default(false) @map("is_deprecated")
+  version                    String?           @db.VarChar(50)
+  createdAt                  DateTime          @default(now()) @map("created_at")
+  updatedAt                  DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  usageHistory    UsageHistory[]
+  userPreferences UserPreference[]
+
+  @@index([isAvailable])
+  @@index([provider])
+  @@map("models")
+}
+
+// User Preferences Table
+// Stores user-specific preferences and default settings
+// Enhanced with notification and alert preferences
+model UserPreference {
+  userId               String   @id @map("user_id") @db.Uuid
+  defaultModelId       String?  @map("default_model_id") @db.VarChar(100)
+  enableStreaming      Boolean  @default(true) @map("enable_streaming")
+  maxTokens            Int      @default(4096) @map("max_tokens")
+  temperature          Decimal  @default(0.7) @db.Decimal(3, 2)
+
+  // NEW FIELDS for Enhanced User Profile
+  emailNotifications   Boolean  @default(true) @map("email_notifications")
+    // Whether user receives email notifications
+  usageAlerts          Boolean  @default(true) @map("usage_alerts")
+    // Whether user receives usage threshold alerts
+
+  preferencesMetadata  Json?    @map("preferences_metadata")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultModel Model? @relation(fields: [defaultModelId], references: [id])
+
+  @@map("user_preferences")
+}
+
+// Webhook Config Table
+// Stores user webhook endpoint configurations for event notifications
+model WebhookConfig {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  webhookUrl    String   @map("webhook_url") @db.VarChar(2048)
+  webhookSecret String   @map("webhook_secret") @db.VarChar(255)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs WebhookLog[]
+
+  @@unique([userId]) // One webhook config per user
+  @@index([userId])
+  @@index([isActive])
+  @@map("webhook_configs")
+}
+
+// Webhook Log Table
+// Tracks webhook delivery attempts, responses, and failures
+model WebhookLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  webhookConfigId String    @map("webhook_config_id") @db.Uuid
+  eventType       String    @map("event_type") @db.VarChar(100)
+  payload         Json
+  status          String    @db.VarChar(20) // "success", "failed", "pending"
+  statusCode      Int?      @map("status_code")
+  responseBody    String?   @map("response_body") @db.Text
+  errorMessage    String?   @map("error_message") @db.Text
+  attempts        Int       @default(1)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+
+  // Relations
+  webhookConfig WebhookConfig @relation(fields: [webhookConfigId], references: [id], onDelete: Cascade)
+
+  @@index([webhookConfigId])
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("webhook_logs")
+}

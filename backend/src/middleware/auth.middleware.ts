@@ -2,7 +2,8 @@
  * JWT Authentication Middleware
  *
  * Validates JWT bearer tokens from the Authorization header.
- * Verifies token signature using OIDC provider's JWKS.
+ * Verifies token signature using Identity Provider's JWKS.
+ * Falls back to token introspection if JWT verification fails.
  * Injects user context into request for downstream handlers.
  *
  * Usage:
@@ -15,10 +16,21 @@ import { importJWK, jwtVerify, type JWTPayload } from 'jose';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { unauthorizedError, forbiddenError } from './error.middleware';
+import { TokenIntrospectionService } from '../services/token-introspection.service';
 
 // Environment variables
-const OIDC_ISSUER = process.env.OIDC_ISSUER || 'http://localhost:3001';
-const OIDC_JWKS_PRIVATE_KEY = process.env.OIDC_JWKS_PRIVATE_KEY;
+const IDENTITY_PROVIDER_URL =
+  process.env.IDENTITY_PROVIDER_URL || 'http://localhost:7151';
+
+// Initialize introspection service
+const introspectionService = new TokenIntrospectionService(
+  IDENTITY_PROVIDER_URL
+);
+
+// Cache for JWKS (refresh every 5 minutes)
+let cachedJwks: any = null;
+let jwksLastFetched = 0;
+const JWKS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Extend Express Request to include user context
 declare global {
@@ -38,14 +50,14 @@ declare global {
 
 /**
  * JWT authentication middleware
- * Validates bearer token and sets req.user
+ * Validates bearer token from Identity Provider
+ * Tries JWT verification first, falls back to introspection
  */
 export function authMiddleware(
   req: Request,
   _res: Response,
   next: NextFunction
 ): void {
-  // Extract token from Authorization header
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -66,10 +78,9 @@ export function authMiddleware(
 
   const token = parts[1];
 
-  // Verify token
+  // Try JWT verification first
   verifyJWT(token)
     .then((payload) => {
-      // Extract user context from token
       req.user = {
         sub: payload.sub!,
         email: payload.email as string | undefined,
@@ -79,104 +90,89 @@ export function authMiddleware(
         iat: payload.iat!,
       };
 
-      logger.debug('Auth middleware: token verified', {
+      logger.debug('Auth middleware: JWT verified', {
         userId: req.user.sub,
-        scope: req.user.scope,
       });
 
       next();
     })
     .catch((error) => {
-      logger.warn('Auth middleware: token verification failed', {
-        path: req.path,
+      logger.debug('Auth middleware: JWT verification failed, trying introspection', {
         error: error.message,
       });
-      // Pass error to Express error handling middleware instead of throwing
-      return next(unauthorizedError('Invalid or expired token'));
+
+      // Fall back to introspection
+      introspectionService
+        .introspectToken(token)
+        .then((result) => {
+          if (!result.active) {
+            logger.warn('Auth middleware: token inactive', {
+              path: req.path,
+            });
+            throw new Error('Token is not active or has expired');
+          }
+
+          req.user = {
+            sub: result.sub!,
+            email: result.email as string | undefined,
+            scope: (result.scope as string)?.split(' ') || [],
+            clientId: result.client_id as string,
+            exp: result.exp!,
+            iat: result.iat!,
+          };
+
+          logger.debug('Auth middleware: token validated via introspection', {
+            userId: req.user.sub,
+          });
+
+          next();
+        })
+        .catch((introspectError) => {
+          logger.warn('Auth middleware: token validation failed', {
+            path: req.path,
+            error: introspectError.message,
+          });
+          next(unauthorizedError('Invalid or expired token'));
+        });
     });
 }
 
 /**
- * Verify JWT token using OIDC provider's public key or introspect opaque token
+ * Verify JWT token using public key from Identity Provider
  */
 async function verifyJWT(token: string): Promise<JWTPayload> {
-  // First, check if it's a JWT token (has 3 parts)
   const parts = token.split('.');
 
-  if (parts.length === 3) {
-    // It's a JWT, verify it
-    if (!OIDC_JWKS_PRIVATE_KEY) {
-      throw new Error('OIDC_JWKS_PRIVATE_KEY not configured');
-    }
-
-    // Parse JWKS private key to get public key for verification
-    const privateJwk = JSON.parse(OIDC_JWKS_PRIVATE_KEY);
-
-    // Extract public key components from private key
-    const publicJwk = {
-      kty: privateJwk.kty,
-      n: privateJwk.n,
-      e: privateJwk.e,
-      alg: privateJwk.alg,
-      kid: privateJwk.kid,
-      use: privateJwk.use,
-    };
-
-    const publicKey = await importJWK(publicJwk, 'RS256');
-
-    // Verify JWT
-    const { payload } = await jwtVerify(token, publicKey, {
-      issuer: OIDC_ISSUER,
-      algorithms: ['RS256'],
-    });
-
-    return payload;
-  } else {
-    // It's an opaque token, introspect it with the OIDC provider
-    // Opaque access tokens must be validated via the introspection endpoint
-    logger.debug('Introspecting opaque access token');
-
-    try {
-      const response = await fetch(`${OIDC_ISSUER}/oauth/introspect`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          token: token,
-        }).toString(),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Introspection failed: ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as any;
-
-      // Check if token is active
-      if (!data.active) {
-        throw new Error('Token is not active or has expired');
-      }
-
-      // Convert introspection response to JWTPayload format
-      const payload: JWTPayload = {
-        sub: data.sub,
-        aud: data.aud,
-        client_id: data.client_id,
-        exp: data.exp,
-        iat: data.iat,
-        scope: data.scope,
-        email: data.email,
-      };
-
-      return payload;
-    } catch (error) {
-      logger.error('Token introspection failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw new Error('Failed to introspect token');
-    }
+  // Check if it's a valid JWT format (3 parts)
+  if (parts.length !== 3) {
+    throw new Error('Invalid token format');
   }
+
+  // Fetch JWKS if not cached
+  if (!cachedJwks || Date.now() - jwksLastFetched > JWKS_CACHE_TTL) {
+    cachedJwks = await introspectionService.getPublicKeys();
+    jwksLastFetched = Date.now();
+    logger.debug('Fetched JWKS from Identity Provider', {
+      keyCount: cachedJwks.keys.length,
+    });
+  }
+
+  // Use the first public key (typically only one for RS256)
+  const publicJwk = cachedJwks.keys[0];
+
+  if (!publicJwk) {
+    throw new Error('No public keys available');
+  }
+
+  const publicKey = await importJWK(publicJwk, 'RS256');
+
+  // Verify JWT signature and issuer
+  const { payload } = await jwtVerify(token, publicKey, {
+    issuer: IDENTITY_PROVIDER_URL,
+    algorithms: ['RS256'],
+  });
+
+  return payload;
 }
 
 /**

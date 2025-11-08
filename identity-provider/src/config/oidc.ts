@@ -78,6 +78,13 @@ export async function createOIDCProvider(
         enabled: false,
       },
 
+      // Enable token introspection (RFC 7662) for opaque token validation
+      // Introspection endpoint requires client authentication by default (RFC 7662)
+      // For public clients, we'll handle this in a custom endpoint
+      introspection: {
+        enabled: true,
+      },
+
       // Enable token revocation
       revocation: {
         enabled: true,
@@ -181,6 +188,7 @@ export async function createOIDCProvider(
       authorization: '/oauth/authorize',
       token: '/oauth/token',
       userinfo: '/oauth/userinfo',
+      introspection: '/oauth/introspect',
       revocation: '/oauth/revoke',
       jwks: '/oauth/jwks',
     },
