@@ -316,31 +316,34 @@ export async function createOIDCProvider(
   provider.AccessToken.prototype.save = async function(this: any): Promise<string> {
     const { oidc } = this;
 
+    console.log('🔍🔍🔍 AccessToken.save DEBUG - Checking all possible sources:');
+    console.log('  oidc.params:', oidc?.params);
+    console.log('  oidc.ctx:', oidc?.ctx ? 'EXISTS' : 'MISSING');
+    console.log('  oidc.ctx.request:', oidc?.ctx?.request ? 'EXISTS' : 'MISSING');
+    console.log('  oidc.ctx.request.body:', oidc?.ctx?.request?.body);
+    console.log('  oidc.ctx.req:', oidc?.ctx?.req ? 'EXISTS' : 'MISSING');
+    console.log('  oidc.ctx.req.body:', oidc?.ctx?.req?.body);
+
     // The resource parameter may be in the params or we need to get it from the context
     let resource = oidc?.params?.resource;
 
-    // If not in params, try to get from the request body via the context
+    // If not in params, try to get from the request body via Koa context
     if (!resource && oidc?.ctx?.request?.body?.resource) {
       resource = oidc.ctx.request.body.resource;
+      console.log('✅ Found resource in oidc.ctx.request.body:', resource);
     }
 
-    // Also check for the parameter in various other context locations
-    if (oidc?.ctx?.request?.body) {
-      const bodyKeys = Object.keys(oidc.ctx.request.body);
-      console.log('🔍 OIDC AccessToken.save - Request body keys:', bodyKeys);
-      console.log('🔍 Full body:', JSON.stringify(oidc.ctx.request.body));
-
-      logger.debug('OIDC: Checking request body', {
-        keys: bodyKeys,
-        body: JSON.stringify(oidc.ctx.request.body),
-      });
+    // If still not found, try to access Express req.body from the Node.js req object
+    // The Koa context wraps the Node.js request as ctx.req
+    if (!resource && oidc?.ctx?.req?.body?.resource) {
+      resource = oidc.ctx.req.body.resource;
+      console.log('✅ Found resource in oidc.ctx.req.body:', resource);
     }
 
-    console.log('🔍 OIDC AccessToken.save called with:', {
+    console.log('🔍 OIDC AccessToken.save RESULT:', {
       hasResource: !!resource,
       resource: resource,
       clientId: oidc?.client?.clientId,
-      ctxBodyKeys: Object.keys(oidc?.ctx?.request?.body || {}),
     });
 
     logger.debug('OIDC: AccessToken.save called', {
@@ -439,8 +442,8 @@ export async function createOIDCProvider(
 
   provider.on('access_token.issued', (_ctx: any) => {
     logger.info('OIDC: access token issued', {
-      clientId: _ctx.oidc.client?.clientId,
-      userId: _ctx.oidc.session?.accountId,
+      clientId: _ctx?.oidc?.client?.clientId,
+      userId: _ctx?.oidc?.session?.accountId,
     });
   });
 
@@ -454,6 +457,22 @@ export async function createOIDCProvider(
   provider.on('refresh_token.consumed', (refreshToken: any) => {
     logger.info('OIDC: refresh token consumed', {
       clientId: refreshToken.clientId,
+    });
+  });
+
+  // Add error listener to catch server errors
+  provider.on('server_error', (ctx: any, error: any) => {
+    console.error('❌❌❌ OIDC SERVER ERROR EVENT:', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      path: ctx?.path,
+      method: ctx?.method,
+    });
+    logger.error('OIDC: server_error event fired', {
+      error: error.message,
+      stack: error.stack,
+      path: ctx?.path,
+      method: ctx?.method,
     });
   });
 

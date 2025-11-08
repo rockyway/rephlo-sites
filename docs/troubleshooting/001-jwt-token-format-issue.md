@@ -363,6 +363,130 @@ To fully verify the JWT token generation:
 | Token endpoint crashes | ✅ FIXED | Server responds gracefully |
 | Resource parameter not found | ✅ PARTIAL | Parameter is in request body, needs validation with real code |
 
+## Final Resolution - COMPLETE ✅
+
+### Root Cause of "oops! something went wrong" Error
+
+After enabling enhanced error logging with the `server_error` event listener, the actual exception was revealed:
+
+**Error**: `TypeError: Cannot read properties of undefined (reading 'client')`
+**Location**: `identity-provider/src/config/oidc.ts:445` in the `access_token.issued` event handler
+
+**The Problem**: The event handler tried to access `_ctx.oidc.client?.clientId`, but during token generation, the `_ctx.oidc` object was undefined, causing the property access to fail and throwing an unhandled exception that resulted in the generic "oops! something went wrong" error.
+
+### Fix Applied
+
+**File**: `identity-provider/src/config/oidc.ts` (line 445)
+**Change**: Added optional chaining to safely handle undefined `_ctx.oidc`
+
+```typescript
+// BEFORE - Would crash if _ctx.oidc is undefined
+provider.on('access_token.issued', (_ctx: any) => {
+  logger.info('OIDC: access token issued', {
+    clientId: _ctx.oidc.client?.clientId,
+    userId: _ctx.oidc.session?.accountId,
+  });
+});
+
+// AFTER - Safely handles undefined _ctx.oidc
+provider.on('access_token.issued', (_ctx: any) => {
+  logger.info('OIDC: access token issued', {
+    clientId: _ctx?.oidc?.client?.clientId,
+    userId: _ctx?.oidc?.session?.accountId,
+  });
+});
+```
+
+### Final Test Results ✅
+
+**Date**: 2025-11-08
+**Status**: All tests PASSING
+
+#### 1. JWT Token Generation ✅
+- Token successfully obtained from Identity Provider
+- Format: `eyJhbGciOi...payload...signature` (proper JWT with 3 parts)
+- Token type: `at+jwt` (Access Token in JWT format)
+- Algorithm: RS256 (RSA signature)
+
+#### 2. Token Payload Validation ✅
+```json
+{
+  "jti": "oj8B4NdsRCj2SjVKRO62m7QbC0syhMu4Pe_KYdxdlOC",
+  "sub": "71ffe2bb-31ea-4c70-9416-bff452c8d5e9",
+  "iat": 1762624824,
+  "exp": 1762628424,
+  "scope": "openid email profile llm.inference models.read user.info credits.read",
+  "client_id": "textassistant-desktop",
+  "iss": "http://localhost:7151",
+  "aud": "https://api.textassistant.local"
+}
+```
+- Audience: Correctly set to "https://api.textassistant.local"
+- Issuer: Correctly set to "http://localhost:7151"
+- All required scopes present
+
+#### 3. API Endpoint Tests ✅
+
+**GET /health** → 200 OK
+```json
+{
+  "success": true,
+  "endpoint": "/health",
+  "statusCode": 200,
+  "data": {
+    "status": "ok",
+    "timestamp": "2025-11-08T18:00:32.177Z",
+    "uptime": 3480,
+    "services": {
+      "database": "connected",
+      "redis": "configured",
+      "di_container": "initialized"
+    }
+  }
+}
+```
+
+**GET /users/me** → 200 OK
+```json
+{
+  "success": true,
+  "endpoint": "/v1/users/me",
+  "statusCode": 200,
+  "data": {
+    "id": "71ffe2bb-31ea-4c70-9416-bff452c8d5e9",
+    "email": "developer@example.com",
+    "emailVerified": true,
+    "username": "dev_user",
+    "firstName": "Dev",
+    "lastName": "Developer"
+  }
+}
+```
+
+#### 4. Complete OAuth Flow ✅
+1. User clicks Login
+2. Redirects to Identity Provider login page
+3. User submits credentials (developer@example.com / User@123)
+4. User grants consent for scopes
+5. Redirects back to POC client with authorization code
+6. POC client exchanges code for JWT token
+7. JWT token is successfully received and stored
+8. Protected API endpoints accept the JWT and return 200 OK
+
+### Important Notes for Development
+
+#### Browser Cache Clearing
+**Critical for testing during development!** Clear browser cache every time you rebuild services:
+- **Keyboard shortcut**: `Ctrl+Shift+Delete` to open DevTools cache clearing dialog
+- **Reason**: Browser may cache old OAuth state, redirect URIs, or stale code
+- **Impact**: Without clearing, you may see "invalid_grant" or redirect loop errors even if code is correct
+
+#### Service Startup Order
+1. Database must be running and migrations applied
+2. Start Identity Provider service first (port 7151)
+3. Start POC Client second (port 8080)
+4. Always rebuild services when making code changes: `npm run build`
+
 ## Reference source code
 - `node-oidc-provider` project at: `d:/sources/github/node-oidc-provider`
 - its RagSearch collection `rs_node_oidc_provider_weyr`
