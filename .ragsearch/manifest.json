@@ -32,8 +32,19 @@
       "chunk_count": 2,
       "file_type": "markdown",
       "last_indexed": "2025-11-08T17:33:05.158Z"
+    },
+    "70806ec4619b0179": {
+      "source": "D:\\sources\\work\\rephlo-sites\\work-log.md",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\work-log.md",
+      "content_hash": "dec6e95d90a1280a4da96cd255e361eeb43219da50409a4b434c0dea3024fd8c",
+      "file_size": 63610,
+      "modified_time": "2025-11-08T08:29:14.655Z",
+      "chunk_count": 20,
+      "file_type": "markdown",
+      "last_indexed": "2025-11-08T17:34:58.453Z"
     }
   },
-  "last_updated": "2025-11-08T17:33:05.158Z",
+  "last_updated": "2025-11-08T17:34:58.453Z",
   "version": "1.0.0"
 }
