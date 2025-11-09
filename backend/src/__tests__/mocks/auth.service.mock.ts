@@ -54,7 +54,7 @@ export class MockAuthService implements IAuthService {
       // Multi-Factor Authentication Fields (Phase 4)
       mfaEnabled: false,
       mfaSecret: null,
-      mfaBackupCodes: null,
+      mfaBackupCodes: [],
       mfaVerifiedAt: null,
       mfaMethod: 'totp',
     };

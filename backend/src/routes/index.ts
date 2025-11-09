@@ -26,6 +26,7 @@ import { createSocialAuthRouter } from './social-auth.routes';
 import { createPlan109Router } from './plan109.routes';
 import { createPlan110Router } from './plan110.routes';
 import { createPlan111Router } from './plan111.routes';
+import { createMFARouter } from './mfa.routes';
 
 // Import subscription controller for webhooks
 import { SubscriptionsController } from '../controllers/subscriptions.controller';
@@ -68,6 +69,12 @@ router.get('/', (_req: Request, res: Response) => {
         verify_email: '/auth/verify-email',
         forgot_password: '/auth/forgot-password',
         reset_password: '/auth/reset-password',
+        mfa_setup: '/auth/mfa/setup',
+        mfa_verify_setup: '/auth/mfa/verify-setup',
+        mfa_verify_login: '/auth/mfa/verify-login',
+        mfa_disable: '/auth/mfa/disable',
+        mfa_backup_code_login: '/auth/mfa/backup-code-login',
+        mfa_status: '/auth/mfa/status',
       },
       oauth: {
         discovery: '/.well-known/openid-configuration',
@@ -239,6 +246,10 @@ router.use('/', createPlan111Router());
 // ===== Authentication Routes =====
 // User registration, email verification, password reset
 router.use('/auth', createAuthRouter());
+
+// ===== Multi-Factor Authentication Routes =====
+// MFA setup, verification, and management
+router.use('/auth/mfa', createMFARouter());
 
 // ===== Social Authentication Routes =====
 // OAuth integration with external providers (Google)
