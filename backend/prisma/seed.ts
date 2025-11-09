@@ -171,6 +171,28 @@ async function main() {
       },
       isActive: true,
     },
+    {
+      tierName: 'perpetual',
+      monthlyPriceUsd: 199.00, // One-time payment (not recurring)
+      annualPriceUsd: 199.00,  // Same as monthly (lifetime license)
+      monthlyCreditAllocation: 0, // No cloud credits (BYOK only)
+      maxCreditRollover: 0,
+      features: {
+        apiAccess: false, // No cloud API access
+        prioritySupport: false,
+        maxProjects: 999,
+        customModels: false,
+        analyticsAccess: 'local', // Local analytics only
+        rateLimit: 'none', // No cloud rate limits
+        byokMode: true, // Bring Your Own Key enabled
+        offlineMode: true, // Ollama support
+        perpetualLicense: true,
+        majorVersionUpgrades: false, // Requires $99 upgrade fee
+        minorVersionUpgrades: true,  // Free within same major version
+        supportDuration: '12 months' // 1 year from purchase
+      },
+      isActive: true,
+    },
   ];
 
   for (const tier of subscriptionTiers) {
@@ -979,12 +1001,120 @@ async function main() {
   });
   console.log(`  ✓ Created preferences for ${proUser.email}`);
 
+  // =============================================================================
+  // Seed Perpetual Licenses (Plan 110)
+  // =============================================================================
+  console.log('\n[10/11] Seeding Perpetual Licenses...');
+
+  // Sample Perpetual License for Developer User
+  const developerPerpetualLicense = await prisma.perpetualLicense.create({
+    data: {
+      userId: developerUser.id,
+      licenseKey: 'REPHLO-1A2B-3C4D-5E6F-7G8H',
+      purchasePriceUsd: 199.00,
+      purchasedVersion: '1.0.0',
+      eligibleUntilVersion: '1.99.99', // Free updates to all v1.x versions
+      maxActivations: 3,
+      currentActivations: 2, // 2 devices activated
+      status: 'active',
+      purchasedAt: new Date('2025-10-15T10:00:00Z'),
+      activatedAt: new Date('2025-10-15T11:30:00Z'),
+      expiresAt: null, // Perpetual (NULL)
+    },
+  });
+  console.log(`  ✓ Created perpetual license for ${developerUser.email}: ${developerPerpetualLicense.licenseKey}`);
+
+  // Sample License Activations for Developer
+  const activation1 = await prisma.licenseActivation.create({
+    data: {
+      licenseId: developerPerpetualLicense.id,
+      userId: developerUser.id,
+      machineFingerprint: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', // SHA-256 hash
+      deviceName: 'Developer-Laptop',
+      osType: 'Windows',
+      osVersion: '11 Pro',
+      cpuInfo: 'Intel Core i7-12700K',
+      status: 'active',
+      activatedAt: new Date('2025-10-15T11:30:00Z'),
+      lastSeenAt: new Date('2025-11-09T08:00:00Z'),
+    },
+  });
+
+  const activation2 = await prisma.licenseActivation.create({
+    data: {
+      licenseId: developerPerpetualLicense.id,
+      userId: developerUser.id,
+      machineFingerprint: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3', // Different machine
+      deviceName: 'Developer-Desktop',
+      osType: 'Windows',
+      osVersion: '11 Home',
+      cpuInfo: 'AMD Ryzen 9 5900X',
+      status: 'active',
+      activatedAt: new Date('2025-10-20T14:00:00Z'),
+      lastSeenAt: new Date('2025-11-08T18:30:00Z'),
+    },
+  });
+  console.log(`  ✓ Created ${2} license activations for ${developerUser.email}`);
+
+  // Sample Version Upgrade (Developer upgrading from v1.x to v2.0)
+  const versionUpgrade = await prisma.versionUpgrade.create({
+    data: {
+      licenseId: developerPerpetualLicense.id,
+      userId: developerUser.id,
+      fromVersion: '1.5.2',
+      toVersion: '2.0.0',
+      upgradePriceUsd: 79.00, // Early bird discount
+      stripePaymentIntentId: 'pi_test_upgrade_v2_early_bird',
+      status: 'completed',
+      purchasedAt: new Date('2025-11-01T09:00:00Z'),
+    },
+  });
+  console.log(`  ✓ Created version upgrade: v${versionUpgrade.fromVersion} → v${versionUpgrade.toVersion} ($${versionUpgrade.upgradePriceUsd})`);
+
+  // Create SubscriptionMonetization for Pro User (for proration testing)
+  const proSubscriptionMonetization = await prisma.subscriptionMonetization.create({
+    data: {
+      userId: proUser.id,
+      tier: 'pro',
+      billingCycle: 'monthly',
+      status: 'active',
+      basePriceUsd: 19.00,
+      monthlyCreditAllocation: 20000,
+      stripeCustomerId: 'cus_test_pro_user_plan110',
+      stripeSubscriptionId: 'sub_test_pro_user_plan110',
+      currentPeriodStart: new Date('2025-11-01T00:00:00Z'),
+      currentPeriodEnd: new Date('2025-12-01T00:00:00Z'),
+    },
+  });
+  console.log(`  ✓ Created subscription monetization for ${proUser.email}`);
+
+  // Sample Proration Event (Pro User upgrading from Pro to Pro Max mid-cycle)
+  const prorationEvent = await prisma.prorationEvent.create({
+    data: {
+      userId: proUser.id,
+      subscriptionId: proSubscriptionMonetization.id,
+      fromTier: 'pro',
+      toTier: 'pro_max',
+      changeType: 'upgrade',
+      daysRemaining: 15,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 9.50, // (15/30) × $19
+      newTierProratedCostUsd: 24.50, // (15/30) × $49
+      netChargeUsd: 15.00, // $24.50 - $9.50
+      effectiveDate: new Date('2025-11-15T10:00:00Z'),
+      stripeInvoiceId: 'in_test_proration_upgrade',
+      status: 'applied',
+      createdAt: new Date('2025-11-15T10:00:00Z'),
+    },
+  });
+  console.log(`  ✓ Created proration event: ${prorationEvent.fromTier} → ${prorationEvent.toTier} (Net charge: $${prorationEvent.netChargeUsd})`);
+
   console.log('\n✅ Database seeding completed successfully!');
   console.log('\n=============================================================================');
   console.log('SEEDED DATA SUMMARY');
   console.log('=============================================================================');
   console.log(`  📦 OAuth Clients: ${oauthClients.length}`);
-  console.log(`  💎 Subscription Tiers: ${subscriptionTiers.length} (Plan 109)`);
+  console.log(`  💎 Subscription Tiers: ${subscriptionTiers.length} (Plan 109 + Plan 110 Perpetual)`);
   console.log(`  🤖 LLM Models: ${models.length}`);
   console.log(`  👤 Test Users: 10 (1 admin + 5 regular + 2 OAuth + 2 legacy)`);
   console.log(`  💳 Subscriptions: 2 (1 free tier, 1 pro tier)`);
@@ -998,6 +1128,10 @@ async function main() {
     console.log(`  📝 Webhook Logs: Skipped (table not found)`);
   }
   console.log(`  ⚙️  User Preferences: 2`);
+  console.log(`  🔑 Perpetual Licenses: 1 (developer user)`);
+  console.log(`  💻 License Activations: 2 (2 devices for developer)`);
+  console.log(`  📦 Version Upgrades: 1 (v1.5.2 → v2.0.0, early bird $79)`);
+  console.log(`  💸 Proration Events: 1 (pro → pro_max upgrade, $15 net charge)`);
 
   console.log('\n=============================================================================');
   console.log('TEST USER CREDENTIALS');

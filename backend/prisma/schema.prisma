@@ -171,6 +171,12 @@ model User {
   paymentTransactions      PaymentTransaction[]       @relation("UserPaymentTransaction")
   dunningAttempts          DunningAttempt[]           @relation("UserDunningAttempt")
 
+  // Plan 110 Perpetual Licensing Relations
+  perpetualLicenses  PerpetualLicense[]  @relation("UserPerpetualLicense")
+  licenseActivations LicenseActivation[] @relation("UserLicenseActivation")
+  versionUpgrades    VersionUpgrade[]    @relation("UserVersionUpgrade")
+  prorationEvents    ProrationEvent[]    @relation("UserProrationEvent")
+
   @@index([email])
   @@index([createdAt])
   @@index([googleId])
@@ -455,43 +461,46 @@ model ModelTierAuditLog {
 // Manages user subscription lifecycle with Stripe integration
 // Links to credit_allocation for monthly credit grants
 model SubscriptionMonetization {
-  id       String @id @default(uuid()) @db.Uuid
-  userId   String @map("user_id") @db.Uuid
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
 
   // Subscription Details
-  tier                   String   @db.VarChar(50)
+  tier         String @db.VarChar(50)
   // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
-  billingCycle           String   @map("billing_cycle") @db.VarChar(20)
+  billingCycle String @map("billing_cycle") @db.VarChar(20)
   // Values: 'monthly', 'annual', 'lifetime' (for perpetual)
-  status                 String   @db.VarChar(20)
+  status       String @db.VarChar(20)
   // Values: 'trial', 'active', 'past_due', 'cancelled', 'expired'
 
   // Pricing
-  basePriceUsd           Decimal  @map("base_price_usd") @db.Decimal(10, 2)
+  basePriceUsd            Decimal @map("base_price_usd") @db.Decimal(10, 2)
   monthlyCreditAllocation Int     @map("monthly_credit_allocation")
 
   // Stripe Integration
-  stripeCustomerId       String?  @unique @map("stripe_customer_id") @db.VarChar(255)
-  stripeSubscriptionId   String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id") @db.VarChar(255)
 
   // Billing Period
-  currentPeriodStart     DateTime @map("current_period_start")
-  currentPeriodEnd       DateTime @map("current_period_end")
-  trialEndsAt            DateTime? @map("trial_ends_at")
+  currentPeriodStart DateTime  @map("current_period_start")
+  currentPeriodEnd   DateTime  @map("current_period_end")
+  trialEndsAt        DateTime? @map("trial_ends_at")
 
   // Cancellation Tracking
-  cancelledAt            DateTime? @map("cancelled_at")
+  cancelledAt DateTime? @map("cancelled_at")
 
   // Timestamps
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user               User                    @relation("UserSubscriptionMonetization", fields: [userId], references: [id], onDelete: Cascade)
-  creditAllocations  CreditAllocation[]
-  billingInvoices    BillingInvoice[]
+  user                User                 @relation("UserSubscriptionMonetization", fields: [userId], references: [id], onDelete: Cascade)
+  creditAllocations   CreditAllocation[]
+  billingInvoices     BillingInvoice[]
   paymentTransactions PaymentTransaction[]
-  dunningAttempts    DunningAttempt[]
+  dunningAttempts     DunningAttempt[]
+
+  // Plan 110 Perpetual Licensing Relations
+  prorationEvents ProrationEvent[]
 
   @@index([userId])
   @@index([status])
@@ -506,31 +515,31 @@ model SubscriptionMonetization {
 // Defines tier pricing, credit allocations, and features
 // Managed via admin UI for dynamic pricing adjustments
 model SubscriptionTierConfig {
-  id                    String   @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
 
   // Tier Identification
-  tierName              String   @unique @map("tier_name") @db.VarChar(50)
+  tierName String @unique @map("tier_name") @db.VarChar(50)
   // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
 
   // Pricing
-  monthlyPriceUsd       Decimal  @map("monthly_price_usd") @db.Decimal(10, 2)
-  annualPriceUsd        Decimal  @map("annual_price_usd") @db.Decimal(10, 2)
+  monthlyPriceUsd Decimal @map("monthly_price_usd") @db.Decimal(10, 2)
+  annualPriceUsd  Decimal @map("annual_price_usd") @db.Decimal(10, 2)
 
   // Credit Allocation
-  monthlyCreditAllocation Int    @map("monthly_credit_allocation")
-  maxCreditRollover      Int     @map("max_credit_rollover")
+  monthlyCreditAllocation Int @map("monthly_credit_allocation")
+  maxCreditRollover       Int @map("max_credit_rollover")
   // Maximum credits that can roll over to next month
 
   // Features (JSONB for flexibility)
-  features              Json     @default("{}")
+  features Json @default("{}")
   // Example: {"apiAccess": true, "prioritySupport": true, "maxProjects": 10}
 
   // Status
-  isActive              Boolean  @default(true) @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
   // Timestamps
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("subscription_tier_config")
 }
@@ -539,9 +548,9 @@ model SubscriptionTierConfig {
 // Tracks monthly credit grants to users
 // Links to user_credit_balance from Plan 112 for actual balance tracking
 model CreditAllocation {
-  id                    String   @id @default(uuid()) @db.Uuid
-  userId                String   @map("user_id") @db.Uuid
-  subscriptionId        String?  @map("subscription_id") @db.Uuid
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
 
   // Allocation Details
   amount                Int
@@ -549,15 +558,15 @@ model CreditAllocation {
   allocationPeriodEnd   DateTime @map("allocation_period_end")
 
   // Source Tracking
-  source                String   @db.VarChar(50)
+  source String @db.VarChar(50)
   // Values: 'subscription', 'bonus', 'admin_grant', 'referral', 'coupon'
 
   // Timestamps
-  createdAt             DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  user          User                        @relation("UserCreditAllocation", fields: [userId], references: [id], onDelete: Cascade)
-  subscription  SubscriptionMonetization?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  user         User                      @relation("UserCreditAllocation", fields: [userId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([subscriptionId])
@@ -570,31 +579,31 @@ model CreditAllocation {
 // Stores Stripe invoice records for subscription billing
 // Provides audit trail and reconciliation with Stripe
 model BillingInvoice {
-  id                  String   @id @default(uuid()) @db.Uuid
-  userId              String   @map("user_id") @db.Uuid
-  subscriptionId      String?  @map("subscription_id") @db.Uuid
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
 
   // Stripe Integration
-  stripeInvoiceId     String   @unique @map("stripe_invoice_id") @db.VarChar(255)
+  stripeInvoiceId String @unique @map("stripe_invoice_id") @db.VarChar(255)
 
   // Invoice Details
-  amountDue           Decimal  @map("amount_due") @db.Decimal(10, 2)
-  amountPaid          Decimal  @map("amount_paid") @db.Decimal(10, 2)
-  currency            String   @default("usd") @db.VarChar(3)
-  status              String   @db.VarChar(20)
+  amountDue  Decimal @map("amount_due") @db.Decimal(10, 2)
+  amountPaid Decimal @map("amount_paid") @db.Decimal(10, 2)
+  currency   String  @default("usd") @db.VarChar(3)
+  status     String  @db.VarChar(20)
   // Values: 'draft', 'open', 'paid', 'void', 'uncollectible'
 
   // Billing Period
-  periodStart         DateTime @map("period_start")
-  periodEnd           DateTime @map("period_end")
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
 
   // Stripe URLs
-  invoicePdf          String?  @map("invoice_pdf") @db.Text
-  hostedInvoiceUrl    String?  @map("hosted_invoice_url") @db.Text
+  invoicePdf       String? @map("invoice_pdf") @db.Text
+  hostedInvoiceUrl String? @map("hosted_invoice_url") @db.Text
 
   // Timestamps
-  createdAt           DateTime @default(now()) @map("created_at")
-  paidAt              DateTime? @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  paidAt    DateTime? @map("paid_at")
 
   // Relations
   user                User                      @relation("UserBillingInvoice", fields: [userId], references: [id], onDelete: Cascade)
@@ -614,35 +623,35 @@ model BillingInvoice {
 // Records all payment attempts and completions
 // Links to billing_invoice for payment history
 model PaymentTransaction {
-  id                    String   @id @default(uuid()) @db.Uuid
-  userId                String   @map("user_id") @db.Uuid
-  invoiceId             String?  @map("invoice_id") @db.Uuid
-  subscriptionId        String?  @map("subscription_id") @db.Uuid
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  invoiceId      String? @map("invoice_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
 
   // Stripe Integration
-  stripePaymentIntentId String   @unique @map("stripe_payment_intent_id") @db.VarChar(255)
+  stripePaymentIntentId String @unique @map("stripe_payment_intent_id") @db.VarChar(255)
 
   // Transaction Details
-  amount                Decimal  @db.Decimal(10, 2)
-  currency              String   @default("usd") @db.VarChar(3)
-  status                String   @db.VarChar(20)
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("usd") @db.VarChar(3)
+  status   String  @db.VarChar(20)
   // Values: 'pending', 'succeeded', 'failed', 'cancelled', 'refunded'
 
   // Payment Method
-  paymentMethodType     String?  @map("payment_method_type") @db.VarChar(50)
+  paymentMethodType String? @map("payment_method_type") @db.VarChar(50)
   // Values: 'card', 'bank_account', 'paypal', etc.
 
   // Failure Tracking
-  failureReason         String?  @map("failure_reason") @db.Text
+  failureReason String? @map("failure_reason") @db.Text
 
   // Timestamps
-  createdAt             DateTime @default(now()) @map("created_at")
-  completedAt           DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
 
   // Relations
-  user          User                      @relation("UserPaymentTransaction", fields: [userId], references: [id], onDelete: Cascade)
-  invoice       BillingInvoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  subscription  SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  user         User                      @relation("UserPaymentTransaction", fields: [userId], references: [id], onDelete: Cascade)
+  invoice      BillingInvoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([invoiceId])
@@ -657,31 +666,31 @@ model PaymentTransaction {
 // Tracks failed payment retry attempts (dunning management)
 // Implements automatic retry logic for failed payments
 model DunningAttempt {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @map("user_id") @db.Uuid
-  invoiceId       String   @map("invoice_id") @db.Uuid
-  subscriptionId  String?  @map("subscription_id") @db.Uuid
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  invoiceId      String  @map("invoice_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
 
   // Retry Details
-  attemptNumber   Int      @map("attempt_number")
-  scheduledAt     DateTime @map("scheduled_at")
-  attemptedAt     DateTime? @map("attempted_at")
+  attemptNumber Int       @map("attempt_number")
+  scheduledAt   DateTime  @map("scheduled_at")
+  attemptedAt   DateTime? @map("attempted_at")
 
   // Result Tracking
-  result          String?  @db.VarChar(20)
+  result        String? @db.VarChar(20)
   // Values: 'success', 'failed', 'pending', 'skipped'
-  failureReason   String?  @map("failure_reason") @db.Text
+  failureReason String? @map("failure_reason") @db.Text
 
   // Next Retry
-  nextRetryAt     DateTime? @map("next_retry_at")
+  nextRetryAt DateTime? @map("next_retry_at")
 
   // Timestamps
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  user          User                      @relation("UserDunningAttempt", fields: [userId], references: [id], onDelete: Cascade)
-  invoice       BillingInvoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  subscription  SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  user         User                      @relation("UserDunningAttempt", fields: [userId], references: [id], onDelete: Cascade)
+  invoice      BillingInvoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([invoiceId])
@@ -689,4 +698,241 @@ model DunningAttempt {
   @@index([scheduledAt])
   @@index([result])
   @@map("dunning_attempt")
+}
+
+// =============================================================================
+// PERPETUAL LICENSING SYSTEM (Plan 110)
+// Integrated with Subscription Monetization (Plan 109) and Token-to-Credit (Plan 112)
+// =============================================================================
+
+// Enums for Perpetual Licensing
+enum LicenseStatus {
+  pending // License created but not yet activated
+  active // License active and in use
+  suspended // Temporarily suspended (payment issues, policy violations)
+  revoked // Permanently revoked (fraud, abuse)
+  expired // Version support ended (v1.x EOL)
+
+  @@map("license_status")
+}
+
+enum ActivationStatus {
+  active // Device is actively using the license
+  deactivated // User manually deactivated
+  replaced // Device replaced by new activation
+
+  @@map("activation_status")
+}
+
+enum UpgradeStatus {
+  pending // Upgrade payment initiated but not completed
+  completed // Upgrade payment completed and applied
+  failed // Payment failed
+  refunded // Upgrade refunded
+
+  @@map("upgrade_status")
+}
+
+enum ProrationChangeType {
+  upgrade // User upgraded to higher tier
+  downgrade // User downgraded to lower tier
+  cancellation // User cancelled subscription
+  reactivation // User reactivated subscription
+
+  @@map("proration_change_type")
+}
+
+enum ProrationStatus {
+  pending // Proration calculated but not yet applied
+  applied // Proration applied to Stripe invoice
+  failed // Proration application failed
+  reversed // Proration reversed (refund/adjustment)
+
+  @@map("proration_status")
+}
+
+// Perpetual License Table
+// Manages one-time perpetual license purchases with version eligibility tracking
+// Links to User for ownership and subscription_monetization for migrations
+model PerpetualLicense {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // License Key (Format: REPHLO-XXXX-XXXX-XXXX-XXXX)
+  licenseKey String @unique @map("license_key") @db.VarChar(50)
+
+  // Purchase Details
+  purchasePriceUsd Decimal @map("purchase_price_usd") @db.Decimal(10, 2)
+  purchasedVersion String  @map("purchased_version") @db.VarChar(50)
+  // SemVer format: "1.0.0", "2.0.0"
+
+  // Version Eligibility (SemVer)
+  eligibleUntilVersion String @map("eligible_until_version") @db.VarChar(50)
+  // Example: "1.99.99" means free updates to all v1.x releases
+
+  // Activation Limits
+  maxActivations     Int @default(3) @map("max_activations")
+  currentActivations Int @default(0) @map("current_activations")
+
+  // Status
+  status LicenseStatus @default(pending)
+
+  // Dates
+  purchasedAt DateTime  @default(now()) @map("purchased_at")
+  activatedAt DateTime? @map("activated_at")
+  expiresAt   DateTime? @map("expires_at")
+  // NULL for perpetual, set for EOL date (e.g., v1.x EOL after v2.0 launch + 12 months)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User                @relation("UserPerpetualLicense", fields: [userId], references: [id], onDelete: Cascade)
+  activations     LicenseActivation[]
+  versionUpgrades VersionUpgrade[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([licenseKey])
+  @@index([purchasedAt])
+  @@map("perpetual_license")
+}
+
+// License Activation Table
+// Tracks device activations with machine fingerprinting for fraud prevention
+// Implements 3-device limit per license with deactivation support
+model LicenseActivation {
+  id        String @id @default(uuid()) @db.Uuid
+  licenseId String @map("license_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  // Machine Fingerprinting (SHA-256 hash)
+  machineFingerprint String @map("machine_fingerprint") @db.VarChar(64)
+  // SHA-256 hash of: CPU ID + MAC address + disk serial + OS version
+
+  // Device Information
+  deviceName String? @map("device_name") @db.VarChar(255)
+  osType     String? @map("os_type") @db.VarChar(50)
+  // Values: "Windows", "macOS", "Linux"
+  osVersion  String? @map("os_version") @db.VarChar(100)
+  cpuInfo    String? @map("cpu_info") @db.VarChar(255)
+
+  // Activation Tracking
+  activatedAt   DateTime  @default(now()) @map("activated_at")
+  lastSeenAt    DateTime  @updatedAt @map("last_seen_at")
+  deactivatedAt DateTime? @map("deactivated_at")
+
+  // Status
+  status ActivationStatus @default(active)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  license PerpetualLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  user    User             @relation("UserLicenseActivation", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([licenseId, machineFingerprint], name: "unique_license_machine")
+  @@index([licenseId])
+  @@index([userId])
+  @@index([machineFingerprint])
+  @@index([status])
+  @@index([activatedAt])
+  @@map("license_activation")
+}
+
+// Version Upgrade Table
+// Tracks major version upgrade purchases (e.g., v1.x → v2.0 for $99)
+// Implements SemVer upgrade eligibility and payment tracking
+model VersionUpgrade {
+  id        String @id @default(uuid()) @db.Uuid
+  licenseId String @map("license_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  // Version Details (SemVer)
+  fromVersion String @map("from_version") @db.VarChar(50)
+  // Example: "1.9.5"
+  toVersion   String @map("to_version") @db.VarChar(50)
+  // Example: "2.0.0"
+
+  // Pricing
+  upgradePriceUsd Decimal @map("upgrade_price_usd") @db.Decimal(10, 2)
+  // Standard: $99, Early bird: $79, Loyalty: $69
+
+  // Stripe Payment Integration
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id") @db.VarChar(255)
+
+  // Status
+  status UpgradeStatus @default(pending)
+
+  // Timestamps
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  license PerpetualLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  user    User             @relation("UserVersionUpgrade", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([licenseId])
+  @@index([userId])
+  @@index([fromVersion, toVersion])
+  @@index([status])
+  @@index([purchasedAt])
+  @@map("version_upgrade")
+}
+
+// Proration Event Table
+// Tracks mid-cycle tier changes with prorated credit calculations
+// Integrates with subscription_monetization for tier change billing
+model ProrationEvent {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+
+  // Tier Change Details
+  fromTier String? @map("from_tier") @db.VarChar(50)
+  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
+  toTier   String? @map("to_tier") @db.VarChar(50)
+
+  // Change Type
+  changeType ProrationChangeType
+
+  // Billing Cycle Details
+  daysRemaining Int @map("days_remaining")
+  daysInCycle   Int @map("days_in_cycle")
+
+  // Proration Calculation (in USD)
+  unusedCreditValueUsd   Decimal @map("unused_credit_value_usd") @db.Decimal(10, 2)
+  // Credit from old tier: (days_remaining / days_in_cycle) × old_tier_price
+  newTierProratedCostUsd Decimal @map("new_tier_prorated_cost_usd") @db.Decimal(10, 2)
+  // Cost for new tier: (days_remaining / days_in_cycle) × new_tier_price
+  netChargeUsd           Decimal @map("net_charge_usd") @db.Decimal(10, 2)
+  // Net charge: new_tier_cost - unused_credit (positive = charge, negative = credit)
+
+  // Dates
+  effectiveDate DateTime @map("effective_date")
+
+  // Stripe Integration
+  stripeInvoiceId String? @unique @map("stripe_invoice_id") @db.VarChar(255)
+
+  // Status
+  status ProrationStatus @default(pending)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user         User                     @relation("UserProrationEvent", fields: [userId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([changeType])
+  @@index([effectiveDate])
+  @@index([status])
+  @@map("proration_event")
 }
