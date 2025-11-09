@@ -51,6 +51,12 @@ export class MockAuthService implements IAuthService {
       passwordResetCount: 0,
       // Role-based access control
       role: 'user',
+      // Multi-Factor Authentication Fields (Phase 4)
+      mfaEnabled: false,
+      mfaSecret: null,
+      mfaBackupCodes: null,
+      mfaVerifiedAt: null,
+      mfaMethod: 'totp',
     };
 
     this.users.set(user.id, user);

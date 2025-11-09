@@ -343,9 +343,15 @@ async function main() {
       isActive: true,
       authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
+      // MFA Fields (Phase 4 Task 4.1 - Initially disabled, will be enrolled later)
+      mfaEnabled: false,
+      mfaSecret: null,
+      mfaBackupCodes: null,
+      mfaVerifiedAt: null,
+      mfaMethod: 'totp', // Default method for future enrollment
     },
   });
-  console.log(`    ✓ Admin: ${adminUser.email} / Admin@123 (role: ${adminUser.role})`);
+  console.log(`    ✓ Admin: ${adminUser.email} / Admin@123 (role: ${adminUser.role}, MFA: disabled)`);
 
   // =============================================================================
   // REGULAR USERS (5 personas)
@@ -367,6 +373,8 @@ async function main() {
       isActive: true,
       authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T10:30:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Developer: ${developerUser.email} / User@123`);
@@ -388,6 +396,8 @@ async function main() {
       emailVerificationToken: 'test_verification_token_12345',
       emailVerificationTokenExpiry: new Date('2025-11-10T00:00:00Z'),
       lastLoginAt: new Date('2025-11-05T14:20:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Tester: ${testerUser.email} / User@123 (Email NOT verified)`);
@@ -407,6 +417,8 @@ async function main() {
       isActive: true,
       authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T09:15:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Designer: ${designerUser.email} / User@123`);
@@ -427,6 +439,8 @@ async function main() {
       authProvider: 'local',
       deactivatedAt: new Date('2025-11-03T16:00:00Z'),
       lastLoginAt: new Date('2025-11-03T15:45:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Manager: ${managerUser.email} / User@123 (DEACTIVATED)`);
@@ -448,6 +462,8 @@ async function main() {
       passwordResetToken: 'reset_token_abc123xyz',
       passwordResetTokenExpiry: new Date('2025-11-07T12:00:00Z'),
       lastLoginAt: new Date('2025-11-06T08:30:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Support: ${supportUser.email} / User@123 (Has password reset token)`);
@@ -472,6 +488,8 @@ async function main() {
       authProvider: 'google',
       isActive: true,
       lastLoginAt: new Date('2025-11-06T11:00:00Z'),
+      // MFA Fields (OAuth users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Google User: ${googleUser.email} (OAuth)`);
@@ -493,6 +511,8 @@ async function main() {
       lastName: 'Auth',
       isActive: true,
       lastLoginAt: new Date('2025-11-06T07:45:00Z'),
+      // MFA Fields (OAuth users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Mixed Auth: ${mixedAuthUser.email} / User@123 (Local + Google)`);
@@ -512,6 +532,8 @@ async function main() {
       isActive: true,
       authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Free Tier: ${freeUser.email} / User@123 (Legacy)`);
@@ -530,6 +552,8 @@ async function main() {
       isActive: true,
       authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
+      // MFA Fields (Regular users - MFA disabled by default)
+      mfaEnabled: false,
     },
   });
   console.log(`    ✓ Pro Tier: ${proUser.email} / User@123 (Legacy)`);
