@@ -224,7 +224,8 @@ async function seedUserPersonas() {
       where: { email: persona.email },
     });
 
-    // Note: MFA fields will be added later when migrations are applied
+    // Note: MFA fields are added by migration 20251109130000
+    // mfaBackupCodes array is handled by Prisma with @default([])
     const user = await prisma.user.create({
       data: {
         email: persona.email,
@@ -237,6 +238,8 @@ async function seedUserPersonas() {
         googleId: persona.googleId || undefined,
         role: persona.role,
         isActive: true,
+        mfaEnabled: persona.mfaEnabled || false,
+        // mfaBackupCodes defaults to [] automatically
       },
     });
 

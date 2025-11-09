@@ -1,4 +1,7 @@
--- CreateEnum
+-- CreateEnum (NOTE: The following enums are created in earlier migrations and commented out to avoid duplicates)
+-- license_status, activation_status, upgrade_status, proration_change_type, proration_status created in 20251109080000_add_perpetual_licensing_system
+-- coupon_type, discount_type, campaign_type, redemption_status, fraud_detection_type, fraud_severity, validation_rule_type created in 20251109080100_add_coupon_discount_system
+
 CREATE TYPE "vendor_name" AS ENUM ('openai', 'anthropic', 'google', 'meta', 'mistral', 'cohere');
 
 -- CreateEnum
@@ -6,42 +9,6 @@ CREATE TYPE "margin_strategy" AS ENUM ('fixed_percentage', 'tiered', 'dynamic');
 
 -- CreateEnum
 CREATE TYPE "deduction_type" AS ENUM ('inference', 'embedding', 'fine_tuning', 'custom');
-
--- CreateEnum
-CREATE TYPE "license_status" AS ENUM ('pending', 'active', 'suspended', 'revoked', 'expired');
-
--- CreateEnum
-CREATE TYPE "activation_status" AS ENUM ('active', 'deactivated', 'replaced');
-
--- CreateEnum
-CREATE TYPE "upgrade_status" AS ENUM ('pending', 'completed', 'failed', 'refunded');
-
--- CreateEnum
-CREATE TYPE "proration_change_type" AS ENUM ('upgrade', 'downgrade', 'cancellation', 'reactivation');
-
--- CreateEnum
-CREATE TYPE "proration_status" AS ENUM ('pending', 'applied', 'failed', 'reversed');
-
--- CreateEnum
-CREATE TYPE "coupon_type" AS ENUM ('percentage_discount', 'fixed_amount_discount', 'tier_specific_discount', 'duration_bonus', 'byok_migration');
-
--- CreateEnum
-CREATE TYPE "discount_type" AS ENUM ('percentage', 'fixed_amount', 'credits', 'months_free');
-
--- CreateEnum
-CREATE TYPE "campaign_type" AS ENUM ('seasonal', 'win_back', 'referral', 'promotional', 'early_bird');
-
--- CreateEnum
-CREATE TYPE "redemption_status" AS ENUM ('success', 'failed', 'reversed', 'pending');
-
--- CreateEnum
-CREATE TYPE "fraud_detection_type" AS ENUM ('velocity_abuse', 'ip_switching', 'bot_pattern', 'device_fingerprint_mismatch', 'stacking_abuse');
-
--- CreateEnum
-CREATE TYPE "fraud_severity" AS ENUM ('low', 'medium', 'high', 'critical');
-
--- CreateEnum
-CREATE TYPE "validation_rule_type" AS ENUM ('first_time_user_only', 'specific_email_domain', 'minimum_credit_balance', 'exclude_refunded_users', 'require_payment_method');
 
 -- AlterEnum
 -- This migration adds more than one value to an enum.
