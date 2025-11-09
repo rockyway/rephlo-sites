@@ -211,6 +211,9 @@ import { RevenueAnalyticsService } from './services/revenue-analytics.service';
 // Phase 1 Performance Optimizations: Role Caching (Plan 126/127)
 import { RoleCacheService } from './services/role-cache.service';
 
+// Phase 3 Permission Caching Layer: Permission Caching (Plan 126/127)
+import { PermissionCacheService } from './services/permission-cache.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -245,6 +248,9 @@ container.registerSingleton(RevenueAnalyticsService);
 
 // Register Role Cache service (Phase 1 Performance Optimizations)
 container.registerSingleton(RoleCacheService);
+
+// Register Permission Cache service (Phase 3 Permission Caching Layer)
+container.registerSingleton(PermissionCacheService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);

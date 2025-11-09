@@ -44,6 +44,7 @@ declare global {
         exp: number;
         iat: number;
         role?: string; // User role (from JWT claim when admin scope is included)
+        permissions?: string[]; // User permissions (future: from JWT claim or cache)
       };
     }
   }
