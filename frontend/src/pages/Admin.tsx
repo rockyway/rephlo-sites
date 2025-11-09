@@ -5,7 +5,7 @@ import MetricsCard from '@/components/admin/MetricsCard';
 import FeedbackList from '@/components/admin/FeedbackList';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Button from '@/components/common/Button';
-import { Download, MessageSquare, HardDrive, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Download, MessageSquare, HardDrive, RefreshCw, ArrowLeft, Settings } from 'lucide-react';
 
 function Admin() {
   const { metrics, isLoading, error, refetch } = useMetrics();
@@ -89,6 +89,27 @@ function Admin() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Admin Actions */}
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Link to="/admin/model-tiers">
+            <div className="bg-white border border-deep-navy-200 rounded-lg p-6 hover:shadow-md transition-all duration-fast cursor-pointer group">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-rephlo-blue/10 rounded-lg group-hover:bg-rephlo-blue/20 transition-colors">
+                  <Settings className="h-6 w-6 text-rephlo-blue" />
+                </div>
+                <div>
+                  <h3 className="text-h4 font-semibold text-deep-navy-800">
+                    Model Tier Management
+                  </h3>
+                  <p className="text-body-sm text-deep-navy-500">
+                    Configure subscription tiers for AI models
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+
         {/* Loading State */}
         {isLoading && !metrics && (
           <div className="flex items-center justify-center py-20">
