@@ -100,6 +100,10 @@ async function main() {
       isAvailable: true,
       isDeprecated: false,
       version: '1.0',
+      // Tier Access Control: Premium model - requires enterprise tier
+      requiredTier: SubscriptionTier.enterprise,
+      tierRestrictionMode: 'minimum',
+      allowedTiers: [SubscriptionTier.enterprise],
     },
     {
       id: 'gemini-2.0-pro',
@@ -120,6 +124,10 @@ async function main() {
       isAvailable: true,
       isDeprecated: false,
       version: '2.0',
+      // Tier Access Control: Pro model - requires pro tier or higher
+      requiredTier: SubscriptionTier.pro,
+      tierRestrictionMode: 'minimum',
+      allowedTiers: [SubscriptionTier.pro, SubscriptionTier.enterprise],
     },
     {
       id: 'claude-3.5-sonnet',
@@ -140,6 +148,10 @@ async function main() {
       isAvailable: true,
       isDeprecated: false,
       version: '3.5',
+      // Tier Access Control: Pro model - requires pro tier or higher
+      requiredTier: SubscriptionTier.pro,
+      tierRestrictionMode: 'minimum',
+      allowedTiers: [SubscriptionTier.pro, SubscriptionTier.enterprise],
     },
   ];
 
@@ -160,10 +172,13 @@ async function main() {
         isAvailable: model.isAvailable,
         isDeprecated: model.isDeprecated,
         version: model.version,
+        requiredTier: model.requiredTier,
+        tierRestrictionMode: model.tierRestrictionMode,
+        allowedTiers: model.allowedTiers,
       },
       create: model,
     });
-    console.log(`  ✓ Created/Updated model: ${model.displayName} (${model.id})`);
+    console.log(`  ✓ Created/Updated model: ${model.displayName} (${model.id}) - Required tier: ${model.requiredTier}`);
   }
 
   // =============================================================================

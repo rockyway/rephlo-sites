@@ -316,12 +316,22 @@ model Model {
   createdAt                  DateTime          @default(now()) @map("created_at")
   updatedAt                  DateTime          @updatedAt @map("updated_at")
 
+  // Tier Access Control Fields (Added: 2025-11-08)
+  requiredTier               SubscriptionTier  @default(free) @map("required_tier")
+    // Minimum tier required to access this model
+  tierRestrictionMode        String            @default("minimum") @map("tier_restriction_mode") @db.VarChar(20)
+    // "minimum" = tier >= requiredTier, "exact" = tier == requiredTier, "whitelist" = use allowedTiers
+  allowedTiers               SubscriptionTier[] @default([free, pro, enterprise]) @map("allowed_tiers")
+    // Explicit whitelist of allowed tiers (used when mode = "whitelist")
+
   // Relations
   usageHistory    UsageHistory[]
   userPreferences UserPreference[]
 
   @@index([isAvailable])
   @@index([provider])
+  @@index([requiredTier])
+  @@index([isAvailable, requiredTier])
   @@map("models")
 }
 
