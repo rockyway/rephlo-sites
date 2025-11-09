@@ -1,4 +1,6 @@
 import { IModelService } from '../../interfaces';
+import { SubscriptionTier } from '@prisma/client';
+import { TierAccessResult } from '../../utils/tier-access';
 
 export class MockModelService implements IModelService {
   private models: Map<string, any> = new Map();
@@ -52,11 +54,14 @@ export class MockModelService implements IModelService {
     defaultModels.forEach((model) => this.models.set(model.id, model));
   }
 
-  async listModels(filters?: {
-    available?: boolean;
-    capability?: string[];
-    provider?: string;
-  }): Promise<any> {
+  async listModels(
+    filters?: {
+      available?: boolean;
+      capability?: string[];
+      provider?: string;
+    },
+    userTier?: SubscriptionTier
+  ): Promise<any> {
     let models = Array.from(this.models.values());
 
     if (filters?.available !== undefined) {
@@ -73,11 +78,21 @@ export class MockModelService implements IModelService {
       models = models.filter((m) => m.provider === filters.provider);
     }
 
-    return { models, count: models.length };
+    return { models, count: models.length, user_tier: userTier };
   }
 
-  async getModelDetails(modelId: string): Promise<any> {
+  async getModelDetails(modelId: string, _userTier?: SubscriptionTier): Promise<any> {
     return this.models.get(modelId) || null;
+  }
+
+  async canUserAccessModel(
+    _modelId: string,
+    _userTier: SubscriptionTier
+  ): Promise<TierAccessResult> {
+    // Mock implementation - always allow access in tests
+    return {
+      allowed: true,
+    };
   }
 
   async isModelAvailable(modelId: string): Promise<boolean> {

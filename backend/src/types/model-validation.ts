@@ -198,11 +198,17 @@ export interface ModelListItem {
   credits_per_1k_tokens: number;
   is_available: boolean;
   version: string | null;
+  // Tier access control fields
+  required_tier: 'free' | 'pro' | 'enterprise';
+  tier_restriction_mode: 'minimum' | 'exact' | 'whitelist';
+  allowed_tiers: Array<'free' | 'pro' | 'enterprise'>;
+  access_status: 'allowed' | 'restricted' | 'upgrade_required';
 }
 
 export interface ModelListResponse {
   models: ModelListItem[];
   total: number;
+  user_tier?: 'free' | 'pro' | 'enterprise'; // Current user's tier (if provided)
 }
 
 /**
@@ -225,6 +231,15 @@ export interface ModelDetailsResponse {
   version: string | null;
   created_at: string;
   updated_at: string;
+  // Tier access control fields
+  required_tier: 'free' | 'pro' | 'enterprise';
+  tier_restriction_mode: 'minimum' | 'exact' | 'whitelist';
+  allowed_tiers: Array<'free' | 'pro' | 'enterprise'>;
+  access_status: 'allowed' | 'restricted' | 'upgrade_required';
+  upgrade_info?: {
+    required_tier: string;
+    upgrade_url: string;
+  };
 }
 
 /**

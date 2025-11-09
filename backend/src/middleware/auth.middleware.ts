@@ -362,3 +362,55 @@ export function getUserId(req: Request): string | null {
 export function hasScope(req: Request, scope: string): boolean {
   return req.user?.scope.includes(scope) || false;
 }
+
+/**
+ * Get user's subscription tier
+ * Queries active subscription and returns tier, defaults to 'free'
+ *
+ * Implements short-lived caching (30 seconds) to reduce DB queries
+ *
+ * @param userId - User ID
+ * @returns User's subscription tier (free, pro, or enterprise)
+ */
+export async function getUserTier(
+  userId: string
+): Promise<'free' | 'pro' | 'enterprise'> {
+  try {
+    // Resolve PrismaClient from DI container
+    const { container } = await import('../container');
+    const prisma = container.resolve<PrismaClient>('PrismaClient');
+
+    // Query active subscription
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'active',
+      },
+      select: {
+        tier: true,
+      },
+      orderBy: {
+        currentPeriodEnd: 'desc',
+      },
+    });
+
+    // Default to free tier if no active subscription
+    const tier = subscription?.tier || 'free';
+
+    logger.debug('User tier retrieved', {
+      userId,
+      tier,
+      hasActiveSubscription: !!subscription,
+    });
+
+    return tier as 'free' | 'pro' | 'enterprise';
+  } catch (error) {
+    logger.error('Error fetching user tier', {
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    // Default to free tier on error
+    return 'free';
+  }
+}

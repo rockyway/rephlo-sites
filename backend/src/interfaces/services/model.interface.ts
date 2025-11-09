@@ -1,19 +1,33 @@
+import { SubscriptionTier } from '@prisma/client';
+import { TierAccessResult } from '../../utils/tier-access';
+
 export const IModelService = Symbol('IModelService');
 
 export interface IModelService {
   /**
    * List all available models with optional filters
    */
-  listModels(filters?: {
-    available?: boolean;
-    capability?: string[];
-    provider?: string;
-  }): Promise<any>;
+  listModels(
+    filters?: {
+      available?: boolean;
+      capability?: string[];
+      provider?: string;
+    },
+    userTier?: SubscriptionTier
+  ): Promise<any>;
 
   /**
    * Get detailed model information by ID
    */
-  getModelDetails(modelId: string): Promise<any>;
+  getModelDetails(modelId: string, userTier?: SubscriptionTier): Promise<any>;
+
+  /**
+   * Check if user's tier can access a specific model
+   */
+  canUserAccessModel(
+    modelId: string,
+    userTier: SubscriptionTier
+  ): Promise<TierAccessResult>;
 
   /**
    * Check if model is available for inference

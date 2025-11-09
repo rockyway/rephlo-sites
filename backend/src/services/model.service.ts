@@ -14,13 +14,17 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, ModelCapability } from '@prisma/client';
+import { PrismaClient, ModelCapability, SubscriptionTier } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   ModelListResponse,
   ModelDetailsResponse,
 } from '../types/model-validation';
 import { IModelService } from '../interfaces';
+import {
+  checkTierAccess,
+  TierAccessResult,
+} from '../utils/tier-access';
 
 // =============================================================================
 // In-Memory Cache
@@ -81,17 +85,21 @@ export class ModelService implements IModelService {
    * @param filters.available - Filter by availability (true/false)
    * @param filters.capability - Filter by capabilities (array of capability names)
    * @param filters.provider - Filter by provider (openai, anthropic, google)
+   * @param userTier - Optional user subscription tier for access status
    * @returns List of models matching filters
    */
-  async listModels(filters?: {
-    available?: boolean;
-    capability?: string[];
-    provider?: string;
-  }): Promise<ModelListResponse> {
-    logger.debug('ModelService: Listing models', { filters });
+  async listModels(
+    filters?: {
+      available?: boolean;
+      capability?: string[];
+      provider?: string;
+    },
+    userTier?: SubscriptionTier
+  ): Promise<ModelListResponse> {
+    logger.debug('ModelService: Listing models', { filters, userTier });
 
-    // Check cache first
-    const cacheKey = `models_${JSON.stringify(filters || {})}`;
+    // Check cache first (include userTier in cache key)
+    const cacheKey = `models_${JSON.stringify(filters || {})}_${userTier || 'public'}`;
     const cached = modelCache.get(cacheKey);
     if (cached) {
       logger.debug('ModelService: Returning cached model list');
@@ -130,24 +138,47 @@ export class ModelService implements IModelService {
         creditsPer1kTokens: true,
         isAvailable: true,
         version: true,
+        // Tier access fields
+        requiredTier: true,
+        tierRestrictionMode: true,
+        allowedTiers: true,
       },
       orderBy: [{ isAvailable: 'desc' }, { displayName: 'asc' }],
     });
 
     const response: ModelListResponse = {
-      models: models.map((model) => ({
-        id: model.id,
-        name: model.displayName,
-        provider: model.provider,
-        description: model.description,
-        capabilities: model.capabilities,
-        context_length: model.contextLength,
-        max_output_tokens: model.maxOutputTokens,
-        credits_per_1k_tokens: model.creditsPer1kTokens,
-        is_available: model.isAvailable,
-        version: model.version,
-      })),
+      models: models.map((model) => {
+        // Calculate tier access status if userTier provided
+        let accessStatus: 'allowed' | 'restricted' | 'upgrade_required' = 'allowed';
+        if (userTier) {
+          const accessCheck = checkTierAccess(userTier, {
+            requiredTier: model.requiredTier,
+            tierRestrictionMode: model.tierRestrictionMode,
+            allowedTiers: model.allowedTiers,
+          });
+          accessStatus = accessCheck.allowed ? 'allowed' : 'upgrade_required';
+        }
+
+        return {
+          id: model.id,
+          name: model.displayName,
+          provider: model.provider,
+          description: model.description,
+          capabilities: model.capabilities,
+          context_length: model.contextLength,
+          max_output_tokens: model.maxOutputTokens,
+          credits_per_1k_tokens: model.creditsPer1kTokens,
+          is_available: model.isAvailable,
+          version: model.version,
+          // Tier access fields
+          required_tier: model.requiredTier,
+          tier_restriction_mode: model.tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
+          allowed_tiers: model.allowedTiers,
+          access_status: accessStatus,
+        };
+      }),
       total: models.length,
+      user_tier: userTier,
     };
 
     // Cache result
@@ -165,14 +196,18 @@ export class ModelService implements IModelService {
    * Get detailed information about a specific model
    *
    * @param modelId - Model ID (e.g., 'gpt-5', 'claude-3.5-sonnet')
+   * @param userTier - Optional user subscription tier for access status
    * @returns Detailed model information
    * @throws Error if model not found
    */
-  async getModelDetails(modelId: string): Promise<ModelDetailsResponse> {
-    logger.debug('ModelService: Getting model details', { modelId });
+  async getModelDetails(
+    modelId: string,
+    userTier?: SubscriptionTier
+  ): Promise<ModelDetailsResponse> {
+    logger.debug('ModelService: Getting model details', { modelId, userTier });
 
-    // Check cache first
-    const cacheKey = `model_${modelId}`;
+    // Check cache first (include userTier in cache key)
+    const cacheKey = `model_${modelId}_${userTier || 'public'}`;
     const cached = modelCache.get(cacheKey);
     if (cached) {
       logger.debug('ModelService: Returning cached model details');
@@ -198,12 +233,37 @@ export class ModelService implements IModelService {
         version: true,
         createdAt: true,
         updatedAt: true,
+        // Tier access fields
+        requiredTier: true,
+        tierRestrictionMode: true,
+        allowedTiers: true,
       },
     });
 
     if (!model) {
       logger.warn('ModelService: Model not found', { modelId });
       throw new Error(`Model '${modelId}' not found`);
+    }
+
+    // Calculate tier access status if userTier provided
+    let accessStatus: 'allowed' | 'restricted' | 'upgrade_required' = 'allowed';
+    let upgradeInfo: { required_tier: string; upgrade_url: string } | undefined;
+
+    if (userTier) {
+      const accessCheck = checkTierAccess(userTier, {
+        requiredTier: model.requiredTier,
+        tierRestrictionMode: model.tierRestrictionMode,
+        allowedTiers: model.allowedTiers,
+      });
+
+      accessStatus = accessCheck.allowed ? 'allowed' : 'upgrade_required';
+
+      if (!accessCheck.allowed && accessCheck.requiredTier) {
+        upgradeInfo = {
+          required_tier: accessCheck.requiredTier,
+          upgrade_url: '/subscriptions/upgrade',
+        };
+      }
     }
 
     const response: ModelDetailsResponse = {
@@ -223,6 +283,12 @@ export class ModelService implements IModelService {
       version: model.version,
       created_at: model.createdAt.toISOString(),
       updated_at: model.updatedAt.toISOString(),
+      // Tier access fields
+      required_tier: model.requiredTier,
+      tier_restriction_mode: model.tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
+      allowed_tiers: model.allowedTiers,
+      access_status: accessStatus,
+      upgrade_info: upgradeInfo,
     };
 
     // Cache result
@@ -236,6 +302,54 @@ export class ModelService implements IModelService {
   // ===========================================================================
   // Model Validation Operations
   // ===========================================================================
+
+  /**
+   * Check if user's tier can access a specific model
+   *
+   * @param modelId - Model ID to check
+   * @param userTier - User's subscription tier
+   * @returns Access check result with allowed status, reason, and required tier
+   */
+  async canUserAccessModel(
+    modelId: string,
+    userTier: SubscriptionTier
+  ): Promise<TierAccessResult> {
+    logger.debug('ModelService: Checking tier access for model', {
+      modelId,
+      userTier,
+    });
+
+    const model = await this.prisma.model.findUnique({
+      where: { id: modelId },
+      select: {
+        requiredTier: true,
+        tierRestrictionMode: true,
+        allowedTiers: true,
+      },
+    });
+
+    if (!model) {
+      logger.warn('ModelService: Model not found for tier check', { modelId });
+      return {
+        allowed: false,
+        reason: 'Model not found',
+      };
+    }
+
+    const accessCheck = checkTierAccess(userTier, {
+      requiredTier: model.requiredTier,
+      tierRestrictionMode: model.tierRestrictionMode,
+      allowedTiers: model.allowedTiers,
+    });
+
+    logger.debug('ModelService: Tier access check completed', {
+      modelId,
+      userTier,
+      allowed: accessCheck.allowed,
+    });
+
+    return accessCheck;
+  }
 
   /**
    * Check if a model exists and is available for use

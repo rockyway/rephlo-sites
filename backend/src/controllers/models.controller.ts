@@ -31,7 +31,8 @@ import {
   unauthorizedError,
   createApiError,
 } from '../middleware/error.middleware';
-import { getUserId } from '../middleware/auth.middleware';
+import { getUserId, getUserTier } from '../middleware/auth.middleware';
+import { SubscriptionTier } from '@prisma/client';
 
 // =============================================================================
 // Models Controller Class
@@ -63,7 +64,12 @@ export class ModelsController {
    * - provider: string - Filter by provider (openai, anthropic, google)
    */
   async listModels(req: Request, res: Response): Promise<void> {
-    logger.debug('ModelsController.listModels', { query: req.query });
+    const userId = getUserId(req);
+
+    logger.debug('ModelsController.listModels', {
+      query: req.query,
+      userId,
+    });
 
     // Validate query parameters
     const parseResult = listModelsQuerySchema.safeParse(req.query);
@@ -84,11 +90,24 @@ export class ModelsController {
     const filters = parseResult.data;
 
     try {
-      const result = await this.modelService.listModels({
-        available: filters.available,
-        capability: filters.capability,
-        provider: filters.provider,
-      });
+      // Get user tier if authenticated
+      let userTier: SubscriptionTier | undefined;
+      if (userId) {
+        userTier = (await getUserTier(userId)) as SubscriptionTier;
+        logger.debug('ModelsController.listModels: User tier retrieved', {
+          userId,
+          userTier,
+        });
+      }
+
+      const result = await this.modelService.listModels(
+        {
+          available: filters.available,
+          capability: filters.capability,
+          provider: filters.provider,
+        },
+        userTier
+      );
 
       res.status(200).json(result);
     } catch (error) {
@@ -108,15 +127,26 @@ export class ModelsController {
    */
   async getModelDetails(req: Request, res: Response): Promise<void> {
     const { modelId } = req.params;
+    const userId = getUserId(req);
 
-    logger.debug('ModelsController.getModelDetails', { modelId });
+    logger.debug('ModelsController.getModelDetails', { modelId, userId });
 
     if (!modelId) {
       throw validationError('Model ID is required');
     }
 
     try {
-      const model = await this.modelService.getModelDetails(modelId);
+      // Get user tier if authenticated
+      let userTier: SubscriptionTier | undefined;
+      if (userId) {
+        userTier = (await getUserTier(userId)) as SubscriptionTier;
+        logger.debug('ModelsController.getModelDetails: User tier retrieved', {
+          userId,
+          userTier,
+        });
+      }
+
+      const model = await this.modelService.getModelDetails(modelId, userTier);
       res.status(200).json(model);
     } catch (error) {
       if (error instanceof Error && error.message.includes('not found')) {
@@ -182,6 +212,14 @@ export class ModelsController {
     const request: TextCompletionRequest = parseResult.data;
 
     try {
+      // Get user tier for access control
+      const userTier = (await getUserTier(userId)) as SubscriptionTier;
+
+      logger.debug('ModelsController.textCompletion: User tier retrieved', {
+        userId,
+        userTier,
+      });
+
       // Get model information
       const modelInfo = await this.modelService.getModelForInference(
         request.model
@@ -189,6 +227,33 @@ export class ModelsController {
 
       if (!modelInfo) {
         throw notFoundError(`Model '${request.model}' not found or unavailable`);
+      }
+
+      // NEW: Tier access validation
+      const accessCheck = await this.modelService.canUserAccessModel(
+        request.model,
+        userTier
+      );
+
+      if (!accessCheck.allowed) {
+        logger.warn('ModelsController.textCompletion: Model access denied', {
+          userId,
+          modelId: request.model,
+          userTier,
+          reason: accessCheck.reason,
+        });
+
+        throw createApiError(
+          `Model access restricted: ${accessCheck.reason}`,
+          403,
+          'model_access_restricted',
+          {
+            model_id: request.model,
+            user_tier: userTier,
+            required_tier: accessCheck.requiredTier,
+            upgrade_url: '/subscriptions/upgrade',
+          }
+        );
       }
 
       // Credit balance check is handled by checkCredits middleware
@@ -300,6 +365,14 @@ export class ModelsController {
     const request: ChatCompletionRequest = parseResult.data;
 
     try {
+      // Get user tier for access control
+      const userTier = (await getUserTier(userId)) as SubscriptionTier;
+
+      logger.debug('ModelsController.chatCompletion: User tier retrieved', {
+        userId,
+        userTier,
+      });
+
       // Get model information
       const modelInfo = await this.modelService.getModelForInference(
         request.model
@@ -307,6 +380,33 @@ export class ModelsController {
 
       if (!modelInfo) {
         throw notFoundError(`Model '${request.model}' not found or unavailable`);
+      }
+
+      // NEW: Tier access validation
+      const accessCheck = await this.modelService.canUserAccessModel(
+        request.model,
+        userTier
+      );
+
+      if (!accessCheck.allowed) {
+        logger.warn('ModelsController.chatCompletion: Model access denied', {
+          userId,
+          modelId: request.model,
+          userTier,
+          reason: accessCheck.reason,
+        });
+
+        throw createApiError(
+          `Model access restricted: ${accessCheck.reason}`,
+          403,
+          'model_access_restricted',
+          {
+            model_id: request.model,
+            user_tier: userTier,
+            required_tier: accessCheck.requiredTier,
+            upgrade_url: '/subscriptions/upgrade',
+          }
+        );
       }
 
       // Credit balance check is handled by checkCredits middleware
