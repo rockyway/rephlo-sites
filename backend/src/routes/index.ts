@@ -23,6 +23,7 @@ import { createSwaggerRouter } from './swagger.routes';
 import { createBrandingRouter } from './branding.routes';
 import { createAuthRouter } from './auth.routes';
 import { createSocialAuthRouter } from './social-auth.routes';
+import { createPlan109Router } from './plan109.routes';
 
 // Import subscription controller for webhooks
 import { SubscriptionsController } from '../controllers/subscriptions.controller';
@@ -212,6 +213,10 @@ router.use('/api-docs', createSwaggerRouter());
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);
+
+// ===== Plan 109: Subscription Monetization Routes =====
+// Additional admin endpoints for subscription, user, billing, and analytics management
+router.use('/admin', createPlan109Router());
 
 // ===== Authentication Routes =====
 // User registration, email verification, password reset

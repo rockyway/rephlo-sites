@@ -187,6 +187,19 @@ import { LLMService } from './services/llm.service';
 import { IEmailService } from './services/email/email.service.interface';
 import { SendGridEmailService } from './services/email/sendgrid-email.service';
 
+// Plan 112: Token-to-Credit Conversion Services
+import { CostCalculationService } from './services/cost-calculation.service';
+import { PricingConfigService } from './services/pricing-config.service';
+import { TokenTrackingService } from './services/token-tracking.service';
+import { CreditDeductionService } from './services/credit-deduction.service';
+
+// Plan 109: Subscription Monetization Services
+import { SubscriptionManagementService } from './services/subscription-management.service';
+import { UserManagementService } from './services/user-management.service';
+import { BillingPaymentsService } from './services/billing-payments.service';
+import { CreditManagementService } from './services/credit-management.service';
+import { PlatformAnalyticsService } from './services/platform-analytics.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -197,6 +210,19 @@ container.register('IWebhookService', { useClass: WebhookService });
 
 // Register Email Service (Phase 4)
 container.register<IEmailService>('IEmailService', { useClass: SendGridEmailService });
+
+// Register Plan 112 services
+container.register('ICostCalculationService', { useClass: CostCalculationService });
+container.register('IPricingConfigService', { useClass: PricingConfigService });
+container.register('ITokenTrackingService', { useClass: TokenTrackingService });
+container.register('ICreditDeductionService', { useClass: CreditDeductionService });
+
+// Register Plan 109 services
+container.register('SubscriptionManagementService', { useClass: SubscriptionManagementService });
+container.register('UserManagementService', { useClass: UserManagementService });
+container.register('BillingPaymentsService', { useClass: BillingPaymentsService });
+container.register('CreditManagementService', { useClass: CreditManagementService });
+container.register('PlatformAnalyticsService', { useClass: PlatformAnalyticsService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -213,6 +239,15 @@ logger.info('DI Container: Core services registered', {
     'EmailService',
     'LLMService',
     'UsageRecorder',
+    'CostCalculationService',
+    'PricingConfigService',
+    'TokenTrackingService',
+    'CreditDeductionService',
+    'SubscriptionManagementService',
+    'UserManagementService',
+    'BillingPaymentsService',
+    'CreditManagementService',
+    'PlatformAnalyticsService',
   ],
 });
 
@@ -230,6 +265,13 @@ import { BrandingController } from './controllers/branding.controller';
 import { AuthManagementController } from './controllers/auth-management.controller';
 import { SocialAuthController } from './controllers/social-auth.controller';
 
+// Plan 109: Subscription Monetization Controllers
+import { SubscriptionManagementController } from './controllers/subscription-management.controller';
+import { UserManagementController } from './controllers/user-management.controller';
+import { BillingController } from './controllers/billing.controller';
+import { CreditManagementController } from './controllers/credit-management.controller';
+import { AnalyticsController } from './controllers/analytics.controller';
+
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
 container.registerSingleton(ModelsController);
@@ -240,6 +282,13 @@ container.registerSingleton(AdminController);
 container.registerSingleton(BrandingController);
 container.registerSingleton(AuthManagementController);
 container.registerSingleton(SocialAuthController);
+
+// Register Plan 109 controllers
+container.registerSingleton(SubscriptionManagementController);
+container.registerSingleton(UserManagementController);
+container.registerSingleton(BillingController);
+container.registerSingleton(CreditManagementController);
+container.registerSingleton(AnalyticsController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [
@@ -252,6 +301,11 @@ logger.info('DI Container: Controllers registered', {
     'BrandingController',
     'AuthManagementController',
     'SocialAuthController',
+    'SubscriptionManagementController',
+    'UserManagementController',
+    'BillingController',
+    'CreditManagementController',
+    'AnalyticsController',
   ],
 });
 
