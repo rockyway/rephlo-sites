@@ -11,9 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   RefreshCw,
   Search,
   Users,
@@ -254,34 +252,20 @@ function UserManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="space-y-6">
       {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Link
-                to="/admin"
-                className="inline-flex items-center text-body text-rephlo-blue hover:text-rephlo-blue-600 mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
-              </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">User Management</h1>
-              <p className="text-body text-deep-navy-500 mt-1">
-                View, moderate, and manage platform users
-              </p>
-            </div>
-            <Button onClick={loadUsers} disabled={isLoading} variant="ghost">
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Refresh
-            </Button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 font-bold text-deep-navy-800">User Management</h1>
+          <p className="text-body text-deep-navy-500 mt-1">
+            View, moderate, and manage platform users
+          </p>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button onClick={loadUsers} disabled={isLoading} variant="ghost">
+          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+          Refresh
+        </Button>
+      </div>
         {/* Success/Error Messages */}
         {successMessage && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
@@ -580,7 +564,6 @@ function UserManagement() {
             </div>
           )}
         </div>
-      </main>
 
       {/* User Details Modal */}
       {showDetailsModal && userDetails && (

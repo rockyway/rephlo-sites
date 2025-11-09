@@ -128,9 +128,9 @@ export default function PlatformAnalytics() {
   const totalDowngrades = downgrades.reduce((sum, t) => sum + t.count, 0);
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800">Platform Analytics</h1>
           <p className="text-body text-deep-navy-600 mt-2">
