@@ -64,8 +64,8 @@ function CampaignCalendar() {
   const [filterType, setFilterType] = useState<CampaignType | ''>('');
   const [filterStatus, setFilterStatus] = useState<CampaignStatus | ''>('');
 
-  // Pagination
-  const [currentPage] = useState(0);
+  // Pagination (1-indexed)
+  const [currentPage] = useState(1);
   const [pageSize] = useState(50);
 
   // Load data
@@ -173,23 +173,23 @@ function CampaignCalendar() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-deep-navy-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <Link
             to="/admin"
-            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center text-sm text-deep-navy-600 hover:text-deep-navy-900 mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Admin Dashboard
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-deep-navy-900">
                 Campaign Calendar
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-deep-navy-600">
                 Plan and schedule marketing campaigns
               </p>
             </div>
@@ -220,29 +220,29 @@ function CampaignCalendar() {
 
         {/* Quick Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-sm font-medium text-gray-600">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
+            <div className="text-sm font-medium text-deep-navy-600">
               Total Active Campaigns
             </div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">
+            <div className="mt-2 text-3xl font-bold text-deep-navy-900">
               {stats.totalActive}
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-sm font-medium text-gray-600">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
+            <div className="text-sm font-medium text-deep-navy-600">
               Total Campaign Budget
             </div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">
+            <div className="mt-2 text-3xl font-bold text-deep-navy-900">
               {formatCurrency(stats.totalBudget)}
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-sm font-medium text-gray-600">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
+            <div className="text-sm font-medium text-deep-navy-600">
               Budget Utilized This Month
             </div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">
+            <div className="mt-2 text-3xl font-bold text-deep-navy-900">
               {formatCurrency(stats.budgetUtilized)}
-              <span className="text-sm font-normal text-gray-500 ml-2">
+              <span className="text-sm font-normal text-deep-navy-500 ml-2">
                 (
                 {formatPercentage(
                   calculateBudgetUtilization(
@@ -254,21 +254,21 @@ function CampaignCalendar() {
               </span>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="text-sm font-medium text-gray-600">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
+            <div className="text-sm font-medium text-deep-navy-600">
               Top Performing Campaign
             </div>
-            <div className="mt-2 text-lg font-bold text-gray-900 truncate">
+            <div className="mt-2 text-lg font-bold text-deep-navy-900 truncate">
               {stats.topCampaign}
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-deep-navy-200 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-deep-navy-700 mb-1">
                 Campaign Type
               </label>
               <select
@@ -276,7 +276,7 @@ function CampaignCalendar() {
                 onChange={(e) =>
                   setFilterType(e.target.value as CampaignType | '')
                 }
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-md border-deep-navy-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
                 <option value="">All Types</option>
                 <option value="holiday">Holiday</option>
@@ -286,7 +286,7 @@ function CampaignCalendar() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-deep-navy-700 mb-1">
                 Status
               </label>
               <select
@@ -294,7 +294,7 @@ function CampaignCalendar() {
                 onChange={(e) =>
                   setFilterStatus(e.target.value as CampaignStatus | '')
                 }
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-md border-deep-navy-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
                 <option value="">All Status</option>
                 <option value="planning">Planning</option>
@@ -307,47 +307,47 @@ function CampaignCalendar() {
         </div>
 
         {/* Campaign List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <LoadingSpinner size="lg" />
             </div>
           ) : campaigns.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">No campaigns found</p>
+              <p className="text-deep-navy-500">No campaigns found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-deep-navy-200">
+                <thead className="bg-deep-navy-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Campaign Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Start Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       End Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Budget
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Spent
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-deep-navy-200">
                   {campaigns.map((campaign) => {
                     const budgetUtilization = calculateBudgetUtilization(
                       campaign.current_spend || 0,
@@ -355,13 +355,13 @@ function CampaignCalendar() {
                     );
 
                     return (
-                      <tr key={campaign.id} className="hover:bg-gray-50">
+                      <tr key={campaign.id} className="hover:bg-deep-navy-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-deep-navy-900">
                             {campaign.name}
                           </div>
                           {campaign.description && (
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-deep-navy-500">
                               {campaign.description}
                             </div>
                           )}
@@ -369,19 +369,19 @@ function CampaignCalendar() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <CampaignTypeBadge type={campaign.type} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500">
                           {formatDate(campaign.starts_at)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500">
                           {formatDate(campaign.ends_at)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-900">
                           {campaign.budget_cap
                             ? formatCurrency(campaign.budget_cap)
                             : 'Unlimited'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-deep-navy-900">
                             {formatCurrency(campaign.current_spend || 0)}
                           </div>
                           {campaign.budget_cap && (
@@ -406,7 +406,7 @@ function CampaignCalendar() {
                               campaign.status === 'paused' &&
                                 'bg-yellow-100 text-yellow-800',
                               campaign.status === 'ended' &&
-                                'bg-gray-100 text-gray-800'
+                                'bg-deep-navy-100 text-deep-navy-800'
                             )}
                           >
                             {campaign.status}
@@ -421,7 +421,7 @@ function CampaignCalendar() {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              className="text-gray-600 hover:text-gray-900"
+                              className="text-deep-navy-600 hover:text-deep-navy-900"
                               title="Edit"
                             >
                               <Edit className="w-4 h-4" />
