@@ -46,7 +46,10 @@ export interface ModelTierConfig {
 export const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
   free: 0,
   pro: 1,
-  enterprise: 2,
+  pro_max: 2,
+  enterprise_pro: 3,
+  enterprise_max: 4,
+  perpetual: 5,
 };
 
 /**
@@ -55,7 +58,10 @@ export const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
 export const TIER_DISPLAY_NAMES: Record<SubscriptionTier, string> = {
   free: 'Free',
   pro: 'Pro',
-  enterprise: 'Enterprise',
+  pro_max: 'Pro Max',
+  enterprise_pro: 'Enterprise Pro',
+  enterprise_max: 'Enterprise Max',
+  perpetual: 'Perpetual',
 };
 
 // =============================================================================

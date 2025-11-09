@@ -20,6 +20,7 @@ import { Router } from 'express';
 import { container } from '../container';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
+import { auditLog } from '../middleware/audit.middleware';
 import { LicenseManagementController } from '../controllers/license-management.controller';
 import { VersionUpgradeController } from '../controllers/version-upgrade.controller';
 import { ProrationController } from '../controllers/proration.controller';
@@ -270,6 +271,7 @@ export function createPlan110Router(): Router {
     '/admin/licenses/:id/suspend',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'license', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(licenseController.suspendLicense.bind(licenseController))
   );
 
@@ -282,6 +284,7 @@ export function createPlan110Router(): Router {
     '/admin/licenses/:id/revoke',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'delete', resourceType: 'license', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(licenseController.revokeLicense.bind(licenseController))
   );
 
@@ -322,6 +325,7 @@ export function createPlan110Router(): Router {
     '/admin/prorations/:id/reverse',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'proration', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(prorationController.reverseProration.bind(prorationController))
   );
 

@@ -21,6 +21,7 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
 import { ModelTierAdminController } from '../controllers/admin/model-tier-admin.controller';
+import { AuditLogController } from '../controllers/audit-log.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { container } from '../container';
@@ -33,6 +34,7 @@ router.use(authMiddleware, requireAdmin);
 // Resolve controllers from DI container
 const adminController = container.resolve(AdminController);
 const modelTierAdminController = container.resolve(ModelTierAdminController);
+const auditLogController = container.resolve(AuditLogController);
 
 // =============================================================================
 // Admin Endpoints
@@ -186,6 +188,59 @@ router.post(
 router.post(
   '/models/tiers/revert/:auditLogId',
   asyncHandler(modelTierAdminController.revertTierChange.bind(modelTierAdminController))
+);
+
+// =============================================================================
+// Audit Log Viewer Endpoints (Phase 4 P0 Fixes)
+// =============================================================================
+
+/**
+ * GET /admin/audit-logs
+ * Get audit logs with pagination and filtering
+ *
+ * Query parameters:
+ * - adminUserId: string (optional) - Filter by admin user ID
+ * - resourceType: string (optional) - Filter by resource type
+ * - action: string (optional) - Filter by action (create/update/delete/read)
+ * - startDate: ISO date string (optional) - Filter by start date
+ * - endDate: ISO date string (optional) - Filter by end date
+ * - limit: number (optional, default 100)
+ * - offset: number (optional, default 0)
+ */
+router.get(
+  '/audit-logs',
+  asyncHandler(auditLogController.getAuditLogs.bind(auditLogController))
+);
+
+/**
+ * GET /admin/audit-logs/resource/:resourceType/:resourceId
+ * Get audit logs for a specific resource
+ *
+ * Path parameters:
+ * - resourceType: string - Type of resource (subscription, license, coupon, etc.)
+ * - resourceId: string - ID of the resource
+ *
+ * Query parameters:
+ * - limit: number (optional, default 50)
+ */
+router.get(
+  '/audit-logs/resource/:resourceType/:resourceId',
+  asyncHandler(auditLogController.getLogsForResource.bind(auditLogController))
+);
+
+/**
+ * GET /admin/audit-logs/admin/:adminUserId
+ * Get audit logs for a specific admin user
+ *
+ * Path parameters:
+ * - adminUserId: string - ID of the admin user
+ *
+ * Query parameters:
+ * - limit: number (optional, default 100)
+ */
+router.get(
+  '/audit-logs/admin/:adminUserId',
+  asyncHandler(auditLogController.getLogsForAdmin.bind(auditLogController))
 );
 
 export default router;

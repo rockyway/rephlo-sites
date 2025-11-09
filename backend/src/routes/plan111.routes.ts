@@ -35,6 +35,7 @@ import { CampaignController } from '../controllers/campaign.controller';
 import { FraudDetectionController } from '../controllers/fraud-detection.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
+import { auditLog } from '../middleware/audit.middleware';
 
 export function createPlan111Router(): Router {
   const router = Router();
@@ -85,6 +86,7 @@ export function createPlan111Router(): Router {
     '/admin/coupons',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'create', resourceType: 'coupon', captureRequestBody: true }),
     asyncHandler(async (req, res) => couponController.createCoupon(req, res))
   );
 
@@ -96,6 +98,7 @@ export function createPlan111Router(): Router {
     '/admin/coupons/:id',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'coupon', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(async (req, res) => couponController.updateCoupon(req, res))
   );
 
@@ -107,6 +110,7 @@ export function createPlan111Router(): Router {
     '/admin/coupons/:id',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'delete', resourceType: 'coupon', capturePreviousValue: true }),
     asyncHandler(async (req, res) => couponController.deleteCoupon(req, res))
   );
 
@@ -142,6 +146,7 @@ export function createPlan111Router(): Router {
     '/admin/campaigns',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'create', resourceType: 'campaign', captureRequestBody: true }),
     asyncHandler(async (req, res) => campaignController.createCampaign(req, res))
   );
 
@@ -153,6 +158,7 @@ export function createPlan111Router(): Router {
     '/admin/campaigns/:id',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'campaign', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(async (req, res) => campaignController.updateCampaign(req, res))
   );
 
@@ -164,6 +170,7 @@ export function createPlan111Router(): Router {
     '/admin/campaigns/:id',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'delete', resourceType: 'campaign', capturePreviousValue: true }),
     asyncHandler(async (req, res) => campaignController.deleteCampaign(req, res))
   );
 
@@ -197,6 +204,7 @@ export function createPlan111Router(): Router {
     '/admin/campaigns/:id/assign-coupon',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'campaign', captureRequestBody: true }),
     asyncHandler(async (req, res) => campaignController.assignCoupon(req, res))
   );
 
@@ -208,6 +216,7 @@ export function createPlan111Router(): Router {
     '/admin/campaigns/:id/remove-coupon/:couponId',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'campaign', capturePreviousValue: true }),
     asyncHandler(async (req, res) => campaignController.removeCoupon(req, res))
   );
 
@@ -232,6 +241,7 @@ export function createPlan111Router(): Router {
     '/admin/fraud-detection/:id/review',
     authMiddleware,
     requireAdmin,
+    auditLog({ action: 'update', resourceType: 'fraud_detection', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(async (req, res) => fraudController.reviewFraudEvent(req, res))
   );
 

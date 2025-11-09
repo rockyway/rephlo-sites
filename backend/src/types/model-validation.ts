@@ -199,16 +199,16 @@ export interface ModelListItem {
   is_available: boolean;
   version: string | null;
   // Tier access control fields
-  required_tier: 'free' | 'pro' | 'enterprise';
+  required_tier: 'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual';
   tier_restriction_mode: 'minimum' | 'exact' | 'whitelist';
-  allowed_tiers: Array<'free' | 'pro' | 'enterprise'>;
+  allowed_tiers: Array<'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual'>;
   access_status: 'allowed' | 'restricted' | 'upgrade_required';
 }
 
 export interface ModelListResponse {
   models: ModelListItem[];
   total: number;
-  user_tier?: 'free' | 'pro' | 'enterprise'; // Current user's tier (if provided)
+  user_tier?: 'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual'; // Current user's tier (if provided)
 }
 
 /**
@@ -232,9 +232,9 @@ export interface ModelDetailsResponse {
   created_at: string;
   updated_at: string;
   // Tier access control fields
-  required_tier: 'free' | 'pro' | 'enterprise';
+  required_tier: 'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual';
   tier_restriction_mode: 'minimum' | 'exact' | 'whitelist';
-  allowed_tiers: Array<'free' | 'pro' | 'enterprise'>;
+  allowed_tiers: Array<'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual'>;
   access_status: 'allowed' | 'restricted' | 'upgrade_required';
   upgrade_info?: {
     required_tier: string;

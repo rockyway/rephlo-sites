@@ -200,6 +200,9 @@ import { BillingPaymentsService } from './services/billing-payments.service';
 import { CreditManagementService } from './services/credit-management.service';
 import { PlatformAnalyticsService } from './services/platform-analytics.service';
 
+// Phase 4 P0 Fixes: Audit Logging
+import { AuditLogService } from './services/audit-log.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -223,6 +226,9 @@ container.register('UserManagementService', { useClass: UserManagementService })
 container.register('BillingPaymentsService', { useClass: BillingPaymentsService });
 container.register('CreditManagementService', { useClass: CreditManagementService });
 container.register('PlatformAnalyticsService', { useClass: PlatformAnalyticsService });
+
+// Register Audit Logging service (Phase 4 P0 Fixes)
+container.registerSingleton(AuditLogService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -272,6 +278,9 @@ import { BillingController } from './controllers/billing.controller';
 import { CreditManagementController } from './controllers/credit-management.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 
+// Phase 4 P0 Fixes: Audit Log Controller
+import { AuditLogController } from './controllers/audit-log.controller';
+
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
 container.registerSingleton(ModelsController);
@@ -289,6 +298,9 @@ container.registerSingleton(UserManagementController);
 container.registerSingleton(BillingController);
 container.registerSingleton(CreditManagementController);
 container.registerSingleton(AnalyticsController);
+
+// Register Audit Log controller (Phase 4 P0 Fixes)
+container.registerSingleton(AuditLogController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [

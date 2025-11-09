@@ -82,16 +82,22 @@ model AppVersion {
 enum SubscriptionTier {
   free
   pro
-  enterprise
+  pro_max
+  enterprise_pro
+  enterprise_max
+  perpetual
 
   @@map("subscription_tier")
 }
 
 enum SubscriptionStatus {
+  trial
   active
+  past_due
   cancelled
   expired
   suspended
+  grace_period
 
   @@map("subscription_status")
 }
@@ -113,6 +119,35 @@ enum ModelCapability {
   long_context
 
   @@map("model_capability")
+}
+
+// Plan 112 Token-to-Credit Conversion Enums
+enum VendorName {
+  openai
+  anthropic
+  google
+  meta
+  mistral
+  cohere
+
+  @@map("vendor_name")
+}
+
+enum MarginStrategy {
+  fixed_percentage
+  tiered
+  dynamic
+
+  @@map("margin_strategy")
+}
+
+enum DeductionType {
+  inference
+  embedding
+  fine_tuning
+  custom
+
+  @@map("deduction_type")
 }
 
 // Users Table
@@ -176,6 +211,17 @@ model User {
   licenseActivations LicenseActivation[] @relation("UserLicenseActivation")
   versionUpgrades    VersionUpgrade[]    @relation("UserVersionUpgrade")
   prorationEvents    ProrationEvent[]    @relation("UserProrationEvent")
+
+  // Plan 112 Token-to-Credit Conversion Relations
+  credit_balance         UserCreditBalance?
+  token_usage            TokenUsageLedger[]
+  credit_deductions      CreditDeductionLedger[]
+  token_usage_summaries  TokenUsageDailySummary[]
+  credit_usage_summaries CreditUsageDailySummary[]
+  margin_audit_logs      MarginAuditLog[]
+
+  // Admin Audit Logging Relation (Phase 4 P0 Fixes)
+  admin_audit_logs AdminAuditLog[] @relation("AdminAuditLogs")
 
   @@index([email])
   @@index([createdAt])
@@ -340,7 +386,7 @@ model Model {
   // Minimum tier required to access this model
   tierRestrictionMode String             @default("minimum") @map("tier_restriction_mode") @db.VarChar(20)
   // "minimum" = tier >= requiredTier, "exact" = tier == requiredTier, "whitelist" = use allowedTiers
-  allowedTiers        SubscriptionTier[] @default([free, pro, enterprise]) @map("allowed_tiers")
+  allowedTiers        SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("allowed_tiers")
   // Explicit whitelist of allowed tiers (used when mode = "whitelist")
 
   // Relations
@@ -504,6 +550,10 @@ model SubscriptionMonetization {
 
   // Plan 111 Coupon System Relations
   couponRedemptions CouponRedemption[]
+
+  // Plan 112 Token-to-Credit Conversion Relations
+  tokenUsageLedger      TokenUsageLedger[]
+  creditDeductionLedger CreditDeductionLedger[]
 
   @@index([userId])
   @@index([status])
@@ -1017,8 +1067,8 @@ enum ValidationRuleType {
 // Core coupon configuration with pricing, limits, and tier eligibility
 // Links to campaigns for budget tracking and analytics
 model Coupon {
-  id   String     @id @default(uuid()) @db.Uuid
-  code String     @unique @map("code") @db.VarChar(50)
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @map("code") @db.VarChar(50)
   // Uppercase only: "JULY4LIBERTY", "BLACKFRIDAY50"
   // Regex: ^[A-Z0-9]{4,50}$
 
@@ -1036,11 +1086,11 @@ model Coupon {
   // Default: 1 use per user
 
   // Eligibility Restrictions
-  minPurchaseAmount Decimal?              @map("min_purchase_amount") @db.Decimal(10, 2)
+  minPurchaseAmount Decimal?           @map("min_purchase_amount") @db.Decimal(10, 2)
   // Minimum cart value required
-  tierEligibility   SubscriptionTier[]    @default([free, pro, enterprise]) @map("tier_eligibility")
+  tierEligibility   SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("tier_eligibility")
   // Tiers eligible to use this coupon
-  billingCycles     String[]              @default(["monthly", "annual"]) @map("billing_cycles")
+  billingCycles     String[]           @default(["monthly", "annual"]) @map("billing_cycles")
   // Applicable billing cycles
 
   // Validity Period
@@ -1061,7 +1111,7 @@ model Coupon {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  campaign           CouponCampaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaign           CouponCampaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   redemptions        CouponRedemption[]
   usageLimits        CouponUsageLimit?
   validationRules    CouponValidationRule[]
@@ -1147,9 +1197,9 @@ model CouponRedemption {
   redemptionDate DateTime @default(now()) @map("redemption_date")
 
   // Pricing Details
-  discountAppliedUsd  Decimal @map("discount_applied_usd") @db.Decimal(10, 2)
-  originalAmountUsd   Decimal @map("original_amount_usd") @db.Decimal(10, 2)
-  finalAmountUsd      Decimal @map("final_amount_usd") @db.Decimal(10, 2)
+  discountAppliedUsd Decimal @map("discount_applied_usd") @db.Decimal(10, 2)
+  originalAmountUsd  Decimal @map("original_amount_usd") @db.Decimal(10, 2)
+  finalAmountUsd     Decimal @map("final_amount_usd") @db.Decimal(10, 2)
 
   // Redemption Status
   redemptionStatus RedemptionStatus @map("redemption_status")
@@ -1182,8 +1232,8 @@ model CouponUsageLimit {
   couponId String @unique @map("coupon_id") @db.Uuid
 
   // Usage Counters
-  totalUses              Int @default(0) @map("total_uses")
-  uniqueUsers            Int @default(0) @map("unique_users")
+  totalUses               Int     @default(0) @map("total_uses")
+  uniqueUsers             Int     @default(0) @map("unique_users")
   totalDiscountAppliedUsd Decimal @default(0) @map("total_discount_applied_usd") @db.Decimal(12, 2)
 
   // Last Activity
@@ -1274,7 +1324,7 @@ model CouponValidationRule {
 // Daily aggregated metrics for campaign performance tracking
 // Generated via cron job for efficient dashboard queries
 model CouponAnalyticsSnapshot {
-  id           String @id @default(uuid()) @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
   snapshotDate DateTime @map("snapshot_date") @db.Date
 
   // Aggregated Metrics
@@ -1298,4 +1348,219 @@ model CouponAnalyticsSnapshot {
   @@unique([snapshotDate])
   @@index([snapshotDate])
   @@map("coupon_analytics_snapshot")
+}
+
+// =============================================================================
+// TOKEN-TO-CREDIT CONVERSION SYSTEM (Plan 112)
+// Vendor pricing tracking, credit deduction, and margin management
+// =============================================================================
+
+// Provider Table
+// Tracks AI model vendors (OpenAI, Anthropic, Google, etc.)
+model Provider {
+  id           String     @id @default(uuid()) @db.Uuid
+  vendor_name  VendorName
+  display_name String     @db.VarChar(100)
+  api_endpoint String?
+  is_active    Boolean    @default(true)
+  created_at   DateTime   @default(now())
+  updated_at   DateTime   @updatedAt
+
+  models ModelProviderPricing[]
+
+  @@index([vendor_name, is_active])
+  @@map("provider")
+}
+
+// Model Provider Pricing Table
+// Tracks vendor token pricing with historical tracking
+model ModelProviderPricing {
+  id                             String   @id @default(uuid()) @db.Uuid
+  provider_id                    String   @map("provider_id") @db.Uuid
+  model_name                     String   @db.VarChar(200)
+  input_token_price_per_million  Decimal  @db.Decimal(10, 6)
+  output_token_price_per_million Decimal  @db.Decimal(10, 6)
+  effective_date                 DateTime
+  is_current                     Boolean  @default(true)
+  created_at                     DateTime @default(now())
+  updated_at                     DateTime @updatedAt
+
+  provider      Provider           @relation(fields: [provider_id], references: [id], onDelete: Cascade)
+  usage_records TokenUsageLedger[]
+
+  @@index([provider_id, model_name, is_current])
+  @@index([model_name, is_current])
+  @@map("model_provider_pricing")
+}
+
+// Pricing Configuration Table
+// Tier-based margin multipliers with approval workflow
+model PricingConfiguration {
+  id                String           @id @default(uuid()) @db.Uuid
+  tier              SubscriptionTier
+  margin_strategy   MarginStrategy
+  margin_percentage Decimal          @db.Decimal(5, 2)
+  effective_date    DateTime
+  is_active         Boolean          @default(true)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+
+  @@index([tier, is_active])
+  @@map("pricing_configuration")
+}
+
+// Token Usage Ledger Table
+// Immutable audit trail of every API request
+model TokenUsageLedger {
+  id               String   @id @default(uuid()) @db.Uuid
+  user_id          String   @map("user_id") @db.Uuid
+  subscription_id  String?  @map("subscription_id") @db.Uuid
+  model_pricing_id String   @map("model_pricing_id") @db.Uuid
+  request_id       String?  @db.VarChar(100)
+  input_tokens     Int
+  output_tokens    Int
+  total_cost_usd   Decimal  @db.Decimal(10, 6)
+  credits_deducted Int
+  timestamp        DateTime @default(now())
+
+  user          User                      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  subscription  SubscriptionMonetization? @relation(fields: [subscription_id], references: [id], onDelete: SetNull)
+  model_pricing ModelProviderPricing      @relation(fields: [model_pricing_id], references: [id])
+
+  @@index([user_id, timestamp])
+  @@index([subscription_id, timestamp])
+  @@index([model_pricing_id, timestamp])
+  @@index([timestamp])
+  @@map("token_usage_ledger")
+}
+
+// User Credit Balance Table
+// Single source of truth for user credit balances (CRITICAL)
+model UserCreditBalance {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @unique @map("user_id") @db.Uuid
+  amount     Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("user_credit_balance")
+}
+
+// Credit Deduction Ledger Table
+// Immutable audit trail of every credit deduction
+model CreditDeductionLedger {
+  id               String        @id @default(uuid()) @db.Uuid
+  user_id          String        @map("user_id") @db.Uuid
+  subscription_id  String?       @map("subscription_id") @db.Uuid
+  amount           Int
+  deduction_type   DeductionType
+  related_usage_id String?       @db.Uuid
+  timestamp        DateTime      @default(now())
+
+  user         User                      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscription_id], references: [id], onDelete: SetNull)
+
+  @@index([user_id, timestamp])
+  @@index([subscription_id, timestamp])
+  @@index([timestamp])
+  @@map("credit_deduction_ledger")
+}
+
+// Token Usage Daily Summary Table
+// Daily aggregated token usage for analytics
+model TokenUsageDailySummary {
+  id                  String   @id @default(uuid()) @db.Uuid
+  user_id             String   @map("user_id") @db.Uuid
+  date                DateTime @db.Date
+  model_name          String   @db.VarChar(200)
+  total_input_tokens  Int
+  total_output_tokens Int
+  total_cost_usd      Decimal  @db.Decimal(10, 2)
+  total_credits       Int
+  created_at          DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, date, model_name])
+  @@index([user_id, date])
+  @@index([date])
+  @@map("token_usage_daily_summary")
+}
+
+// Credit Usage Daily Summary Table
+// Daily aggregated credit usage for analytics
+model CreditUsageDailySummary {
+  id                  String   @id @default(uuid()) @db.Uuid
+  user_id             String   @map("user_id") @db.Uuid
+  date                DateTime @db.Date
+  credits_allocated   Int      @default(0)
+  credits_deducted    Int      @default(0)
+  credits_balance_eod Int      @map("credits_balance_eod")
+  created_at          DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, date])
+  @@index([user_id, date])
+  @@index([date])
+  @@map("credit_usage_daily_summary")
+}
+
+// Margin Audit Log Table
+// Tracks margin configuration changes for compliance
+model MarginAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  config_id  String   @db.Uuid
+  changed_by String   @map("changed_by") @db.Uuid
+  old_margin Decimal? @db.Decimal(5, 2)
+  new_margin Decimal  @db.Decimal(5, 2)
+  reason     String?  @db.Text
+  timestamp  DateTime @default(now())
+
+  changed_by_user User @relation(fields: [changed_by], references: [id])
+
+  @@index([config_id, timestamp])
+  @@index([timestamp])
+  @@map("margin_audit_log")
+}
+
+// =============================================================================
+// ADMIN AUDIT LOGGING (Phase 4 - P0 Critical Fixes)
+// For SOC 2 Type II and GDPR Article 30 Compliance
+// =============================================================================
+
+// Admin Audit Log Table
+// Comprehensive audit trail of all admin operations for compliance
+model AdminAuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  admin_user_id  String   @map("admin_user_id") @db.Uuid
+  action         String   @db.VarChar(100)
+  // "create", "update", "delete", "read"
+  resource_type  String   @map("resource_type") @db.VarChar(50)
+  // "subscription", "license", "coupon", "user", etc.
+  resource_id    String?  @map("resource_id") @db.Uuid
+  endpoint       String   @db.VarChar(255)
+  // "/admin/subscriptions/:id"
+  method         String   @db.VarChar(10)
+  // "POST", "PATCH", "DELETE", "GET"
+  ip_address     String?  @map("ip_address") @db.VarChar(45)
+  user_agent     String?  @map("user_agent") @db.Text
+  request_body   Json?    @map("request_body")
+  previous_value Json?    @map("previous_value")
+  // For updates/deletes
+  new_value      Json?    @map("new_value")
+  // For creates/updates
+  status_code    Int      @map("status_code")
+  error_message  String?  @map("error_message") @db.Text
+  timestamp      DateTime @default(now())
+
+  admin_user User @relation("AdminAuditLogs", fields: [admin_user_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_user_id, timestamp])
+  @@index([resource_type, resource_id])
+  @@index([timestamp])
+  @@map("admin_audit_log")
 }

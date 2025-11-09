@@ -63,3 +63,12 @@ export const verifyTestToken = async (token: string): Promise<jose.JWTPayload> =
 export const createAuthHeader = (token: string): { Authorization: string } => {
   return { Authorization: `Bearer ${token}` };
 };
+
+/**
+ * Simple sync token generator for tests (legacy support)
+ */
+export const generateToken = (user: User): string => {
+  // For backwards compatibility - returns a simple token
+  // In actual tests, use generateTestAccessToken for proper JWT
+  return `test-token-${user.id}`;
+};

@@ -21,6 +21,7 @@ import { Router } from 'express';
 import { container } from '../container';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/error.middleware';
+import { auditLog } from '../middleware/audit.middleware';
 import { SubscriptionManagementController } from '../controllers/subscription-management.controller';
 import { UserManagementController } from '../controllers/user-management.controller';
 import { BillingController } from '../controllers/billing.controller';
@@ -54,6 +55,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions',
+    auditLog({ action: 'create', resourceType: 'subscription', captureRequestBody: true }),
     asyncHandler(subscriptionController.createSubscription.bind(subscriptionController))
   );
 
@@ -63,6 +65,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions/:id/upgrade',
+    auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(subscriptionController.upgradeTier.bind(subscriptionController))
   );
 
@@ -72,6 +75,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions/:id/downgrade',
+    auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(subscriptionController.downgradeTier.bind(subscriptionController))
   );
 
@@ -81,6 +85,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions/:id/cancel',
+    auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(subscriptionController.cancelSubscription.bind(subscriptionController))
   );
 
@@ -90,6 +95,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions/:id/reactivate',
+    auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(subscriptionController.reactivateSubscription.bind(subscriptionController))
   );
 
@@ -99,6 +105,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions/:id/allocate-credits',
+    auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true }),
     asyncHandler(subscriptionController.allocateMonthlyCredits.bind(subscriptionController))
   );
 
@@ -108,6 +115,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/subscriptions/:id/rollover',
+    auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true }),
     asyncHandler(subscriptionController.handleRollover.bind(subscriptionController))
   );
 
@@ -175,6 +183,7 @@ export function createPlan109Router(): Router {
    */
   router.patch(
     '/users/:id',
+    auditLog({ action: 'update', resourceType: 'user', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(userManagementController.editUserProfile.bind(userManagementController))
   );
 
@@ -184,6 +193,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/users/:id/suspend',
+    auditLog({ action: 'update', resourceType: 'user', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(userManagementController.suspendUser.bind(userManagementController))
   );
 
@@ -193,6 +203,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/users/:id/unsuspend',
+    auditLog({ action: 'update', resourceType: 'user', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(userManagementController.unsuspendUser.bind(userManagementController))
   );
 
@@ -202,6 +213,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/users/:id/ban',
+    auditLog({ action: 'delete', resourceType: 'user', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(userManagementController.banUser.bind(userManagementController))
   );
 
@@ -211,6 +223,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/users/:id/unban',
+    auditLog({ action: 'update', resourceType: 'user', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(userManagementController.unbanUser.bind(userManagementController))
   );
 
@@ -220,6 +233,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/users/bulk-update',
+    auditLog({ action: 'update', resourceType: 'user', captureRequestBody: true }),
     asyncHandler(userManagementController.bulkUpdateUsers.bind(userManagementController))
   );
 
@@ -229,6 +243,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/users/:id/adjust-credits',
+    auditLog({ action: 'update', resourceType: 'user', captureRequestBody: true }),
     asyncHandler(userManagementController.adjustUserCredits.bind(userManagementController))
   );
 
@@ -242,6 +257,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/billing/payment-methods',
+    auditLog({ action: 'create', resourceType: 'payment_method', captureRequestBody: true }),
     asyncHandler(billingController.addPaymentMethod.bind(billingController))
   );
 
@@ -251,6 +267,7 @@ export function createPlan109Router(): Router {
    */
   router.delete(
     '/billing/payment-methods/:id',
+    auditLog({ action: 'delete', resourceType: 'payment_method', capturePreviousValue: true }),
     asyncHandler(billingController.removePaymentMethod.bind(billingController))
   );
 
@@ -269,6 +286,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/billing/invoices/:subscriptionId',
+    auditLog({ action: 'create', resourceType: 'invoice', captureRequestBody: true }),
     asyncHandler(billingController.createInvoice.bind(billingController))
   );
 
@@ -305,6 +323,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/billing/transactions/:id/refund',
+    auditLog({ action: 'update', resourceType: 'transaction', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(billingController.refundTransaction.bind(billingController))
   );
 
@@ -314,6 +333,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/billing/dunning/:attemptId/retry',
+    auditLog({ action: 'update', resourceType: 'dunning_attempt', captureRequestBody: true }),
     asyncHandler(billingController.retryFailedPayment.bind(billingController))
   );
 
@@ -327,6 +347,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/credits/allocate',
+    auditLog({ action: 'create', resourceType: 'credit', captureRequestBody: true }),
     asyncHandler(creditController.allocateSubscriptionCredits.bind(creditController))
   );
 
@@ -336,6 +357,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/credits/process-monthly',
+    auditLog({ action: 'create', resourceType: 'credit', captureRequestBody: true }),
     asyncHandler(creditController.processMonthlyAllocations.bind(creditController))
   );
 
@@ -345,6 +367,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/credits/grant-bonus',
+    auditLog({ action: 'create', resourceType: 'credit', captureRequestBody: true }),
     asyncHandler(creditController.grantBonusCredits.bind(creditController))
   );
 
@@ -354,6 +377,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/credits/deduct',
+    auditLog({ action: 'update', resourceType: 'credit', captureRequestBody: true }),
     asyncHandler(creditController.deductCreditsManually.bind(creditController))
   );
 
@@ -372,6 +396,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/credits/rollover/:userId/apply',
+    auditLog({ action: 'update', resourceType: 'credit', captureRequestBody: true }),
     asyncHandler(creditController.applyRollover.bind(creditController))
   );
 
@@ -381,6 +406,7 @@ export function createPlan109Router(): Router {
    */
   router.post(
     '/credits/sync/:userId',
+    auditLog({ action: 'update', resourceType: 'credit', captureRequestBody: true }),
     asyncHandler(creditController.syncWithTokenCreditSystem.bind(creditController))
   );
 
