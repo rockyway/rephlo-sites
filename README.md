@@ -104,6 +104,9 @@ rephlo-sites/
 └── README.md                    # This file
 ```
 
+## External Desktop App project
+Location: `D:\sources\demo\text-assistant`
+
 ---
 
 ## Setup Instructions

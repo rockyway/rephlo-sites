@@ -24,6 +24,8 @@ import { createBrandingRouter } from './branding.routes';
 import { createAuthRouter } from './auth.routes';
 import { createSocialAuthRouter } from './social-auth.routes';
 import { createPlan109Router } from './plan109.routes';
+import { createPlan110Router } from './plan110.routes';
+import { createPlan111Router } from './plan111.routes';
 
 // Import subscription controller for webhooks
 import { SubscriptionsController } from '../controllers/subscriptions.controller';
@@ -90,12 +92,19 @@ router.get('/', (_req: Request, res: Response) => {
         user_profile: '/api/user/profile',
         detailed_credits: '/api/user/credits',
         oauth_token_enhance: '/oauth/token/enhance',
+        licenses: '/api/licenses',
+        version_upgrades: '/api/licenses/:licenseKey/upgrade',
+        proration: '/api/subscriptions/:id/proration-preview',
+        migrations: '/api/migrations',
       },
       admin: {
         metrics: '/admin/metrics',
         users: '/admin/users',
         subscriptions: '/admin/subscriptions',
         usage: '/admin/usage',
+        licenses: '/admin/licenses',
+        prorations: '/admin/prorations',
+        upgrade_analytics: '/admin/analytics/upgrade-conversion',
       },
       branding: {
         downloads: '/api/track-download',
@@ -217,6 +226,15 @@ router.use('/admin', adminRoutes);
 // ===== Plan 109: Subscription Monetization Routes =====
 // Additional admin endpoints for subscription, user, billing, and analytics management
 router.use('/admin', createPlan109Router());
+
+// ===== Plan 110: Perpetual Licensing & Proration Routes =====
+// Public and admin endpoints for perpetual licenses, version upgrades, proration, and migrations
+router.use('/api', createPlan110Router());
+router.use('/', createPlan110Router()); // Admin routes are mounted at /admin
+
+// ===== Plan 111: Coupon & Discount Code System Routes =====
+// Public endpoints for coupon validation/redemption and admin endpoints for campaign management
+router.use('/', createPlan111Router());
 
 // ===== Authentication Routes =====
 // User registration, email verification, password reset

@@ -13,6 +13,12 @@ export * from './services/subscription.interface';
 export * from './services/stripe.interface';
 export * from './services/model.interface';
 
+// Plan 112: Token-to-Credit Conversion Service Interfaces
+export * from './services/cost-calculation.interface';
+export * from './services/pricing-config.interface';
+export * from './services/token-tracking.interface';
+export * from './services/credit-deduction.interface';
+
 // Provider interfaces
 export * from './providers/llm-provider.interface';
 
