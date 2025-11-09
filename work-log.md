@@ -1531,3 +1531,65 @@ Reference: docs/plan/111-coupon-discount-code-system.md, docs/plan/115-master-or
 ### Build Status: ✅ SUCCESS (0 TypeScript errors)
 
 **All 5 Phases of Identity Provider Enhancement Complete!**
+
+## November 9, 2025 - Data Seed and POC-Client Setup
+
+### Completed Tasks (P0)
+
+1. **Comprehensive Data Seed Design**
+   - Created `backend/prisma/seed.ts` with complete seeding logic
+   - Defined 3 OAuth clients (desktop, poc, web) with full OIDC configuration
+   - Defined 4 user personas covering all test scenarios (free, pro, admin, google-auth)
+   - Implemented password hashing, subscription allocation, and credit seeding
+
+2. **Seed File Features**
+   - ✅ OAuth client seeding (WORKS - successfully creates clients)
+   - ✅ User persona seeding (PARTIAL - works without MFA fields)
+   - ⏳ Subscription and credit allocation (ready but blocked)
+   - ⏳ Legacy branding data (ready but blocked)
+   
+3. **Test Credentials Configured**
+   - Free User: free.user@example.com / TestPassword123!
+   - Pro User: pro.user@example.com / TestPassword123!
+   - Admin: admin.test@rephlo.ai / AdminPassword123!
+   - Google Auth: google.user@example.com (OAuth only)
+
+### Blockers (P1 - Database Migrations)
+
+**Critical Issue:** Migration sequencing error preventing schema evolution
+- Migration 20251109000001 (perpetual licensing) references table from 20251109071433
+- Migrations named with incorrect chronological ordering
+- Blocks MFA field migration and other schema updates
+
+**Impact:**
+- Cannot seed user personas with MFA fields yet
+- Subscription/credit seeding waits on user creation
+- Admin account cannot be fully configured
+
+**Solution Required:** Rename/reorder migrations or manually fix migration state
+
+### Deliverables
+
+✅ **Created:** `docs/progress/136-data-seed-and-poc-client-setup.md`
+- Complete progress report
+- All test credentials documented
+- Migration issue analysis and solutions
+- Next steps clearly outlined
+
+✅ **Created:** `backend/prisma/seed.ts`
+- Production-ready seed script
+- Proper error handling and logging
+- Upsert logic to prevent duplicates
+- ~650 lines of fully commented code
+
+### Outstanding Tasks (P1)
+
+1. Fix database migration ordering
+2. Execute seed script successfully
+3. Verify OAuth clients in OIDC provider
+4. Update POC-Client configuration
+5. Run end-to-end tests with seeded data
+
+**Status:** 🚧 Blocked on database migration sequencing issue
+**Next Session:** Resolve migration ordering and complete seed execution
+
