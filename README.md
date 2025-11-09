@@ -131,7 +131,7 @@ cd frontend
 cp .env.example .env
 
 # Edit .env file with your configuration
-# VITE_API_URL=http://localhost:3001
+# VITE_API_URL=http://localhost:7150
 
 # Install dependencies
 npm install
@@ -140,7 +140,7 @@ npm install
 npm run dev
 ```
 
-Frontend will be available at **http://localhost:5173**
+Frontend will be available at **http://localhost:7052**
 
 ### 3. Backend Setup
 
@@ -152,8 +152,8 @@ cp .env.example .env
 
 # Edit .env file with your database credentials
 # DATABASE_URL=postgresql://username:password@localhost:5432/rephlo
-# PORT=3001
-# CORS_ORIGIN=http://localhost:5173
+# PORT=7150
+# CORS_ORIGIN=http://localhost:7052
 
 # Install dependencies
 npm install
@@ -168,13 +168,28 @@ npm run prisma:migrate
 npm run dev
 ```
 
-Backend API will be available at **http://localhost:3001**
+Backend API will be available at **http://localhost:7150**
 
 ---
 
 ## Development Workflow
 
-### Running in Development
+### Running All Services (Recommended)
+
+Run all three services (Frontend, Backend, Identity Provider) concurrently:
+
+```bash
+npm run dev:all
+```
+
+This will start:
+- Frontend on **http://localhost:7052**
+- Backend API on **http://localhost:7150**
+- Identity Provider on **http://localhost:7151**
+
+All services will hot-reload on file changes with color-coded output.
+
+### Running Services Individually
 
 **Terminal 1 - Frontend:**
 ```bash
@@ -188,7 +203,11 @@ cd backend
 npm run dev
 ```
 
-Both servers will hot-reload on file changes.
+**Terminal 3 - Identity Provider:**
+```bash
+cd identity-provider
+npm run dev
+```
 
 ### Building for Production
 
@@ -228,7 +247,7 @@ npm start
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `http://localhost:3001` |
+| `VITE_API_URL` | Backend API URL | `http://localhost:7150` |
 | `VITE_APP_NAME` | Application name | `Rephlo` |
 | `VITE_APP_TAGLINE` | Application tagline | `Transform text. Keep your flow.` |
 | `VITE_NODE_ENV` | Environment mode | `development` |
@@ -237,10 +256,10 @@ npm start
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `PORT` | Server port | `3001` |
+| `PORT` | Server port | `7150` |
 | `NODE_ENV` | Environment mode | `development` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:password@localhost:5432/rephlo` |
-| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:5173` |
+| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:7052` |
 | `MAX_FILE_SIZE` | Max upload size (bytes) | `5242880` (5MB) |
 | `UPLOAD_DIR` | Upload directory path | `./uploads` |
 
