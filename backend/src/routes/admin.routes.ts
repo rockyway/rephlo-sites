@@ -20,10 +20,12 @@
 
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
+import { AdminAnalyticsController } from '../controllers/admin-analytics.controller';
 import { ModelTierAdminController } from '../controllers/admin/model-tier-admin.controller';
 import { AuditLogController } from '../controllers/audit-log.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
+import { auditLog } from '../middleware/audit.middleware';
 import { container } from '../container';
 
 const router = Router();
@@ -33,6 +35,7 @@ router.use(authMiddleware, requireAdmin);
 
 // Resolve controllers from DI container
 const adminController = container.resolve(AdminController);
+const adminAnalyticsController = container.resolve(AdminAnalyticsController);
 const modelTierAdminController = container.resolve(ModelTierAdminController);
 const auditLogController = container.resolve(AuditLogController);
 
@@ -110,6 +113,49 @@ router.get('/usage', asyncHandler(adminController.getSystemUsage.bind(adminContr
 router.post(
   '/webhooks/test',
   asyncHandler(adminController.testWebhook.bind(adminController))
+);
+
+// =============================================================================
+// Admin Analytics Endpoints (Phase 2 - Unified Dashboard)
+// =============================================================================
+
+/**
+ * GET /admin/analytics/dashboard-kpis
+ * Get cross-plan dashboard KPIs
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (default: '30d')
+ *
+ * Returns:
+ * - totalRevenue: { value, change, breakdown: { mrr, perpetual, upgrades } }
+ * - activeUsers: { value, change }
+ * - creditsConsumed: { value, change }
+ * - couponRedemptions: { value, change, totalDiscount }
+ */
+router.get(
+  '/analytics/dashboard-kpis',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(adminAnalyticsController.getDashboardKPIs.bind(adminAnalyticsController))
+);
+
+/**
+ * GET /admin/analytics/recent-activity
+ * Get recent activity feed from multiple sources
+ *
+ * Query parameters:
+ * - limit: number (default: 20, max: 100)
+ * - offset: number (default: 0)
+ *
+ * Returns:
+ * - events: ActivityEvent[] (subscription, license, coupon, credit, device events)
+ * - total: number
+ * - limit: number
+ * - offset: number
+ */
+router.get(
+  '/analytics/recent-activity',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(adminAnalyticsController.getRecentActivity.bind(adminAnalyticsController))
 );
 
 // =============================================================================
