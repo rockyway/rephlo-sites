@@ -290,20 +290,20 @@ app.get('/api/test/credits', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'No token provided' });
     }
 
-    const response = await axios.get(`${RESOURCE_API_URL}/v1/credits`, {
+    const response = await axios.get(`${RESOURCE_API_URL}/v1/credits/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     res.json({
       success: true,
-      endpoint: '/v1/credits',
+      endpoint: '/v1/credits/me',
       statusCode: response.status,
       data: response.data,
     });
   } catch (error: any) {
     res.status(error.response?.status || 500).json({
       success: false,
-      endpoint: '/v1/credits',
+      endpoint: '/v1/credits/me',
       statusCode: error.response?.status,
       error: error.response?.data?.message || error.message,
     });
