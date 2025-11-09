@@ -344,13 +344,15 @@ async function main() {
   console.log(`    ✓ Mixed Auth: ${mixedAuthUser.email} / User@123 (Local + Google)`);
 
   // Legacy users from original seed (kept for backward compatibility)
+  const freePassword = await bcrypt.hash('User@123', SALT_ROUNDS);
   const freeUser = await prisma.user.upsert({
     where: { email: 'free@example.com' },
-    update: {},
+    update: { passwordHash: freePassword },
     create: {
       email: 'free@example.com',
       emailVerified: true,
       username: 'freetier',
+      passwordHash: freePassword,
       firstName: 'Free',
       lastName: 'User',
       isActive: true,
@@ -358,15 +360,17 @@ async function main() {
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
     },
   });
-  console.log(`    ✓ Free Tier: ${freeUser.email} (Legacy)`);
+  console.log(`    ✓ Free Tier: ${freeUser.email} / User@123 (Legacy)`);
 
+  const proPassword = await bcrypt.hash('User@123', SALT_ROUNDS);
   const proUser = await prisma.user.upsert({
     where: { email: 'pro@example.com' },
-    update: {},
+    update: { passwordHash: proPassword },
     create: {
       email: 'pro@example.com',
       emailVerified: true,
       username: 'protier',
+      passwordHash: proPassword,
       firstName: 'Pro',
       lastName: 'User',
       isActive: true,
@@ -374,7 +378,7 @@ async function main() {
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
     },
   });
-  console.log(`    ✓ Pro Tier: ${proUser.email} (Legacy)`);
+  console.log(`    ✓ Pro Tier: ${proUser.email} / User@123 (Legacy)`);
 
   // =============================================================================
   // Seed Subscriptions
