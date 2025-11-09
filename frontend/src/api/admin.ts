@@ -218,4 +218,283 @@ export const adminAPI = {
     );
     return response.data;
   },
+
+  // ============================================================================
+  // User Detail APIs (Phase 4 - Unified User View)
+  // ============================================================================
+
+  /**
+   * Get user overview with current subscription, license, and credit status
+   * @param userId - User ID
+   */
+  getUserOverview: async (userId: string): Promise<UserOverviewResponse> => {
+    const response = await apiClient.get<UserOverviewResponse>(
+      `/admin/users/${userId}/overview`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get user subscription history with proration events
+   * @param userId - User ID
+   * @param params - Pagination parameters
+   */
+  getUserSubscriptions: async (
+    userId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<UserSubscriptionsResponse> => {
+    const response = await apiClient.get<UserSubscriptionsResponse>(
+      `/admin/users/${userId}/subscriptions`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get user licenses with device activations and upgrade history
+   * @param userId - User ID
+   * @param params - Pagination parameters
+   */
+  getUserLicenses: async (
+    userId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<UserLicensesResponse> => {
+    const response = await apiClient.get<UserLicensesResponse>(
+      `/admin/users/${userId}/licenses`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get user credit balance, allocations, and usage
+   * @param userId - User ID
+   * @param params - Period and pagination parameters
+   */
+  getUserCredits: async (
+    userId: string,
+    params?: { period?: string; limit?: number; offset?: number }
+  ): Promise<UserCreditsResponse> => {
+    const response = await apiClient.get<UserCreditsResponse>(
+      `/admin/users/${userId}/credits`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get user coupon redemptions and fraud flags
+   * @param userId - User ID
+   * @param params - Pagination parameters
+   */
+  getUserCoupons: async (
+    userId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<UserCouponsResponse> => {
+    const response = await apiClient.get<UserCouponsResponse>(
+      `/admin/users/${userId}/coupons`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get user payment methods and invoice history
+   * @param userId - User ID
+   * @param params - Pagination parameters
+   */
+  getUserPayments: async (
+    userId: string,
+    params?: { limit?: number; offset?: number }
+  ): Promise<UserPaymentsResponse> => {
+    const response = await apiClient.get<UserPaymentsResponse>(
+      `/admin/users/${userId}/payments`,
+      { params }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get user activity timeline
+   * @param userId - User ID
+   * @param params - Filter and pagination parameters
+   */
+  getUserActivity: async (
+    userId: string,
+    params?: { type?: string; limit?: number; offset?: number }
+  ): Promise<UserActivityResponse> => {
+    const response = await apiClient.get<UserActivityResponse>(
+      `/admin/users/${userId}/activity`,
+      { params }
+    );
+    return response.data;
+  },
 };
+
+// ============================================================================
+// User Detail Response Types
+// ============================================================================
+
+export interface UserOverviewResponse {
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+    createdAt: string;
+    lastLogin?: string;
+    status: 'active' | 'suspended' | 'banned';
+  };
+  currentSubscription?: {
+    id: string;
+    tier: string;
+    status: string;
+    billingCycle: 'monthly' | 'annual';
+    creditAllocation: number;
+    nextBillingDate?: string;
+    startedAt: string;
+  };
+  currentLicense?: {
+    id: string;
+    licenseKey: string;
+    status: string;
+    activatedAt: string;
+    deviceCount: number;
+    maxDevices: number;
+  };
+  creditBalance: number;
+  stats: {
+    totalSubscriptions: number;
+    totalLicenses: number;
+    creditsConsumed: number;
+    couponsRedeemed: number;
+  };
+}
+
+export interface UserSubscriptionsResponse {
+  subscriptions: Array<{
+    id: string;
+    tier: string;
+    status: string;
+    billingCycle: 'monthly' | 'annual';
+    startedAt: string;
+    endedAt?: string;
+    price: number;
+  }>;
+  prorations: Array<{
+    id: string;
+    fromTier: string;
+    toTier: string;
+    prorationAmount: number;
+    createdAt: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface UserLicensesResponse {
+  licenses: Array<{
+    id: string;
+    licenseKey: string;
+    status: string;
+    purchasedAt: string;
+    price: number;
+    deviceActivations: Array<{
+      id: string;
+      deviceName?: string;
+      deviceId: string;
+      activatedAt: string;
+      lastSeen?: string;
+      status: string;
+    }>;
+    versionUpgrades: Array<{
+      id: string;
+      fromVersion: string;
+      toVersion: string;
+      price: number;
+      upgradedAt: string;
+    }>;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface UserCreditsResponse {
+  balance: number;
+  lastUpdated: string;
+  allocations: Array<{
+    id: string;
+    amount: number;
+    source: 'subscription' | 'bonus' | 'admin' | 'coupon';
+    reason?: string;
+    allocatedAt: string;
+  }>;
+  usageByModel: Array<{
+    model: string;
+    totalCredits: number;
+    requestCount: number;
+  }>;
+  deductions: Array<{
+    id: string;
+    amount: number;
+    model: string;
+    timestamp: string;
+  }>;
+  totals: {
+    totalAllocated: number;
+    totalUsed: number;
+  };
+  limit: number;
+  offset: number;
+}
+
+export interface UserCouponsResponse {
+  redemptions: Array<{
+    id: string;
+    couponCode: string;
+    type: 'percentage' | 'fixed' | 'subscription' | 'license';
+    discount?: number;
+    redeemedAt: string;
+    grantedBenefits?: string;
+  }>;
+  fraudFlags: Array<{
+    id: string;
+    couponCode: string;
+    reason: string;
+    severity: 'low' | 'medium' | 'high';
+    flaggedAt: string;
+  }>;
+  totalDiscount: number;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface UserPaymentsResponse {
+  paymentMethod?: {
+    type: string;
+    last4?: string;
+    brand?: string;
+  };
+  stripeCustomerId?: string;
+  invoices: Array<{
+    id: string;
+    invoiceId: string;
+    amount: number;
+    status: string;
+    description?: string;
+    createdAt: string;
+    stripeInvoiceUrl?: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface UserActivityResponse {
+  activities: ActivityEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}

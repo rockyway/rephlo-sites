@@ -21,6 +21,7 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
 import { AdminAnalyticsController } from '../controllers/admin-analytics.controller';
+import { AdminUserDetailController } from '../controllers/admin-user-detail.controller';
 import { ModelTierAdminController } from '../controllers/admin/model-tier-admin.controller';
 import { AuditLogController } from '../controllers/audit-log.controller';
 import { asyncHandler } from '../middleware/error.middleware';
@@ -36,6 +37,7 @@ router.use(authMiddleware, requireAdmin);
 // Resolve controllers from DI container
 const adminController = container.resolve(AdminController);
 const adminAnalyticsController = container.resolve(AdminAnalyticsController);
+const adminUserDetailController = container.resolve(AdminUserDetailController);
 const modelTierAdminController = container.resolve(ModelTierAdminController);
 const auditLogController = container.resolve(AuditLogController);
 
@@ -287,6 +289,172 @@ router.get(
 router.get(
   '/audit-logs/admin/:adminUserId',
   asyncHandler(auditLogController.getLogsForAdmin.bind(auditLogController))
+);
+
+// =============================================================================
+// Unified User Detail Endpoints (Phase 4 - Backend)
+// =============================================================================
+
+/**
+ * GET /admin/users/:id/overview
+ * Get user profile and current status
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Returns:
+ * - User basic info
+ * - Current subscription
+ * - Current license
+ * - Credit balance
+ * - Quick stats (total subscriptions, licenses, credits, coupons)
+ */
+router.get(
+  '/users/:id/overview',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserOverview.bind(adminUserDetailController))
+);
+
+/**
+ * GET /admin/users/:id/subscriptions
+ * Get user subscription history and proration events
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Query parameters:
+ * - limit: number (optional, default 50, max 100)
+ * - offset: number (optional, default 0)
+ *
+ * Returns:
+ * - Subscription history
+ * - Proration events (tier changes)
+ * - Pagination info
+ */
+router.get(
+  '/users/:id/subscriptions',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserSubscriptions.bind(adminUserDetailController))
+);
+
+/**
+ * GET /admin/users/:id/licenses
+ * Get user perpetual licenses with device activations
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Query parameters:
+ * - limit: number (optional, default 50, max 100)
+ * - offset: number (optional, default 0)
+ *
+ * Returns:
+ * - Perpetual licenses
+ * - Device activations per license
+ * - Version upgrade history
+ * - Pagination info
+ */
+router.get(
+  '/users/:id/licenses',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserLicenses.bind(adminUserDetailController))
+);
+
+/**
+ * GET /admin/users/:id/credits
+ * Get user credit balance, allocations, and usage
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ * - limit: number (optional, default 100, max 200)
+ * - offset: number (optional, default 0)
+ *
+ * Returns:
+ * - Current credit balance
+ * - Credit allocations (by source)
+ * - Credit usage by model (aggregated)
+ * - Credit deduction ledger
+ * - Total allocations and usage
+ */
+router.get(
+  '/users/:id/credits',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserCredits.bind(adminUserDetailController))
+);
+
+/**
+ * GET /admin/users/:id/coupons
+ * Get user coupon redemptions and fraud flags
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Query parameters:
+ * - limit: number (optional, default 50, max 100)
+ * - offset: number (optional, default 0)
+ *
+ * Returns:
+ * - Coupon redemptions
+ * - Fraud detection flags
+ * - Total discount value
+ * - Pagination info
+ */
+router.get(
+  '/users/:id/coupons',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserCoupons.bind(adminUserDetailController))
+);
+
+/**
+ * GET /admin/users/:id/payments
+ * Get user payment history (PLACEHOLDER - Not implemented)
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Query parameters:
+ * - limit: number (optional, default 50, max 100)
+ * - offset: number (optional, default 0)
+ *
+ * Returns:
+ * - Empty invoices array (placeholder)
+ * - Payment method info (null)
+ * - Stripe customer ID (if exists)
+ * - Pagination info
+ *
+ * NOTE: This endpoint is a placeholder for future implementation
+ * when Invoice and PaymentMethod tables are added to the schema.
+ */
+router.get(
+  '/users/:id/payments',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserPayments.bind(adminUserDetailController))
+);
+
+/**
+ * GET /admin/users/:id/activity
+ * Get combined timeline of all user activities
+ *
+ * Path parameters:
+ * - id: string - User ID
+ *
+ * Query parameters:
+ * - type: 'subscription' | 'license' | 'coupon' | 'credit' | 'device' | 'all' (optional, default 'all')
+ * - limit: number (optional, default 50, max 100)
+ * - offset: number (optional, default 0)
+ *
+ * Returns:
+ * - Combined activity timeline from all sources
+ * - Filtered by type if specified
+ * - Pagination info
+ */
+router.get(
+  '/users/:id/activity',
+  auditLog({ action: 'read', resourceType: 'user' }),
+  asyncHandler(adminUserDetailController.getUserActivity.bind(adminUserDetailController))
 );
 
 export default router;

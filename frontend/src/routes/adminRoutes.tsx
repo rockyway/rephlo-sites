@@ -21,8 +21,8 @@ const CouponManagement = lazy(() => import('../pages/admin/CouponManagement'));
 // const CampaignManagement = lazy(() => import('../pages/admin/CampaignManagement'));
 // const FraudDetection = lazy(() => import('../pages/admin/FraudDetection'));
 
-// Phase 4: New unified views (to be implemented)
-// const UserDetailUnified = lazy(() => import('../pages/admin/users/UserDetailUnified'));
+// Phase 4: New unified views
+const UserDetailUnified = lazy(() => import('../pages/admin/users/UserDetailUnified'));
 // const RevenueAnalytics = lazy(() => import('../pages/admin/analytics/RevenueAnalytics'));
 
 // Admin route configuration
@@ -42,10 +42,10 @@ export const adminRoutes: RouteObject[] = [
         path: 'users',
         element: <UserManagement />,
       },
-      // {
-      //   path: 'users/:id',
-      //   element: <UserDetailUnified />,
-      // },
+      {
+        path: 'users/:id',
+        element: <UserDetailUnified />,
+      },
 
       // Subscription management (Plan 109)
       {

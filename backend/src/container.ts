@@ -203,6 +203,10 @@ import { PlatformAnalyticsService } from './services/platform-analytics.service'
 // Phase 4 P0 Fixes: Audit Logging
 import { AuditLogService } from './services/audit-log.service';
 
+// Phase 4 Backend: Admin Analytics & User Detail
+import { AdminAnalyticsService } from './services/admin-analytics.service';
+import { AdminUserDetailService } from './services/admin-user-detail.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -229,6 +233,10 @@ container.register('PlatformAnalyticsService', { useClass: PlatformAnalyticsServ
 
 // Register Audit Logging service (Phase 4 P0 Fixes)
 container.registerSingleton(AuditLogService);
+
+// Register Admin Analytics & User Detail services (Phase 4 Backend)
+container.registerSingleton(AdminAnalyticsService);
+container.registerSingleton(AdminUserDetailService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -281,6 +289,10 @@ import { AnalyticsController } from './controllers/analytics.controller';
 // Phase 4 P0 Fixes: Audit Log Controller
 import { AuditLogController } from './controllers/audit-log.controller';
 
+// Phase 4 Backend: Admin Analytics & User Detail Controllers
+import { AdminAnalyticsController } from './controllers/admin-analytics.controller';
+import { AdminUserDetailController } from './controllers/admin-user-detail.controller';
+
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
 container.registerSingleton(ModelsController);
@@ -301,6 +313,10 @@ container.registerSingleton(AnalyticsController);
 
 // Register Audit Log controller (Phase 4 P0 Fixes)
 container.registerSingleton(AuditLogController);
+
+// Register Admin Analytics & User Detail controllers (Phase 4 Backend)
+container.registerSingleton(AdminAnalyticsController);
+container.registerSingleton(AdminUserDetailController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [
