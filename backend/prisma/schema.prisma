@@ -152,16 +152,22 @@ model User {
   lastPasswordChange DateTime? @map("last_password_change")
   passwordResetCount Int       @default(0) @map("password_reset_count")
 
+  // Role-Based Access Control
+  role String @default("user") @map("role") @db.VarChar(20)
+  // Values: "user", "admin"
+
   // Relations
-  subscriptions   Subscription[]
-  credits         Credit[]
-  usageHistory    UsageHistory[]
-  userPreferences UserPreference?
-  webhookConfigs  WebhookConfig[]
+  subscriptions      Subscription[]
+  credits            Credit[]
+  usageHistory       UsageHistory[]
+  userPreferences    UserPreference?
+  webhookConfigs     WebhookConfig[]
+  modelTierAuditLogs ModelTierAuditLog[] @relation("ModelTierAuditLogs")
 
   @@index([email])
   @@index([createdAt])
   @@index([googleId])
+  @@index([role])
   @@map("users")
 }
 
@@ -327,6 +333,7 @@ model Model {
   // Relations
   usageHistory    UsageHistory[]
   userPreferences UserPreference[]
+  auditLogs       ModelTierAuditLog[]
 
   @@index([isAvailable])
   @@index([provider])
@@ -406,4 +413,28 @@ model WebhookLog {
   @@index([status])
   @@index([createdAt])
   @@map("webhook_logs")
+}
+
+// Model Tier Audit Log Table
+// Tracks all changes to model tier configurations for compliance and auditing
+model ModelTierAuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  modelId       String   @map("model_id") @db.VarChar(100)
+  adminUserId   String   @map("admin_user_id") @db.Uuid
+  changeType    String   @map("change_type") @db.VarChar(50)
+  // Values: "tier_update", "restriction_mode_update", "allowed_tiers_update"
+  previousValue Json?    @map("previous_value")
+  newValue      Json     @map("new_value")
+  reason        String?  @db.Text
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  model Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  admin User  @relation("ModelTierAuditLogs", fields: [adminUserId], references: [id])
+
+  @@index([modelId])
+  @@index([adminUserId])
+  @@index([createdAt])
+  @@map("model_tier_audit_logs")
 }

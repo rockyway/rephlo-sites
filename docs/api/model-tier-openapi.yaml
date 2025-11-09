@@ -1,0 +1,835 @@
+openapi: 3.0.3
+info:
+  title: Rephlo Model Tier Access Control API
+  description: |
+    API for tier-based access control to LLM models in the Rephlo platform.
+
+    This API provides endpoints for listing models with tier metadata, getting model details,
+    and executing inference requests with automatic tier validation.
+
+    ## Authentication
+    All endpoints require JWT bearer token authentication.
+
+    ## Subscription Tiers
+    - **Free**: 2,000 credits/month, basic models
+    - **Pro**: 50,000 credits/month, advanced models
+    - **Enterprise**: 250,000 credits/month, all models
+
+    ## Tier Restriction Modes
+    - **minimum**: User tier must be >= required tier (hierarchical)
+    - **exact**: User tier must exactly match required tier
+    - **whitelist**: User tier must be in allowed tiers list
+
+  version: 1.1.0
+  contact:
+    name: Rephlo API Support
+    email: api@rephlo.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.rephlo.com
+    description: Production server
+  - url: https://staging.api.rephlo.com
+    description: Staging server
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Models
+    description: Model listing and details with tier metadata
+  - name: Inference
+    description: LLM inference with tier validation
+  - name: Authentication
+    description: User authentication endpoints
+
+paths:
+  /v1/models:
+    get:
+      tags:
+        - Models
+      summary: List available models with tier metadata
+      description: |
+        Retrieves all available models with tier access information.
+
+        The response includes access status based on the authenticated user's subscription tier.
+        Models are returned with tier metadata regardless of user access level.
+      operationId: listModels
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: available
+          in: query
+          description: Filter by availability status
+          required: false
+          schema:
+            type: boolean
+          example: true
+        - name: capability
+          in: query
+          description: Filter by capabilities (comma-separated)
+          required: false
+          schema:
+            type: string
+          example: "text,vision"
+        - name: provider
+          in: query
+          description: Filter by provider
+          required: false
+          schema:
+            type: string
+            enum: [openai, anthropic, google]
+          example: "anthropic"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+              examples:
+                freeUser:
+                  summary: Free user viewing models
+                  value:
+                    models:
+                      - id: "gpt-5"
+                        name: "GPT-5"
+                        provider: "openai"
+                        description: "Most capable GPT model with advanced reasoning"
+                        capabilities: ["text", "vision", "function_calling", "code"]
+                        context_length: 128000
+                        max_output_tokens: 16384
+                        credits_per_1k_tokens: 500
+                        is_available: true
+                        version: "2024-11-06"
+                        required_tier: "enterprise"
+                        tier_restriction_mode: "minimum"
+                        allowed_tiers: ["enterprise"]
+                        access_status: "upgrade_required"
+                      - id: "claude-3.5-sonnet"
+                        name: "Claude 3.5 Sonnet"
+                        provider: "anthropic"
+                        description: "Balanced model optimized for coding tasks"
+                        capabilities: ["text", "vision", "code"]
+                        context_length: 200000
+                        max_output_tokens: 8192
+                        credits_per_1k_tokens: 300
+                        is_available: true
+                        version: "20241022"
+                        required_tier: "pro"
+                        tier_restriction_mode: "minimum"
+                        allowed_tiers: ["pro", "enterprise"]
+                        access_status: "upgrade_required"
+                    total: 2
+                    user_tier: "free"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/models/{modelId}:
+    get:
+      tags:
+        - Models
+      summary: Get model details with tier access status
+      description: |
+        Retrieves detailed information about a specific model including tier requirements
+        and access status for the authenticated user.
+      operationId: getModelDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: modelId
+          in: path
+          description: Unique model identifier
+          required: true
+          schema:
+            type: string
+          example: "claude-3.5-sonnet"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelDetailsResponse'
+              examples:
+                accessAllowed:
+                  summary: Pro user viewing Pro model
+                  value:
+                    id: "claude-3.5-sonnet"
+                    name: "claude-3.5-sonnet"
+                    display_name: "Claude 3.5 Sonnet"
+                    provider: "anthropic"
+                    description: "Balanced model optimized for coding tasks with extended context"
+                    capabilities: ["text", "vision", "code"]
+                    context_length: 200000
+                    max_output_tokens: 8192
+                    input_cost_per_million_tokens: 300
+                    output_cost_per_million_tokens: 1500
+                    credits_per_1k_tokens: 300
+                    is_available: true
+                    is_deprecated: false
+                    version: "20241022"
+                    created_at: "2025-11-01T10:00:00.000Z"
+                    updated_at: "2025-11-08T12:00:00.000Z"
+                    required_tier: "pro"
+                    tier_restriction_mode: "minimum"
+                    allowed_tiers: ["pro", "enterprise"]
+                    access_status: "allowed"
+                accessDenied:
+                  summary: Free user viewing Enterprise model
+                  value:
+                    id: "gpt-5"
+                    name: "gpt-5"
+                    display_name: "GPT-5"
+                    provider: "openai"
+                    description: "Most capable GPT model with advanced reasoning capabilities"
+                    capabilities: ["text", "vision", "function_calling", "code"]
+                    context_length: 128000
+                    max_output_tokens: 16384
+                    input_cost_per_million_tokens: 500
+                    output_cost_per_million_tokens: 1500
+                    credits_per_1k_tokens: 500
+                    is_available: true
+                    is_deprecated: false
+                    version: "2024-11-06"
+                    created_at: "2025-11-01T10:00:00.000Z"
+                    updated_at: "2025-11-08T12:00:00.000Z"
+                    required_tier: "enterprise"
+                    tier_restriction_mode: "minimum"
+                    allowed_tiers: ["enterprise"]
+                    access_status: "upgrade_required"
+                    upgrade_info:
+                      required_tier: "enterprise"
+                      upgrade_url: "/subscriptions/upgrade"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/chat/completions:
+    post:
+      tags:
+        - Inference
+      summary: Create chat completion with tier validation
+      description: |
+        Executes a chat completion request with automatic tier validation.
+
+        Returns 403 error if user's tier is insufficient for the requested model.
+      operationId: chatCompletion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+            examples:
+              basicChat:
+                summary: Basic chat request
+                value:
+                  model: "claude-3.5-sonnet"
+                  messages:
+                    - role: "system"
+                      content: "You are a helpful assistant."
+                    - role: "user"
+                      content: "Explain quantum computing in simple terms."
+                  max_tokens: 4096
+                  temperature: 0.7
+                  stream: false
+      responses:
+        '200':
+          description: Successful completion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/TierRestrictionError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '402':
+          $ref: '#/components/responses/InsufficientCreditsError'
+
+  /v1/completions:
+    post:
+      tags:
+        - Inference
+      summary: Create text completion with tier validation
+      description: |
+        Executes a text completion request with automatic tier validation.
+
+        Returns 403 error if user's tier is insufficient for the requested model.
+      operationId: textCompletion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextCompletionRequest'
+            examples:
+              basicCompletion:
+                summary: Basic text completion
+                value:
+                  model: "gpt-5"
+                  prompt: "Once upon a time in a distant galaxy"
+                  max_tokens: 2048
+                  temperature: 0.8
+                  stream: false
+      responses:
+        '200':
+          description: Successful completion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TextCompletionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/TierRestrictionError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '402':
+          $ref: '#/components/responses/InsufficientCreditsError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from authentication endpoint.
+
+        Include in header as: `Authorization: Bearer <token>`
+
+  schemas:
+    SubscriptionTier:
+      type: string
+      enum: [free, pro, enterprise]
+      description: User subscription tier
+
+    TierRestrictionMode:
+      type: string
+      enum: [minimum, exact, whitelist]
+      description: |
+        Tier restriction mode:
+        - minimum: User tier must be >= required tier
+        - exact: User tier must exactly match required tier
+        - whitelist: User tier must be in allowed tiers list
+
+    AccessStatus:
+      type: string
+      enum: [allowed, upgrade_required]
+      description: User's access status for a model
+
+    ModelCapability:
+      type: string
+      enum: [text, vision, function_calling, code, long_context]
+      description: Model capability flag
+
+    Model:
+      type: object
+      required:
+        - id
+        - name
+        - provider
+        - capabilities
+        - context_length
+        - credits_per_1k_tokens
+        - is_available
+        - required_tier
+        - tier_restriction_mode
+        - allowed_tiers
+        - access_status
+      properties:
+        id:
+          type: string
+          description: Unique model identifier
+          example: "claude-3.5-sonnet"
+        name:
+          type: string
+          description: Human-readable model name
+          example: "Claude 3.5 Sonnet"
+        provider:
+          type: string
+          description: Model provider
+          example: "anthropic"
+        description:
+          type: string
+          nullable: true
+          description: Model description
+          example: "Balanced model optimized for coding tasks"
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelCapability'
+          description: Model capabilities
+        context_length:
+          type: integer
+          description: Maximum context window size
+          example: 200000
+        max_output_tokens:
+          type: integer
+          nullable: true
+          description: Maximum output tokens
+          example: 8192
+        credits_per_1k_tokens:
+          type: integer
+          description: Credits cost per 1000 tokens
+          example: 300
+        is_available:
+          type: boolean
+          description: Whether model is currently available
+          example: true
+        version:
+          type: string
+          nullable: true
+          description: Model version identifier
+          example: "20241022"
+        required_tier:
+          $ref: '#/components/schemas/SubscriptionTier'
+        tier_restriction_mode:
+          $ref: '#/components/schemas/TierRestrictionMode'
+        allowed_tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionTier'
+          description: List of allowed tiers
+          example: ["pro", "enterprise"]
+        access_status:
+          $ref: '#/components/schemas/AccessStatus'
+
+    ModelListResponse:
+      type: object
+      required:
+        - models
+        - total
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+          description: Array of model objects
+        total:
+          type: integer
+          description: Total number of models returned
+          example: 3
+        user_tier:
+          $ref: '#/components/schemas/SubscriptionTier'
+          nullable: true
+          description: Current user's subscription tier
+
+    ModelDetailsResponse:
+      type: object
+      required:
+        - id
+        - name
+        - display_name
+        - provider
+        - capabilities
+        - context_length
+        - input_cost_per_million_tokens
+        - output_cost_per_million_tokens
+        - credits_per_1k_tokens
+        - is_available
+        - is_deprecated
+        - created_at
+        - updated_at
+        - required_tier
+        - tier_restriction_mode
+        - allowed_tiers
+        - access_status
+      properties:
+        id:
+          type: string
+          example: "claude-3.5-sonnet"
+        name:
+          type: string
+          example: "claude-3.5-sonnet"
+        display_name:
+          type: string
+          example: "Claude 3.5 Sonnet"
+        provider:
+          type: string
+          example: "anthropic"
+        description:
+          type: string
+          nullable: true
+          example: "Balanced model optimized for coding tasks"
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelCapability'
+        context_length:
+          type: integer
+          example: 200000
+        max_output_tokens:
+          type: integer
+          nullable: true
+          example: 8192
+        input_cost_per_million_tokens:
+          type: integer
+          description: Input token cost (credits per million)
+          example: 300
+        output_cost_per_million_tokens:
+          type: integer
+          description: Output token cost (credits per million)
+          example: 1500
+        credits_per_1k_tokens:
+          type: integer
+          example: 300
+        is_available:
+          type: boolean
+          example: true
+        is_deprecated:
+          type: boolean
+          example: false
+        version:
+          type: string
+          nullable: true
+          example: "20241022"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:00:00.000Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-11-08T12:00:00.000Z"
+        required_tier:
+          $ref: '#/components/schemas/SubscriptionTier'
+        tier_restriction_mode:
+          $ref: '#/components/schemas/TierRestrictionMode'
+        allowed_tiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionTier'
+        access_status:
+          $ref: '#/components/schemas/AccessStatus'
+        upgrade_info:
+          type: object
+          nullable: true
+          description: Upgrade information (only if access denied)
+          properties:
+            required_tier:
+              $ref: '#/components/schemas/SubscriptionTier'
+            upgrade_url:
+              type: string
+              example: "/subscriptions/upgrade"
+
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+          description: Message role
+          example: "user"
+        content:
+          type: string
+          description: Message content
+          example: "Explain quantum computing"
+
+    ChatCompletionRequest:
+      type: object
+      required:
+        - model
+        - messages
+      properties:
+        model:
+          type: string
+          description: Model ID to use
+          example: "claude-3.5-sonnet"
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          description: Array of message objects
+        max_tokens:
+          type: integer
+          nullable: true
+          description: Maximum tokens to generate
+          default: 4096
+          example: 2048
+        temperature:
+          type: number
+          format: float
+          nullable: true
+          description: Sampling temperature (0-2)
+          default: 0.7
+          minimum: 0
+          maximum: 2
+          example: 0.7
+        stream:
+          type: boolean
+          nullable: true
+          description: Enable streaming
+          default: false
+          example: false
+        top_p:
+          type: number
+          format: float
+          nullable: true
+          description: Nucleus sampling parameter
+          minimum: 0
+          maximum: 1
+          example: 1
+        presence_penalty:
+          type: number
+          format: float
+          nullable: true
+          description: Presence penalty (-2 to 2)
+          minimum: -2
+          maximum: 2
+          example: 0
+        frequency_penalty:
+          type: number
+          format: float
+          nullable: true
+          description: Frequency penalty (-2 to 2)
+          minimum: -2
+          maximum: 2
+          example: 0
+
+    ChatCompletionResponse:
+      type: object
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - usage
+      properties:
+        id:
+          type: string
+          example: "chatcmpl-9a8f7e6d5c4b3a2"
+        object:
+          type: string
+          example: "chat.completion"
+        created:
+          type: integer
+          description: Unix timestamp
+          example: 1730908800
+        model:
+          type: string
+          example: "claude-3.5-sonnet"
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+                example: 0
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+                enum: [stop, length, content_filter]
+                example: "stop"
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+              example: 25
+            completion_tokens:
+              type: integer
+              example: 150
+            total_tokens:
+              type: integer
+              example: 175
+
+    TextCompletionRequest:
+      type: object
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          type: string
+          example: "gpt-5"
+        prompt:
+          type: string
+          example: "Once upon a time"
+        max_tokens:
+          type: integer
+          nullable: true
+          default: 4096
+          example: 2048
+        temperature:
+          type: number
+          format: float
+          nullable: true
+          default: 0.7
+          minimum: 0
+          maximum: 2
+          example: 0.8
+        stream:
+          type: boolean
+          nullable: true
+          default: false
+          example: false
+        top_p:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 1
+          example: 1
+        stop:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Stop sequences
+          example: ["\n", "END"]
+
+    TextCompletionResponse:
+      type: object
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - usage
+      properties:
+        id:
+          type: string
+          example: "cmpl-9a8f7e6d5c4b3a2"
+        object:
+          type: string
+          example: "text_completion"
+        created:
+          type: integer
+          example: 1730908800
+        model:
+          type: string
+          example: "gpt-5"
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                example: ", a brave explorer discovered..."
+              index:
+                type: integer
+                example: 0
+              logprobs:
+                type: object
+                nullable: true
+              finish_reason:
+                type: string
+                enum: [stop, length]
+                example: "stop"
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+              example: 8
+            completion_tokens:
+              type: integer
+              example: 120
+            total_tokens:
+              type: integer
+              example: 128
+
+    ApiError:
+      type: object
+      required:
+        - status
+        - code
+        - message
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [error]
+          example: "error"
+        code:
+          type: string
+          description: Error code
+          example: "model_access_restricted"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Model access restricted: Requires Pro tier or higher"
+        details:
+          type: object
+          nullable: true
+          description: Additional error details
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-08T12:00:00Z"
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            status: "error"
+            code: "unauthorized"
+            message: "Authentication required"
+            timestamp: "2025-11-08T12:00:00Z"
+
+    TierRestrictionError:
+      description: User's tier insufficient for requested model
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            status: "error"
+            code: "model_access_restricted"
+            message: "Model access restricted: Requires Pro tier or higher"
+            details:
+              model_id: "claude-3.5-sonnet"
+              user_tier: "free"
+              required_tier: "pro"
+              upgrade_url: "/subscriptions/upgrade"
+            timestamp: "2025-11-08T12:00:00Z"
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            status: "error"
+            code: "resource_not_found"
+            message: "Model 'invalid-model' not found"
+            timestamp: "2025-11-08T12:00:00Z"
+
+    InsufficientCreditsError:
+      description: User has insufficient credits
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            status: "error"
+            code: "insufficient_credits"
+            message: "Insufficient credits to complete request"
+            details:
+              credits_required: 500
+              credits_available: 100
+            timestamp: "2025-11-08T12:00:00Z"

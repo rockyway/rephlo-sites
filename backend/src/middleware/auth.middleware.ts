@@ -414,3 +414,61 @@ export async function getUserTier(
     return 'free';
   }
 }
+
+/**
+ * Middleware to require admin role
+ * Use after authMiddleware
+ *
+ * Example:
+ *   app.get('/admin/models', authMiddleware, requireAdmin, handler);
+ */
+export function requireAdmin(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    logger.error('requireAdmin called before authMiddleware');
+    throw unauthorizedError('Authentication required');
+  }
+
+  // Check user role in database
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { container } = require('../container');
+  const prisma = container.resolve('PrismaClient') as PrismaClient;
+
+  prisma.user
+    .findUnique({
+      where: { id: req.user.sub },
+      select: { role: true, isActive: true },
+    })
+    .then((user: { role: string; isActive: boolean } | null) => {
+      if (!user) {
+        logger.warn('requireAdmin: user not found', {
+          userId: req.user?.sub,
+        });
+        throw unauthorizedError('User not found');
+      }
+
+      if (!user.isActive) {
+        logger.warn('requireAdmin: user inactive', {
+          userId: req.user?.sub,
+        });
+        throw forbiddenError('Account is inactive');
+      }
+
+      if (user.role !== 'admin') {
+        logger.warn('requireAdmin: insufficient privileges', {
+          userId: req.user?.sub,
+          role: user.role,
+        });
+        throw forbiddenError('Admin access required');
+      }
+
+      // User is admin, proceed
+      next();
+    })
+    .catch((error: Error) => {
+      next(error);
+    });
+}

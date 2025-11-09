@@ -30,7 +30,7 @@ import { PrismaClient } from '@prisma/client';
 
 // ===== Configuration =====
 
-const PORT = parseInt(process.env.PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || '7150', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 

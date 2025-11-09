@@ -49,6 +49,8 @@ export class MockAuthService implements IAuthService {
       // Security/audit fields
       lastPasswordChange: null,
       passwordResetCount: 0,
+      // Role-based access control
+      role: 'user',
     };
 
     this.users.set(user.id, user);

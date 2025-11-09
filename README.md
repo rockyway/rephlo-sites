@@ -300,16 +300,38 @@ Opens GUI at **http://localhost:5555**
 
 ---
 
-## API Endpoints (Coming in Phase 3)
+## API Features
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/track-download` | Track download by OS |
-| `POST` | `/api/feedback` | Submit user feedback |
-| `POST` | `/api/diagnostics` | Upload diagnostic files |
-| `GET` | `/api/version` | Get latest app version |
-| `GET` | `/admin/metrics` | Admin dashboard metrics |
+### Model Tier Access Control
+
+The API supports tier-based access control for LLM models:
+
+- **Free Tier**: Basic models for general use (2,000 credits/month)
+- **Pro Tier**: Advanced models for professional use (50,000 credits/month)
+- **Enterprise Tier**: Premium models with highest capabilities (250,000 credits/month)
+
+All API endpoints automatically enforce tier restrictions. Users receive clear upgrade prompts when attempting to access models above their subscription level.
+
+**Documentation**:
+- [API Reference](docs/reference/017-model-tier-access-api.md) - Complete API documentation
+- [Admin Guide](docs/guides/model-tier-management-admin-guide.md) - Tier management for administrators
+- [Integration Guide](docs/guides/tier-access-integration-guide.md) - Developer integration instructions
+- [Deployment Guide](docs/guides/tier-access-deployment-guide.md) - Production deployment steps
+
+### Core API Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/health` | Health check | No |
+| `GET` | `/v1/models` | List models with tier metadata | Yes |
+| `GET` | `/v1/models/:id` | Get model details with access status | Yes |
+| `POST` | `/v1/chat/completions` | Chat completion (tier-validated) | Yes |
+| `POST` | `/v1/completions` | Text completion (tier-validated) | Yes |
+| `POST` | `/api/track-download` | Track download by OS | No |
+| `POST` | `/api/feedback` | Submit user feedback | No |
+| `POST` | `/api/diagnostics` | Upload diagnostic files | Yes |
+| `GET` | `/api/version` | Get latest app version | No |
+| `GET` | `/admin/metrics` | Admin dashboard metrics | Yes |
 
 ---
 

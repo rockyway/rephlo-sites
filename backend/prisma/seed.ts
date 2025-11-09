@@ -193,7 +193,9 @@ async function main() {
   const adminPassword = await bcrypt.hash('Admin@123', SALT_ROUNDS);
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@rephlo.com' },
-    update: {},
+    update: {
+      role: 'admin', // Ensure admin role is set on update
+    },
     create: {
       email: 'admin@rephlo.com',
       emailVerified: true,
@@ -201,12 +203,13 @@ async function main() {
       passwordHash: adminPassword,
       firstName: 'Admin',
       lastName: 'User',
+      role: 'admin', // Set admin role
       isActive: true,
       authProvider: 'local',
       lastLoginAt: new Date('2025-11-06T08:00:00Z'),
     },
   });
-  console.log(`    ✓ Admin: ${adminUser.email} / Admin@123`);
+  console.log(`    ✓ Admin: ${adminUser.email} / Admin@123 (role: ${adminUser.role})`);
 
   // =============================================================================
   // REGULAR USERS (5 personas)

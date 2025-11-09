@@ -30,11 +30,11 @@ export const cleanDatabase = async (): Promise<void> => {
 
   // Delete in order to respect foreign key constraints
   await db.usageHistory.deleteMany();
-  await db.credits.deleteMany();
-  await db.subscriptions.deleteMany();
-  await db.userPreferences.deleteMany();
-  await db.webhookConfiguration.deleteMany();
-  await db.users.deleteMany();
+  await db.credit.deleteMany();
+  await db.subscription.deleteMany();
+  await db.userPreference.deleteMany();
+  await db.webhookConfig.deleteMany();
+  await db.user.deleteMany();
   // Don't delete models and oauth_clients as they are seeded
 };
 
@@ -107,7 +107,7 @@ export const seedTestData = async (): Promise<void> => {
           maxOutputTokens: 4096,
           inputCostPerMillionTokens: 500,
           outputCostPerMillionTokens: 1500,
-          creditsPerKTokens: 2,
+          creditsPer1kTokens: 2,
           isAvailable: true,
           isDeprecated: false,
           version: '1.0',
@@ -123,7 +123,7 @@ export const seedTestData = async (): Promise<void> => {
           maxOutputTokens: 8192,
           inputCostPerMillionTokens: 350,
           outputCostPerMillionTokens: 1050,
-          creditsPerKTokens: 1,
+          creditsPer1kTokens: 1,
           isAvailable: true,
           isDeprecated: false,
           version: '2.0',
@@ -139,7 +139,7 @@ export const seedTestData = async (): Promise<void> => {
           maxOutputTokens: 4096,
           inputCostPerMillionTokens: 300,
           outputCostPerMillionTokens: 1500,
-          creditsPerKTokens: 2,
+          creditsPer1kTokens: 2,
           isAvailable: true,
           isDeprecated: false,
           version: '3.5',
