@@ -21,6 +21,7 @@ export interface IntrospectionResponse {
   email?: string;
   email_verified?: boolean;
   name?: string;
+  role?: string; // User role (when admin scope is included in token)
 }
 
 export interface JWKSResponse {
