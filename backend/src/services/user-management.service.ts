@@ -19,6 +19,7 @@ import { injectable, inject } from 'tsyringe';
 import { PrismaClient, Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import { notFoundError } from '../middleware/error.middleware';
+import { RoleCacheService } from './role-cache.service';
 
 // =============================================================================
 // Types and Interfaces
@@ -110,7 +111,10 @@ export interface CreditTransaction {
 
 @injectable()
 export class UserManagementService {
-  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+  constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
+    private roleCacheService: RoleCacheService
+  ) {
     logger.debug('UserManagementService: Initialized');
   }
 
@@ -516,6 +520,16 @@ export class UserManagementService {
             updatedAt: new Date(),
           },
         });
+
+        // Invalidate role cache when role is updated (Phase 1 - Performance Optimizations)
+        if (updates.role) {
+          await this.roleCacheService.invalidateUserRole(userId);
+          logger.debug('UserManagementService: Invalidated role cache after update', {
+            userId,
+            newRole: updates.role,
+          });
+        }
+
         result.success++;
       } catch (error: any) {
         result.failed++;
