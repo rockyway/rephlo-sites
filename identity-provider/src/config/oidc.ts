@@ -101,6 +101,23 @@ export async function createOIDCProvider(
       // this function will be called and should return JWT token configuration
       resourceIndicators: {
         enabled: true,
+        // Validate that the resource is allowed
+        async validate(ctx: any, client: any, resourceIndicator: string) {
+          logger.info(`OIDC: Validating resource indicator: ${resourceIndicator}`);
+
+          // Allow these resources for JWT token generation
+          const allowedResources = [
+            'https://api.textassistant.local',
+            'api',
+            'api.textassistant.local',
+            '*', // Allow any resource
+          ];
+
+          const isValid = allowedResources.includes(resourceIndicator);
+          logger.info(`OIDC: Resource validation result for ${resourceIndicator}: ${isValid}`);
+
+          return isValid;
+        },
         // Return resource server configuration for the requested resource
         async getResourceServerInfo(ctx: any, resourceIndicator: string, client: any) {
           logger.info(`OIDC: Resource indicator requested: ${resourceIndicator}`);
