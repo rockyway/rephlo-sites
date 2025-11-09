@@ -206,6 +206,7 @@ import { AuditLogService } from './services/audit-log.service';
 // Phase 4 Backend: Admin Analytics & User Detail
 import { AdminAnalyticsService } from './services/admin-analytics.service';
 import { AdminUserDetailService } from './services/admin-user-detail.service';
+import { RevenueAnalyticsService } from './services/revenue-analytics.service';
 
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
@@ -237,6 +238,7 @@ container.registerSingleton(AuditLogService);
 // Register Admin Analytics & User Detail services (Phase 4 Backend)
 container.registerSingleton(AdminAnalyticsService);
 container.registerSingleton(AdminUserDetailService);
+container.registerSingleton(RevenueAnalyticsService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -292,6 +294,7 @@ import { AuditLogController } from './controllers/audit-log.controller';
 // Phase 4 Backend: Admin Analytics & User Detail Controllers
 import { AdminAnalyticsController } from './controllers/admin-analytics.controller';
 import { AdminUserDetailController } from './controllers/admin-user-detail.controller';
+import { RevenueAnalyticsController } from './controllers/revenue-analytics.controller';
 
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
@@ -317,6 +320,7 @@ container.registerSingleton(AuditLogController);
 // Register Admin Analytics & User Detail controllers (Phase 4 Backend)
 container.registerSingleton(AdminAnalyticsController);
 container.registerSingleton(AdminUserDetailController);
+container.registerSingleton(RevenueAnalyticsController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [

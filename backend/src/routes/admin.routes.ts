@@ -24,6 +24,7 @@ import { AdminAnalyticsController } from '../controllers/admin-analytics.control
 import { AdminUserDetailController } from '../controllers/admin-user-detail.controller';
 import { ModelTierAdminController } from '../controllers/admin/model-tier-admin.controller';
 import { AuditLogController } from '../controllers/audit-log.controller';
+import { RevenueAnalyticsController } from '../controllers/revenue-analytics.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -40,6 +41,7 @@ const adminAnalyticsController = container.resolve(AdminAnalyticsController);
 const adminUserDetailController = container.resolve(AdminUserDetailController);
 const modelTierAdminController = container.resolve(ModelTierAdminController);
 const auditLogController = container.resolve(AuditLogController);
+const revenueAnalyticsController = container.resolve(RevenueAnalyticsController);
 
 // =============================================================================
 // Admin Endpoints
@@ -455,6 +457,121 @@ router.get(
   '/users/:id/activity',
   auditLog({ action: 'read', resourceType: 'user' }),
   asyncHandler(adminUserDetailController.getUserActivity.bind(adminUserDetailController))
+);
+
+// =============================================================================
+// Revenue Analytics Endpoints (Phase 4 - Backend)
+// =============================================================================
+
+/**
+ * GET /admin/analytics/revenue/kpis
+ * Get revenue KPIs: total revenue, MRR, perpetual, ARPU, coupon discount
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ *
+ * Returns:
+ * - totalRevenue: { value, change }
+ * - mrr: { value, change }
+ * - perpetualRevenue: { value, change }
+ * - arpu: { value, change }
+ * - couponDiscount: { value, period }
+ */
+router.get(
+  '/analytics/revenue/kpis',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getRevenueKPIs.bind(revenueAnalyticsController))
+);
+
+/**
+ * GET /admin/analytics/revenue/mix
+ * Get revenue breakdown by type (subscription, perpetual, upgrade)
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ *
+ * Returns:
+ * - subscriptionRevenue: number (USD cents)
+ * - perpetualRevenue: number (USD cents)
+ * - upgradeRevenue: number (USD cents)
+ */
+router.get(
+  '/analytics/revenue/mix',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getRevenueMix.bind(revenueAnalyticsController))
+);
+
+/**
+ * GET /admin/analytics/revenue/trend
+ * Get revenue trend data with automatic aggregation
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ *
+ * Aggregation:
+ * - '7d', '30d': Daily
+ * - '90d': Weekly
+ * - '1y': Monthly
+ *
+ * Returns:
+ * - data: Array of { date, totalRevenue, subscriptionRevenue, perpetualRevenue }
+ */
+router.get(
+  '/analytics/revenue/trend',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getRevenueTrend.bind(revenueAnalyticsController))
+);
+
+/**
+ * GET /admin/analytics/revenue/funnel
+ * Get user conversion funnel: free -> paid -> perpetual
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ *
+ * Returns:
+ * - freeTier: { count, percentage }
+ * - paidSubscription: { count, percentage, conversionRate }
+ * - perpetualLicense: { count, percentage, conversionRate }
+ */
+router.get(
+  '/analytics/revenue/funnel',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getRevenueFunnel.bind(revenueAnalyticsController))
+);
+
+/**
+ * GET /admin/analytics/revenue/credit-usage
+ * Get credit usage by model with revenue contribution estimates
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ * - limit: number (optional, default 10, max 100)
+ *
+ * Returns:
+ * - data: Array of { model, credits, requests, revenue_contribution }
+ */
+router.get(
+  '/analytics/revenue/credit-usage',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getCreditUsage.bind(revenueAnalyticsController))
+);
+
+/**
+ * GET /admin/analytics/revenue/coupon-roi
+ * Get coupon ROI analysis by campaign
+ *
+ * Query parameters:
+ * - period: '7d' | '30d' | '90d' | '1y' (optional, default '30d')
+ * - limit: number (optional, default 10, max 100)
+ *
+ * Returns:
+ * - data: Array of { campaign_name, coupons_issued, coupons_redeemed, discount_value, revenue_generated, roi_percentage }
+ */
+router.get(
+  '/analytics/revenue/coupon-roi',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getCouponROI.bind(revenueAnalyticsController))
 );
 
 export default router;

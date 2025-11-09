@@ -23,7 +23,7 @@ const CouponManagement = lazy(() => import('../pages/admin/CouponManagement'));
 
 // Phase 4: New unified views
 const UserDetailUnified = lazy(() => import('../pages/admin/users/UserDetailUnified'));
-// const RevenueAnalytics = lazy(() => import('../pages/admin/analytics/RevenueAnalytics'));
+const RevenueAnalytics = lazy(() => import('../pages/admin/analytics/RevenueAnalytics'));
 
 // Admin route configuration
 export const adminRoutes: RouteObject[] = [
@@ -90,10 +90,10 @@ export const adminRoutes: RouteObject[] = [
         path: 'analytics',
         element: <PlatformAnalytics />,
       },
-      // {
-      //   path: 'analytics/revenue',
-      //   element: <RevenueAnalytics />,
-      // },
+      {
+        path: 'analytics/revenue',
+        element: <RevenueAnalytics />,
+      },
 
       // Settings (future)
       // {

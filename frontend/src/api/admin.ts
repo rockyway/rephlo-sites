@@ -498,3 +498,191 @@ export interface UserActivityResponse {
   limit: number;
   offset: number;
 }
+
+// ============================================================================
+// Revenue Analytics Types & APIs (Phase 4 - RevenueAnalytics Page)
+// ============================================================================
+
+export interface RevenueKPIsResponse {
+  totalRevenue: {
+    value: number;
+    change?: KPIChange;
+  };
+  mrr: {
+    value: number;
+    change?: KPIChange;
+  };
+  perpetualRevenue: {
+    value: number;
+    change?: KPIChange;
+  };
+  arpu: {
+    value: number;
+    change?: KPIChange;
+  };
+}
+
+export interface RevenueMixDataPoint {
+  name: string;
+  value: number;
+  percentage: number;
+}
+
+export interface RevenueMixResponse {
+  data: RevenueMixDataPoint[];
+  total: number;
+  period: string;
+}
+
+export interface RevenueTrendDataPoint {
+  date: string;
+  total: number;
+  subscription: number;
+  perpetual: number;
+  upgrade?: number;
+}
+
+export interface RevenueTrendResponse {
+  data: RevenueTrendDataPoint[];
+  period: string;
+  granularity: 'daily' | 'weekly' | 'monthly';
+}
+
+export interface ConversionFunnelStage {
+  name: string;
+  count: number;
+  percentage: number;
+  conversionRate?: number;
+}
+
+export interface ConversionFunnelResponse {
+  stages: ConversionFunnelStage[];
+  period: string;
+}
+
+export interface CreditUsageByModel {
+  modelId: string;
+  modelName: string;
+  creditsConsumed: number;
+  requestCount: number;
+  percentage: number;
+}
+
+export interface CreditUsageResponse {
+  data: CreditUsageByModel[];
+  total: number;
+  period: string;
+  topModels: number;
+}
+
+export interface CouponROIRow {
+  id: string;
+  campaignName: string;
+  issued: number;
+  redeemed: number;
+  redemptionRate: number;
+  discountValue: number;
+  revenueGenerated: number;
+  roi: number;
+}
+
+export interface CouponROIResponse {
+  data: CouponROIRow[];
+  total: number;
+  period: string;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Revenue Analytics API functions
+ */
+export const revenueAnalyticsAPI = {
+  /**
+   * Get revenue KPIs for a given period
+   * @param period - Time period (7d, 30d, 90d, 1y)
+   */
+  getRevenueKPIs: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d'
+  ): Promise<RevenueKPIsResponse> => {
+    const response = await apiClient.get<RevenueKPIsResponse>(
+      '/admin/analytics/revenue/kpis',
+      { params: { period } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get revenue mix breakdown (subscription vs perpetual vs upgrades)
+   * @param period - Time period (7d, 30d, 90d, 1y)
+   */
+  getRevenueMix: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d'
+  ): Promise<RevenueMixResponse> => {
+    const response = await apiClient.get<RevenueMixResponse>(
+      '/admin/analytics/revenue/mix',
+      { params: { period } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get revenue trend over time
+   * @param period - Time period (7d, 30d, 90d, 1y)
+   */
+  getRevenueTrend: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d'
+  ): Promise<RevenueTrendResponse> => {
+    const response = await apiClient.get<RevenueTrendResponse>(
+      '/admin/analytics/revenue/trend',
+      { params: { period } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get conversion funnel (free -> paid subscription -> perpetual license)
+   * @param period - Time period (7d, 30d, 90d, 1y)
+   */
+  getConversionFunnel: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d'
+  ): Promise<ConversionFunnelResponse> => {
+    const response = await apiClient.get<ConversionFunnelResponse>(
+      '/admin/analytics/revenue/conversion-funnel',
+      { params: { period } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get credit usage by AI model
+   * @param period - Time period (7d, 30d, 90d, 1y)
+   * @param limit - Number of top models (default: 10)
+   */
+  getCreditUsageByModel: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d',
+    limit = 10
+  ): Promise<CreditUsageResponse> => {
+    const response = await apiClient.get<CreditUsageResponse>(
+      '/admin/analytics/revenue/credit-usage',
+      { params: { period, limit } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get coupon ROI analysis
+   * @param period - Time period (7d, 30d, 90d, 1y)
+   * @param params - Pagination parameters
+   */
+  getCouponROI: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d',
+    params?: { limit?: number; offset?: number }
+  ): Promise<CouponROIResponse> => {
+    const response = await apiClient.get<CouponROIResponse>(
+      '/admin/analytics/revenue/coupon-roi',
+      { params: { period, ...params } }
+    );
+    return response.data;
+  },
+};
