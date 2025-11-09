@@ -152,6 +152,10 @@ model User {
   lastPasswordChange           DateTime? @map("last_password_change")
   passwordResetCount           Int       @default(0) @map("password_reset_count")
 
+  // Role-Based Access Control
+  role                         String    @default("user") @map("role") @db.VarChar(20)
+  // Values: "user", "admin"
+
   // Relations
   subscriptions   Subscription[]
   credits         Credit[]
@@ -162,6 +166,7 @@ model User {
   @@index([email])
   @@index([createdAt])
   @@index([googleId])
+  @@index([role])
   @@map("users")
 }
 

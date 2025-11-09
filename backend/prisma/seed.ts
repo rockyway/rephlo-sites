@@ -34,7 +34,7 @@ async function main() {
       ],
       grantTypes: ['authorization_code'], // refresh_token is built-in
       responseTypes: ['code'],
-      scope: 'openid email profile llm.inference models.read user.info credits.read',
+      scope: 'openid email profile llm.inference models.read user.info credits.read admin',
       isActive: true,
       config: {
         skipConsentScreen: true, // First-party trusted app, auto-approve consent

@@ -126,7 +126,7 @@ export async function createOIDCProvider(
           // This ensures access tokens are JWT format instead of opaque reference tokens
           return {
             // Scopes available for this resource
-            scope: 'openid email profile llm.inference models.read user.info credits.read',
+            scope: 'openid email profile llm.inference models.read user.info credits.read admin',
             // CRITICAL: Force JWT format instead of default opaque tokens
             accessTokenFormat: 'jwt',
             // JWT audience claim - identifies the intended recipient
@@ -153,6 +153,7 @@ export async function createOIDCProvider(
       'models.read',
       'user.info',
       'credits.read',
+      'admin', // NEW: Admin access scope
     ],
 
     // Claims configuration
@@ -168,6 +169,7 @@ export async function createOIDCProvider(
         'updated_at',
       ],
       'user.info': ['created_at', 'last_login_at', 'is_active'],
+      'admin': ['role', 'permissions'], // NEW: Admin claims
     },
 
     // Token TTLs (in seconds)

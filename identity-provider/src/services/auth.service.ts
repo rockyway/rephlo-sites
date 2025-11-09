@@ -172,6 +172,18 @@ export class AuthService {
       claims.is_active = user.isActive;
     }
 
+    // Admin scope - include role claim for authorization
+    if (scopes.includes('admin')) {
+      claims.role = user.role || 'user';
+      logger.debug('AuthService: Including role claim in token', {
+        userId: user.id,
+        role: claims.role,
+      });
+
+      // Future: Add permissions when RBAC implemented (Plan 119)
+      // claims.permissions = await getUserPermissions(user.id);
+    }
+
     return claims;
   }
 
