@@ -164,6 +164,13 @@ model User {
   webhookConfigs     WebhookConfig[]
   modelTierAuditLogs ModelTierAuditLog[] @relation("ModelTierAuditLogs")
 
+  // Plan 109 Subscription Monetization Relations
+  subscriptionMonetization SubscriptionMonetization[] @relation("UserSubscriptionMonetization")
+  creditAllocations        CreditAllocation[]         @relation("UserCreditAllocation")
+  billingInvoices          BillingInvoice[]           @relation("UserBillingInvoice")
+  paymentTransactions      PaymentTransaction[]       @relation("UserPaymentTransaction")
+  dunningAttempts          DunningAttempt[]           @relation("UserDunningAttempt")
+
   @@index([email])
   @@index([createdAt])
   @@index([googleId])
@@ -437,4 +444,249 @@ model ModelTierAuditLog {
   @@index([adminUserId])
   @@index([createdAt])
   @@map("model_tier_audit_logs")
+}
+
+// =============================================================================
+// SUBSCRIPTION MONETIZATION SYSTEM (Plan 109)
+// Integrated with Token-to-Credit Conversion (Plan 112)
+// =============================================================================
+
+// Subscription Table
+// Manages user subscription lifecycle with Stripe integration
+// Links to credit_allocation for monthly credit grants
+model SubscriptionMonetization {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+
+  // Subscription Details
+  tier                   String   @db.VarChar(50)
+  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
+  billingCycle           String   @map("billing_cycle") @db.VarChar(20)
+  // Values: 'monthly', 'annual', 'lifetime' (for perpetual)
+  status                 String   @db.VarChar(20)
+  // Values: 'trial', 'active', 'past_due', 'cancelled', 'expired'
+
+  // Pricing
+  basePriceUsd           Decimal  @map("base_price_usd") @db.Decimal(10, 2)
+  monthlyCreditAllocation Int     @map("monthly_credit_allocation")
+
+  // Stripe Integration
+  stripeCustomerId       String?  @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId   String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+
+  // Billing Period
+  currentPeriodStart     DateTime @map("current_period_start")
+  currentPeriodEnd       DateTime @map("current_period_end")
+  trialEndsAt            DateTime? @map("trial_ends_at")
+
+  // Cancellation Tracking
+  cancelledAt            DateTime? @map("cancelled_at")
+
+  // Timestamps
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user               User                    @relation("UserSubscriptionMonetization", fields: [userId], references: [id], onDelete: Cascade)
+  creditAllocations  CreditAllocation[]
+  billingInvoices    BillingInvoice[]
+  paymentTransactions PaymentTransaction[]
+  dunningAttempts    DunningAttempt[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([tier])
+  @@index([currentPeriodEnd])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@map("subscription_monetization")
+}
+
+// Subscription Tier Configuration Table
+// Defines tier pricing, credit allocations, and features
+// Managed via admin UI for dynamic pricing adjustments
+model SubscriptionTierConfig {
+  id                    String   @id @default(uuid()) @db.Uuid
+
+  // Tier Identification
+  tierName              String   @unique @map("tier_name") @db.VarChar(50)
+  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
+
+  // Pricing
+  monthlyPriceUsd       Decimal  @map("monthly_price_usd") @db.Decimal(10, 2)
+  annualPriceUsd        Decimal  @map("annual_price_usd") @db.Decimal(10, 2)
+
+  // Credit Allocation
+  monthlyCreditAllocation Int    @map("monthly_credit_allocation")
+  maxCreditRollover      Int     @map("max_credit_rollover")
+  // Maximum credits that can roll over to next month
+
+  // Features (JSONB for flexibility)
+  features              Json     @default("{}")
+  // Example: {"apiAccess": true, "prioritySupport": true, "maxProjects": 10}
+
+  // Status
+  isActive              Boolean  @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("subscription_tier_config")
+}
+
+// Credit Allocation Table
+// Tracks monthly credit grants to users
+// Links to user_credit_balance from Plan 112 for actual balance tracking
+model CreditAllocation {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  subscriptionId        String?  @map("subscription_id") @db.Uuid
+
+  // Allocation Details
+  amount                Int
+  allocationPeriodStart DateTime @map("allocation_period_start")
+  allocationPeriodEnd   DateTime @map("allocation_period_end")
+
+  // Source Tracking
+  source                String   @db.VarChar(50)
+  // Values: 'subscription', 'bonus', 'admin_grant', 'referral', 'coupon'
+
+  // Timestamps
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user          User                        @relation("UserCreditAllocation", fields: [userId], references: [id], onDelete: Cascade)
+  subscription  SubscriptionMonetization?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([allocationPeriodStart, allocationPeriodEnd])
+  @@index([source])
+  @@map("credit_allocation")
+}
+
+// Billing Invoice Table
+// Stores Stripe invoice records for subscription billing
+// Provides audit trail and reconciliation with Stripe
+model BillingInvoice {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  subscriptionId      String?  @map("subscription_id") @db.Uuid
+
+  // Stripe Integration
+  stripeInvoiceId     String   @unique @map("stripe_invoice_id") @db.VarChar(255)
+
+  // Invoice Details
+  amountDue           Decimal  @map("amount_due") @db.Decimal(10, 2)
+  amountPaid          Decimal  @map("amount_paid") @db.Decimal(10, 2)
+  currency            String   @default("usd") @db.VarChar(3)
+  status              String   @db.VarChar(20)
+  // Values: 'draft', 'open', 'paid', 'void', 'uncollectible'
+
+  // Billing Period
+  periodStart         DateTime @map("period_start")
+  periodEnd           DateTime @map("period_end")
+
+  // Stripe URLs
+  invoicePdf          String?  @map("invoice_pdf") @db.Text
+  hostedInvoiceUrl    String?  @map("hosted_invoice_url") @db.Text
+
+  // Timestamps
+  createdAt           DateTime @default(now()) @map("created_at")
+  paidAt              DateTime? @map("paid_at")
+
+  // Relations
+  user                User                      @relation("UserBillingInvoice", fields: [userId], references: [id], onDelete: Cascade)
+  subscription        SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  paymentTransactions PaymentTransaction[]
+  dunningAttempts     DunningAttempt[]
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([stripeInvoiceId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@map("billing_invoice")
+}
+
+// Payment Transaction Table
+// Records all payment attempts and completions
+// Links to billing_invoice for payment history
+model PaymentTransaction {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @map("user_id") @db.Uuid
+  invoiceId             String?  @map("invoice_id") @db.Uuid
+  subscriptionId        String?  @map("subscription_id") @db.Uuid
+
+  // Stripe Integration
+  stripePaymentIntentId String   @unique @map("stripe_payment_intent_id") @db.VarChar(255)
+
+  // Transaction Details
+  amount                Decimal  @db.Decimal(10, 2)
+  currency              String   @default("usd") @db.VarChar(3)
+  status                String   @db.VarChar(20)
+  // Values: 'pending', 'succeeded', 'failed', 'cancelled', 'refunded'
+
+  // Payment Method
+  paymentMethodType     String?  @map("payment_method_type") @db.VarChar(50)
+  // Values: 'card', 'bank_account', 'paypal', etc.
+
+  // Failure Tracking
+  failureReason         String?  @map("failure_reason") @db.Text
+
+  // Timestamps
+  createdAt             DateTime @default(now()) @map("created_at")
+  completedAt           DateTime? @map("completed_at")
+
+  // Relations
+  user          User                      @relation("UserPaymentTransaction", fields: [userId], references: [id], onDelete: Cascade)
+  invoice       BillingInvoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscription  SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([subscriptionId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payment_transaction")
+}
+
+// Dunning Attempt Table
+// Tracks failed payment retry attempts (dunning management)
+// Implements automatic retry logic for failed payments
+model DunningAttempt {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  invoiceId       String   @map("invoice_id") @db.Uuid
+  subscriptionId  String?  @map("subscription_id") @db.Uuid
+
+  // Retry Details
+  attemptNumber   Int      @map("attempt_number")
+  scheduledAt     DateTime @map("scheduled_at")
+  attemptedAt     DateTime? @map("attempted_at")
+
+  // Result Tracking
+  result          String?  @db.VarChar(20)
+  // Values: 'success', 'failed', 'pending', 'skipped'
+  failureReason   String?  @map("failure_reason") @db.Text
+
+  // Next Retry
+  nextRetryAt     DateTime? @map("next_retry_at")
+
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user          User                      @relation("UserDunningAttempt", fields: [userId], references: [id], onDelete: Cascade)
+  invoice       BillingInvoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  subscription  SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([subscriptionId])
+  @@index([scheduledAt])
+  @@index([result])
+  @@map("dunning_attempt")
 }

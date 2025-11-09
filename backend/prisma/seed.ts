@@ -27,7 +27,11 @@ async function main() {
       clientId: 'textassistant-desktop',
       clientName: 'Text Assistant Desktop',
       clientSecretHash: null, // Public client, no secret needed
-      redirectUris: ['http://localhost:8080/callback'],
+      redirectUris: [
+        'http://localhost:8080/callback',
+        'http://localhost:8327/callback',
+        'http://localhost:8329/callback',
+      ],
       grantTypes: ['authorization_code'], // refresh_token is built-in
       responseTypes: ['code'],
       scope: 'openid email profile llm.inference models.read user.info credits.read',
@@ -76,9 +80,119 @@ async function main() {
   }
 
   // =============================================================================
+  // Seed Subscription Tier Configurations (Plan 109)
+  // =============================================================================
+  console.log('\n[2/10] Seeding Subscription Tier Configurations...');
+
+  const subscriptionTiers = [
+    {
+      tierName: 'free',
+      monthlyPriceUsd: 0,
+      annualPriceUsd: 0,
+      monthlyCreditAllocation: 2000,
+      maxCreditRollover: 0,
+      features: {
+        apiAccess: true,
+        prioritySupport: false,
+        maxProjects: 1,
+        customModels: false,
+        analyticsAccess: 'basic',
+        rateLimit: '100 requests/day'
+      },
+      isActive: true,
+    },
+    {
+      tierName: 'pro',
+      monthlyPriceUsd: 19.00,
+      annualPriceUsd: 190.00, // ~17% discount
+      monthlyCreditAllocation: 20000,
+      maxCreditRollover: 5000,
+      features: {
+        apiAccess: true,
+        prioritySupport: false,
+        maxProjects: 10,
+        customModels: false,
+        analyticsAccess: 'standard',
+        rateLimit: '1000 requests/day'
+      },
+      isActive: true,
+    },
+    {
+      tierName: 'pro_max',
+      monthlyPriceUsd: 49.00,
+      annualPriceUsd: 490.00, // ~17% discount
+      monthlyCreditAllocation: 60000,
+      maxCreditRollover: 15000,
+      features: {
+        apiAccess: true,
+        prioritySupport: true,
+        maxProjects: 50,
+        customModels: true,
+        analyticsAccess: 'advanced',
+        rateLimit: '5000 requests/day'
+      },
+      isActive: true,
+    },
+    {
+      tierName: 'enterprise_pro',
+      monthlyPriceUsd: 149.00,
+      annualPriceUsd: 1490.00, // ~17% discount
+      monthlyCreditAllocation: 250000,
+      maxCreditRollover: 50000,
+      features: {
+        apiAccess: true,
+        prioritySupport: true,
+        maxProjects: 200,
+        customModels: true,
+        analyticsAccess: 'enterprise',
+        rateLimit: '25000 requests/day',
+        dedicatedSupport: true,
+        sla: '99.9% uptime'
+      },
+      isActive: true,
+    },
+    {
+      tierName: 'enterprise_max',
+      monthlyPriceUsd: 499.00, // Custom pricing, this is starting price
+      annualPriceUsd: 4990.00,
+      monthlyCreditAllocation: 1000000,
+      maxCreditRollover: 999999, // Effectively unlimited rollover
+      features: {
+        apiAccess: true,
+        prioritySupport: true,
+        maxProjects: 999,
+        customModels: true,
+        analyticsAccess: 'enterprise',
+        rateLimit: 'unlimited',
+        dedicatedSupport: true,
+        sla: '99.99% uptime',
+        customContract: true,
+        onPremiseOption: true
+      },
+      isActive: true,
+    },
+  ];
+
+  for (const tier of subscriptionTiers) {
+    await prisma.subscriptionTierConfig.upsert({
+      where: { tierName: tier.tierName },
+      update: {
+        monthlyPriceUsd: tier.monthlyPriceUsd,
+        annualPriceUsd: tier.annualPriceUsd,
+        monthlyCreditAllocation: tier.monthlyCreditAllocation,
+        maxCreditRollover: tier.maxCreditRollover,
+        features: tier.features,
+        isActive: tier.isActive,
+      },
+      create: tier,
+    });
+    console.log(`  ✓ Created/Updated tier: ${tier.tierName} ($${tier.monthlyPriceUsd}/month, ${tier.monthlyCreditAllocation} credits)`);
+  }
+
+  // =============================================================================
   // Seed Models
   // =============================================================================
-  console.log('\n[2/5] Seeding LLM Models...');
+  console.log('\n[3/10] Seeding LLM Models...');
 
   const models = [
     {
@@ -870,6 +984,7 @@ async function main() {
   console.log('SEEDED DATA SUMMARY');
   console.log('=============================================================================');
   console.log(`  📦 OAuth Clients: ${oauthClients.length}`);
+  console.log(`  💎 Subscription Tiers: ${subscriptionTiers.length} (Plan 109)`);
   console.log(`  🤖 LLM Models: ${models.length}`);
   console.log(`  👤 Test Users: 10 (1 admin + 5 regular + 2 OAuth + 2 legacy)`);
   console.log(`  💳 Subscriptions: 2 (1 free tier, 1 pro tier)`);
