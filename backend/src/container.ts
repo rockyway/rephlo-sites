@@ -208,6 +208,9 @@ import { AdminAnalyticsService } from './services/admin-analytics.service';
 import { AdminUserDetailService } from './services/admin-user-detail.service';
 import { RevenueAnalyticsService } from './services/revenue-analytics.service';
 
+// Phase 1 Performance Optimizations: Role Caching (Plan 126/127)
+import { RoleCacheService } from './services/role-cache.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -239,6 +242,9 @@ container.registerSingleton(AuditLogService);
 container.registerSingleton(AdminAnalyticsService);
 container.registerSingleton(AdminUserDetailService);
 container.registerSingleton(RevenueAnalyticsService);
+
+// Register Role Cache service (Phase 1 Performance Optimizations)
+container.registerSingleton(RoleCacheService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
