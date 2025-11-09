@@ -54,7 +54,7 @@ export class RevenueAnalyticsController {
    * Validate limit parameter
    */
   private validateLimit(limit?: string | number, defaultLimit: number = 10, maxLimit: number = 100): number {
-    const parsed = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+    const parsed = typeof limit === 'string' ? parseInt(limit, 10) : (limit || defaultLimit);
     if (isNaN(parsed) || parsed < 1) return defaultLimit;
     return Math.min(parsed, maxLimit);
   }

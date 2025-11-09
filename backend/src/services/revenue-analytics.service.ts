@@ -122,7 +122,7 @@ export class RevenueAnalyticsService {
         },
       });
 
-      const currentMRR = currentSubscriptions.reduce((sum, sub) => {
+      const currentMRR = currentSubscriptions.reduce((sum: number, sub) => {
         // Convert to monthly if annual
         const monthlyRate =
           sub.billingCycle === 'annual'
@@ -145,7 +145,7 @@ export class RevenueAnalyticsService {
         },
       });
 
-      const previousMRR = previousSubscriptions.reduce((sum, sub) => {
+      const previousMRR = previousSubscriptions.reduce((sum: number, sub) => {
         const monthlyRate =
           sub.billingCycle === 'annual'
             ? parseFloat(sub.basePriceUsd.toString()) / 12
@@ -167,7 +167,7 @@ export class RevenueAnalyticsService {
       });
 
       const currentPerpetualRevenue = Math.round(
-        (perpetualRevenue._sum.purchasePriceUsd || 0) * 100
+        parseFloat((perpetualRevenue._sum.purchasePriceUsd || 0).toString()) * 100
       );
 
       const previousPerpetualRevenue = await this.prisma.perpetualLicense.aggregate({
@@ -183,7 +183,7 @@ export class RevenueAnalyticsService {
       });
 
       const prevPerpetualRevenue = Math.round(
-        (previousPerpetualRevenue._sum.purchasePriceUsd || 0) * 100
+        parseFloat((previousPerpetualRevenue._sum.purchasePriceUsd || 0).toString()) * 100
       );
 
       // Calculate upgrade revenue
@@ -201,7 +201,7 @@ export class RevenueAnalyticsService {
       });
 
       const currentUpgradeRevenue = Math.round(
-        (upgradeRevenue._sum.upgradePriceUsd || 0) * 100
+        parseFloat((upgradeRevenue._sum.upgradePriceUsd || 0).toString()) * 100
       );
 
       const previousUpgradeRevenue = await this.prisma.versionUpgrade.aggregate({
@@ -218,7 +218,7 @@ export class RevenueAnalyticsService {
       });
 
       const prevUpgradeRevenue = Math.round(
-        (previousUpgradeRevenue._sum.upgradePriceUsd || 0) * 100
+        parseFloat((previousUpgradeRevenue._sum.upgradePriceUsd || 0).toString()) * 100
       );
 
       // Total revenue = MRR + Perpetual + Upgrades
@@ -302,7 +302,7 @@ export class RevenueAnalyticsService {
       });
 
       const couponDiscountValue = Math.round(
-        (couponDiscount._sum.discountAppliedUsd || 0) * 100
+        parseFloat((couponDiscount._sum.discountAppliedUsd || 0).toString()) * 100
       );
 
       return {
@@ -358,7 +358,7 @@ export class RevenueAnalyticsService {
         },
       });
 
-      const subscriptionRevenue = subscriptions.reduce((sum, sub) => {
+      const subscriptionRevenue = subscriptions.reduce((sum: number, sub) => {
         const monthlyRate =
           sub.billingCycle === 'annual'
             ? parseFloat(sub.basePriceUsd.toString()) / 12
@@ -380,7 +380,7 @@ export class RevenueAnalyticsService {
       });
 
       const perpetualRevenue = Math.round(
-        (perpetual._sum.purchasePriceUsd || 0) * 100
+        parseFloat((perpetual._sum.purchasePriceUsd || 0).toString()) * 100
       );
 
       // Upgrade revenue
@@ -398,7 +398,7 @@ export class RevenueAnalyticsService {
       });
 
       const upgradeRevenue = Math.round(
-        (upgrades._sum.upgradePriceUsd || 0) * 100
+        parseFloat((upgrades._sum.upgradePriceUsd || 0).toString()) * 100
       );
 
       return {
@@ -494,7 +494,7 @@ export class RevenueAnalyticsService {
         return d.toISOString().split('T')[0];
       };
 
-      subscriptions.forEach((sub) => {
+      subscriptions.forEach((sub: any) => {
         const key = getKey(sub.createdAt);
         const monthlyRate =
           sub.billingCycle === 'annual'
@@ -507,12 +507,12 @@ export class RevenueAnalyticsService {
           subscriptionRevenue: 0,
           perpetualRevenue: 0,
         };
-        current.subscriptionRevenue += amount;
-        current.totalRevenue += amount;
+        current.subscriptionRevenue = (current.subscriptionRevenue || 0) + amount;
+        current.totalRevenue = (current.totalRevenue || 0) + amount;
         aggregated.set(key, current);
       });
 
-      perpetuals.forEach((perp) => {
+      perpetuals.forEach((perp: any) => {
         const key = getKey(perp.purchasedAt);
         const amount = Math.round(parseFloat(perp.purchasePriceUsd.toString()) * 100);
 
@@ -521,12 +521,12 @@ export class RevenueAnalyticsService {
           subscriptionRevenue: 0,
           perpetualRevenue: 0,
         };
-        current.perpetualRevenue += amount;
-        current.totalRevenue += amount;
+        current.perpetualRevenue = (current.perpetualRevenue || 0) + amount;
+        current.totalRevenue = (current.totalRevenue || 0) + amount;
         aggregated.set(key, current);
       });
 
-      upgrades.forEach((upg) => {
+      upgrades.forEach((upg: any) => {
         const key = getKey(upg.purchasedAt);
         const amount = Math.round(parseFloat(upg.upgradePriceUsd.toString()) * 100);
 
@@ -535,7 +535,7 @@ export class RevenueAnalyticsService {
           subscriptionRevenue: 0,
           perpetualRevenue: 0,
         };
-        current.totalRevenue += amount;
+        current.totalRevenue = (current.totalRevenue || 0) + amount;
         aggregated.set(key, current);
       });
 
@@ -763,7 +763,7 @@ export class RevenueAnalyticsService {
                     gte: config.startDate,
                     lte: config.endDate,
                   },
-                  status: 'success',
+                  redemptionStatus: 'success',
                 },
               },
             },
@@ -772,28 +772,28 @@ export class RevenueAnalyticsService {
         take: limit,
       });
 
-      const data = campaigns.map((campaign) => {
+      const data = campaigns.map((campaign: any) => {
         let totalCouponsIssued = 0;
         let totalCouponsRedeemed = 0;
         let totalDiscount = 0;
         let totalRevenueGenerated = 0;
 
-        campaign.coupons.forEach((coupon) => {
+        campaign.coupons.forEach((coupon: any) => {
           totalCouponsRedeemed += coupon.redemptions.length;
-          coupon.redemptions.forEach((redemption) => {
+          coupon.redemptions.forEach((redemption: any) => {
+            // Use discountAppliedUsd from the actual field
             totalDiscount += Math.round(
-              parseFloat(redemption.discountAmountUsd.toString()) * 100
+              parseFloat(redemption.discountAppliedUsd.toString()) * 100
             );
-            // Estimate revenue generated (purchase amount minus discount)
-            // Assumes redemption has associated transaction (would need join in real scenario)
+            // Revenue generated is the final amount paid (after discount)
             totalRevenueGenerated += Math.round(
-              parseFloat(redemption.purchaseAmountUsd.toString()) * 100
+              parseFloat(redemption.finalAmountUsd.toString()) * 100
             );
           });
         });
 
         // Count total coupons issued (sum of max_uses or estimate from created count)
-        campaign.coupons.forEach((coupon) => {
+        campaign.coupons.forEach((coupon: any) => {
           if (coupon.maxUses) {
             totalCouponsIssued += coupon.maxUses;
           } else {
