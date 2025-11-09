@@ -20,6 +20,8 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import { notFoundError } from '../middleware/error.middleware';
 import { RoleCacheService } from './role-cache.service';
+import { PermissionCacheService } from './permission-cache.service';
+import { SessionManagementService } from './session-management.service';
 
 // =============================================================================
 // Types and Interfaces
@@ -113,7 +115,9 @@ export interface CreditTransaction {
 export class UserManagementService {
   constructor(
     @inject('PrismaClient') private prisma: PrismaClient,
-    private roleCacheService: RoleCacheService
+    private roleCacheService: RoleCacheService,
+    private permissionCacheService: PermissionCacheService,
+    private sessionManagementService: SessionManagementService
   ) {
     logger.debug('UserManagementService: Initialized');
   }
@@ -521,12 +525,21 @@ export class UserManagementService {
           },
         });
 
-        // Invalidate role cache when role is updated (Phase 1 - Performance Optimizations)
+        // Phase 5: Invalidate caches and sessions when role is updated
         if (updates.role) {
+          // Invalidate role cache (Phase 1)
           await this.roleCacheService.invalidateUserRole(userId);
-          logger.debug('UserManagementService: Invalidated role cache after update', {
+
+          // Invalidate permission cache (Phase 3)
+          await this.permissionCacheService.invalidateUserPermissions(userId);
+
+          // Invalidate all sessions - force re-login (Phase 5)
+          const sessionsInvalidated = await this.sessionManagementService.invalidateAllSessions(userId);
+
+          logger.info('UserManagementService: Role changed - invalidated caches and sessions', {
             userId,
             newRole: updates.role,
+            sessionsInvalidated,
           });
         }
 

@@ -173,12 +173,64 @@ export async function createOIDCProvider(
     },
 
     // Token TTLs (in seconds)
+    // Phase 5: Admin Session Management - Dynamic TTL based on user role
     ttl: {
       AccessToken: 3600, // 1 hour
       AuthorizationCode: 600, // 10 minutes
       IdToken: 3600, // 1 hour
-      RefreshToken: 2592000, // 30 days
-      Session: 86400, // 24 hours
+      // Dynamic RefreshToken TTL based on user role
+      RefreshToken: async (_ctx: KoaContextWithOIDC, _token, _client) => {
+        try {
+          const userId = _ctx.oidc.session?.accountId;
+          if (!userId) {
+            return 2592000; // Default 30 days
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true },
+          });
+
+          // Admin: 7 days, Regular user: 30 days
+          return user?.role === 'admin' ? 604800 : 2592000;
+        } catch (error) {
+          logger.error('Failed to determine refresh token TTL', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return 2592000; // Default 30 days on error
+        }
+      },
+      // Dynamic Session TTL based on user role
+      Session: async (_ctx: KoaContextWithOIDC, _session, _client) => {
+        try {
+          const userId = _ctx.oidc.session?.accountId;
+          if (!userId) {
+            return 86400; // Default 24 hours
+          }
+
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true },
+          });
+
+          // Admin: 4 hours, Regular user: 24 hours
+          const ttl = user?.role === 'admin' ? 14400 : 86400;
+
+          logger.info('OIDC Session TTL assigned', {
+            userId,
+            role: user?.role,
+            ttlSeconds: ttl,
+            ttlHours: ttl / 3600,
+          });
+
+          return ttl;
+        } catch (error) {
+          logger.error('Failed to determine session TTL', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return 86400; // Default 24 hours on error
+        }
+      },
       Grant: 2592000, // 30 days
       Interaction: 3600, // 1 hour
     },

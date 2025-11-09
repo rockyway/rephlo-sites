@@ -574,4 +574,68 @@ router.get(
   asyncHandler(revenueAnalyticsController.getCouponROI.bind(revenueAnalyticsController))
 );
 
+
+// =============================================================================
+// Phase 5: Admin Session Management - Role Change Endpoint
+// =============================================================================
+
+/**
+ * PATCH /admin/users/:id/role
+ * Change user role and invalidate all sessions
+ *
+ * Body:
+ * - role: 'user' | 'admin'
+ *
+ * Returns:
+ * - Updated user details
+ * - Number of sessions invalidated
+ */
+router.patch(
+  '/users/:id/role',
+  auditLog({ action: 'update', resourceType: 'user' }),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    if (!role || !['user', 'admin'].includes(role)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_ROLE',
+          message: 'Role must be either "user" or "admin"',
+        },
+      });
+    }
+
+    // Get UserManagementService
+    const { UserManagementService } = await import('../services/user-management.service');
+    const userManagementService = container.resolve(UserManagementService);
+
+    // Update user role (this will automatically invalidate caches and sessions)
+    const result = await userManagementService.bulkUpdateUsers([id], { role });
+
+    if (result.failed > 0) {
+      return res.status(400).json({
+        error: {
+          code: 'ROLE_UPDATE_FAILED',
+          message: result.errors[0]?.error || 'Failed to update user role',
+        },
+      });
+    }
+
+    // Get updated user details
+    const user = await userManagementService.viewUserDetails(id);
+
+    return res.json({
+      message: 'User role updated successfully. All sessions have been terminated.',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    });
+  })
+);
+
 export default router;

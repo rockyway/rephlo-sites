@@ -213,6 +213,8 @@ import { RoleCacheService } from './services/role-cache.service';
 
 // Phase 3 Permission Caching Layer: Permission Caching (Plan 126/127)
 import { PermissionCacheService } from './services/permission-cache.service';
+// Phase 5 Admin Session Management: Session Tracking (Plan 126/127)
+import { SessionManagementService } from './services/session-management.service';
 
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
@@ -251,6 +253,8 @@ container.registerSingleton(RoleCacheService);
 
 // Register Permission Cache service (Phase 3 Permission Caching Layer)
 container.registerSingleton(PermissionCacheService);
+// Register Session Management service (Phase 5 Admin Session Management)
+container.registerSingleton(SessionManagementService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
