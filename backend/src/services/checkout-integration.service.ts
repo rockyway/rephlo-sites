@@ -8,9 +8,10 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Coupon } from '@prisma/client';
+import { PrismaClient, Coupon, PerpetualLicense } from '@prisma/client';
 import { CouponValidationService } from './coupon-validation.service';
 import { CouponRedemptionService } from './coupon-redemption.service';
+import { LicenseManagementService } from './license-management.service';
 import { DiscountCalculation } from '../types/coupon-validation';
 import logger from '../utils/logger';
 
@@ -19,7 +20,8 @@ export class CheckoutIntegrationService {
   constructor(
     @inject('PrismaClient') private prisma: PrismaClient,
     @inject(CouponValidationService) private validationService: CouponValidationService,
-    @inject(CouponRedemptionService) private redemptionService: CouponRedemptionService
+    @inject(CouponRedemptionService) private redemptionService: CouponRedemptionService,
+    @inject(LicenseManagementService) private licenseManagementService: LicenseManagementService
   ) {
     logger.debug('CheckoutIntegrationService: Initialized');
   }
@@ -185,15 +187,31 @@ export class CheckoutIntegrationService {
     });
   }
 
-  async grantPerpetualLicense(userId: string, couponId: string): Promise<any> {
-    logger.info('Granting perpetual license', { userId, couponId });
+  async grantPerpetualLicense(userId: string, couponId: string): Promise<PerpetualLicense> {
+    logger.info('Granting perpetual license from BYOK coupon', { userId, couponId });
 
-    // TODO: Integrate with Plan 110 license management
-    // This is a placeholder - actual implementation would create a perpetual license
-    return {
-      userId,
-      licenseKey: `REPHLO-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-      status: 'active',
-    };
+    try {
+      // Create perpetual license with $0 purchase price (coupon-granted)
+      const license = await this.licenseManagementService.createPerpetualLicense(
+        userId,
+        0, // purchase_price_usd (coupon-granted licenses are free)
+        '1.0.0' // current version
+      );
+
+      logger.info('CheckoutIntegrationService: Perpetual license granted successfully', {
+        userId,
+        licenseId: license.id,
+        licenseKey: license.licenseKey,
+      });
+
+      return license;
+    } catch (error) {
+      logger.error('CheckoutIntegrationService: Failed to grant perpetual license', {
+        error,
+        userId,
+        couponId,
+      });
+      throw new Error('Failed to grant perpetual license');
+    }
   }
 }

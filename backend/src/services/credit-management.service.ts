@@ -99,6 +99,7 @@ export class CreditManagementService {
     logger.info('CreditManagementService.allocateSubscriptionCredits', { userId, subscriptionId });
 
     try {
+      // Get subscription to determine credit amount
       const subscription = await this.prisma.subscriptionMonetization.findUnique({
         where: { id: subscriptionId },
       });
@@ -107,26 +108,44 @@ export class CreditManagementService {
         throw notFoundError('Subscription');
       }
 
-      const allocation = await this.prisma.creditAllocation.create({
-        data: {
-          userId,
-          subscriptionId,
-          amount: subscription.monthlyCreditAllocation,
-          allocationPeriodStart: subscription.currentPeriodStart,
-          allocationPeriodEnd: subscription.currentPeriodEnd,
-          source: 'subscription',
-        },
-      });
+      const monthlyAllocation = subscription.monthlyCreditAllocation;
 
-      // TODO: Update Plan 112's user_credit_balance
-      // await this.updatePlan112Balance(userId, allocation.amount);
+      // Use transaction to ensure atomicity
+      return await this.prisma.$transaction(async (tx) => {
+        // Create credit allocation record
+        const allocation = await tx.creditAllocation.create({
+          data: {
+            userId,
+            subscriptionId,
+            amount: monthlyAllocation,
+            allocationPeriodStart: subscription.currentPeriodStart,
+            allocationPeriodEnd: subscription.currentPeriodEnd,
+            source: 'subscription',
+          },
+        });
 
-      logger.info('CreditManagementService: Subscription credits allocated', {
-        allocationId: allocation.id,
-        amount: allocation.amount,
-      });
+        // Update user credit balance (Plan 112 integration)
+        await tx.userCreditBalance.upsert({
+          where: { user_id: userId },
+          update: {
+            amount: { increment: allocation.amount },
+            updated_at: new Date()
+          },
+          create: {
+            user_id: userId,
+            amount: allocation.amount,
+            created_at: new Date(),
+            updated_at: new Date()
+          }
+        });
 
-      return allocation as CreditAllocation;
+        logger.info('CreditManagementService: Subscription credits allocated and balance updated', {
+          allocationId: allocation.id,
+          amount: allocation.amount,
+        });
+
+        return allocation as CreditAllocation;
+      }, { isolationLevel: 'Serializable' });
     } catch (error) {
       logger.error('CreditManagementService.allocateSubscriptionCredits: Error', { error });
       throw error;
@@ -199,23 +218,42 @@ export class CreditManagementService {
       const defaultExpiry = new Date(now);
       defaultExpiry.setMonth(defaultExpiry.getMonth() + 3); // 3 months default
 
-      const allocation = await this.prisma.creditAllocation.create({
-        data: {
-          userId,
+      // Use transaction to ensure atomicity
+      return await this.prisma.$transaction(async (tx) => {
+        // Create bonus allocation record
+        const allocation = await tx.creditAllocation.create({
+          data: {
+            userId,
+            amount,
+            allocationPeriodStart: now,
+            allocationPeriodEnd: expiresAt || defaultExpiry,
+            source: 'bonus',
+          },
+        });
+
+        // Update user credit balance (Plan 112 integration)
+        await tx.userCreditBalance.upsert({
+          where: { user_id: userId },
+          update: {
+            amount: { increment: amount },
+            updated_at: new Date()
+          },
+          create: {
+            user_id: userId,
+            amount: amount,
+            created_at: new Date(),
+            updated_at: new Date()
+          }
+        });
+
+        logger.info('CreditManagementService: Bonus credits granted and balance updated', {
+          allocationId: allocation.id,
           amount,
-          allocationPeriodStart: now,
-          allocationPeriodEnd: expiresAt || defaultExpiry,
-          source: 'bonus',
-        },
-      });
+          expiresAt: expiresAt || defaultExpiry,
+        });
 
-      logger.info('CreditManagementService: Bonus credits granted', {
-        allocationId: allocation.id,
-        amount,
-        expiresAt: expiresAt || defaultExpiry,
-      });
-
-      return allocation as CreditAllocation;
+        return allocation as CreditAllocation;
+      }, { isolationLevel: 'Serializable' });
     } catch (error) {
       logger.error('CreditManagementService.grantBonusCredits: Error', { error });
       throw error;
@@ -358,13 +396,41 @@ export class CreditManagementService {
     logger.info('CreditManagementService.syncWithTokenCreditSystem', { userId });
 
     try {
-      // TODO: Implement sync logic
-      // 1. Get all credit allocations from Plan 109
-      // 2. Get user_credit_balance from Plan 112
-      // 3. Reconcile differences
-      // 4. Update balances as needed
+      // Calculate expected balance from allocations
+      const allocations = await this.prisma.creditAllocation.findMany({
+        where: { userId: userId },
+        select: { amount: true }
+      });
 
-      logger.info('CreditManagementService: Synced with token-credit system', { userId });
+      // Calculate total deductions
+      const deductions = await this.prisma.creditDeductionLedger.findMany({
+        where: { user_id: userId },
+        select: { amount: true }
+      });
+
+      const expectedBalance =
+        allocations.reduce((sum, a) => sum + a.amount, 0) -
+        deductions.reduce((sum, d) => sum + d.amount, 0);
+
+      // Update balance to match expected value
+      await this.prisma.userCreditBalance.upsert({
+        where: { user_id: userId },
+        update: {
+          amount: expectedBalance,
+          updated_at: new Date()
+        },
+        create: {
+          user_id: userId,
+          amount: expectedBalance,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      });
+
+      logger.info('CreditManagementService: Synced with token-credit system', {
+        userId,
+        expectedBalance
+      });
     } catch (error) {
       logger.error('CreditManagementService.syncWithTokenCreditSystem: Error', { error });
       throw error;

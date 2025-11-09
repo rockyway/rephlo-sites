@@ -83,6 +83,7 @@ export function createPlan111Router(): Router {
    */
   router.post(
     '/admin/coupons',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => couponController.createCoupon(req, res))
   );
@@ -93,6 +94,7 @@ export function createPlan111Router(): Router {
    */
   router.patch(
     '/admin/coupons/:id',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => couponController.updateCoupon(req, res))
   );
@@ -103,6 +105,7 @@ export function createPlan111Router(): Router {
    */
   router.delete(
     '/admin/coupons/:id',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => couponController.deleteCoupon(req, res))
   );
@@ -113,6 +116,7 @@ export function createPlan111Router(): Router {
    */
   router.get(
     '/admin/coupons',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => couponController.listCoupons(req, res))
   );
@@ -123,6 +127,7 @@ export function createPlan111Router(): Router {
    */
   router.get(
     '/admin/coupons/:id/redemptions',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => couponController.getCouponRedemptions(req, res))
   );
@@ -135,6 +140,7 @@ export function createPlan111Router(): Router {
    */
   router.post(
     '/admin/campaigns',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.createCampaign(req, res))
   );
@@ -145,6 +151,7 @@ export function createPlan111Router(): Router {
    */
   router.patch(
     '/admin/campaigns/:id',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.updateCampaign(req, res))
   );
@@ -155,6 +162,7 @@ export function createPlan111Router(): Router {
    */
   router.delete(
     '/admin/campaigns/:id',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.deleteCampaign(req, res))
   );
@@ -165,6 +173,7 @@ export function createPlan111Router(): Router {
    */
   router.get(
     '/admin/campaigns',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.listCampaigns(req, res))
   );
@@ -175,6 +184,7 @@ export function createPlan111Router(): Router {
    */
   router.get(
     '/admin/campaigns/:id/performance',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.getCampaignPerformance(req, res))
   );
@@ -185,6 +195,7 @@ export function createPlan111Router(): Router {
    */
   router.post(
     '/admin/campaigns/:id/assign-coupon',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.assignCoupon(req, res))
   );
@@ -195,6 +206,7 @@ export function createPlan111Router(): Router {
    */
   router.delete(
     '/admin/campaigns/:id/remove-coupon/:couponId',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.removeCoupon(req, res))
   );
@@ -207,6 +219,7 @@ export function createPlan111Router(): Router {
    */
   router.get(
     '/admin/fraud-detection',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => fraudController.listFraudEvents(req, res))
   );
@@ -217,6 +230,7 @@ export function createPlan111Router(): Router {
    */
   router.patch(
     '/admin/fraud-detection/:id/review',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => fraudController.reviewFraudEvent(req, res))
   );
@@ -227,6 +241,7 @@ export function createPlan111Router(): Router {
    */
   router.get(
     '/admin/fraud-detection/pending',
+    authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => fraudController.getPendingReviews(req, res))
   );
