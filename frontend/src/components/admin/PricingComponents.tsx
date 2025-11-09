@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import { AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

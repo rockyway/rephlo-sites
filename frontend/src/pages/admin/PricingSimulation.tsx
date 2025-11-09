@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import Button from '@/components/common/Button';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { MultiplierInput, ImpactPreview } from '@/components/admin/PricingComponents';
+import { MultiplierInput } from '@/components/admin/PricingComponents';
 import { pricingApi, type SimulationScenario, type SimulationResult } from '@/api/pricing';
 import { cn } from '@/lib/utils';
 

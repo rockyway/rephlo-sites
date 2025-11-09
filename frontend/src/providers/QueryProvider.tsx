@@ -36,7 +36,6 @@ export function QueryProvider({ children }: QueryProviderProps) {
       {import.meta.env.DEV && (
         <ReactQueryDevtools
           initialIsOpen={false}
-          position="bottom-right" as any
         />
       )}
     </QueryClientProvider>

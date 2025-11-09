@@ -7,6 +7,60 @@ import type {
   AuditLogResponse,
 } from '@/types/model-tier';
 
+// ============================================================================
+// Dashboard Analytics Types
+// ============================================================================
+
+export interface KPIChange {
+  value: number;
+  trend: 'up' | 'down' | 'neutral';
+}
+
+export interface KPIMetric {
+  value: number;
+  change?: KPIChange;
+}
+
+export interface TotalRevenueMetric extends KPIMetric {
+  breakdown: {
+    mrr: number;
+    perpetual: number;
+    upgrades: number;
+  };
+}
+
+export interface CouponRedemptionsMetric extends KPIMetric {
+  totalDiscount: number;
+}
+
+export interface DashboardKPIsResponse {
+  totalRevenue: TotalRevenueMetric;
+  activeUsers: KPIMetric;
+  creditsConsumed: KPIMetric;
+  couponRedemptions: CouponRedemptionsMetric;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: 'subscription' | 'license' | 'coupon' | 'credit' | 'device';
+  action: string;
+  description: string;
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+  metadata?: Record<string, any>;
+  timestamp: string;
+}
+
+export interface RecentActivityResponse {
+  events: ActivityEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /**
  * Admin API Client for Model Tier Management
  *
@@ -130,5 +184,38 @@ export const adminAPI = {
       '/admin/models/providers'
     );
     return response.data.providers;
+  },
+
+  // ============================================================================
+  // Dashboard Analytics APIs
+  // ============================================================================
+
+  /**
+   * Get cross-plan dashboard KPIs
+   * @param period - Time period for KPI calculation (7d, 30d, 90d, 1y)
+   */
+  getDashboardKPIs: async (
+    period: '7d' | '30d' | '90d' | '1y' = '30d'
+  ): Promise<DashboardKPIsResponse> => {
+    const response = await apiClient.get<DashboardKPIsResponse>(
+      '/admin/analytics/dashboard-kpis',
+      { params: { period } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get recent activity feed from multiple sources
+   * @param params - Pagination parameters
+   */
+  getRecentActivity: async (params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<RecentActivityResponse> => {
+    const response = await apiClient.get<RecentActivityResponse>(
+      '/admin/analytics/recent-activity',
+      { params }
+    );
+    return response.data;
   },
 };

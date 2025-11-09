@@ -1,12 +1,12 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export interface StatCard {
   label: string;
   value: string | number;
   change?: {
     value: number;
-    trend: 'up' | 'down';
+    trend: 'up' | 'down' | 'neutral';
   };
   icon?: React.ReactNode;
 }
@@ -60,16 +60,26 @@ const AdminStatsGrid: React.FC<AdminStatsGridProps> = ({ stats, columns = 4 }) =
           {stat.change && (
             <div
               className={`flex items-center gap-1 text-sm font-medium ${
-                stat.change.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                stat.change.trend === 'up'
+                  ? 'text-green-600'
+                  : stat.change.trend === 'down'
+                  ? 'text-red-600'
+                  : 'text-deep-navy-600'
               }`}
             >
               {stat.change.trend === 'up' ? (
                 <TrendingUp className="w-4 h-4" />
-              ) : (
+              ) : stat.change.trend === 'down' ? (
                 <TrendingDown className="w-4 h-4" />
+              ) : (
+                <Minus className="w-4 h-4" />
               )}
               <span>
-                {stat.change.trend === 'up' ? '+' : '-'}
+                {stat.change.trend === 'up'
+                  ? '+'
+                  : stat.change.trend === 'down'
+                  ? '-'
+                  : ''}
                 {Math.abs(stat.change.value)}%
               </span>
             </div>

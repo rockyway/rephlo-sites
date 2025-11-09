@@ -3,20 +3,14 @@ import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
   RefreshCw,
-  Search,
   Edit,
   Plus,
   Check,
   X,
   AlertCircle,
-  Calendar,
-  TrendingUp,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
-import Input from '@/components/common/Input';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
-import MetricsCard from '@/components/admin/MetricsCard';
-import { MultiplierInput, MarginBadge, PricingConfigForm } from '@/components/admin/PricingComponents';
+import { MarginBadge, PricingConfigForm } from '@/components/admin/PricingComponents';
 import { pricingApi, type PricingConfig } from '@/api/pricing';
 import { cn } from '@/lib/utils';
 
@@ -38,9 +32,9 @@ function PricingConfiguration() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Filter state
-  const [filterScope, setFilterScope] = useState<string>('');
-  const [filterTier, setFilterTier] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('active');
+  const [filterScope] = useState<string>('');
+  const [filterTier] = useState<string>('');
+  const [filterStatus] = useState<string>('active');
 
   // Dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);

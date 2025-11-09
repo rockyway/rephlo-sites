@@ -9,7 +9,6 @@ import {
   TrendingUp,
   TrendingDown,
   Bell,
-  BellOff,
   Eye,
   LineChart,
 } from 'lucide-react';
@@ -30,7 +29,7 @@ import { cn } from '@/lib/utils';
  */
 function VendorPriceMonitoring() {
   const [alerts, setAlerts] = useState<VendorPriceAlert[]>([]);
-  const [pricing, setPricing] = useState<VendorPricing[]>([]);
+  const [_pricing, setPricing] = useState<VendorPricing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
