@@ -179,7 +179,7 @@ export async function createOIDCProvider(
       AuthorizationCode: 600, // 10 minutes
       IdToken: 3600, // 1 hour
       // Dynamic RefreshToken TTL based on user role
-      RefreshToken: async (_ctx: KoaContextWithOIDC, _token, _client) => {
+      RefreshToken: async (_ctx: KoaContextWithOIDC, _token: any, _client: any) => {
         try {
           const userId = _ctx.oidc.session?.accountId;
           if (!userId) {
@@ -201,7 +201,7 @@ export async function createOIDCProvider(
         }
       },
       // Dynamic Session TTL based on user role
-      Session: async (_ctx: KoaContextWithOIDC, _session, _client) => {
+      Session: async (_ctx: KoaContextWithOIDC, _session: any, _client: any) => {
         try {
           const userId = _ctx.oidc.session?.accountId;
           if (!userId) {

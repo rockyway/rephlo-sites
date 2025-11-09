@@ -1476,3 +1476,58 @@ Successfully implemented complete Admin UI for Plan 111 (Coupon & Discount Code 
 
 Reference: docs/plan/111-coupon-discount-code-system.md, docs/plan/115-master-orchestration-plan-109-110-111.md
 
+
+---
+## Phase 5: Admin Session Management - November 9, 2025
+
+**Commits:** 032da91, 0745fe6
+**Status:** ✅ COMPLETE
+**Total Time:** ~17 hours (as planned)
+
+### Tasks Completed (5.1-5.5):
+
+1. **SessionManagementService** - Redis-based session tracking
+   - Session creation with metadata (IP, user agent, timestamps)
+   - Activity tracking and TTL validation
+   - Concurrent session limits (max 3 for admins)
+   - Comprehensive logging
+
+2. **Dynamic OIDC Session TTL** - Role-based session expiration
+   - Admin: 4 hours, User: 24 hours
+   - Admin refresh: 7 days, User refresh: 30 days
+   - Automatic TTL assignment based on role
+
+3. **Idle Timeout Middleware** - Activity-based session expiration
+   - Admin: 15 minutes idle timeout
+   - User: 24 hours idle timeout
+   - Automatic session invalidation
+
+4. **Force Logout on Role Change** - Security enhancement
+   - Invalidates all sessions when role changes
+   - Clears role and permission caches
+   - New endpoint: PATCH /admin/users/:id/role
+
+5. **Tests & Documentation**
+   - 14 unit tests for SessionManagementService
+   - Comprehensive completion report
+   - Deployment guide and configuration reference
+
+### Files Changed:
+- **New:** backend/src/services/session-management.service.ts
+- **New:** backend/src/middleware/idle-timeout.middleware.ts
+- **New:** backend/src/services/__tests__/session-management.service.test.ts
+- **New:** docs/progress/132-phase5-admin-session-management-completion.md
+- **Modified:** backend/src/container.ts (DI registration)
+- **Modified:** backend/src/services/user-management.service.ts (enhanced)
+- **Modified:** backend/src/routes/admin.routes.ts (new endpoint)
+- **Modified:** identity-provider/src/config/oidc.ts (dynamic TTL)
+
+### Security Impact:
+- 80% reduction in admin session attack window (24h → 4h)
+- Idle timeout prevents unattended access
+- Session limits prevent credential sharing
+- Force logout prevents privilege escalation
+
+### Build Status: ✅ SUCCESS (0 TypeScript errors)
+
+**All 5 Phases of Identity Provider Enhancement Complete!**
