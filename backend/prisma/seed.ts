@@ -1109,6 +1109,425 @@ async function main() {
   });
   console.log(`  ✓ Created proration event: ${prorationEvent.fromTier} → ${prorationEvent.toTier} (Net charge: $${prorationEvent.netChargeUsd})`);
 
+  // =============================================================================
+  // Seed Coupon Campaigns (Plan 111)
+  // =============================================================================
+  console.log('\n[11/12] Seeding Coupon Campaigns...');
+
+  // Campaign 1: Black Friday 2025
+  const blackFridayCampaign = await prisma.couponCampaign.create({
+    data: {
+      campaignName: 'Black Friday 2025',
+      campaignType: 'seasonal',
+      startDate: new Date('2025-11-29T00:00:00Z'),
+      endDate: new Date('2025-12-02T23:59:59Z'),
+      budgetLimitUsd: 50000.00,
+      totalSpentUsd: 0,
+      targetTier: null, // All tiers
+      isActive: true,
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created campaign: ${blackFridayCampaign.campaignName} (Budget: $${blackFridayCampaign.budgetLimitUsd})`);
+
+  // Campaign 2: Summer Sale 2025
+  const summerSaleCampaign = await prisma.couponCampaign.create({
+    data: {
+      campaignName: 'Summer Sale 2025',
+      campaignType: 'seasonal',
+      startDate: new Date('2025-07-01T00:00:00Z'),
+      endDate: new Date('2025-07-31T23:59:59Z'),
+      budgetLimitUsd: 30000.00,
+      totalSpentUsd: 0,
+      targetTier: 'pro', // Pro tier only
+      isActive: true,
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created campaign: ${summerSaleCampaign.campaignName} (Budget: $${summerSaleCampaign.budgetLimitUsd})`);
+
+  // Campaign 3: Win-Back Campaign
+  const winBackCampaign = await prisma.couponCampaign.create({
+    data: {
+      campaignName: 'Win Back Churned Users',
+      campaignType: 'win_back',
+      startDate: new Date('2025-01-01T00:00:00Z'),
+      endDate: new Date('2025-12-31T23:59:59Z'),
+      budgetLimitUsd: 999999.00, // Unlimited budget
+      totalSpentUsd: 0,
+      targetTier: null, // All tiers
+      isActive: true,
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created campaign: ${winBackCampaign.campaignName} (Budget: Unlimited)`);
+
+  // Campaign 4: Referral Program
+  const referralCampaign = await prisma.couponCampaign.create({
+    data: {
+      campaignName: 'Referral Bonus Program',
+      campaignType: 'referral',
+      startDate: new Date('2025-01-01T00:00:00Z'),
+      endDate: new Date('2025-12-31T23:59:59Z'),
+      budgetLimitUsd: 100000.00,
+      totalSpentUsd: 0,
+      targetTier: null, // All tiers
+      isActive: true,
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created campaign: ${referralCampaign.campaignName} (Budget: $${referralCampaign.budgetLimitUsd})`);
+
+  // Campaign 5: BYOK Migration
+  const byokCampaign = await prisma.couponCampaign.create({
+    data: {
+      campaignName: 'Perpetual License Migration',
+      campaignType: 'early_bird',
+      startDate: new Date('2025-01-01T00:00:00Z'),
+      endDate: new Date('2025-12-31T23:59:59Z'),
+      budgetLimitUsd: 999999.00, // Unlimited
+      totalSpentUsd: 0,
+      targetTier: 'enterprise', // Enterprise only
+      isActive: true,
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created campaign: ${byokCampaign.campaignName} (Budget: Unlimited)`);
+
+  // =============================================================================
+  // Seed Coupons (Plan 111)
+  // =============================================================================
+  console.log('\n[12/13] Seeding Coupons...');
+
+  // Coupon 1: Black Friday - 25% off first 3 months
+  const blackFridayCoupon = await prisma.coupon.create({
+    data: {
+      code: 'BLACKFRIDAY25',
+      couponType: 'percentage_discount',
+      discountValue: 25.00,
+      discountType: 'percentage',
+      currency: 'usd',
+      maxUses: 1000,
+      maxUsesPerUser: 1,
+      minPurchaseAmount: 0,
+      tierEligibility: ['free', 'pro', 'enterprise'],
+      billingCycles: ['monthly', 'annual'],
+      validFrom: new Date('2025-11-29T00:00:00Z'),
+      validUntil: new Date('2025-12-02T23:59:59Z'),
+      isActive: true,
+      campaignId: blackFridayCampaign.id,
+      description: 'Black Friday Special: 25% off your first 3 months!',
+      internalNotes: 'Limited to 1000 redemptions. Target: New subscribers during BF weekend.',
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created coupon: ${blackFridayCoupon.code} (${blackFridayCoupon.discountValue}% off)`);
+
+  // Coupon 2: Summer Sale - 20% off annual plans
+  const summerSaleCoupon = await prisma.coupon.create({
+    data: {
+      code: 'SUMMER2025',
+      couponType: 'percentage_discount',
+      discountValue: 20.00,
+      discountType: 'percentage',
+      currency: 'usd',
+      maxUses: 500,
+      maxUsesPerUser: 1,
+      minPurchaseAmount: 100.00, // Minimum $100 purchase (annual plans)
+      tierEligibility: ['pro', 'enterprise'],
+      billingCycles: ['annual'],
+      validFrom: new Date('2025-07-01T00:00:00Z'),
+      validUntil: new Date('2025-07-31T23:59:59Z'),
+      isActive: true,
+      campaignId: summerSaleCampaign.id,
+      description: 'Summer Sale: 20% off all annual Pro plans!',
+      internalNotes: 'Annual plans only. Min $100 purchase. Pro/Enterprise tiers.',
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created coupon: ${summerSaleCoupon.code} (${summerSaleCoupon.discountValue}% off annual)`);
+
+  // Coupon 3: Win-Back - 50% off first month
+  const winBackCoupon = await prisma.coupon.create({
+    data: {
+      code: 'COMEBACK50',
+      couponType: 'percentage_discount',
+      discountValue: 50.00,
+      discountType: 'percentage',
+      currency: 'usd',
+      maxUses: null, // Unlimited uses
+      maxUsesPerUser: 1,
+      minPurchaseAmount: 0,
+      tierEligibility: ['free', 'pro', 'enterprise'],
+      billingCycles: ['monthly'],
+      validFrom: new Date('2025-01-01T00:00:00Z'),
+      validUntil: new Date('2025-12-31T23:59:59Z'),
+      isActive: true,
+      campaignId: winBackCampaign.id,
+      description: 'We want you back! 50% off your first month when you resubscribe.',
+      internalNotes: 'Targeted at users who cancelled in last 90 days. Custom validation rule required.',
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created coupon: ${winBackCoupon.code} (${winBackCoupon.discountValue}% off first month)`);
+
+  // Coupon 4: Referral - $20 credit for both parties
+  const referralCoupon = await prisma.coupon.create({
+    data: {
+      code: 'REFER20',
+      couponType: 'fixed_amount_discount',
+      discountValue: 20.00,
+      discountType: 'credits',
+      currency: 'usd',
+      maxUses: null, // Unlimited uses
+      maxUsesPerUser: 5, // Max 5 referrals per user
+      minPurchaseAmount: 0,
+      tierEligibility: ['free', 'pro', 'enterprise'],
+      billingCycles: ['monthly', 'annual'],
+      validFrom: new Date('2025-01-01T00:00:00Z'),
+      validUntil: new Date('2025-12-31T23:59:59Z'),
+      isActive: true,
+      campaignId: referralCampaign.id,
+      description: 'Refer a friend and you both get $20 in credits!',
+      internalNotes: 'Max 5 referrals per user. $20 credit to both referrer and referee.',
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created coupon: ${referralCoupon.code} ($${referralCoupon.discountValue} credit)`);
+
+  // Coupon 5: BYOK Migration - 100% off first month + perpetual license
+  const byokCoupon = await prisma.coupon.create({
+    data: {
+      code: 'BYOK2025',
+      couponType: 'byok_migration',
+      discountValue: 100.00,
+      discountType: 'percentage',
+      currency: 'usd',
+      maxUses: null, // Unlimited
+      maxUsesPerUser: 1,
+      minPurchaseAmount: 199.00, // Perpetual license cost
+      tierEligibility: ['enterprise'],
+      billingCycles: ['monthly'],
+      validFrom: new Date('2025-01-01T00:00:00Z'),
+      validUntil: new Date('2025-12-31T23:59:59Z'),
+      isActive: true,
+      campaignId: byokCampaign.id,
+      description: 'Migrate to Perpetual Plan: First month free + lifetime license!',
+      internalNotes: 'Grants perpetual license. Enterprise tier only. Requires payment method for future upgrades.',
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created coupon: ${byokCoupon.code} (${byokCoupon.discountValue}% off + perpetual license)`);
+
+  // Coupon 6: Early Bird - $79 upgrade to v2.0
+  const earlyBirdCoupon = await prisma.coupon.create({
+    data: {
+      code: 'EARLYBIRD79',
+      couponType: 'tier_specific_discount',
+      discountValue: 20.00, // $20 off the standard $99 upgrade
+      discountType: 'fixed_amount',
+      currency: 'usd',
+      maxUses: 500,
+      maxUsesPerUser: 1,
+      minPurchaseAmount: 79.00,
+      tierEligibility: ['enterprise'], // Perpetual license holders
+      billingCycles: ['monthly'],
+      validFrom: new Date('2025-01-01T00:00:00Z'),
+      validUntil: new Date('2025-03-31T23:59:59Z'),
+      isActive: true,
+      campaignId: byokCampaign.id,
+      description: 'Early Bird Special: Upgrade to v2.0 for just $79 (save $20)!',
+      internalNotes: 'Standard upgrade is $99. Early bird discount: $79. Limited to 500 users.',
+      createdBy: adminUser.id,
+    },
+  });
+  console.log(`  ✓ Created coupon: ${earlyBirdCoupon.code} ($${earlyBirdCoupon.discountValue} off v2.0 upgrade)`);
+
+  // =============================================================================
+  // Seed Coupon Usage Limits (Plan 111)
+  // =============================================================================
+  console.log('\n[13/14] Seeding Coupon Usage Limits...');
+
+  const coupons = [blackFridayCoupon, summerSaleCoupon, winBackCoupon, referralCoupon, byokCoupon, earlyBirdCoupon];
+  for (const coupon of coupons) {
+    await prisma.couponUsageLimit.create({
+      data: {
+        couponId: coupon.id,
+        totalUses: 0,
+        uniqueUsers: 0,
+        totalDiscountAppliedUsd: 0,
+        lastUsedAt: null,
+      },
+    });
+  }
+  console.log(`  ✓ Created usage limit trackers for ${coupons.length} coupons`);
+
+  // =============================================================================
+  // Seed Coupon Validation Rules (Plan 111)
+  // =============================================================================
+  console.log('\n[14/15] Seeding Coupon Validation Rules...');
+
+  // Rule 1: Win-Back coupon - Only for users who cancelled in last 90 days
+  const winBackRule = await prisma.couponValidationRule.create({
+    data: {
+      couponId: winBackCoupon.id,
+      ruleType: 'exclude_refunded_users',
+      ruleValue: {
+        days: 90,
+        description: 'Only users who cancelled in last 90 days'
+      },
+      isActive: true,
+    },
+  });
+  console.log(`  ✓ Created validation rule: Win-back (exclude recent cancellations)`);
+
+  // Rule 2: Referral - Require first-time users only
+  const referralRule = await prisma.couponValidationRule.create({
+    data: {
+      couponId: referralCoupon.id,
+      ruleType: 'first_time_user_only',
+      ruleValue: {
+        description: 'Only new users who have never subscribed'
+      },
+      isActive: true,
+    },
+  });
+  console.log(`  ✓ Created validation rule: Referral (first-time users only)`);
+
+  // Rule 3: BYOK - Require payment method on file
+  const byokPaymentRule = await prisma.couponValidationRule.create({
+    data: {
+      couponId: byokCoupon.id,
+      ruleType: 'require_payment_method',
+      ruleValue: {
+        description: 'Requires valid payment method for future upgrades'
+      },
+      isActive: true,
+    },
+  });
+  console.log(`  ✓ Created validation rule: BYOK (payment method required)`);
+
+  // Rule 4: Enterprise-only email domains
+  const enterpriseDomainRule = await prisma.couponValidationRule.create({
+    data: {
+      couponId: byokCoupon.id,
+      ruleType: 'specific_email_domain',
+      ruleValue: {
+        domains: ['acme.com', 'techcorp.io', 'enterprise.org'],
+        description: 'Only specific enterprise email domains'
+      },
+      isActive: false, // Disabled by default, enable for specific campaigns
+    },
+  });
+  console.log(`  ✓ Created validation rule: Enterprise domains (disabled)`);
+
+  // =============================================================================
+  // Seed Sample Coupon Redemptions (Plan 111)
+  // =============================================================================
+  console.log('\n[15/16] Seeding Sample Coupon Redemptions...');
+
+  // Sample redemption 1: Developer successfully redeemed Black Friday coupon
+  const redemption1 = await prisma.couponRedemption.create({
+    data: {
+      couponId: blackFridayCoupon.id,
+      userId: developerUser.id,
+      subscriptionId: proSubscriptionMonetization.id,
+      redemptionDate: new Date('2025-11-29T10:00:00Z'),
+      discountAppliedUsd: 4.75, // 25% off $19 = $4.75
+      originalAmountUsd: 19.00,
+      finalAmountUsd: 14.25,
+      redemptionStatus: 'success',
+      failureReason: null,
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    },
+  });
+  console.log(`  ✓ Created redemption: ${blackFridayCoupon.code} by ${developerUser.email} (SUCCESS)`);
+
+  // Sample redemption 2: Pro user redeemed referral coupon
+  const redemption2 = await prisma.couponRedemption.create({
+    data: {
+      couponId: referralCoupon.id,
+      userId: proUser.id,
+      subscriptionId: proSubscriptionMonetization.id,
+      redemptionDate: new Date('2025-11-15T14:30:00Z'),
+      discountAppliedUsd: 20.00, // $20 credit
+      originalAmountUsd: 19.00,
+      finalAmountUsd: 0.00, // Free first month due to credit
+      redemptionStatus: 'success',
+      failureReason: null,
+      ipAddress: '192.168.1.101',
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
+    },
+  });
+  console.log(`  ✓ Created redemption: ${referralCoupon.code} by ${proUser.email} (SUCCESS)`);
+
+  // Sample redemption 3: Failed redemption (coupon expired)
+  const redemption3 = await prisma.couponRedemption.create({
+    data: {
+      couponId: summerSaleCoupon.id,
+      userId: designerUser.id,
+      subscriptionId: null, // No subscription created due to failure
+      redemptionDate: new Date('2025-08-01T10:00:00Z'),
+      discountAppliedUsd: 0,
+      originalAmountUsd: 190.00,
+      finalAmountUsd: 190.00,
+      redemptionStatus: 'failed',
+      failureReason: 'Coupon expired. Valid until 2025-07-31 23:59:59 UTC.',
+      ipAddress: '192.168.1.102',
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64)',
+    },
+  });
+  console.log(`  ✓ Created redemption: ${summerSaleCoupon.code} by ${designerUser.email} (FAILED - expired)`);
+
+  // Update coupon usage limits to reflect redemptions
+  await prisma.couponUsageLimit.update({
+    where: { couponId: blackFridayCoupon.id },
+    data: {
+      totalUses: 1,
+      uniqueUsers: 1,
+      totalDiscountAppliedUsd: 4.75,
+      lastUsedAt: new Date('2025-11-29T10:00:00Z'),
+    },
+  });
+
+  await prisma.couponUsageLimit.update({
+    where: { couponId: referralCoupon.id },
+    data: {
+      totalUses: 1,
+      uniqueUsers: 1,
+      totalDiscountAppliedUsd: 20.00,
+      lastUsedAt: new Date('2025-11-15T14:30:00Z'),
+    },
+  });
+
+  // =============================================================================
+  // Seed Coupon Fraud Detection Events (Plan 111)
+  // =============================================================================
+  console.log('\n[16/17] Seeding Coupon Fraud Detection Events...');
+
+  // Sample fraud event: Velocity abuse (same user, multiple attempts)
+  const fraudEvent = await prisma.couponFraudDetection.create({
+    data: {
+      couponId: blackFridayCoupon.id,
+      userId: designerUser.id,
+      detectionType: 'velocity_abuse',
+      severity: 'medium',
+      detectedAt: new Date('2025-11-29T12:00:00Z'),
+      details: {
+        attempts: 5,
+        timeWindow: '10 minutes',
+        ipAddresses: ['192.168.1.105', '192.168.1.106'],
+        description: 'User attempted to redeem coupon 5 times in 10 minutes from 2 different IPs'
+      },
+      isFlagged: true,
+      reviewedBy: null,
+      reviewedAt: null,
+      resolution: null,
+    },
+  });
+  console.log(`  ✓ Created fraud detection event: Velocity abuse (medium severity)`);
+
   console.log('\n✅ Database seeding completed successfully!');
   console.log('\n=============================================================================');
   console.log('SEEDED DATA SUMMARY');
@@ -1132,6 +1551,13 @@ async function main() {
   console.log(`  💻 License Activations: 2 (2 devices for developer)`);
   console.log(`  📦 Version Upgrades: 1 (v1.5.2 → v2.0.0, early bird $79)`);
   console.log(`  💸 Proration Events: 1 (pro → pro_max upgrade, $15 net charge)`);
+  console.log('\n  Plan 111 - Coupon & Discount System:');
+  console.log(`  🎟️  Coupon Campaigns: 5 (Black Friday, Summer Sale, Win-Back, Referral, BYOK)`);
+  console.log(`  🎫 Coupons: 6 (BLACKFRIDAY25, SUMMER2025, COMEBACK50, REFER20, BYOK2025, EARLYBIRD79)`);
+  console.log(`  📊 Coupon Usage Limits: 6 (tracking for all coupons)`);
+  console.log(`  ✅ Validation Rules: 4 (win-back, referral, BYOK, enterprise domains)`);
+  console.log(`  💰 Redemptions: 3 (2 successful, 1 failed)`);
+  console.log(`  🚨 Fraud Detection Events: 1 (velocity abuse - medium severity)`);
 
   console.log('\n=============================================================================');
   console.log('TEST USER CREDENTIALS');

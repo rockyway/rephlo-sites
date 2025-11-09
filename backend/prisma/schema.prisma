@@ -502,6 +502,9 @@ model SubscriptionMonetization {
   // Plan 110 Perpetual Licensing Relations
   prorationEvents ProrationEvent[]
 
+  // Plan 111 Coupon System Relations
+  couponRedemptions CouponRedemption[]
+
   @@index([userId])
   @@index([status])
   @@index([tier])
@@ -935,4 +938,364 @@ model ProrationEvent {
   @@index([effectiveDate])
   @@index([status])
   @@map("proration_event")
+}
+
+// =============================================================================
+// COUPON & DISCOUNT CODE SYSTEM (Plan 111)
+// Integrated with Subscription Monetization (Plan 109) and Perpetual Licensing (Plan 110)
+// =============================================================================
+
+// Enums for Coupon System
+enum CouponType {
+  percentage_discount // Percentage off subscription price
+  fixed_amount_discount // Fixed dollar amount off
+  tier_specific_discount // Discount for specific tier upgrades
+  duration_bonus // Free additional months
+  byok_migration // Perpetual Plan migration discount
+
+  @@map("coupon_type")
+}
+
+enum DiscountType {
+  percentage // % discount (e.g., 25%)
+  fixed_amount // $ discount (e.g., $20)
+  credits // Credit allocation (e.g., 1000 credits)
+  months_free // Free months (e.g., 1 month)
+
+  @@map("discount_type")
+}
+
+enum CampaignType {
+  seasonal // Holiday campaigns (Black Friday, July 4)
+  win_back // Churned user re-engagement
+  referral // Referral program
+  promotional // Marketing campaigns
+  early_bird // New product launch
+
+  @@map("campaign_type")
+}
+
+enum RedemptionStatus {
+  success // Coupon successfully redeemed
+  failed // Redemption failed (validation error)
+  reversed // Redemption reversed (refund/chargeback)
+  pending // Redemption pending payment
+
+  @@map("redemption_status")
+}
+
+enum FraudDetectionType {
+  velocity_abuse // Multiple redemptions in short time
+  ip_switching // Same user, multiple IPs
+  bot_pattern // Automated bot-like behavior
+  device_fingerprint_mismatch // Device fingerprint inconsistency
+  stacking_abuse // Coupon stacking attempts
+
+  @@map("fraud_detection_type")
+}
+
+enum FraudSeverity {
+  low // Low risk, log only
+  medium // Medium risk, flag for review
+  high // High risk, block redemption
+  critical // Critical risk, ban user
+
+  @@map("fraud_severity")
+}
+
+enum ValidationRuleType {
+  first_time_user_only // Only for users who have never subscribed
+  specific_email_domain // Only for specific email domains
+  minimum_credit_balance // Requires minimum credit balance
+  exclude_refunded_users // Excludes users with refunds
+  require_payment_method // Requires valid payment method on file
+
+  @@map("validation_rule_type")
+}
+
+// Coupon Table
+// Core coupon configuration with pricing, limits, and tier eligibility
+// Links to campaigns for budget tracking and analytics
+model Coupon {
+  id   String     @id @default(uuid()) @db.Uuid
+  code String     @unique @map("code") @db.VarChar(50)
+  // Uppercase only: "JULY4LIBERTY", "BLACKFRIDAY50"
+  // Regex: ^[A-Z0-9]{4,50}$
+
+  // Coupon Type & Discount Configuration
+  couponType    CouponType   @map("coupon_type")
+  discountValue Decimal      @map("discount_value") @db.Decimal(10, 2)
+  // For percentage: 25.00 = 25%, For fixed_amount: 20.00 = $20
+  discountType  DiscountType @map("discount_type")
+  currency      String       @default("usd") @db.VarChar(3)
+
+  // Usage Limits
+  maxUses        Int? @map("max_uses")
+  // NULL = unlimited, otherwise max total redemptions
+  maxUsesPerUser Int  @default(1) @map("max_uses_per_user")
+  // Default: 1 use per user
+
+  // Eligibility Restrictions
+  minPurchaseAmount Decimal?              @map("min_purchase_amount") @db.Decimal(10, 2)
+  // Minimum cart value required
+  tierEligibility   SubscriptionTier[]    @default([free, pro, enterprise]) @map("tier_eligibility")
+  // Tiers eligible to use this coupon
+  billingCycles     String[]              @default(["monthly", "annual"]) @map("billing_cycles")
+  // Applicable billing cycles
+
+  // Validity Period
+  validFrom  DateTime @map("valid_from")
+  validUntil DateTime @map("valid_until")
+  isActive   Boolean  @default(true) @map("is_active")
+
+  // Campaign Association
+  campaignId String? @map("campaign_id") @db.Uuid
+
+  // Description & Metadata
+  description   String? @db.Text
+  internalNotes String? @map("internal_notes") @db.Text
+
+  // Audit Fields
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  campaign           CouponCampaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  redemptions        CouponRedemption[]
+  usageLimits        CouponUsageLimit?
+  validationRules    CouponValidationRule[]
+  fraudDetections    CouponFraudDetection[]
+  analyticsSnapshots CouponAnalyticsSnapshot[]
+  campaignCoupons    CampaignCoupon[]
+
+  @@index([code, isActive])
+  @@index([validFrom, validUntil, isActive])
+  @@index([campaignId])
+  @@index([couponType])
+  @@map("coupon")
+}
+
+// Coupon Campaign Table
+// Manages promotional campaigns that group related coupons
+// Tracks budget limits and spending for ROI analysis
+model CouponCampaign {
+  id           String       @id @default(uuid()) @db.Uuid
+  campaignName String       @map("campaign_name") @db.VarChar(255)
+  campaignType CampaignType @map("campaign_type")
+
+  // Timing
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+
+  // Budget Management
+  budgetLimitUsd Decimal @map("budget_limit_usd") @db.Decimal(12, 2)
+  totalSpentUsd  Decimal @default(0) @map("total_spent_usd") @db.Decimal(12, 2)
+
+  // Targeting
+  targetTier SubscriptionTier? @map("target_tier")
+  // NULL = all tiers, otherwise specific tier
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Audit Fields
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  coupons         Coupon[]
+  campaignCoupons CampaignCoupon[]
+
+  @@index([campaignType, isActive])
+  @@index([startDate, endDate])
+  @@index([targetTier])
+  @@map("coupon_campaign")
+}
+
+// Campaign Coupon Junction Table
+// Links campaigns to coupons (many-to-many relationship)
+// Allows coupons to be part of multiple campaigns
+model CampaignCoupon {
+  id         String @id @default(uuid()) @db.Uuid
+  campaignId String @map("campaign_id") @db.Uuid
+  couponId   String @map("coupon_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  campaign CouponCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  coupon   Coupon         @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, couponId], name: "unique_campaign_coupon")
+  @@index([campaignId])
+  @@index([couponId])
+  @@map("campaign_coupon")
+}
+
+// Coupon Redemption Table
+// Immutable ledger of all coupon usage with fraud detection metadata
+// Links to subscription_monetization for discount application
+model CouponRedemption {
+  id             String  @id @default(uuid()) @db.Uuid
+  couponId       String  @map("coupon_id") @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Redemption Details
+  redemptionDate DateTime @default(now()) @map("redemption_date")
+
+  // Pricing Details
+  discountAppliedUsd  Decimal @map("discount_applied_usd") @db.Decimal(10, 2)
+  originalAmountUsd   Decimal @map("original_amount_usd") @db.Decimal(10, 2)
+  finalAmountUsd      Decimal @map("final_amount_usd") @db.Decimal(10, 2)
+
+  // Redemption Status
+  redemptionStatus RedemptionStatus @map("redemption_status")
+  failureReason    String?          @map("failure_reason") @db.Text
+
+  // Fraud Detection Metadata
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  coupon       Coupon                    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([couponId, userId, redemptionDate])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([redemptionStatus])
+  @@index([redemptionDate])
+  @@map("coupon_redemption")
+}
+
+// Coupon Usage Limit Table
+// Tracks real-time usage counts per coupon for limit enforcement
+// Auto-incremented via triggers/transactions on redemption
+model CouponUsageLimit {
+  id       String @id @default(uuid()) @db.Uuid
+  couponId String @unique @map("coupon_id") @db.Uuid
+
+  // Usage Counters
+  totalUses              Int @default(0) @map("total_uses")
+  uniqueUsers            Int @default(0) @map("unique_users")
+  totalDiscountAppliedUsd Decimal @default(0) @map("total_discount_applied_usd") @db.Decimal(12, 2)
+
+  // Last Activity
+  lastUsedAt DateTime? @map("last_used_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([totalUses])
+  @@index([lastUsedAt])
+  @@map("coupon_usage_limit")
+}
+
+// Coupon Fraud Detection Table
+// Logs fraud detection events for security monitoring and pattern analysis
+// Integrates with CouponValidationService for real-time blocking
+model CouponFraudDetection {
+  id       String @id @default(uuid()) @db.Uuid
+  couponId String @map("coupon_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+
+  // Detection Details
+  detectionType FraudDetectionType @map("detection_type")
+  severity      FraudSeverity      @map("severity")
+  detectedAt    DateTime           @default(now()) @map("detected_at")
+
+  // Event Details (JSONB for flexibility)
+  details Json @db.Json
+  // Example: {"ip_addresses": ["1.2.3.4", "5.6.7.8"], "velocity": 5, "time_window": "1h"}
+
+  // Flag Status
+  isFlagged Boolean @default(false) @map("is_flagged")
+
+  // Review Status
+  reviewedBy String?   @map("reviewed_by") @db.Uuid
+  reviewedAt DateTime? @map("reviewed_at")
+  resolution String?   @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, severity, isFlagged])
+  @@index([userId])
+  @@index([detectionType])
+  @@index([detectedAt])
+  @@map("coupon_fraud_detection")
+}
+
+// Coupon Validation Rule Table
+// Custom validation rules per coupon for fine-grained eligibility control
+// Extensible via JSONB for rule_value configuration
+model CouponValidationRule {
+  id       String             @id @default(uuid()) @db.Uuid
+  couponId String             @map("coupon_id") @db.Uuid
+  ruleType ValidationRuleType @map("rule_type")
+
+  // Rule Configuration (JSONB for flexibility)
+  ruleValue Json @map("rule_value") @db.Json
+  // Examples:
+  // first_time_user_only: {}
+  // specific_email_domain: {"domains": ["company.com", "example.org"]}
+  // minimum_credit_balance: {"min_balance": 1000}
+  // exclude_refunded_users: {"days": 90}
+  // require_payment_method: {}
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, ruleType, isActive])
+  @@map("coupon_validation_rule")
+}
+
+// Coupon Analytics Snapshot Table
+// Daily aggregated metrics for campaign performance tracking
+// Generated via cron job for efficient dashboard queries
+model CouponAnalyticsSnapshot {
+  id           String @id @default(uuid()) @db.Uuid
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+
+  // Aggregated Metrics
+  totalCouponsActive          Int     @map("total_coupons_active")
+  totalRedemptions            Int     @map("total_redemptions")
+  totalDiscountValueUsd       Decimal @map("total_discount_value_usd") @db.Decimal(12, 2)
+  avgDiscountPerRedemptionUsd Decimal @map("avg_discount_per_redemption_usd") @db.Decimal(10, 2)
+
+  // Top Performing Coupon
+  topCouponCode String? @map("top_coupon_code") @db.VarChar(50)
+
+  // Conversion Rate (%)
+  conversionRate Decimal @map("conversion_rate") @db.Decimal(5, 2)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  coupon Coupon? @relation(fields: [topCouponCode], references: [code])
+
+  @@unique([snapshotDate])
+  @@index([snapshotDate])
+  @@map("coupon_analytics_snapshot")
 }
