@@ -183,11 +183,12 @@ export async function createApp(): Promise<Application> {
 
   // Apply user-based rate limiting to REST API endpoints (authenticated)
   // Tier-based limits will be applied based on user's subscription
+  // NOTE: Admin routes are NOT rate limited - admins are trusted users
   const userRateLimiter = createUserRateLimiter();
   app.use('/v1', userRateLimiter);
-  app.use('/admin', userRateLimiter);
+  // app.use('/admin', userRateLimiter); // DISABLED - Admin routes should not be rate limited
 
-  logger.info('Rate limiting middleware configured');
+  logger.info('Rate limiting middleware configured (admin routes excluded)');
 
   // ===== 9. Routes =====
 

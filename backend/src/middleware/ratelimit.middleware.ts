@@ -154,12 +154,14 @@ function rateLimitHandler(req: Request, res: Response): void {
   const resetTime = Math.ceil(now / 60000) * 60000; // Next minute boundary
   const retryAfter = Math.ceil((resetTime - now) / 1000);
 
+  const fullPath = (req.originalUrl || req.url).split('?')[0];
+
   logger.warn('Rate limit exceeded', {
     userId: user?.id,
     ip: req.ip,
     tier,
     limit,
-    endpoint: `${req.method} ${req.path}`,
+    endpoint: `${req.method} ${fullPath}`,
   });
 
   res.status(429).json({
@@ -181,18 +183,25 @@ function rateLimitHandler(req: Request, res: Response): void {
  * Skip rate limiting for certain requests
  */
 function shouldSkipRateLimit(req: Request): boolean {
+  // Use originalUrl to get the full path including mount prefix
+  // req.path only contains the path relative to the mount point
+  const fullPath = (req.originalUrl || req.url).split('?')[0]; // Strip query string
+
   // Skip rate limiting for health checks
-  if (req.path.startsWith('/health')) {
+  if (fullPath.startsWith('/health')) {
     return true;
   }
 
   // Skip for OIDC discovery endpoints (must be publicly accessible)
-  if (req.path.startsWith('/.well-known')) {
+  if (fullPath.startsWith('/.well-known')) {
     return true;
   }
 
   // Skip for admin endpoints (admins have their own authentication checks)
-  if (req.path.startsWith('/admin')) {
+  if (fullPath.startsWith('/admin')) {
+    logger.debug('Rate limit skipped for admin endpoint', {
+      endpoint: `${req.method} ${fullPath}`,
+    });
     return true;
   }
 
@@ -202,7 +211,7 @@ function shouldSkipRateLimit(req: Request): boolean {
   if (bypassHeader === process.env.RATE_LIMIT_BYPASS_SECRET) {
     logger.debug('Rate limit bypassed via header', {
       ip: req.ip,
-      endpoint: `${req.method} ${req.path}`,
+      endpoint: `${req.method} ${fullPath}`,
     });
     return true;
   }
@@ -291,10 +300,11 @@ export function createIPRateLimiter(
     skip: shouldSkipRateLimit,
     handler: (req: Request, res: Response): void => {
       const retryAfter = Math.ceil((60 * 1000 - (Date.now() % (60 * 1000))) / 1000);
+      const fullPath = (req.originalUrl || req.url).split('?')[0];
 
       logger.warn('IP rate limit exceeded', {
         ip: req.ip,
-        endpoint: `${req.method} ${req.path}`,
+        endpoint: `${req.method} ${fullPath}`,
       });
 
       res.status(429).json({
