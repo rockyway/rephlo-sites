@@ -330,19 +330,29 @@ END $$;
 -- UPDATE MIGRATION TRACKING
 -- =============================================================================
 
--- Mark this migration as applied in Prisma's tracking table
-INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count")
-VALUES (
-    gen_random_uuid()::text,
-    '8e8f4e4c5d6b7a8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c',
-    NOW(),
-    '20251109000000_add_token_credit_conversion_system',
-    NULL,
-    NULL,
-    NOW(),
-    1
-)
-ON CONFLICT (migration_name) DO NOTHING;
+-- Mark this migration as applied in Prisma's tracking table (only if not already recorded)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM "_prisma_migrations"
+        WHERE migration_name = '20251109000000_add_token_credit_conversion_system'
+    ) THEN
+        INSERT INTO "_prisma_migrations" ("id", "checksum", "finished_at", "migration_name", "logs", "rolled_back_at", "started_at", "applied_steps_count")
+        VALUES (
+            gen_random_uuid()::text,
+            '8e8f4e4c5d6b7a8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c',
+            NOW(),
+            '20251109000000_add_token_credit_conversion_system',
+            NULL,
+            NULL,
+            NOW(),
+            1
+        );
+        RAISE NOTICE 'Migration 20251109000000_add_token_credit_conversion_system marked as applied';
+    ELSE
+        RAISE NOTICE 'Migration 20251109000000_add_token_credit_conversion_system already recorded';
+    END IF;
+END $$;
 
 COMMIT;
 
