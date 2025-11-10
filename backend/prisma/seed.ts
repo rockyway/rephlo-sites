@@ -139,10 +139,10 @@ const USER_PERSONAS = [
     role: 'admin',
     emailVerified: true,
     authProvider: 'local',
-    mfaEnabled: true,
+    mfaEnabled: false, // Disabled MFA for OAuth login testing
     subscriptionTier: 'pro' as const,
     subscriptionStatus: 'active' as const,
-    description: 'Admin user with MFA enabled',
+    description: 'Admin user for OAuth testing (MFA disabled)',
   },
   {
     email: 'google.user@example.com',
