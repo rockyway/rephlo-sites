@@ -389,8 +389,9 @@ model Subscription {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  credits Credit[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits           Credit[]
+  tokenUsageLedgers TokenUsageLedger[]
 
   @@index([userId])
   @@index([status])
@@ -651,10 +652,6 @@ model SubscriptionMonetization {
 
   // Plan 111 Coupon System Relations
   couponRedemptions CouponRedemption[]
-
-  // Plan 112 Token-to-Credit Conversion Relations
-  tokenUsageLedger      TokenUsageLedger[]
-  creditDeductionLedger CreditDeductionLedger[]
 
   @@index([userId])
   @@index([status])
@@ -1532,23 +1529,50 @@ model PricingConfig {
 }
 
 // Model Provider Pricing Table
-// Tracks vendor token pricing with historical tracking
+// Tracks vendor token pricing with historical tracking and change detection
 model ModelProviderPricing {
-  id                             String   @id @default(uuid()) @db.Uuid
-  provider_id                    String   @map("provider_id") @db.Uuid
-  model_name                     String   @db.VarChar(200)
-  input_token_price_per_million  Decimal  @db.Decimal(10, 6)
-  output_token_price_per_million Decimal  @db.Decimal(10, 6)
-  effective_date                 DateTime
-  is_current                     Boolean  @default(true)
-  created_at                     DateTime @default(now())
-  updated_at                     DateTime @updatedAt
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
-  provider      Provider           @relation(fields: [provider_id], references: [id], onDelete: Cascade)
-  usage_records TokenUsageLedger[]
+  // Identification
+  providerId              String    @map("provider_id") @db.Uuid
+  modelName               String    @map("model_name") @db.VarChar(255)
+  vendorModelId           String?   @unique @map("vendor_model_id") @db.VarChar(255)
 
-  @@index([provider_id, model_name, is_current])
-  @@index([model_name, is_current])
+  // Pricing (per 1,000 tokens) - DECIMAL(10,8) for micro-dollar precision
+  inputPricePer1k         Decimal   @map("input_price_per_1k") @db.Decimal(10, 8)
+  outputPricePer1k        Decimal   @map("output_price_per_1k") @db.Decimal(10, 8)
+
+  // Optional: Cache pricing
+  cacheInputPricePer1k    Decimal?  @map("cache_input_price_per_1k") @db.Decimal(10, 8)
+  cacheHitPricePer1k      Decimal?  @map("cache_hit_price_per_1k") @db.Decimal(10, 8)
+
+  // Effective date tracking (for historical pricing)
+  effectiveFrom           DateTime  @map("effective_from")
+  effectiveUntil          DateTime? @map("effective_until")
+
+  // Rate change detection
+  previousPriceInput      Decimal?  @map("previous_price_input") @db.Decimal(10, 8)
+  previousPriceOutput     Decimal?  @map("previous_price_output") @db.Decimal(10, 8)
+  priceChangePercentInput Decimal?  @map("price_change_percent_input") @db.Decimal(5, 2)
+  priceChangePercentOutput Decimal? @map("price_change_percent_output") @db.Decimal(5, 2)
+  detectedAt              DateTime? @map("detected_at")
+
+  // Metadata
+  isActive                Boolean   @default(true) @map("is_active")
+  description             String?   @db.Text
+  lastVerified            DateTime  @default(now()) @map("last_verified")
+  verificationFrequencyDays Int     @default(7) @map("verification_frequency_days")
+
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, modelName, effectiveFrom])
+  @@index([providerId, modelName, isActive])
+  @@index([effectiveFrom, effectiveUntil])
+  @@index([isActive])
   @@map("model_provider_pricing")
 }
 
@@ -1617,10 +1641,11 @@ model TokenUsageLedger {
   createdAt             DateTime      @default(now()) @map("created_at")
 
   // Relations
-  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription          Subscription?           @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-  provider              Provider                @relation(fields: [providerId], references: [id], onDelete: Restrict)
-  deductionRecord       CreditDeductionLedger?  @relation("TokenUsageToDeduction", fields: [deductionRecordId], references: [id], onDelete: SetNull)
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription          Subscription?            @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  provider              Provider                 @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  deductionRecord       CreditDeductionLedger?   @relation("DeductionRecords", fields: [deductionRecordId], references: [id], onDelete: SetNull)
+  creditDeduction       CreditDeductionLedger?   @relation("TokenUsageLink")
 
   @@index([userId, createdAt])
   @@index([modelId, createdAt])
@@ -1679,9 +1704,10 @@ model CreditDeductionLedger {
   createdAt        DateTime               @default(now()) @map("created_at")
 
   // Relations
-  user            User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reversedByUser  User?                  @relation("ReversedBy", fields: [reversedBy], references: [id], onDelete: SetNull)
-  tokenUsage      TokenUsageLedger?      @relation("TokenUsageToDeduction")
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reversedByUser         User?              @relation("ReversedBy", fields: [reversedBy], references: [id], onDelete: SetNull)
+  tokenUsageLedgers      TokenUsageLedger[] @relation("DeductionRecords")
+  tokenUsageByRequestId  TokenUsageLedger?  @relation("TokenUsageLink", fields: [requestId], references: [requestId])
 
   @@index([userId, createdAt])
   @@index([requestId])
