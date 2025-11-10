@@ -507,44 +507,94 @@ export const analyticsApi = {
   /**
    * Get conversion funnel data
    */
-  getConversionFunnel: async () => {
-    const response = await apiClient.get<{ funnel: ConversionFunnel[] }>(
-      '/admin/analytics/conversion-funnel'
-    );
-    return response.data;
+  getConversionFunnel: async (period = '30d') => {
+    const response = await apiClient.get<{
+      freeTier: { count: number; percentage: number };
+      paidSubscription: { count: number; percentage: number; conversionRate: number };
+      perpetualLicense: { count: number; percentage: number; conversionRate: number };
+    }>('/admin/analytics/revenue/funnel', { params: { period } });
+
+    // Transform backend response to frontend format
+    const data = response.data;
+    const funnel: ConversionFunnel[] = [
+      {
+        stage: 'Free Tier',
+        users: data.freeTier.count,
+        conversionRate: 100, // Starting point
+      },
+      {
+        stage: 'Paid Subscription',
+        users: data.paidSubscription.count,
+        conversionRate: data.paidSubscription.conversionRate,
+      },
+      {
+        stage: 'Perpetual License',
+        users: data.perpetualLicense.count,
+        conversionRate: data.perpetualLicense.conversionRate,
+      },
+    ];
+
+    return { funnel };
   },
 
   /**
-   * Get revenue time series (12 months)
+   * Get revenue time series (trend data)
    */
-  getRevenueTimeSeries: async (period = 'last_12_months') => {
-    const response = await apiClient.get<{ timeSeries: RevenueTimeSeries[] }>(
-      '/admin/analytics/revenue/time-series',
-      { params: { period } }
-    );
-    return response.data;
+  getRevenueTimeSeries: async (period = '1y') => {
+    const response = await apiClient.get<{
+      data: Array<{
+        date: string;
+        totalRevenue: number;
+        subscriptionRevenue: number;
+        perpetualRevenue: number;
+      }>;
+    }>('/admin/analytics/revenue/trend', { params: { period } });
+
+    // Transform backend response to frontend format
+    const timeSeries: RevenueTimeSeries[] = response.data.data.map((item) => ({
+      month: item.date,
+      mrr: item.subscriptionRevenue / 100, // Convert cents to dollars
+      arr: (item.subscriptionRevenue * 12) / 100, // Annualized
+      growth: 0, // TODO: Calculate growth from previous period
+    }));
+
+    return { timeSeries };
   },
 
   /**
    * Get tier transitions (upgrades/downgrades)
+   * NOTE: This endpoint is not yet implemented on the backend
+   * Returns empty array for now
    */
-  getTierTransitions: async (filters?: AnalyticsFilters) => {
-    const response = await apiClient.get<{ transitions: TierTransition[] }>(
-      '/admin/analytics/tier-transitions',
-      { params: filters }
-    );
-    return response.data;
+  getTierTransitions: async (_filters?: AnalyticsFilters) => {
+    // Backend endpoint doesn't exist yet - return empty array
+    return { transitions: [] };
   },
 
   /**
    * Get credits used by model
    */
-  getCreditsByModel: async (filters?: AnalyticsFilters) => {
-    const response = await apiClient.get<{ models: CreditsByModel[] }>(
-      '/admin/analytics/credits-by-model',
-      { params: filters }
-    );
-    return response.data;
+  getCreditsByModel: async (period = '30d', limit = 10) => {
+    const response = await apiClient.get<{
+      data: Array<{
+        model: string;
+        credits: number;
+        requests: number;
+        revenue_contribution: number;
+      }>;
+    }>('/admin/analytics/revenue/credit-usage', { params: { period, limit } });
+
+    // Calculate total credits for percentage
+    const totalCredits = response.data.data.reduce((sum, item) => sum + item.credits, 0);
+
+    // Transform backend response to frontend format
+    const models: CreditsByModel[] = response.data.data.map((item) => ({
+      modelName: item.model,
+      creditsUsed: item.credits,
+      percentage: totalCredits > 0 ? (item.credits / totalCredits) * 100 : 0,
+    }));
+
+    return { models };
   },
 };
 
