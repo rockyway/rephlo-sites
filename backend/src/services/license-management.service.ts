@@ -649,7 +649,8 @@ export class LicenseManagementService {
               select: {
                 id: true,
                 email: true,
-                displayName: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
