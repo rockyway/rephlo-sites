@@ -53,6 +53,10 @@ export class AuthService {
   /**
    * Authenticate user with email and password
    * @returns User object if authentication succeeds, null otherwise
+   *
+   * Note: MFA verification is handled separately in the OAuth flow.
+   * If MFA_ENFORCEMENT_ENABLED=false, users with MFA enabled can still login
+   * via OAuth without MFA verification. This is useful for development/testing.
    */
   async authenticate(
     email: string,
@@ -86,10 +90,37 @@ export class AuthService {
         return null;
       }
 
+      // Check if MFA enforcement is enabled via environment variable
+      const mfaEnforcementEnabled = process.env.MFA_ENFORCEMENT_ENABLED !== 'false';
+
+      // If MFA is enabled for this user AND MFA enforcement is enabled globally
+      if (user.mfaEnabled && mfaEnforcementEnabled) {
+        logger.warn('Login failed: MFA verification required but not implemented in OAuth flow', {
+          userId: user.id,
+          mfaEnforcementEnabled,
+        });
+        // Note: In a full implementation, we would redirect to MFA verification page
+        // For now, we fail the login if MFA is enabled and enforcement is on
+        return null;
+      }
+
+      // Log if MFA is bypassed
+      if (user.mfaEnabled && !mfaEnforcementEnabled) {
+        logger.warn('Login success: MFA bypassed (MFA_ENFORCEMENT_ENABLED=false)', {
+          userId: user.id,
+          userMfaEnabled: user.mfaEnabled,
+          mfaEnforcementEnabled,
+        });
+      }
+
       // Update last login timestamp
       await this.updateLastLogin(user.id);
 
-      logger.info('Login success', { userId: user.id });
+      logger.info('Login success', {
+        userId: user.id,
+        mfaEnforcementEnabled,
+        userHasMfa: user.mfaEnabled,
+      });
 
       return user;
     } catch (error) {

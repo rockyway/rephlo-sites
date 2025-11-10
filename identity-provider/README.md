@@ -30,6 +30,8 @@ The Identity Provider is part of a three-tier architecture:
 
 ## Environment Variables
 
+See `.env.example` for all available configuration options.
+
 ```env
 NODE_ENV=development
 PORT=7151
@@ -43,12 +45,32 @@ OIDC_COOKIE_KEYS=["secret-1","secret-2"]
 OIDC_JWKS_PRIVATE_KEY='{"kty":"RSA",...}'
 
 # CORS
-ALLOWED_ORIGINS=http://localhost:8080,http://localhost:7150
+ALLOWED_ORIGINS=http://localhost:8080,http://localhost:7150,http://localhost:7152
+
+# MFA Enforcement (Optional)
+# Set to 'false' to disable MFA enforcement during OAuth login
+# Useful for development/testing when MFA verification UI is not yet implemented
+# Default: true
+MFA_ENFORCEMENT_ENABLED=false
 
 # Logging
 LOG_LEVEL=debug
 LOG_DIR=logs
 ```
+
+### MFA Configuration
+
+The `MFA_ENFORCEMENT_ENABLED` environment variable controls whether MFA verification is required during OAuth login for users who have MFA enabled in the database.
+
+- **`MFA_ENFORCEMENT_ENABLED=true`** (default): Users with `mfaEnabled=true` in the database will be blocked from logging in via OAuth until MFA verification is implemented.
+
+- **`MFA_ENFORCEMENT_ENABLED=false`**: Users with MFA enabled can still login via OAuth without MFA verification. Useful for:
+  - Development environments
+  - Testing OAuth flows
+  - Environments where MFA verification UI is not yet implemented
+  - Admin access during testing
+
+**Security Note:** In production environments, set `MFA_ENFORCEMENT_ENABLED=true` once MFA verification is properly implemented in the OAuth flow.
 
 ## Installation
 

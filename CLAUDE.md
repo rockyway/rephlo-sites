@@ -451,10 +451,16 @@ DATABASE_URL=postgresql://postgres:changeme@localhost:5432/rephlo-dev
 OIDC_ISSUER=http://localhost:7151
 OIDC_COOKIE_KEYS=["key1","key2"]
 OIDC_JWKS_PRIVATE_KEY='{"kty":"RSA",...}'  # RSA private key in JWK format
-ALLOWED_ORIGINS=http://localhost:7052,http://localhost:7150
+ALLOWED_ORIGINS=http://localhost:7052,http://localhost:7150,http://localhost:7152
+MFA_ENFORCEMENT_ENABLED=false  # Set to 'false' to disable MFA during OAuth login (for dev/testing)
 LOG_LEVEL=debug
 LOG_DIR=logs
 ```
+
+**MFA Configuration:**
+- `MFA_ENFORCEMENT_ENABLED=false` - Disables MFA enforcement during OAuth login (useful for development/testing)
+- `MFA_ENFORCEMENT_ENABLED=true` (default) - Requires MFA verification for users with MFA enabled
+- See `identity-provider/README.md` for detailed MFA configuration documentation
 
 ---
 
