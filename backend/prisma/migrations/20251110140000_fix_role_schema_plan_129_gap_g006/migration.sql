@@ -28,6 +28,10 @@ CREATE INDEX "role_is_system_role_idx" ON "role"("is_system_role");
 -- If the column contains valid JSON arrays like '["permission1", "permission2"]'
 -- this will work automatically. If not, you may need to fix the data first.
 
+-- First, drop the default constraint if it exists (prevents casting error)
+ALTER TABLE "role" ALTER COLUMN "default_permissions" DROP DEFAULT;
+
+-- Now convert the column type with explicit USING clause
 ALTER TABLE "role"
 ALTER COLUMN "default_permissions" TYPE jsonb
 USING CASE
@@ -35,6 +39,9 @@ USING CASE
   WHEN "default_permissions"::text IS NULL THEN '[]'::jsonb
   ELSE "default_permissions"::jsonb
 END;
+
+-- Optionally set a new default for future inserts
+ALTER TABLE "role" ALTER COLUMN "default_permissions" SET DEFAULT '[]'::jsonb;
 
 -- ============================================================================
 -- STEP 3: Convert name from RoleName enum to VARCHAR(50)
