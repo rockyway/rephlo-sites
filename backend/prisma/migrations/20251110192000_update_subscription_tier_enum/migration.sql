@@ -49,6 +49,84 @@ ALTER TABLE "models"
 -- Restore default with new enum type
 ALTER TABLE "models" ALTER COLUMN "allowed_tiers" SET DEFAULT ARRAY['free', 'pro', 'enterprise_pro']::"subscription_tier_new"[];
 
+-- Update models table required_tier column
+-- Maps 'enterprise' to 'enterprise_pro'
+-- First drop default constraint to avoid casting error
+ALTER TABLE "models" ALTER COLUMN "required_tier" DROP DEFAULT;
+
+ALTER TABLE "models"
+  ALTER COLUMN "required_tier" TYPE "subscription_tier_new"
+  USING (
+    CASE "required_tier"::text
+      WHEN 'enterprise' THEN 'enterprise_pro'
+      ELSE "required_tier"::text
+    END
+  )::"subscription_tier_new";
+
+-- Restore default with new enum type
+ALTER TABLE "models" ALTER COLUMN "required_tier" SET DEFAULT 'free'::"subscription_tier_new";
+
+-- Update subscriptions table tier column (if table exists)
+-- Maps 'enterprise' to 'enterprise_pro'
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_name = 'subscriptions'
+  ) THEN
+    ALTER TABLE "subscriptions"
+      ALTER COLUMN "tier" TYPE "subscription_tier_new"
+      USING (
+        CASE "tier"::text
+          WHEN 'enterprise' THEN 'enterprise_pro'
+          ELSE "tier"::text
+        END
+      )::"subscription_tier_new";
+  END IF;
+END $$;
+
+-- Update coupon_campaign table target_tier column (if column exists)
+-- Maps 'enterprise' to 'enterprise_pro'
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+    AND table_name = 'coupon_campaign'
+    AND column_name = 'target_tier'
+  ) THEN
+    ALTER TABLE "coupon_campaign"
+      ALTER COLUMN "target_tier" TYPE "subscription_tier_new"
+      USING (
+        CASE "target_tier"::text
+          WHEN 'enterprise' THEN 'enterprise_pro'
+          ELSE "target_tier"::text
+        END
+      )::"subscription_tier_new";
+  END IF;
+END $$;
+
+-- Update pricing_configuration table tier column (if table exists)
+-- Maps 'enterprise' to 'enterprise_pro'
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_name = 'pricing_configuration'
+  ) THEN
+    ALTER TABLE "pricing_configuration"
+      ALTER COLUMN "tier" TYPE "subscription_tier_new"
+      USING (
+        CASE "tier"::text
+          WHEN 'enterprise' THEN 'enterprise_pro'
+          ELSE "tier"::text
+        END
+      )::"subscription_tier_new";
+  END IF;
+END $$;
+
 -- ============================================================================
 -- STEP 3: Drop old enum and rename new one
 -- ============================================================================
@@ -110,14 +188,32 @@ END $$;
 -- WHERE enumtypid = 'subscription_tier'::regtype
 -- ORDER BY enumsortorder;
 
--- Verify no 'enterprise' values remain in data
--- Expected: 0 rows
--- SELECT * FROM subscription_monetization WHERE tier = 'enterprise';
+-- Verify no 'enterprise' values remain in data (check all 7 columns)
+-- Expected: 0 rows for each query
+-- SELECT * FROM subscription_monetization WHERE tier::text = 'enterprise';
+-- SELECT * FROM subscriptions WHERE tier::text = 'enterprise';
+-- SELECT * FROM models WHERE required_tier::text = 'enterprise';
+-- SELECT * FROM coupon_campaign WHERE target_tier::text = 'enterprise';
+-- SELECT * FROM pricing_configuration WHERE tier::text = 'enterprise';
 
 -- Verify unique constraints exist
 -- Expected: 2 rows (oidc_models_id_key, user_role_assignment_user_id_role_id_key)
 -- SELECT conname FROM pg_constraint
 -- WHERE conname IN ('oidc_models_id_key', 'user_role_assignment_user_id_role_id_key');
+
+-- ============================================================================
+-- COLUMNS CONVERTED (7 total)
+-- ============================================================================
+-- Scalar columns:
+-- 1. subscription_monetization.tier
+-- 2. subscriptions.tier (conditional)
+-- 3. models.required_tier
+-- 4. coupon_campaign.target_tier (conditional)
+-- 5. pricing_configuration.tier (conditional)
+--
+-- Array columns:
+-- 6. coupon.tier_eligibility
+-- 7. models.allowed_tiers
 
 -- ============================================================================
 -- NOTES
