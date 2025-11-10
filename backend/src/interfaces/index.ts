@@ -14,6 +14,7 @@ export * from './services/stripe.interface';
 export * from './services/model.interface';
 export * from './services/approval-workflow.interface';
 export * from './services/ip-whitelist.interface';
+export * from './services/user-suspension.interface';
 
 // Plan 112: Token-to-Credit Conversion Service Interfaces
 export * from './services/cost-calculation.interface';
