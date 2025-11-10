@@ -170,12 +170,12 @@ export function createMFARouter(): Router {
       // Hash backup codes for secure storage
       const hashedBackupCodes = await mfaService.hashBackupCodes(backupCodes);
 
-      // Enable MFA and save backup codes
+      // Enable MFA and save backup codes (stored as JSON string)
       await prisma.user.update({
         where: { id: userId },
         data: {
           mfaEnabled: true,
-          mfaBackupCodes: hashedBackupCodes,
+          mfaBackupCodes: JSON.stringify(hashedBackupCodes),
         },
       });
 
@@ -377,7 +377,7 @@ export function createMFARouter(): Router {
         data: {
           mfaEnabled: false,
           mfaSecret: null,
-          mfaBackupCodes: [] as string[],
+          mfaBackupCodes: '',
         },
       });
 
@@ -451,7 +451,23 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.mfaBackupCodes || user.mfaBackupCodes.length === 0) {
+      // Parse backup codes from JSON string
+      let backupCodeList: string[] = [];
+      if (user.mfaBackupCodes) {
+        try {
+          backupCodeList = JSON.parse(user.mfaBackupCodes);
+        } catch (e) {
+          logger.error('MFA Backup Code Login: Failed to parse backup codes', { userId });
+          return res.status(500).json({
+            error: {
+              code: 'INTERNAL_ERROR',
+              message: 'Failed to parse backup codes',
+            },
+          });
+        }
+      }
+
+      if (!backupCodeList || backupCodeList.length === 0) {
         return res.status(400).json({
           error: {
             code: 'NO_BACKUP_CODES',
@@ -463,7 +479,7 @@ export function createMFARouter(): Router {
       // Verify backup code
       const matchIndex = await mfaService.findMatchingBackupCodeIndex(
         backupCode,
-        user.mfaBackupCodes
+        backupCodeList
       );
 
       if (matchIndex === -1) {
@@ -477,12 +493,12 @@ export function createMFARouter(): Router {
       }
 
       // Remove used backup code
-      const updatedBackupCodes = user.mfaBackupCodes.filter((_: string, index: number) => index !== matchIndex);
+      const updatedBackupCodes = backupCodeList.filter((_: string, index: number) => index !== matchIndex);
 
       await prisma.user.update({
         where: { id: userId },
         data: {
-          mfaBackupCodes: updatedBackupCodes,
+          mfaBackupCodes: JSON.stringify(updatedBackupCodes),
         },
       });
 
@@ -533,7 +549,16 @@ export function createMFARouter(): Router {
         });
       }
 
-      const backupCodesRemaining = user.mfaBackupCodes?.length || 0;
+      // Parse backup codes from JSON string
+      let backupCodesRemaining = 0;
+      if (user.mfaBackupCodes) {
+        try {
+          const backupCodeList = JSON.parse(user.mfaBackupCodes);
+          backupCodesRemaining = Array.isArray(backupCodeList) ? backupCodeList.length : 0;
+        } catch (e) {
+          logger.warn('MFA Status: Failed to parse backup codes', { userId });
+        }
+      }
 
       return res.status(200).json({
         mfaEnabled: user.mfaEnabled,

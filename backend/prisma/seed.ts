@@ -509,8 +509,10 @@ async function main() {
 
   console.log('Creating app version records...');
   const versions = await Promise.all([
-    prisma.appVersion.create({
-      data: {
+    prisma.appVersion.upsert({
+      where: { version: '1.0.0' },
+      update: {},
+      create: {
         version: '1.0.0',
         releaseDate: new Date('2025-10-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.0.0/rephlo-setup.exe',
@@ -531,8 +533,10 @@ Download and run the installer for your platform.`,
         isLatest: false, // Old version
       },
     }),
-    prisma.appVersion.create({
-      data: {
+    prisma.appVersion.upsert({
+      where: { version: '1.1.0' },
+      update: {},
+      create: {
         version: '1.1.0',
         releaseDate: new Date('2025-10-15'),
         downloadUrl: 'https://releases.rephlo.ai/v1.1.0/rephlo-setup.exe',
@@ -552,8 +556,10 @@ Download and run the installer for your platform.`,
         isLatest: false,
       },
     }),
-    prisma.appVersion.create({
-      data: {
+    prisma.appVersion.upsert({
+      where: { version: '1.2.0' },
+      update: {},
+      create: {
         version: '1.2.0',
         releaseDate: new Date('2025-11-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.2.0/rephlo-setup.exe',
@@ -582,6 +588,264 @@ Download and run the installer for your platform.`,
   console.log(`✓ Created/Updated ${versions.length} app version records\n`);
 
   // ========================================================================
+  // PHASE 3: RBAC SYSTEM
+  // ========================================================================
+
+  console.log('Creating RBAC roles...');
+  const roles = await Promise.all([
+    prisma.role.upsert({
+      where: { name: 'super_admin' },
+      update: {},
+      create: {
+        name: 'super_admin',
+        displayName: 'Super Administrator',
+        description: 'Full system access with all permissions',
+        hierarchy: 1,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
+          'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
+          'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
+          'campaigns.create', 'campaigns.set_budget',
+          'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct', 'credits.adjust_expiration',
+          'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend', 'users.ban', 'users.delete', 'users.impersonate',
+          'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.assign', 'roles.view_audit_log',
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'admin' },
+      update: {},
+      create: {
+        name: 'admin',
+        displayName: 'Administrator',
+        description: 'Full administrative access except system configuration',
+        hierarchy: 2,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
+          'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
+          'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
+          'campaigns.create', 'campaigns.set_budget',
+          'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct',
+          'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend', 'users.ban', 'users.impersonate',
+          'roles.view', 'roles.assign', 'roles.view_audit_log',
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'ops' },
+      update: {},
+      create: {
+        name: 'ops',
+        displayName: 'Operations Manager',
+        description: 'Operational access for managing subscriptions and licenses',
+        hierarchy: 3,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate',
+          'licenses.view', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend',
+          'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.approve_redemption',
+          'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct',
+          'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend',
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'support' },
+      update: {},
+      create: {
+        name: 'support',
+        displayName: 'Support Specialist',
+        description: 'Customer support access for resolving issues',
+        hierarchy: 4,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view',
+          'licenses.view',
+          'coupons.view',
+          'credits.view_balance', 'credits.view_history',
+          'users.view', 'users.edit_profile',
+          'analytics.view_dashboard'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'analyst' },
+      update: {},
+      create: {
+        name: 'analyst',
+        displayName: 'Data Analyst',
+        description: 'Analytics and reporting access',
+        hierarchy: 5,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view',
+          'licenses.view',
+          'credits.view_history',
+          'users.view',
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'auditor' },
+      update: {},
+      create: {
+        name: 'auditor',
+        displayName: 'Auditor',
+        description: 'Read-only access for compliance and audit',
+        hierarchy: 6,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view',
+          'licenses.view',
+          'credits.view_history',
+          'users.view',
+          'roles.view_audit_log',
+          'analytics.view_dashboard'
+        ]),
+        isActive: true,
+      },
+    }),
+  ]);
+  console.log(`✓ Created/Updated ${roles.length} RBAC roles\n`);
+
+  // Create RBAC team users
+  console.log('Creating RBAC team users...');
+  const rbacTeamUsers = await Promise.all([
+    prisma.user.upsert({
+      where: { email: 'ops.user@rephlo.ai' },
+      update: {},
+      create: {
+        email: 'ops.user@rephlo.ai',
+        firstName: 'Operations',
+        lastName: 'Manager',
+        emailVerified: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: 'support.user@rephlo.ai' },
+      update: {},
+      create: {
+        email: 'support.user@rephlo.ai',
+        firstName: 'Support',
+        lastName: 'Specialist',
+        emailVerified: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: 'analyst.user@rephlo.ai' },
+      update: {},
+      create: {
+        email: 'analyst.user@rephlo.ai',
+        firstName: 'Data',
+        lastName: 'Analyst',
+        emailVerified: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: 'auditor.user@rephlo.ai' },
+      update: {},
+      create: {
+        email: 'auditor.user@rephlo.ai',
+        firstName: 'Security',
+        lastName: 'Auditor',
+        emailVerified: true,
+      },
+    }),
+  ]);
+  console.log(`✓ Created/Updated ${rbacTeamUsers.length} RBAC team users\n`);
+
+  // Assign roles to users
+  console.log('Creating role assignments...');
+  const roleAssignments = await Promise.all([
+    // Super admin assignment to existing admin user
+    prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: users[2].userId, // admin.test@rephlo.ai
+          roleId: roles[0].id, // super_admin
+        },
+      },
+      update: {},
+      create: {
+        userId: users[2].userId,
+        roleId: roles[0].id,
+        assignedBy: users[2].userId,
+        assignedAt: new Date(),
+      },
+    }),
+    // Ops user - Ops role
+    prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: rbacTeamUsers[0].id,
+          roleId: roles[2].id, // ops
+        },
+      },
+      update: {},
+      create: {
+        userId: rbacTeamUsers[0].id,
+        roleId: roles[2].id,
+        assignedBy: users[2].userId,
+        assignedAt: new Date(),
+      },
+    }),
+    // Support user - Support role
+    prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: rbacTeamUsers[1].id,
+          roleId: roles[3].id, // support
+        },
+      },
+      update: {},
+      create: {
+        userId: rbacTeamUsers[1].id,
+        roleId: roles[3].id,
+        assignedBy: users[2].userId,
+        assignedAt: new Date(),
+      },
+    }),
+    // Analyst user - Analyst role
+    prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: rbacTeamUsers[2].id,
+          roleId: roles[4].id, // analyst
+        },
+      },
+      update: {},
+      create: {
+        userId: rbacTeamUsers[2].id,
+        roleId: roles[4].id,
+        assignedBy: users[2].userId,
+        assignedAt: new Date(),
+      },
+    }),
+    // Auditor user - Auditor role
+    prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: rbacTeamUsers[3].id,
+          roleId: roles[5].id, // auditor
+        },
+      },
+      update: {},
+      create: {
+        userId: rbacTeamUsers[3].id,
+        roleId: roles[5].id,
+        assignedBy: users[2].userId,
+        assignedAt: new Date(),
+      },
+    }),
+  ]);
+  console.log(`✓ Created/Updated ${roleAssignments.length} role assignments\n`);
+
+  // ========================================================================
   // PRINT COMPREHENSIVE SUMMARY
   // ========================================================================
 
@@ -605,6 +869,11 @@ Download and run the installer for your platform.`,
   console.log(`   Diagnostics:   ${diagnostics.length}`);
   console.log(`   App Versions:  ${versions.length}`);
 
+  console.log('\n🔑 RBAC System (Plan 119):');
+  console.log(`   Roles:         ${roles.length}`);
+  console.log(`   RBAC Users:    ${rbacTeamUsers.length}`);
+  console.log(`   Role Assignments: ${roleAssignments.length}`);
+
   console.log('\n═══════════════════════════════════════════════════════════════\n');
 
   console.log('📋 TEST CREDENTIALS:\n');
@@ -627,6 +896,20 @@ Download and run the installer for your platform.`,
   console.log('Pro Tier User (Google Auth):');
   console.log('   Email:    google.user@example.com');
   console.log('   Auth:     Google OAuth\n');
+
+  console.log('RBAC Team Users:');
+  console.log('   Ops Manager:');
+  console.log('     Email: ops.user@rephlo.ai');
+  console.log('     Role:  Operations Manager (25 permissions)\n');
+  console.log('   Support Specialist:');
+  console.log('     Email: support.user@rephlo.ai');
+  console.log('     Role:  Support Specialist (12 permissions)\n');
+  console.log('   Data Analyst:');
+  console.log('     Email: analyst.user@rephlo.ai');
+  console.log('     Role:  Data Analyst (8 permissions)\n');
+  console.log('   Auditor:');
+  console.log('     Email: auditor.user@rephlo.ai');
+  console.log('     Role:  Auditor (5 permissions)\n');
 
   console.log('═══════════════════════════════════════════════════════════════\n');
 

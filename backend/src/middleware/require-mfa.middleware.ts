@@ -104,29 +104,37 @@ export function requireMFA(
       }
 
       // Try backup code verification
-      if (user.mfaBackupCodes && user.mfaBackupCodes.length > 0) {
-        const backupCodeIndex = await mfaService.findMatchingBackupCodeIndex(
-          mfaToken,
-          user.mfaBackupCodes
-        );
+      if (user.mfaBackupCodes) {
+        try {
+          const backupCodeList = JSON.parse(user.mfaBackupCodes);
 
-        if (backupCodeIndex !== -1) {
-          // Remove used backup code
-          const updatedBackupCodes = user.mfaBackupCodes.filter(
-            (_: string, index: number) => index !== backupCodeIndex
-          );
+          if (Array.isArray(backupCodeList) && backupCodeList.length > 0) {
+            const backupCodeIndex = await mfaService.findMatchingBackupCodeIndex(
+              mfaToken,
+              backupCodeList
+            );
 
-          await prisma.user.update({
-            where: { id: userId },
-            data: { mfaBackupCodes: updatedBackupCodes },
-          });
+            if (backupCodeIndex !== -1) {
+              // Remove used backup code
+              const updatedBackupCodes = backupCodeList.filter(
+                (_: string, index: number) => index !== backupCodeIndex
+              );
 
-          logger.info('requireMFA: Backup code verified successfully', {
-            userId,
-            remainingBackupCodes: updatedBackupCodes.length,
-          });
+              await prisma.user.update({
+                where: { id: userId },
+                data: { mfaBackupCodes: JSON.stringify(updatedBackupCodes) },
+              });
 
-          return next();
+              logger.info('requireMFA: Backup code verified successfully', {
+                userId,
+                remainingBackupCodes: updatedBackupCodes.length,
+              });
+
+              return next();
+            }
+          }
+        } catch (e) {
+          logger.warn('requireMFA: Failed to parse backup codes', { userId });
         }
       }
 

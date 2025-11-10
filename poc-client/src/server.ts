@@ -17,10 +17,12 @@ const app = express();
 const PORT = 8080;
 
 // Configuration
+// Updated to use seeded OAuth credentials for testing
 const IDENTITY_PROVIDER_URL = 'http://localhost:7151';
 const RESOURCE_API_URL = 'http://localhost:7150';
-const CLIENT_ID = 'textassistant-desktop';
-const CLIENT_REDIRECT_URI = 'http://localhost:8080/callback';
+const CLIENT_ID = 'poc-client-test';  // Matches seeded OAuth client
+const CLIENT_SECRET = 'test-secret-poc-client-67890';  // Seeded client secret
+const CLIENT_REDIRECT_URI = 'http://localhost:8080/oauth/callback';  // Matches seeded redirect URI
 
 // In-memory session store (for demo purposes)
 const sessions = new Map<string, {
@@ -328,6 +330,116 @@ app.get('/api/test/health', async (req: Request, res: Response) => {
     res.status(error.response?.status || 500).json({
       success: false,
       endpoint: '/health',
+      statusCode: error.response?.status,
+      error: error.response?.data?.message || error.message,
+    });
+  }
+});
+
+/**
+ * Test endpoint: Get user subscription
+ * GET /api/test/subscriptions
+ */
+app.get('/api/test/subscriptions', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'No token provided' });
+    }
+
+    const response = await axios.get(`${RESOURCE_API_URL}/v1/subscriptions/current`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    res.json({
+      success: true,
+      endpoint: '/v1/subscriptions/current',
+      statusCode: response.status,
+      data: response.data,
+    });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      success: false,
+      endpoint: '/v1/subscriptions/current',
+      statusCode: error.response?.status,
+      error: error.response?.data?.message || error.message,
+    });
+  }
+});
+
+/**
+ * Test endpoint: Get MFA status
+ * GET /api/test/mfa/status
+ */
+app.get('/api/test/mfa/status', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'No token provided' });
+    }
+
+    const response = await axios.get(`${RESOURCE_API_URL}/v1/auth/mfa/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    res.json({
+      success: true,
+      endpoint: '/v1/auth/mfa/status',
+      statusCode: response.status,
+      data: response.data,
+    });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      success: false,
+      endpoint: '/v1/auth/mfa/status',
+      statusCode: error.response?.status,
+      error: error.response?.data?.message || error.message,
+    });
+  }
+});
+
+/**
+ * Test endpoint: Execute inference (test LLM call)
+ * POST /api/test/inference
+ * Body: { prompt: string, model?: string }
+ */
+app.post('/api/test/inference', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'No token provided' });
+    }
+
+    const { prompt, model } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ success: false, error: 'Prompt is required' });
+    }
+
+    const response = await axios.post(
+      `${RESOURCE_API_URL}/v1/inference/generate`,
+      {
+        prompt,
+        model: model || 'gpt-4',
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    res.json({
+      success: true,
+      endpoint: '/v1/inference/generate',
+      statusCode: response.status,
+      data: response.data,
+    });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      success: false,
+      endpoint: '/v1/inference/generate',
       statusCode: error.response?.status,
       error: error.response?.data?.message || error.message,
     });

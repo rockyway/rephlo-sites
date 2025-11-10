@@ -310,16 +310,13 @@ async function seedSubscriptions(users: any[]) {
     const now = new Date();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    const subscription = await prisma.subscription.upsert({
+    // Delete existing subscription for this user to avoid conflicts
+    await prisma.subscription.deleteMany({
       where: { userId: user.userId },
-      update: {
-        tier,
-        status: 'active',
-        creditsPerMonth: config.creditsPerMonth,
-        currentPeriodStart: now,
-        currentPeriodEnd: endOfMonth,
-      },
-      create: {
+    });
+
+    const subscription = await prisma.subscription.create({
+      data: {
         userId: user.userId,
         tier,
         status: 'active',
@@ -594,6 +591,261 @@ Download and run the installer for your platform.`,
   console.log(`✓ Created/Updated ${versions.length} app version records\n`);
 
   // ========================================================================
+  // SEED DATA - PHASE 3: RBAC SYSTEM (Plan 119)
+  // ========================================================================
+
+  console.log('Creating RBAC roles...');
+  const roles = await Promise.all([
+    prisma.role.upsert({
+      where: { name: 'super_admin' },
+      update: {},
+      create: {
+        name: 'super_admin',
+        displayName: 'Super Administrator',
+        description: 'Full system access with all permissions',
+        hierarchy: 1,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
+          'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
+          'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
+          'campaigns.create', 'campaigns.set_budget',
+          'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct', 'credits.adjust_expiration',
+          'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend', 'users.ban', 'users.delete', 'users.impersonate',
+          'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.assign', 'roles.view_audit_log',
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'admin' },
+      update: {},
+      create: {
+        name: 'admin',
+        displayName: 'Administrator',
+        description: 'Administrative access with most permissions except role management',
+        hierarchy: 2,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
+          'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
+          'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
+          'campaigns.create', 'campaigns.set_budget',
+          'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct', 'credits.adjust_expiration',
+          'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend', 'users.ban', 'users.delete', 'users.impersonate',
+          'roles.view', 'roles.view_audit_log',
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'ops' },
+      update: {},
+      create: {
+        name: 'ops',
+        displayName: 'Operations',
+        description: 'Operational tasks for subscriptions, licenses, and coupons',
+        hierarchy: 3,
+        defaultPermissions: JSON.stringify([
+          'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel',
+          'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate',
+          'coupons.view', 'coupons.create', 'coupons.edit',
+          'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct',
+          'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend',
+          'analytics.view_dashboard'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'support' },
+      update: {},
+      create: {
+        name: 'support',
+        displayName: 'Support',
+        description: 'Customer support agent with limited access to user and coupon data',
+        hierarchy: 4,
+        defaultPermissions: JSON.stringify([
+          'users.view', 'users.edit_profile',
+          'subscriptions.view',
+          'coupons.view', 'coupons.approve_redemption',
+          'credits.view_balance', 'credits.view_history', 'credits.grant',
+          'licenses.view'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'analyst' },
+      update: {},
+      create: {
+        name: 'analyst',
+        displayName: 'Analyst',
+        description: 'Analytics access for reporting and insights',
+        hierarchy: 5,
+        defaultPermissions: JSON.stringify([
+          'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data',
+          'subscriptions.view', 'coupons.view', 'users.view', 'credits.view_history'
+        ]),
+        isActive: true,
+      },
+    }),
+    prisma.role.upsert({
+      where: { name: 'auditor' },
+      update: {},
+      create: {
+        name: 'auditor',
+        displayName: 'Auditor',
+        description: 'Read-only access for audit and compliance purposes',
+        hierarchy: 6,
+        defaultPermissions: JSON.stringify([
+          'roles.view_audit_log', 'users.view', 'subscriptions.view', 'coupons.view', 'analytics.view_dashboard'
+        ]),
+        isActive: true,
+      },
+    }),
+  ]);
+  console.log(`✓ Created/Updated ${roles.length} RBAC roles\n`);
+
+  console.log('Assigning roles to RBAC team users...');
+  const roleAssignments = [];
+
+  // Create RBAC team users
+  const rbacUsers = [
+    {
+      email: 'ops.user@rephlo.ai',
+      firstName: 'Operations',
+      lastName: 'Lead',
+      username: 'opsuser',
+      password: 'OpsPassword123!',
+      roleName: 'ops',
+    },
+    {
+      email: 'support.user@rephlo.ai',
+      firstName: 'Support',
+      lastName: 'Agent',
+      username: 'supportuser',
+      password: 'SupportPassword123!',
+      roleName: 'support',
+    },
+    {
+      email: 'analyst.user@rephlo.ai',
+      firstName: 'Business',
+      lastName: 'Analyst',
+      username: 'analystuser',
+      password: 'AnalystPassword123!',
+      roleName: 'analyst',
+    },
+    {
+      email: 'auditor.user@rephlo.ai',
+      firstName: 'Compliance',
+      lastName: 'Auditor',
+      username: 'auditoruser',
+      password: 'AuditorPassword123!',
+      roleName: 'auditor',
+    },
+  ];
+
+  for (const rbacUser of rbacUsers) {
+    const passwordHash = await hashPassword(rbacUser.password);
+    const user = await prisma.user.upsert({
+      where: { email: rbacUser.email },
+      update: {
+        firstName: rbacUser.firstName,
+        lastName: rbacUser.lastName,
+        emailVerified: true,
+        isActive: true,
+      },
+      create: {
+        email: rbacUser.email,
+        firstName: rbacUser.firstName,
+        lastName: rbacUser.lastName,
+        username: rbacUser.username,
+        passwordHash,
+        emailVerified: true,
+        authProvider: 'local',
+        role: 'user',
+        isActive: true,
+      },
+    });
+
+    // Find the corresponding role
+    const role = roles.find((r) => r.name === rbacUser.roleName);
+    if (role) {
+      const assignment = await prisma.userRoleAssignment.upsert({
+        where: {
+          userId_roleId: {
+            userId: user.id,
+            roleId: role.id,
+          },
+        },
+        update: {
+          assignedAt: new Date(),
+          isActive: true,
+        },
+        create: {
+          userId: user.id,
+          roleId: role.id,
+          assignedBy: users[2].userId, // Assign by admin user
+          assignedAt: new Date(),
+          expiresAt: null, // Permanent assignment
+          isActive: true,
+        },
+      });
+      roleAssignments.push(assignment);
+    }
+  }
+
+  // Assign Super Admin role to existing admin
+  const superAdminRole = roles.find((r) => r.name === 'super_admin');
+  if (superAdminRole && users[2]) {
+    await prisma.userRoleAssignment.upsert({
+      where: {
+        userId_roleId: {
+          userId: users[2].userId,
+          roleId: superAdminRole.id,
+        },
+      },
+      update: { isActive: true },
+      create: {
+        userId: users[2].userId,
+        roleId: superAdminRole.id,
+        assignedBy: users[2].userId,
+        assignedAt: new Date(),
+        expiresAt: null,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log(`✓ Created ${roleAssignments.length + 1} RBAC role assignments\n`);
+
+  // Create permission overrides examples
+  console.log('Creating permission override examples...');
+  const overrides = [];
+
+  if (roles.length >= 3 && users.length >= 3) {
+    const opsRole = roles.find((r) => r.name === 'ops');
+    if (opsRole) {
+      const override = await prisma.permissionOverride.create({
+        data: {
+          userId: users[2].userId, // Using admin user for example
+          permission: 'licenses.revoke',
+          action: 'grant',
+          grantedBy: users[2].userId,
+          grantedAt: new Date(),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          reason: 'Emergency fraud investigation - temporary access grant',
+          isActive: true,
+        },
+      });
+      overrides.push(override);
+    }
+  }
+
+  console.log(`✓ Created ${overrides.length} permission overrides\n`);
+
+  // ========================================================================
   // PRINT COMPREHENSIVE SUMMARY
   // ========================================================================
 
@@ -604,18 +856,24 @@ Download and run the installer for your platform.`,
   console.log('📊 SEED SUMMARY BY CATEGORY:\n');
 
   console.log('🔐 OAuth & Identity:');
-  console.log(`   OAuth Clients: ${oauthClients.length}`);
-  console.log(`   Users:         ${users.length}`);
+  console.log(`   OAuth Clients:     ${oauthClients.length}`);
+  console.log(`   Users:             ${users.length + rbacUsers.length}`);
 
   console.log('\n💳 Subscriptions & Billing:');
-  console.log(`   Subscriptions: ${subscriptions.length}`);
-  console.log(`   Credit Pools:  ${credits.length}`);
+  console.log(`   Subscriptions:     ${subscriptions.length}`);
+  console.log(`   Credit Pools:      ${credits.length}`);
+
+  console.log('\n🔑 RBAC System (Plan 119):');
+  console.log(`   Roles:             ${roles.length}`);
+  console.log(`   Role Assignments:  ${roleAssignments.length + 1}`);
+  console.log(`   Permission Overrides: ${overrides.length}`);
+  console.log(`   RBAC Users:        ${rbacUsers.length}`);
 
   console.log('\n📈 Legacy Branding:');
-  console.log(`   Downloads:     ${downloads.length}`);
-  console.log(`   Feedbacks:     ${feedbacks.length}`);
-  console.log(`   Diagnostics:   ${diagnostics.length}`);
-  console.log(`   App Versions:  ${versions.length}`);
+  console.log(`   Downloads:        ${downloads.length}`);
+  console.log(`   Feedbacks:        ${feedbacks.length}`);
+  console.log(`   Diagnostics:      ${diagnostics.length}`);
+  console.log(`   App Versions:     ${versions.length}`);
 
   console.log('\n═══════════════════════════════════════════════════════════════\n');
 
@@ -639,6 +897,30 @@ Download and run the installer for your platform.`,
   console.log('Pro Tier User (Google Auth):');
   console.log('   Email:    google.user@example.com');
   console.log('   Auth:     Google OAuth\n');
+
+  console.log('═══════════════════════════════════════════════════════════════\n');
+
+  console.log('🔑 RBAC TEAM MEMBERS:\n');
+
+  console.log('Operations Lead:');
+  console.log('   Email:    ops.user@rephlo.ai');
+  console.log('   Password: OpsPassword123!');
+  console.log('   Role:     Operations (25 permissions)\n');
+
+  console.log('Support Agent:');
+  console.log('   Email:    support.user@rephlo.ai');
+  console.log('   Password: SupportPassword123!');
+  console.log('   Role:     Support (12 permissions)\n');
+
+  console.log('Business Analyst:');
+  console.log('   Email:    analyst.user@rephlo.ai');
+  console.log('   Password: AnalystPassword123!');
+  console.log('   Role:     Analyst (8 permissions)\n');
+
+  console.log('Compliance Auditor:');
+  console.log('   Email:    auditor.user@rephlo.ai');
+  console.log('   Password: AuditorPassword123!');
+  console.log('   Role:     Auditor (5 permissions)\n');
 
   console.log('═══════════════════════════════════════════════════════════════\n');
 

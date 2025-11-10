@@ -234,6 +234,14 @@ model User {
   // Admin Audit Logging Relation (Phase 4 P0 Fixes)
   admin_audit_logs AdminAuditLog[] @relation("AdminAuditLogs")
 
+  // Plan 119 RBAC System Relations
+  userRoleAssignments     UserRoleAssignment[]   @relation("UserRoleAssignments")
+  roleAssignedByUser      UserRoleAssignment[]   @relation("AssignedRolesByUser")
+  permissionOverrides     PermissionOverride[]   @relation("PermissionOverrides")
+  permissionGrantedByUser PermissionOverride[]   @relation("GrantedPermissionsByUser")
+  roleChangeLogs          RoleChangeLog[]        @relation("RoleChangeLogs_TargetUser")
+  roleChangedByUser       RoleChangeLog[]        @relation("RoleChangeLogs_ChangedBy")
+
   @@index([email])
   @@index([createdAt])
   @@index([googleId])
@@ -1575,4 +1583,168 @@ model AdminAuditLog {
   @@index([resource_type, resource_id])
   @@index([timestamp])
   @@map("admin_audit_log")
+}
+
+// =============================================================================
+// RBAC SYSTEM (Plan 119)
+// For comprehensive role-based access control and permission management
+// =============================================================================
+
+enum RoleName {
+  super_admin
+  admin
+  ops
+  support
+  analyst
+  auditor
+
+  @@map("role_name")
+}
+
+enum PermissionCategory {
+  subscriptions
+  licenses
+  coupons
+  campaigns
+  credits
+  users
+  roles
+  analytics
+
+  @@map("permission_category")
+}
+
+enum OverrideAction {
+  grant
+  revoke
+
+  @@map("override_action")
+}
+
+enum RoleChangeAction {
+  role_assigned
+  role_changed
+  role_revoked
+  permission_override_granted
+  permission_override_revoked
+  permission_override_expired
+
+  @@map("role_change_action")
+}
+
+// Role Definition Table
+// Defines 6 hierarchical roles with default permissions
+model Role {
+  id                   String   @id @default(uuid()) @db.Uuid
+  name                 RoleName @unique
+  displayName          String   @map("display_name") @db.VarChar(100)
+  description          String?  @db.Text
+  hierarchy            Int      @db.SmallInt // 1-6: 1=super_admin, 6=auditor
+  defaultPermissions   String   @map("default_permissions") @db.Text // JSON array of permission strings
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  userRoleAssignments UserRoleAssignment[]
+  roleChangeLogs          RoleChangeLog[]        @relation("RoleChangeLog_NewRole")
+  roleChangeLogsAsOldRole RoleChangeLog[]        @relation("RoleChangeLog_OldRole")
+
+  @@index([hierarchy])
+  @@index([isActive])
+  @@map("role")
+}
+
+// Permission Definition Table
+// Catalogs all 40+ permissions for the system
+model Permission {
+  id           String               @id @default(uuid()) @db.Uuid
+  name         String               @unique @db.VarChar(100)
+  displayName  String               @map("display_name") @db.VarChar(150)
+  description  String?              @db.Text
+  category     PermissionCategory
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("permission")
+}
+
+// User Role Assignment Table
+// Assigns roles to users with optional expiration
+model UserRoleAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  roleId    String    @map("role_id") @db.Uuid
+  assignedBy String   @map("assigned_by") @db.Uuid
+  assignedAt DateTime @map("assigned_at")
+  expiresAt DateTime? @map("expires_at") // null = permanent
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user       User @relation("UserRoleAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  role       Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  assignedByUser User @relation("AssignedRolesByUser", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("user_role_assignment")
+}
+
+// Permission Override Table
+// Grants or revokes specific permissions temporarily or permanently
+model PermissionOverride {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  permission String        @db.VarChar(100)
+  action    OverrideAction
+  grantedBy String         @map("granted_by") @db.Uuid
+  grantedAt DateTime       @map("granted_at")
+  expiresAt DateTime?      @map("expires_at") // null = permanent
+  reason    String?        @db.Text
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user       User @relation("PermissionOverrides", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User @relation("GrantedPermissionsByUser", fields: [grantedBy], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([action])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("permission_override")
+}
+
+// Role Change Log Table
+// Immutable audit trail for all role and permission changes
+model RoleChangeLog {
+  id                        String          @id @default(uuid()) @db.Uuid
+  targetUserId              String          @map("target_user_id") @db.Uuid
+  changedBy                 String          @map("changed_by") @db.Uuid
+  action                    RoleChangeAction
+  oldRoleId                 String?         @map("old_role_id") @db.Uuid
+  newRoleId                 String?         @map("new_role_id") @db.Uuid
+  permissionOverride        String?         @map("permission_override") @db.Text // JSON
+  oldPermissions            String          @map("old_permissions") @db.Text // JSON array
+  newPermissions            String          @map("new_permissions") @db.Text // JSON array
+  reason                    String?         @db.Text
+  ipAddress                 String?         @map("ip_address") @db.VarChar(45)
+  userAgent                 String?         @map("user_agent") @db.Text
+  timestamp                 DateTime        @default(now())
+  metadata                  Json?           @db.JsonB
+
+  targetUser User @relation("RoleChangeLogs_TargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+  changedByUser User @relation("RoleChangeLogs_ChangedBy", fields: [changedBy], references: [id], onDelete: Restrict)
+  oldRole    Role? @relation("RoleChangeLog_OldRole", fields: [oldRoleId], references: [id], onDelete: SetNull)
+  newRole    Role? @relation("RoleChangeLog_NewRole", fields: [newRoleId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, timestamp])
+  @@index([changedBy])
+  @@index([action])
+  @@index([timestamp])
+  @@map("role_change_log")
 }
