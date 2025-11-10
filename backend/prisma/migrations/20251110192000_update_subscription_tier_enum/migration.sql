@@ -1,65 +1,66 @@
 -- Migration: Update subscription_tier enum to match Plan 129 6-tier model
--- Adds: pro_max, enterprise_pro, enterprise_max, perpetual
--- Removes: enterprise (migrates data to enterprise_pro)
+-- Replaces 3-value enum (free, pro, enterprise) with 6-value enum
+-- Maps old 'enterprise' to new 'enterprise_pro'
 -- Also fixes unique constraint warnings
 
 -- ============================================================================
--- STEP 1: Add new enum values to subscription_tier
+-- STEP 1: Create new enum type with all 6 values
 -- ============================================================================
 
--- Add the new tier values that are missing
-ALTER TYPE "subscription_tier" ADD VALUE IF NOT EXISTS 'pro_max';
-ALTER TYPE "subscription_tier" ADD VALUE IF NOT EXISTS 'enterprise_pro';
-ALTER TYPE "subscription_tier" ADD VALUE IF NOT EXISTS 'enterprise_max';
-ALTER TYPE "subscription_tier" ADD VALUE IF NOT EXISTS 'perpetual';
-
--- ============================================================================
--- STEP 2: Migrate existing data from 'enterprise' to 'enterprise_pro'
--- ============================================================================
-
--- Update subscription_monetization table
-UPDATE "subscription_monetization"
-SET "tier" = 'enterprise_pro'
-WHERE "tier" = 'enterprise';
-
--- Update any tier_eligibility arrays in coupon table
-UPDATE "coupon"
-SET "tier_eligibility" = array_replace("tier_eligibility", 'enterprise'::subscription_tier, 'enterprise_pro'::subscription_tier)
-WHERE 'enterprise'::subscription_tier = ANY("tier_eligibility");
-
--- Update allowed_tiers arrays in models table
-UPDATE "models"
-SET "allowed_tiers" = array_replace("allowed_tiers", 'enterprise'::subscription_tier, 'enterprise_pro'::subscription_tier)
-WHERE 'enterprise'::subscription_tier = ANY("allowed_tiers");
-
--- ============================================================================
--- STEP 3: Remove the old 'enterprise' enum value
--- ============================================================================
-
--- Create a new enum type with the correct values
+-- Create a new enum type with the correct values (avoids using uncommitted enum values)
 CREATE TYPE "subscription_tier_new" AS ENUM ('free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual');
 
+-- ============================================================================
+-- STEP 2: Migrate all columns to new enum (with data mapping)
+-- ============================================================================
+
 -- Update subscription_monetization table to use new enum
+-- Maps old 'enterprise' to new 'enterprise_pro'
 ALTER TABLE "subscription_monetization"
   ALTER COLUMN "tier" TYPE "subscription_tier_new"
-  USING "tier"::text::"subscription_tier_new";
+  USING (
+    CASE "tier"::text
+      WHEN 'enterprise' THEN 'enterprise_pro'
+      ELSE "tier"::text
+    END
+  )::"subscription_tier_new";
 
 -- Update coupon table tier_eligibility array
+-- Maps 'enterprise' to 'enterprise_pro' in arrays
 ALTER TABLE "coupon"
   ALTER COLUMN "tier_eligibility" TYPE "subscription_tier_new"[]
-  USING "tier_eligibility"::text[]::"subscription_tier_new"[];
+  USING (
+    SELECT ARRAY(
+      SELECT CASE elem::text
+        WHEN 'enterprise' THEN 'enterprise_pro'::subscription_tier_new
+        ELSE elem::text::subscription_tier_new
+      END
+      FROM unnest("tier_eligibility") AS elem
+    )
+  );
 
 -- Update models table allowed_tiers array
+-- Maps 'enterprise' to 'enterprise_pro' in arrays
 ALTER TABLE "models"
   ALTER COLUMN "allowed_tiers" TYPE "subscription_tier_new"[]
-  USING "allowed_tiers"::text[]::"subscription_tier_new"[];
+  USING (
+    SELECT ARRAY(
+      SELECT CASE elem::text
+        WHEN 'enterprise' THEN 'enterprise_pro'::subscription_tier_new
+        ELSE elem::text::subscription_tier_new
+      END
+      FROM unnest("allowed_tiers") AS elem
+    )
+  );
 
--- Update subscription_tier_config table tier_name if it exists and uses the enum
--- (In current schema it's VARCHAR, but check if there are enum references)
--- No action needed - tier_name is VARCHAR(50)
+-- ============================================================================
+-- STEP 3: Drop old enum and rename new one
+-- ============================================================================
 
--- Drop the old enum and rename the new one
+-- Drop the old enum type (no longer used by any columns)
 DROP TYPE "subscription_tier";
+
+-- Rename the new enum to the original name
 ALTER TYPE "subscription_tier_new" RENAME TO "subscription_tier";
 
 -- ============================================================================
