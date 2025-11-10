@@ -476,20 +476,7 @@ export class AdminUserDetailService {
         },
       });
 
-      // Usage by model now groups by modelId (string), no need to fetch model names
-      // Just use the modelId as the model identifier
-      const modelIdMap = new Map(usageByModel.map((u) => [u.modelId, u.modelId]));
-      const modelPricings = [] as any[]; // Not needed anymore but keeping for compatibility
-      const dummy = await this.prisma.modelProviderPricing.findMany({
-        where: {
-          modelName: { in: Array.from(modelIdMap.values()) },
-        },
-        select: {
-          id: true,
-          modelName: true,
-        },
-      });
-
+      // Usage by model now groups by modelId (string), use modelId as the identifier
       const modelPricingMap = new Map(usageByModel.map((u) => [u.modelId, u.modelId]));
 
       // Get deductions
