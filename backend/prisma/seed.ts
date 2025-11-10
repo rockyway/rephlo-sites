@@ -55,7 +55,7 @@ const OAUTH_CLIENTS_CONFIG = [
     ],
     grantTypes: ['authorization_code'],
     responseTypes: ['code'],
-    scope: 'openid email profile offline_access',
+    scope: 'openid email profile llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
       description: 'Proof of Concept Client for Testing',
