@@ -1656,3 +1656,13 @@ Completed comprehensive restoration and enhancement of test data documentation w
 - docs/progress/140-test-data-validation-report.md (validation documentation)
 
 [2025-11-09 23:19:46] Fixed OAuth token storage issue - axios interceptor was clearing tokens after successful login. Added comprehensive logging, route protection, and reason tracking to clearAuth(). See docs/troubleshooting/004-oauth-token-storage-cleared-by-interceptor.md
+
+
+2025-11-10 07:08:35 - Fixed Prisma schema validation errors (5 errors)
+- Added tokenUsageLedgers relation to Subscription model  
+- Removed invalid SubscriptionMonetization relations
+- Updated ModelProviderPricing to match migration (cache pricing, rate detection)
+- Fixed TokenUsageLedger ↔ CreditDeductionLedger circular relations (split into 2 relations)
+- Committed: d390c0f
+- See: docs/troubleshooting/006-prisma-schema-token-credit-migration-sync.md
+
