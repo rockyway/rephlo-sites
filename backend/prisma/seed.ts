@@ -32,17 +32,18 @@ const OAUTH_CLIENTS_CONFIG = [
     clientName: 'Rephlo Desktop App (Test)',
     clientSecret: 'test-secret-desktop-app-12345',
     redirectUris: [
-      'http://localhost:3000/callback',
+      'http://localhost:8327/callback',
+      'http://localhost:8329/callback',
       'rephlo://callback',
     ],
-    grantTypes: ['authorization_code'],
+    grantTypes: ['authorization_code', 'refresh_token'],
     responseTypes: ['code'],
-    scope: 'openid email profile offline_access',
+    scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
       description: 'Official Rephlo Desktop Application',
       tags: ['desktop', 'official', 'test'],
-      allowedOrigins: ['http://localhost:3000', 'rephlo://'],
+      allowedOrigins: ['http://localhost:8327', 'http://localhost:8329', 'rephlo://'],
     },
   },
   {
@@ -66,19 +67,35 @@ const OAUTH_CLIENTS_CONFIG = [
   {
     clientId: 'web-app-test',
     clientName: 'Rephlo Web App (Test)',
-    clientSecret: 'test-secret-web-app-11111',
+    clientSecret: null, // Public client using PKCE - no secret
     redirectUris: [
-      'http://localhost:5173/callback',
-      'http://localhost:5173/auth/callback',
+      'http://localhost:7152/callback',
+      'http://localhost:7152/auth/callback',
+      'http://localhost:7152/oauth/callback',
     ],
-    grantTypes: ['authorization_code'],
+    grantTypes: ['authorization_code', 'refresh_token'],
     responseTypes: ['code'],
-    scope: 'openid email profile offline_access',
+    scope: 'openid email profile offline_access llm.inference models.read user.info credits.read admin',
     config: {
       skipConsentScreen: true,
-      description: 'Official Rephlo Web Application',
-      tags: ['web', 'official', 'test'],
-      allowedOrigins: ['http://localhost:5173'],
+      description: 'Official Rephlo Web Application (Admin Dashboard) - Public client using PKCE',
+      tags: ['web', 'official', 'test', 'admin'],
+      allowedOrigins: ['http://localhost:7152'],
+    },
+  },
+  {
+    clientId: 'textassistant-api',
+    clientName: 'Backend API Server (Token Introspection)',
+    clientSecret: 'api-client-secret-dev',
+    redirectUris: [], // No redirects - this is a confidential client for server-to-server auth
+    grantTypes: ['client_credentials'],
+    responseTypes: [],
+    scope: '', // No specific scopes needed - this client is used for token introspection only
+    config: {
+      skipConsentScreen: true,
+      description: 'Backend API server confidential client for token introspection',
+      tags: ['backend', 'confidential', 'introspection'],
+      allowedOrigins: [],
     },
   },
 ];

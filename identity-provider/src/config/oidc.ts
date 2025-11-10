@@ -275,8 +275,8 @@ export async function createOIDCProvider(
       AccessToken: 3600, // 1 hour
       AuthorizationCode: 600, // 10 minutes
       IdToken: 3600, // 1 hour
-      RefreshToken: 2592000, // 30 days (can be shortened by clients if needed)
-      Grant: 2592000, // 30 days
+      RefreshToken: 7776000, // 90 days (can be shortened by clients if needed)
+      Grant: 2592000, // 90 days
       Interaction: 3600, // 1 hour
       Session: 86400, // 24 hours (can be enforced via logout on client side for admins)
     },

@@ -47,12 +47,34 @@ cd identity-provider && npm run dev         # IDP (only dev mode)
 
 ### Database Commands (Backend Only)
 
+**⚠️ CRITICAL: Shared Database Architecture**
+
+Both the backend and identity-provider services share the same PostgreSQL database (`rephlo-dev`) **BY DESIGN**. This is intentional for the following reasons:
+- Simplified development setup (single database to manage)
+- User table shared between authentication (identity-provider) and API (backend)
+- OAuth clients and sessions accessible to both services
+
+**Important Implications:**
+1. **Database Reset Impact**: Running `npm run db:reset` in the backend will drop ALL tables including `oidc_models` used by the identity-provider
+2. **Schema Coordination**: Backend Prisma schema includes `OIDCModel` to prevent schema conflicts, even though the backend doesn't use it
+3. **Migration Strategy**: Backend manages all migrations; identity-provider creates `oidc_models` table manually if needed
+4. **Seed Data**: Seed scripts should NEVER drop tables; they should use upsert operations to preserve existing data
+
+**After Database Reset:**
+```bash
+# 1. Reset backend database (applies all migrations + seed)
+cd backend && npm run db:reset
+
+# 2. Recreate oidc_models table for identity provider
+cd backend && psql $DATABASE_URL -c "CREATE TABLE IF NOT EXISTS oidc_models (id VARCHAR(255) PRIMARY KEY, kind VARCHAR(100) NOT NULL, payload JSONB NOT NULL, expires_at TIMESTAMP, grant_id VARCHAR(255), user_code VARCHAR(100), uid VARCHAR(255), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE INDEX IF NOT EXISTS idx_oidc_models_kind ON oidc_models(kind); CREATE INDEX IF NOT EXISTS idx_oidc_models_expires_at ON oidc_models(expires_at); CREATE INDEX IF NOT EXISTS idx_oidc_models_grant_id ON oidc_models(grant_id); CREATE INDEX IF NOT EXISTS idx_oidc_models_user_code ON oidc_models(user_code);"
+```
+
 ```bash
 npm run prisma:generate       # Generate Prisma client
 npm run prisma:migrate        # Run pending migrations
 npm run prisma:studio         # Open Prisma Studio GUI (http://localhost:5555)
 npm run seed                  # Seed test data
-npm run db:reset              # Reset database and re-seed
+npm run db:reset              # Reset database and re-seed (⚠️ requires oidc_models recreation)
 ```
 
 ### Testing (Backend Only)

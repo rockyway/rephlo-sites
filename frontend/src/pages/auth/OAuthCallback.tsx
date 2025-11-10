@@ -1,27 +1,25 @@
 /**
  * OAuth Callback Page
  *
- * Handles the OAuth callback from Google after user authorization.
- * This page is rendered when users are redirected back from Google's consent screen.
+ * Handles the OAuth callback from Identity Provider after user authorization.
+ * This page is rendered when users are redirected back from the authorization endpoint.
  *
  * Flow:
- * 1. Extract query parameters (google_success, user_id, error)
+ * 1. Extract query parameters (code, state, error)
  * 2. Verify state parameter for CSRF protection
- * 3. Show success or error message
- * 4. Redirect to appropriate destination
+ * 3. Exchange authorization code for tokens
+ * 4. Fetch user information from userinfo endpoint
+ * 5. Store tokens and user data
+ * 6. Redirect to dashboard
  *
  * URL Formats:
- * - Success: /oauth/callback?google_success=true&user_id={uuid}
- * - Error: /oauth/callback?error={error_code}
+ * - Success: /oauth/callback?code={authorization_code}&state={state}
+ * - Error: /oauth/callback?error={error_code}&error_description={description}
  *
- * Error Codes:
- * - google_oauth_not_configured: Backend missing credentials
- * - google_oauth_failed: User denied access
- * - missing_code: Authorization code not provided
- * - invalid_state: State parameter missing/invalid
- * - email_not_verified: Google account email not verified
- * - user_creation_failed: Database error
- * - google_oauth_callback_failed: Unexpected error
+ * Error Codes (OAuth 2.0 standard):
+ * - access_denied: User denied authorization
+ * - invalid_request: Malformed request
+ * - server_error: Identity provider error
  */
 
 import { useEffect, useState } from 'react';
@@ -29,6 +27,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { exchangeCodeForTokens } from '@/utils/oauth';
+import { decodeJWT } from '@/utils/jwt';
+import { User } from '@/types/auth';
 
 type CallbackStatus = 'loading' | 'success' | 'error';
 
@@ -40,22 +41,22 @@ interface ErrorDetails {
 }
 
 const errorMessages: Record<string, ErrorDetails> = {
-  google_oauth_not_configured: {
-    code: 'google_oauth_not_configured',
-    title: 'Google Login Not Available',
-    description: 'Google authentication is not configured on the server. Please contact support or try another login method.',
-    action: 'Try another method'
-  },
-  google_oauth_failed: {
-    code: 'google_oauth_failed',
+  access_denied: {
+    code: 'access_denied',
     title: 'Authorization Cancelled',
-    description: 'You cancelled the Google authorization. No changes were made to your account.',
+    description: 'You cancelled the authorization. No changes were made to your account.',
     action: 'Try again'
   },
-  missing_code: {
-    code: 'missing_code',
-    title: 'Authorization Failed',
-    description: 'The authorization code was not received from Google. Please try again.',
+  invalid_request: {
+    code: 'invalid_request',
+    title: 'Invalid Request',
+    description: 'The authorization request was invalid. Please try logging in again.',
+    action: 'Try again'
+  },
+  server_error: {
+    code: 'server_error',
+    title: 'Server Error',
+    description: 'The authorization server encountered an error. Please try again later.',
     action: 'Try again'
   },
   invalid_state: {
@@ -64,22 +65,16 @@ const errorMessages: Record<string, ErrorDetails> = {
     description: 'The security verification failed. This may be due to an expired session or browser cookies being blocked.',
     action: 'Try again'
   },
-  email_not_verified: {
-    code: 'email_not_verified',
-    title: 'Email Not Verified',
-    description: 'Your Google account email is not verified. Please verify your email with Google first.',
-    action: 'Go to login'
-  },
-  user_creation_failed: {
-    code: 'user_creation_failed',
-    title: 'Account Creation Failed',
-    description: 'We could not create your account. Please try again or contact support if the problem persists.',
+  code_exchange_failed: {
+    code: 'code_exchange_failed',
+    title: 'Token Exchange Failed',
+    description: 'Failed to exchange authorization code for tokens. The code may have expired.',
     action: 'Try again'
   },
-  google_oauth_callback_failed: {
-    code: 'google_oauth_callback_failed',
-    title: 'Login Failed',
-    description: 'An unexpected error occurred during login. Please try again.',
+  userinfo_failed: {
+    code: 'userinfo_failed',
+    title: 'User Info Failed',
+    description: 'Failed to fetch user information. Please try again.',
     action: 'Try again'
   },
   unknown: {
@@ -95,41 +90,125 @@ export default function OAuthCallback() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<CallbackStatus>('loading');
   const [errorDetails, setErrorDetails] = useState<ErrorDetails | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Extract query parameters
-    const success = searchParams.get('google_success') === 'true';
-    const error = searchParams.get('error');
-    const userIdParam = searchParams.get('user_id');
+    const handleCallback = async () => {
+      try {
+        // Check for OAuth error response
+        const error = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
 
-    // Handle success
-    if (success && userIdParam) {
-      setStatus('success');
-      setUserId(userIdParam);
+        if (error) {
+          const details = errorMessages[error] || errorMessages.unknown;
+          setStatus('error');
+          setErrorDetails({
+            ...details,
+            description: errorDescription || details.description
+          });
+          return;
+        }
 
-      // Store user ID in session storage (for demo purposes)
-      sessionStorage.setItem('user_id', userIdParam);
-      sessionStorage.setItem('authenticated', 'true');
+        // Extract authorization code and state
+        const code = searchParams.get('code');
+        const state = searchParams.get('state');
 
-      // Redirect to dashboard after 2 seconds
-      setTimeout(() => {
-        navigate('/admin'); // Adjust to your dashboard route
-      }, 2000);
+        // Validate required parameters
+        if (!code) {
+          setStatus('error');
+          setErrorDetails(errorMessages.invalid_request);
+          return;
+        }
 
-      return;
-    }
+        // Exchange authorization code for tokens
+        let tokenResponse;
+        try {
+          tokenResponse = await exchangeCodeForTokens(code, state);
+        } catch (error) {
+          console.error('Token exchange error:', error);
+          const details = errorMessages.code_exchange_failed;
+          setStatus('error');
+          setErrorDetails({
+            ...details,
+            description: error instanceof Error ? error.message : details.description
+          });
+          return;
+        }
 
-    // Handle error
-    if (error) {
-      const details = errorMessages[error] || errorMessages.unknown;
-      setStatus('error');
-      setErrorDetails(details);
-      return;
-    }
+        // Decode user information from id_token
+        // Using id_token avoids audience mismatch with resource-specific access token
+        let idTokenClaims;
+        try {
+          idTokenClaims = decodeJWT<{
+            sub: string;
+            email: string;
+            email_verified?: boolean;
+            name?: string;
+            given_name?: string;
+            family_name?: string;
+            role?: string;
+            permissions?: string[];
+            created_at?: string;
+          }>(tokenResponse.id_token);
+        } catch (error) {
+          console.error('Failed to decode id_token:', error);
+          setStatus('error');
+          setErrorDetails(errorMessages.userinfo_failed);
+          return;
+        }
 
-    // No success or error - redirect to login
-    navigate('/');
+        // Transform id_token claims to User object
+        const userData: User = {
+          id: idTokenClaims.sub,
+          email: idTokenClaims.email,
+          name: idTokenClaims.name || `${idTokenClaims.given_name || ''} ${idTokenClaims.family_name || ''}`.trim() || undefined,
+          role: idTokenClaims.role || 'user',
+          emailVerified: idTokenClaims.email_verified,
+          createdAt: idTokenClaims.created_at || new Date().toISOString(),
+          permissions: idTokenClaims.permissions
+        };
+
+        // Store tokens in session storage (temporary - will be improved with secure storage)
+        console.log('[OAuthCallback] Storing tokens in sessionStorage:', {
+          hasAccessToken: !!tokenResponse.access_token,
+          hasRefreshToken: !!tokenResponse.refresh_token,
+          expiresIn: tokenResponse.expires_in,
+          accessTokenPreview: tokenResponse.access_token?.substring(0, 20) + '...',
+        });
+
+        sessionStorage.setItem('access_token', tokenResponse.access_token);
+        sessionStorage.setItem('refresh_token', tokenResponse.refresh_token);
+        sessionStorage.setItem('token_expires_at', String(Date.now() + tokenResponse.expires_in * 1000));
+        sessionStorage.setItem('user', JSON.stringify(userData));
+
+        // Verify storage
+        console.log('[OAuthCallback] Tokens stored successfully. Verifying...');
+        const storedAccessToken = sessionStorage.getItem('access_token');
+        const storedRefreshToken = sessionStorage.getItem('refresh_token');
+        console.log('[OAuthCallback] Storage verification:', {
+          accessTokenStored: !!storedAccessToken,
+          refreshTokenStored: !!storedRefreshToken,
+          accessTokenMatches: storedAccessToken === tokenResponse.access_token,
+          refreshTokenMatches: storedRefreshToken === tokenResponse.refresh_token,
+        });
+
+        // Update state
+        setUser(userData);
+        setStatus('success');
+
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          navigate('/admin');
+        }, 2000);
+
+      } catch (error) {
+        console.error('Unexpected error in OAuth callback:', error);
+        setStatus('error');
+        setErrorDetails(errorMessages.unknown);
+      }
+    };
+
+    handleCallback();
   }, [searchParams, navigate]);
 
   const handleRetry = () => {
@@ -146,7 +225,7 @@ export default function OAuthCallback() {
             Completing Login
           </h2>
           <p className="text-body text-deep-navy-300">
-            Please wait while we complete your Google login...
+            Please wait while we complete your login...
           </p>
         </Card>
       </div>
@@ -179,13 +258,23 @@ export default function OAuthCallback() {
             Login Successful!
           </h2>
           <p className="text-body text-deep-navy-300 mb-6">
-            Welcome back! Redirecting you to your dashboard...
+            Welcome {user?.name || user?.email}! Redirecting you to your dashboard...
           </p>
 
-          {userId && (
-            <p className="text-body-sm text-deep-navy-200 font-mono">
-              User ID: {userId.substring(0, 8)}...
-            </p>
+          {user && (
+            <div className="text-left bg-deep-navy-50 rounded-md p-4">
+              <p className="text-body-sm text-deep-navy-300 mb-1">
+                <span className="font-semibold">Email:</span> {user.email}
+              </p>
+              <p className="text-body-sm text-deep-navy-300 mb-1">
+                <span className="font-semibold">Role:</span> {user.role}
+              </p>
+              {user.permissions && user.permissions.length > 0 && (
+                <p className="text-body-sm text-deep-navy-300">
+                  <span className="font-semibold">Permissions:</span> {user.permissions.join(', ')}
+                </p>
+              )}
+            </div>
           )}
         </Card>
       </div>

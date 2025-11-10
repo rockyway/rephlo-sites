@@ -135,6 +135,7 @@ cp .env.example .env
 
 # Edit .env file with your configuration
 # VITE_API_URL=http://localhost:7150
+# VITE_PORT=7152 (optional, default: 7152)
 
 # Install dependencies
 npm install
@@ -143,7 +144,7 @@ npm install
 npm run dev
 ```
 
-Frontend will be available at **http://localhost:7052**
+Frontend (Admin Dashboard) will be available at **http://localhost:7152**
 
 ### 3. Backend Setup
 
@@ -175,6 +176,21 @@ Backend API will be available at **http://localhost:7150**
 
 ---
 
+## Services Port Mapping
+
+All services run on separate ports for development. Here's the complete port configuration:
+
+| Service | Port | Purpose | OAuth Client ID |
+|---------|------|---------|-----------------|
+| **Frontend (Admin Dashboard)** | 7152 | React admin dashboard and web interface | `web-app-test` |
+| **Backend API** | 7150 | REST API server | N/A |
+| **Identity Provider (OIDC)** | 7151 | OAuth 2.0 / OpenID Connect provider | N/A |
+| **POC Client** | 8080 | Proof of concept OAuth client | `poc-client-test` |
+| **Desktop App (Instance 1)** | 8327 | Rephlo desktop application (test) | `desktop-app-test` |
+| **Desktop App (Instance 2)** | 8329 | Rephlo desktop application (test) | `desktop-app-test` |
+
+---
+
 ## Development Workflow
 
 ### Running All Services (Recommended)
@@ -186,9 +202,11 @@ npm run dev:all
 ```
 
 This will start:
-- Frontend on **http://localhost:7052**
+- Frontend (Admin Dashboard) on **http://localhost:7152**
 - Backend API on **http://localhost:7150**
 - Identity Provider on **http://localhost:7151**
+- POC Client on **http://localhost:8080**
+- Desktop App on **http://localhost:8327** or **http://localhost:8329**
 
 All services will hot-reload on file changes with color-coded output.
 
@@ -251,6 +269,7 @@ npm start
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VITE_API_URL` | Backend API URL | `http://localhost:7150` |
+| `VITE_PORT` | Frontend port (optional) | `7152` |
 | `VITE_APP_NAME` | Application name | `Rephlo` |
 | `VITE_APP_TAGLINE` | Application tagline | `Transform text. Keep your flow.` |
 | `VITE_NODE_ENV` | Environment mode | `development` |
@@ -262,7 +281,7 @@ npm start
 | `PORT` | Server port | `7150` |
 | `NODE_ENV` | Environment mode | `development` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:password@localhost:5432/rephlo` |
-| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:7052` |
+| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:7152` |
 | `MAX_FILE_SIZE` | Max upload size (bytes) | `5242880` (5MB) |
 | `UPLOAD_DIR` | Upload directory path | `./uploads` |
 
@@ -454,7 +473,7 @@ Detailed deployment instructions will be added in **Phase 6**.
 
 1. Check Node.js version: `node -v` (should be v18+)
 2. Clear node_modules: `rm -rf node_modules package-lock.json && npm install`
-3. Check port 5173 is available
+3. Check port 7152 is available (or configure `VITE_PORT` in `.env`)
 4. Verify `.env` file exists and is valid
 
 ### Backend won't start

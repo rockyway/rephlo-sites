@@ -191,6 +191,18 @@ model User {
   role String @default("user") @map("role") @db.VarChar(20)
   // Values: "user", "admin"
 
+  // Multi-Factor Authentication (MFA) Fields
+  mfaSecret      String?   @map("mfa_secret") @db.VarChar(255)
+  // TOTP secret (base32 encoded)
+  mfaEnabled     Boolean   @default(false) @map("mfa_enabled")
+  // Whether MFA is enabled for this user
+  mfaBackupCodes String?   @map("mfa_backup_codes") @db.Text
+  // JSON string of hashed backup codes for account recovery
+  mfaVerifiedAt  DateTime? @map("mfa_verified_at")
+  // Timestamp when MFA was last verified
+  mfaMethod      String?   @map("mfa_method") @db.VarChar(20)
+  // MFA method: "totp" (Time-based One-Time Password)
+
   // Relations
   subscriptions      Subscription[]
   credits            Credit[]
@@ -235,6 +247,7 @@ model User {
   @@index([createdAt])
   @@index([googleId])
   @@index([role])
+  @@index([mfaEnabled])
   @@map("users")
 }
 
@@ -1735,4 +1748,29 @@ model RoleChangeLog {
   @@index([action])
   @@index([timestamp])
   @@map("role_change_log")
+}
+
+// =============================================================================
+// OIDC Provider Support
+// =============================================================================
+
+/// OIDC session and token storage (managed by identity-provider service)
+/// This model is defined here to prevent schema conflicts since both services
+/// share the same database. The identity-provider service owns this table.
+model OIDCModel {
+  id        String    @id @db.VarChar(255)
+  kind      String    @db.VarChar(100) // Session, AccessToken, AuthorizationCode, etc.
+  payload   Json      // OIDC payload data stored as JSONB
+  expiresAt DateTime? @map("expires_at")
+  grantId   String?   @map("grant_id") @db.VarChar(255)
+  userCode  String?   @map("user_code") @db.VarChar(100)
+  uid       String?   @map("uid") @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([id])
+  @@index([kind])
+  @@index([expiresAt])
+  @@index([grantId])
+  @@index([userCode])
+  @@map("oidc_models")
 }

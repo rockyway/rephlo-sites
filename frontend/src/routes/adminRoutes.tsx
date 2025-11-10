@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
+import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 
 // Lazy load admin components for code splitting
 const AdminLayout = lazy(() => import('../components/admin/layout/AdminLayout'));
@@ -29,7 +30,11 @@ const RevenueAnalytics = lazy(() => import('../pages/admin/analytics/RevenueAnal
 export const adminRoutes: RouteObject[] = [
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: (
+      <ProtectedRoute>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
     children: [
       // Dashboard home
       {

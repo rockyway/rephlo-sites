@@ -1655,3 +1655,4 @@ Completed comprehensive restoration and enhancement of test data documentation w
 - docs/guides/011-test-data.md (primary output - comprehensive test data reference)
 - docs/progress/140-test-data-validation-report.md (validation documentation)
 
+[2025-11-09 23:19:46] Fixed OAuth token storage issue - axios interceptor was clearing tokens after successful login. Added comprehensive logging, route protection, and reason tracking to clearAuth(). See docs/troubleshooting/004-oauth-token-storage-cleared-by-interceptor.md

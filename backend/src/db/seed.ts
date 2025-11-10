@@ -68,8 +68,8 @@ const OAUTH_CLIENTS_CONFIG = [
     clientName: 'Rephlo Web App (Test)',
     clientSecret: 'test-secret-web-app-11111',
     redirectUris: [
-      'http://localhost:5173/callback',
-      'http://localhost:5173/auth/callback',
+      'http://localhost:7152/callback',
+      'http://localhost:7152/auth/callback',
     ],
     grantTypes: ['authorization_code', 'refresh_token'],
     responseTypes: ['code'],
@@ -78,7 +78,7 @@ const OAUTH_CLIENTS_CONFIG = [
       skipConsentScreen: true,
       description: 'Official Rephlo Web Application',
       tags: ['web', 'official', 'test'],
-      allowedOrigins: ['http://localhost:5173'],
+      allowedOrigins: ['http://localhost:7152'],
     },
   },
 ];
