@@ -12,6 +12,7 @@ export * from './services/user.interface';
 export * from './services/subscription.interface';
 export * from './services/stripe.interface';
 export * from './services/model.interface';
+export * from './services/approval-workflow.interface';
 
 // Plan 112: Token-to-Credit Conversion Service Interfaces
 export * from './services/cost-calculation.interface';
