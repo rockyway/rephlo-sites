@@ -12,13 +12,16 @@
  * Reference: https://github.com/panva/node-oidc-provider/tree/main/docs
  */
 
-import Provider from 'oidc-provider';
+import Provider, { interactionPolicy } from 'oidc-provider';
 import type { Configuration, KoaContextWithOIDC } from 'oidc-provider';
 import { PrismaClient } from '@prisma/client';
 import type { JWK } from 'jose';
 import { createOIDCAdapterFactory } from '../adapters/oidc-adapter';
 import { AuthService } from '../services/auth.service';
 import logger from '../utils/logger';
+
+// Import interaction policy components for customization
+const { Prompt, Check, base: basePolicy } = interactionPolicy;
 
 // Environment variables
 const OIDC_ISSUER = process.env.OIDC_ISSUER || 'http://localhost:3001';
@@ -36,6 +39,79 @@ if (!OIDC_JWKS_PRIVATE_KEY) {
 
 // Ensure OIDC_JWKS_PRIVATE_KEY is not undefined for TypeScript
 const OIDC_JWKS_KEY: string = OIDC_JWKS_PRIVATE_KEY;
+
+/**
+ * Create custom interaction policy that skips consent for clients with skipConsentScreen: true
+ *
+ * The default interaction policy has a consent prompt with checks that fail when grant is undefined.
+ * For clients configured with skipConsentScreen: true, we need to skip the consent prompt entirely.
+ *
+ * This prevents the error: "Cannot read properties of undefined (reading 'getOIDCScopeEncountered')"
+ */
+async function createCustomInteractionPolicy(prisma: PrismaClient) {
+  const policy = basePolicy();
+
+  // Get the consent prompt from the base policy
+  const consentPrompt = policy.get('consent');
+
+  if (consentPrompt) {
+    // Remove the default consent prompt
+    policy.remove('consent');
+
+    // Create a new consent prompt with a single custom check
+    // This check handles BOTH skipConsentScreen clients AND regular clients
+    const customConsentPrompt = new Prompt(
+      { name: 'consent', requestable: true },
+
+      // Single check that safely handles all consent scenarios
+      new Check(
+        'consent_check',
+        'consent check with skipConsentScreen support',
+        async (ctx: KoaContextWithOIDC) => {
+          const { client, session } = ctx.oidc;
+
+          if (!client) {
+            return Check.REQUEST_PROMPT;
+          }
+
+          // Check if client has skipConsentScreen configured
+          const dbClient = await prisma.oAuthClient.findUnique({
+            where: { clientId: client.clientId },
+          });
+
+          if (dbClient?.config && typeof dbClient.config === 'object') {
+            const config = dbClient.config as any;
+            if (config.skipConsentScreen === true) {
+              // Skip consent for this client - no need to check grant
+              return Check.NO_NEED_TO_PROMPT;
+            }
+          }
+
+          // For regular clients, check if user has already granted consent
+          // This mirrors the default OIDC behavior but with safe grant checking
+          if (!session || !session.accountId) {
+            // Not logged in yet, can't check consent
+            return Check.NO_NEED_TO_PROMPT;
+          }
+
+          // If there's a grant, user has already consented - no need to prompt again
+          const grant = ctx.oidc.entities?.Grant;
+          if (grant) {
+            return Check.NO_NEED_TO_PROMPT;
+          }
+
+          // No grant exists and client doesn't skip consent - need to show consent screen
+          return Check.REQUEST_PROMPT;
+        }
+      )
+    );
+
+    // Add the custom consent prompt back to the policy
+    policy.add(customConsentPrompt);
+  }
+
+  return policy;
+}
 
 /**
  * Create OIDC Provider instance
@@ -126,7 +202,8 @@ export async function createOIDCProvider(
           // This ensures access tokens are JWT format instead of opaque reference tokens
           return {
             // Scopes available for this resource
-            scope: 'openid email profile llm.inference models.read user.info credits.read admin',
+            // IMPORTANT: offline_access must be included here for refresh token issuance when using resource indicators
+            scope: 'openid email profile offline_access llm.inference models.read user.info credits.read admin',
             // CRITICAL: Force JWT format instead of default opaque tokens
             accessTokenFormat: 'jwt',
             // JWT audience claim - identifies the intended recipient
@@ -140,6 +217,20 @@ export async function createOIDCProvider(
       },
     },
 
+    // Custom issueRefreshToken function
+    // IMPORTANT: Override default behavior to work with resource indicators
+    // Default implementation checks: client.grantTypeAllowed('refresh_token') && code.scopes.has('offline_access')
+    // Problem: When using resource indicators, offline_access gets filtered out from code.scopes
+    // Solution: Only check if client has refresh_token grant type, ignore offline_access scope requirement
+    async issueRefreshToken(ctx: any, client: any, code: any) {
+      logger.info(`OIDC: Checking refresh token issuance for client ${client.clientId}`);
+
+      const canIssue = client.grantTypeAllowed('refresh_token');
+      logger.info(`OIDC: Client ${client.clientId} refresh token permission: ${canIssue}`);
+
+      return canIssue;
+    },
+
     // Response types supported
     // 'code' = authorization code flow (used with PKCE)
     responseTypes: ['code'],
@@ -149,6 +240,7 @@ export async function createOIDCProvider(
       'openid',
       'email',
       'profile',
+      'offline_access', // Enables refresh token issuance
       'llm.inference',
       'models.read',
       'user.info',
@@ -223,6 +315,62 @@ export async function createOIDCProvider(
       return authService.findAccount(sub);
     },
 
+    // Load existing grant to check if consent can be skipped
+    // For clients with skipConsentScreen: true, we auto-grant consent after login
+    loadExistingGrant: async (ctx: KoaContextWithOIDC) => {
+      // Only check for existing grants if there's an active session
+      if (!ctx.oidc.session?.accountId) {
+        return undefined;
+      }
+
+      const { client } = ctx.oidc;
+      if (!client) {
+        return undefined;
+      }
+
+      // Check if client has skipConsentScreen configured
+      const dbClient = await prisma.oAuthClient.findUnique({
+        where: { clientId: client.clientId },
+      });
+
+      if (dbClient?.config && typeof dbClient.config === 'object') {
+        const config = dbClient.config as any;
+        if (config.skipConsentScreen === true) {
+          // For clients with skipConsentScreen, automatically create and save a grant
+          // This will skip the consent prompt entirely
+          const grant = new ctx.oidc.provider.Grant({
+            clientId: client.clientId,
+            accountId: ctx.oidc.session.accountId,
+          });
+
+          // Add all requested scopes and resources to the grant
+          if (ctx.oidc.params?.scope) {
+            grant.addOIDCScope(ctx.oidc.params.scope as string);
+          }
+          if (ctx.oidc.params?.resource) {
+            grant.addResourceScope(
+              ctx.oidc.params.resource as string,
+              ctx.oidc.params.scope as string
+            );
+          }
+
+          // Save the grant to the database
+          await grant.save();
+
+          return grant;
+        }
+      }
+
+      // For other clients, check if there's an existing grant in the database
+      // This allows users who have previously consented to skip re-consenting
+      const grantId = ctx.oidc.session?.grantIdFor(client.clientId);
+      if (grantId) {
+        return ctx.oidc.provider.Grant.find(grantId);
+      }
+
+      return undefined;
+    },
+
     // Interaction URL for login/consent
     // IMPORTANT: Must be absolute URL (including protocol and host) so browsers redirect correctly
     // without getting confused about which domain the interaction endpoint is on
@@ -231,6 +379,8 @@ export async function createOIDCProvider(
         const issuer = process.env.OIDC_ISSUER || 'http://localhost:7151';
         return `${issuer}/interaction/${interaction.uid}`;
       },
+      // Use custom interaction policy to handle skipConsentScreen clients
+      policy: await createCustomInteractionPolicy(prisma),
     },
 
     // Routes configuration - use standard OAuth 2.0 paths

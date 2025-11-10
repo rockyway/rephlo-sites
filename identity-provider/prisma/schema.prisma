@@ -411,3 +411,24 @@ model WebhookLog {
   @@index([createdAt])
   @@map("webhook_logs")
 }
+
+// OIDC Models Table
+// Stores OIDC sessions, tokens, and other transient data required by node-oidc-provider
+// Uses a single table with a discriminator (kind) field for different model types
+model OIDCModel {
+  id        String    @id @db.VarChar(255)
+  kind      String    @db.VarChar(100) // Session, AccessToken, AuthorizationCode, etc.
+  payload   Json      // OIDC payload data stored as JSONB
+  expiresAt DateTime? @map("expires_at")
+  grantId   String?   @map("grant_id") @db.VarChar(255)
+  userCode  String?   @map("user_code") @db.VarChar(100)
+  uid       String?   @map("uid") @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([id])
+  @@index([kind])
+  @@index([expiresAt])
+  @@index([grantId])
+  @@index([userCode])
+  @@map("oidc_models")
+}

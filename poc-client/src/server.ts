@@ -90,6 +90,8 @@ app.get('/oauth/login', (req: Request, res: Response) => {
   authorizationUrl.searchParams.set('code_challenge', codeChallenge);
   authorizationUrl.searchParams.set('code_challenge_method', 'S256');
   authorizationUrl.searchParams.set('state', sessionId);
+  // Force login prompt to bypass grant checking issues
+  authorizationUrl.searchParams.set('prompt', 'login');
   // RFC 8707: Resource indicator to request JWT tokens instead of opaque reference tokens
   authorizationUrl.searchParams.set('resource', 'https://api.textassistant.local');
 
@@ -143,12 +145,20 @@ app.get(['/callback', '/oauth/callback'], async (req: Request, res: Response) =>
       }
     );
 
+    // Log full token response to verify refresh_token issuance
+    console.log('\n=== TOKEN RESPONSE ===');
+    console.log(JSON.stringify(tokenResponse.data, null, 2));
+    console.log('=====================\n');
+
     const token = tokenResponse.data.access_token;
     const tokenPayload = decodeJWT(token);
 
-    // Store token in session
+    // Store token and refresh token in session
     session.token = token;
     session.tokenPayload = tokenPayload;
+    if (tokenResponse.data.refresh_token) {
+      (session as any).refreshToken = tokenResponse.data.refresh_token;
+    }
 
     res.redirect(`/?token=${token}&session=${sessionId}`);
   } catch (error: any) {

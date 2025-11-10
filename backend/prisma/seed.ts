@@ -48,18 +48,18 @@ const OAUTH_CLIENTS_CONFIG = [
   {
     clientId: 'poc-client-test',
     clientName: 'POC Client (Test)',
-    clientSecret: 'test-secret-poc-client-67890',
+    clientSecret: null, // Public client using PKCE - no secret
     redirectUris: [
       'http://localhost:8080/callback',
       'http://localhost:8080/oauth/callback',
     ],
-    grantTypes: ['authorization_code', 'refresh_token'],
+    grantTypes: ['authorization_code', 'refresh_token'], // Added refresh_token for offline_access
     responseTypes: ['code'],
     scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
-      description: 'Proof of Concept Client for Testing',
-      tags: ['poc', 'test'],
+      description: 'Proof of Concept Client for Testing - Public client using PKCE',
+      tags: ['poc', 'test', 'public'],
       allowedOrigins: ['http://localhost:8080'],
     },
   },
@@ -163,7 +163,8 @@ async function seedOAuthClients() {
   const createdClients = [];
 
   for (const client of OAUTH_CLIENTS_CONFIG) {
-    const clientSecretHash = await hashPassword(client.clientSecret);
+    // For public clients (no secret), clientSecretHash is null
+    const clientSecretHash = client.clientSecret ? await hashPassword(client.clientSecret) : null;
 
     const oauthClient = await prisma.oAuthClient.upsert({
       where: { clientId: client.clientId },
@@ -224,8 +225,6 @@ async function seedUserPersonas() {
       where: { email: persona.email },
     });
 
-    // Note: MFA fields are added by migration 20251109130000
-    // mfaBackupCodes array is handled by Prisma with @default([])
     const user = await prisma.user.create({
       data: {
         email: persona.email,
@@ -238,8 +237,6 @@ async function seedUserPersonas() {
         googleId: persona.googleId || undefined,
         role: persona.role,
         isActive: true,
-        mfaEnabled: persona.mfaEnabled || false,
-        // mfaBackupCodes defaults to [] automatically
       },
     });
 
@@ -247,7 +244,6 @@ async function seedUserPersonas() {
       userId: user.id,
       email: user.email,
       role: user.role,
-      mfaEnabled: user.mfaEnabled,
       description: persona.description,
     });
   }

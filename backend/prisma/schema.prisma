@@ -191,17 +191,6 @@ model User {
   role String @default("user") @map("role") @db.VarChar(20)
   // Values: "user", "admin"
 
-  // Multi-Factor Authentication Fields (Phase 4 - MFA for Admin Accounts)
-  mfaEnabled     Boolean   @default(false) @map("mfa_enabled")
-  mfaSecret      String?   @map("mfa_secret") @db.VarChar(255)
-  // Base32-encoded TOTP secret (nullable until MFA enrolled)
-  mfaBackupCodes String?   @default("") @map("mfa_backup_codes") @db.Text
-  // Comma-separated hashed backup codes for account recovery (stored as text for now)
-  mfaVerifiedAt  DateTime? @map("mfa_verified_at")
-  // Timestamp of last successful MFA verification
-  mfaMethod      String    @default("totp") @map("mfa_method") @db.VarChar(20)
-  // MFA method: "totp", "sms", "email" (future extensibility)
-
   // Relations
   subscriptions      Subscription[]
   credits            Credit[]
@@ -246,7 +235,6 @@ model User {
   @@index([createdAt])
   @@index([googleId])
   @@index([role])
-  @@index([mfaEnabled])
   @@map("users")
 }
 
