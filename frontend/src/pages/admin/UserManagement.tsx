@@ -620,7 +620,7 @@ function UserManagement() {
                   </div>
                   <div className="bg-deep-navy-50 p-4 rounded-md">
                     <p className="text-caption text-deep-navy-500">Avg Calls/Day</p>
-                    <p className="text-h3 font-semibold">{userDetails.usageStats.averageCallsPerDay.toFixed(1)}</p>
+                    <p className="text-h3 font-semibold">{(userDetails.usageStats.averageCallsPerDay ?? 0).toFixed(1)}</p>
                   </div>
                 </div>
               </div>
