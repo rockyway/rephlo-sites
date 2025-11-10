@@ -307,7 +307,7 @@ function PerpetualLicenseManagement() {
                 <h3 className="text-body-sm text-deep-navy-600 font-medium">Average Devices per License</h3>
                 <HardDrive className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{stats.avgDevicesPerLicense.toFixed(1)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800">{(stats.avgDevicesPerLicense ?? 0).toFixed(1)}</p>
             </div>
 
             <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
@@ -316,17 +316,17 @@ function PerpetualLicenseManagement() {
                 <AlertCircle
                   className={cn(
                     'h-5 w-5',
-                    stats.licensesAtMaxCapacity > 0 ? 'text-amber-600' : 'text-deep-navy-400'
+                    (stats.licensesAtMaxCapacity ?? 0) > 0 ? 'text-amber-600' : 'text-deep-navy-400'
                   )}
                 />
               </div>
               <p
                 className={cn(
                   'text-h2 font-bold',
-                  stats.licensesAtMaxCapacity > 0 ? 'text-amber-600' : 'text-deep-navy-800'
+                  (stats.licensesAtMaxCapacity ?? 0) > 0 ? 'text-amber-600' : 'text-deep-navy-800'
                 )}
               >
-                {stats.licensesAtMaxCapacity} ({stats.licensesAtMaxCapacityPercentage.toFixed(0)}%)
+                {stats.licensesAtMaxCapacity ?? 0} ({(stats.licensesAtMaxCapacityPercentage ?? 0).toFixed(0)}%)
               </p>
             </div>
           </div>
