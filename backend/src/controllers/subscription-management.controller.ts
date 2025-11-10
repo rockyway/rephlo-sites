@@ -538,7 +538,7 @@ export class SubscriptionManagementController {
    *
    * Requires: Admin authentication
    */
-  async getSubscriptionStats(req: Request, res: Response): Promise<void> {
+  async getSubscriptionStats(_req: Request, res: Response): Promise<void> {
     logger.info('SubscriptionManagementController.getSubscriptionStats');
 
     try {
