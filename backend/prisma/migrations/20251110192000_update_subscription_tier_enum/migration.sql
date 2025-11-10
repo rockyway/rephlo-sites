@@ -27,15 +27,27 @@ ALTER TABLE "subscription_monetization"
 
 -- Update coupon table tier_eligibility array
 -- Maps 'enterprise' to 'enterprise_pro' in arrays
+-- First drop default constraint to avoid casting error
+ALTER TABLE "coupon" ALTER COLUMN "tier_eligibility" DROP DEFAULT;
+
 ALTER TABLE "coupon"
   ALTER COLUMN "tier_eligibility" TYPE "subscription_tier_new"[]
   USING array_replace("tier_eligibility"::text[], 'enterprise', 'enterprise_pro')::"subscription_tier_new"[];
 
+-- Restore default with new enum type
+ALTER TABLE "coupon" ALTER COLUMN "tier_eligibility" SET DEFAULT ARRAY['free', 'pro', 'enterprise_pro']::"subscription_tier_new"[];
+
 -- Update models table allowed_tiers array
 -- Maps 'enterprise' to 'enterprise_pro' in arrays
+-- First drop default constraint to avoid casting error
+ALTER TABLE "models" ALTER COLUMN "allowed_tiers" DROP DEFAULT;
+
 ALTER TABLE "models"
   ALTER COLUMN "allowed_tiers" TYPE "subscription_tier_new"[]
   USING array_replace("allowed_tiers"::text[], 'enterprise', 'enterprise_pro')::"subscription_tier_new"[];
+
+-- Restore default with new enum type
+ALTER TABLE "models" ALTER COLUMN "allowed_tiers" SET DEFAULT ARRAY['free', 'pro', 'enterprise_pro']::"subscription_tier_new"[];
 
 -- ============================================================================
 -- STEP 3: Drop old enum and rename new one
