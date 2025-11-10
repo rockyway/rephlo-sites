@@ -13,27 +13,43 @@ import { SubscriptionTier, SubscriptionStatus, UserStatus } from '@/types/plan10
 
 /**
  * Format USD currency amounts
+ * Safely handles undefined, null, or invalid numeric values
  */
-export function formatCurrency(amount: number, decimals = 2): string {
+export function formatCurrency(amount: number | undefined | null, decimals = 2): string {
+  // Handle undefined, null, or NaN values
+  const validAmount = (amount === undefined || amount === null || Number.isNaN(amount)) ? 0 : Number(amount);
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  }).format(amount);
+  }).format(validAmount);
 }
 
 /**
  * Format large numbers with K/M abbreviations
+ * Safely handles undefined, null, or invalid numeric values
  */
-export function formatNumber(num: number): string {
-  if (num >= 1_000_000) {
-    return `${(num / 1_000_000).toFixed(1)}M`;
+export function formatNumber(num: number | undefined | null): string {
+  // Handle undefined, null, or NaN values
+  if (num === undefined || num === null || Number.isNaN(num)) {
+    return '0';
   }
-  if (num >= 1_000) {
-    return `${(num / 1_000).toFixed(1)}K`;
+
+  // Ensure we have a valid number
+  const validNum = Number(num);
+  if (!Number.isFinite(validNum)) {
+    return '0';
   }
-  return num.toLocaleString('en-US');
+
+  if (validNum >= 1_000_000) {
+    return `${(validNum / 1_000_000).toFixed(1)}M`;
+  }
+  if (validNum >= 1_000) {
+    return `${(validNum / 1_000).toFixed(1)}K`;
+  }
+  return validNum.toLocaleString('en-US');
 }
 
 /**
@@ -82,9 +98,12 @@ export function formatRelativeTime(date: string | Date): string {
 
 /**
  * Format percentage
+ * Safely handles undefined, null, or invalid numeric values
  */
-export function formatPercentage(value: number, decimals = 1): string {
-  return `${value.toFixed(decimals)}%`;
+export function formatPercentage(value: number | undefined | null, decimals = 1): string {
+  // Handle undefined, null, or NaN values
+  const validValue = (value === undefined || value === null || Number.isNaN(value)) ? 0 : Number(value);
+  return `${validValue.toFixed(decimals)}%`;
 }
 
 // ============================================================================
