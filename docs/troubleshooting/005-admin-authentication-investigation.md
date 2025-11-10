@@ -455,3 +455,27 @@ cd identity-provider && npm run dev
 **Resolution Status:** ✅ COMPLETE
 **Testing Status:** Ready for testing
 **Production Ready:** Yes (with MFA_ENFORCEMENT_ENABLED=false for now)
+
+## POST-RESOLUTION UPDATE
+
+**Date:** 2025-11-10
+
+### Additional Fix: oidc_models Table Migration
+
+After initial resolution, discovered that the `oidc_models` table required manual creation after `npm run db:reset`. This table is used by the identity provider's PostgreSQL adapter to store OIDC sessions, tokens, and grants.
+
+**Problem:** The table was not included in Prisma migrations, requiring manual SQL execution after every database reset.
+
+**Solution:** Created migration `20251110000000_add_oidc_models_table` to automatically create the table.
+
+**File:** `backend/prisma/migrations/20251110000000_add_oidc_models_table/migration.sql`
+
+This migration creates:
+- `oidc_models` table with columns: id, kind, payload (JSONB), expires_at, grant_id, user_code, uid, created_at
+- Indexes on: kind, expires_at, grant_id, user_code, uid
+
+**Result:** Database reset (`npm run db:reset`) now automatically creates all required tables including `oidc_models`. No manual SQL execution needed.
+
+**Documentation Updated:**
+- `CLAUDE.md` - Removed manual oidc_models creation instructions
+- `CLAUDE.md` - Updated "Database Reset" section to reflect automated process
