@@ -237,13 +237,21 @@ async function seedUserPersonas() {
       ? await hashPassword(persona.password)
       : null;
 
-    // Delete existing user to avoid conflicts
-    await prisma.user.deleteMany({
+    // Use upsert instead of delete + create to avoid foreign key conflicts
+    const user = await prisma.user.upsert({
       where: { email: persona.email },
-    });
-
-    const user = await prisma.user.create({
-      data: {
+      update: {
+        firstName: persona.firstName,
+        lastName: persona.lastName,
+        username: persona.username,
+        passwordHash,
+        emailVerified: persona.emailVerified,
+        authProvider: persona.authProvider,
+        googleId: persona.googleId || undefined,
+        role: persona.role,
+        isActive: true,
+      },
+      create: {
         email: persona.email,
         firstName: persona.firstName,
         lastName: persona.lastName,
