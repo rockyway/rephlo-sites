@@ -1,11 +1,11 @@
 # Test Data Documentation - Complete Reference
 
-**Version**: 3.0 (Plans 109-112 Comprehensive)
-**Last Updated**: November 2025
-**Audience**: Developers, QA Engineers, Testers, Desktop App Developers, Product Managers
+**Version**: 3.1 (Plans 109-112 + Plan 119 RBAC)
+**Last Updated**: November 9, 2025
+**Audience**: Developers, QA Engineers, Testers, Desktop App Developers, Product Managers, Operations Team
 **Status**: Authoritative Single Source of Truth for Test Data
 
-This document provides comprehensive information about all test data required for the Rephlo system, including Plans 109 (Subscription Monetization), 110 (Perpetual Licensing), 111 (Coupon & Discount System), and 112 (Token-to-Credit Conversion).
+This document provides comprehensive information about all test data required for the Rephlo system, including Plans 109 (Subscription Monetization), 110 (Perpetual Licensing), 111 (Coupon & Discount System), 112 (Token-to-Credit Conversion), and 119 (User-Role-Permission RBAC System).
 
 ---
 
@@ -51,6 +51,32 @@ PRO TIER (Google Auth):
   Email: google.user@example.com
   Auth: Google OAuth
   Tier: pro
+
+=== RBAC TEAM MEMBERS ===
+
+OPERATIONS LEAD (Ops Role):
+  Email: ops.user@rephlo.ai
+  Password: OpsPassword123!
+  RBAC Role: ops (25 permissions)
+  Tier: pro
+
+SUPPORT AGENT (Support Role):
+  Email: support.user@rephlo.ai
+  Password: SupportPassword123!
+  RBAC Role: support (12 permissions)
+  Tier: pro
+
+BUSINESS ANALYST (Analyst Role):
+  Email: analyst.user@rephlo.ai
+  Password: AnalystPassword123!
+  RBAC Role: analyst (8 permissions)
+  Tier: pro
+
+COMPLIANCE AUDITOR (Auditor Role):
+  Email: auditor.user@rephlo.ai
+  Password: AuditorPassword123!
+  RBAC Role: auditor (5 permissions)
+  Tier: pro
 ```
 
 ---
@@ -62,11 +88,12 @@ PRO TIER (Google Auth):
 3. [Plan 110: Perpetual Licensing](#plan-110-perpetual-licensing)
 4. [Plan 111: Coupon & Discount System](#plan-111-coupon--discount-system)
 5. [Plan 112: Token-to-Credit Conversion](#plan-112-token-to-credit-conversion)
-6. [Core Test Users](#core-test-users)
-7. [Seeding the Database](#seeding-the-database)
-8. [Comprehensive Test Scenarios](#comprehensive-test-scenarios)
-9. [Enum Reference](#enum-reference)
-10. [Data Reset Procedures](#data-reset-procedures)
+6. [Plan 119: User-Role-Permission RBAC System](#plan-119-user-role-permission-rbac-system)
+7. [Core Test Users](#core-test-users)
+8. [Seeding the Database](#seeding-the-database)
+9. [Comprehensive Test Scenarios](#comprehensive-test-scenarios)
+10. [Enum Reference](#enum-reference)
+11. [Data Reset Procedures](#data-reset-procedures)
 
 ---
 
@@ -99,6 +126,14 @@ The Rephlo system implements four major feature plans with corresponding test da
 - Token usage ledger (immutable audit trail)
 - Credit deduction tracking
 - Daily aggregated summaries
+
+### Plan 119: User-Role-Permission RBAC System
+- 6 hierarchical built-in roles (Super Admin, Admin, Ops, Support, Analyst, Auditor)
+- 40+ granular permissions across 7 categories
+- Permission override system with expiration
+- Complete audit logging with IP tracking
+- Role-based access control enforcement
+- Temporary role assignments
 
 ---
 
@@ -847,6 +882,582 @@ Audit 2 (Tiered Margin Update):
 
 ---
 
+## Plan 119: User-Role-Permission RBAC System
+
+### Role Definitions
+
+The Rephlo platform implements 6 hierarchical built-in roles with granular permission management. The following test data covers all roles with their default permissions.
+
+```yaml
+Role 1 (Super Admin):
+  id: "role-super-admin-id"
+  name: "super_admin"
+  displayName: "Super Administrator"
+  description: "Platform owner with unrestricted access"
+  isSystemRole: true
+  hierarchy: 1
+  defaultPermissions:
+    # Subscriptions (6)
+    - "subscriptions.view"
+    - "subscriptions.create"
+    - "subscriptions.edit"
+    - "subscriptions.cancel"
+    - "subscriptions.reactivate"
+    - "subscriptions.refund"
+    # Licenses (6)
+    - "licenses.view"
+    - "licenses.create"
+    - "licenses.activate"
+    - "licenses.deactivate"
+    - "licenses.suspend"
+    - "licenses.revoke"
+    # Coupons (7)
+    - "coupons.view"
+    - "coupons.create"
+    - "coupons.edit"
+    - "coupons.delete"
+    - "coupons.approve_redemption"
+    - "campaigns.create"
+    - "campaigns.set_budget"
+    # Credits (5)
+    - "credits.view_balance"
+    - "credits.view_history"
+    - "credits.grant"
+    - "credits.deduct"
+    - "credits.adjust_expiration"
+    # Users (7)
+    - "users.view"
+    - "users.edit_profile"
+    - "users.suspend"
+    - "users.unsuspend"
+    - "users.ban"
+    - "users.delete"
+    - "users.impersonate"
+    # Roles (6)
+    - "roles.view"
+    - "roles.create"
+    - "roles.edit"
+    - "roles.delete"
+    - "roles.assign"
+    - "roles.view_audit_log"
+    # Analytics (4)
+    - "analytics.view_dashboard"
+    - "analytics.view_revenue"
+    - "analytics.view_usage"
+    - "analytics.export_data"
+
+Role 2 (Admin):
+  id: "role-admin-id"
+  name: "admin"
+  displayName: "Administrator"
+  description: "Trusted operations lead with broad permissions"
+  isSystemRole: true
+  hierarchy: 2
+  defaultPermissions:
+    # Subscriptions (6)
+    - "subscriptions.view"
+    - "subscriptions.create"
+    - "subscriptions.edit"
+    - "subscriptions.cancel"
+    - "subscriptions.reactivate"
+    - "subscriptions.refund"
+    # Licenses (6)
+    - "licenses.view"
+    - "licenses.create"
+    - "licenses.activate"
+    - "licenses.deactivate"
+    - "licenses.suspend"
+    - "licenses.revoke"
+    # Coupons (7)
+    - "coupons.view"
+    - "coupons.create"
+    - "coupons.edit"
+    - "coupons.delete"
+    - "coupons.approve_redemption"
+    - "campaigns.create"
+    - "campaigns.set_budget"
+    # Credits (5)
+    - "credits.view_balance"
+    - "credits.view_history"
+    - "credits.grant"
+    - "credits.deduct"
+    - "credits.adjust_expiration"
+    # Users (7)
+    - "users.view"
+    - "users.edit_profile"
+    - "users.suspend"
+    - "users.unsuspend"
+    - "users.ban"
+    - "users.delete"
+    # Roles (5)
+    - "roles.view"
+    - "roles.assign"
+    - "roles.view_audit_log"
+    # Analytics (4)
+    - "analytics.view_dashboard"
+    - "analytics.view_revenue"
+    - "analytics.view_usage"
+    - "analytics.export_data"
+
+Role 3 (Operations/Ops):
+  id: "role-ops-id"
+  name: "ops"
+  displayName: "Operations"
+  description: "Day-to-day subscription and license management"
+  isSystemRole: true
+  hierarchy: 3
+  defaultPermissions:
+    # Subscriptions (5)
+    - "subscriptions.view"
+    - "subscriptions.create"
+    - "subscriptions.edit"
+    - "subscriptions.cancel"
+    - "subscriptions.reactivate"
+    # Licenses (5)
+    - "licenses.view"
+    - "licenses.create"
+    - "licenses.activate"
+    - "licenses.deactivate"
+    # Coupons (5)
+    - "coupons.view"
+    - "coupons.create"
+    - "coupons.edit"
+    - "coupons.approve_redemption"
+    - "campaigns.create"
+    # Credits (3)
+    - "credits.view_balance"
+    - "credits.view_history"
+    - "credits.grant"  # Max $100 per transaction
+    # Users (4)
+    - "users.view"
+    - "users.edit_profile"
+    - "users.suspend"
+    - "users.unsuspend"
+    # Roles (1)
+    - "roles.view"
+    # Analytics (3)
+    - "analytics.view_dashboard"
+    - "analytics.view_revenue"
+    - "analytics.view_usage"
+
+Role 4 (Support):
+  id: "role-support-id"
+  name: "support"
+  displayName: "Customer Support"
+  description: "Customer support with read-mostly + limited credit grants"
+  isSystemRole: true
+  hierarchy: 4
+  defaultPermissions:
+    # Subscriptions (1)
+    - "subscriptions.view"
+    # Licenses (1)
+    - "licenses.view"
+    # Coupons (1)
+    - "coupons.view"
+    # Credits (3)
+    - "credits.view_balance"
+    - "credits.view_history"
+    - "credits.grant"  # Max $50 per transaction
+    # Users (3)
+    - "users.view"
+    - "users.unsuspend"
+    # Roles (1)
+    - "roles.view"
+    # Analytics (3)
+    - "analytics.view_dashboard"
+    - "analytics.view_usage"
+
+Role 5 (Analyst):
+  id: "role-analyst-id"
+  name: "analyst"
+  displayName: "Business Analyst"
+  description: "Business intelligence and reporting (read-only)"
+  isSystemRole: true
+  hierarchy: 5
+  defaultPermissions:
+    # Subscriptions (1)
+    - "subscriptions.view"
+    # Licenses (1)
+    - "licenses.view"
+    # Coupons (1)
+    - "coupons.view"
+    # Credits (2)
+    - "credits.view_balance"
+    - "credits.view_history"
+    # Users (1)
+    - "users.view"
+    # Roles (1)
+    - "roles.view"
+    # Analytics (4)
+    - "analytics.view_dashboard"
+    - "analytics.view_revenue"
+    - "analytics.view_usage"
+    - "analytics.export_data"  # Anonymized only
+
+Role 6 (Auditor):
+  id: "role-auditor-id"
+  name: "auditor"
+  displayName: "Auditor"
+  description: "Compliance and audit trail review (read-only)"
+  isSystemRole: true
+  hierarchy: 6
+  defaultPermissions:
+    # Subscriptions (1)
+    - "subscriptions.view"
+    # Licenses (1)
+    - "licenses.view"
+    # Roles (1)
+    - "roles.view"
+    # Roles Audit (1)
+    - "roles.view_audit_log"
+    # Analytics (1)
+    - "analytics.view_dashboard"
+```
+
+### User Role Assignments
+
+```yaml
+Assignment 1 (Admin Role):
+  id: "assignment-admin-id"
+  userId: "admin-test-id"
+  roleId: "role-admin-id"
+  assignedBy: "super-admin-id"
+  assignedAt: "2025-10-01T00:00:00Z"
+  expiresAt: null  # Permanent
+  isActive: true
+  permissionOverrides: []
+  assignmentReason: "Admin team member for operations"
+  notifyUser: true
+
+Assignment 2 (Ops Role):
+  id: "assignment-ops-id"
+  userId: "ops-user-id"
+  roleId: "role-ops-id"
+  assignedBy: "admin-test-id"
+  assignedAt: "2025-10-15T00:00:00Z"
+  expiresAt: null  # Permanent
+  isActive: true
+  permissionOverrides: []
+  assignmentReason: "Operations team - subscription management"
+  notifyUser: true
+
+Assignment 3 (Support Role):
+  id: "assignment-support-id"
+  userId: "support-user-id"
+  roleId: "role-support-id"
+  assignedBy: "admin-test-id"
+  assignedAt: "2025-11-01T00:00:00Z"
+  expiresAt: null  # Permanent
+  isActive: true
+  permissionOverrides: []
+  assignmentReason: "Support team - customer assistance"
+  notifyUser: true
+
+Assignment 4 (Analyst Role):
+  id: "assignment-analyst-id"
+  userId: "analyst-user-id"
+  roleId: "role-analyst-id"
+  assignedBy: "admin-test-id"
+  assignedAt: "2025-11-05T00:00:00Z"
+  expiresAt: null  # Permanent
+  isActive: true
+  permissionOverrides: []
+  assignmentReason: "Business intelligence and reporting"
+  notifyUser: true
+
+Assignment 5 (Auditor Role):
+  id: "assignment-auditor-id"
+  userId: "auditor-user-id"
+  roleId: "role-auditor-id"
+  assignedBy: "admin-test-id"
+  assignedAt: "2025-11-08T00:00:00Z"
+  expiresAt: null  # Permanent
+  isActive: true
+  permissionOverrides: []
+  assignmentReason: "Compliance and audit trail monitoring"
+  notifyUser: true
+
+Assignment 6 (Temporary Analyst - 24 hours):
+  id: "assignment-temp-analyst-id"
+  userId: "ops-user-id"
+  roleId: "role-analyst-id"
+  assignedBy: "admin-test-id"
+  assignedAt: "2025-11-09T10:00:00Z"
+  expiresAt: "2025-11-10T10:00:00Z"  # 24-hour temporary
+  isActive: true
+  permissionOverrides: []
+  assignmentReason: "Temporary analytics access for Q4 planning"
+  notifyUser: true
+```
+
+### Permission Override Examples
+
+```yaml
+Override 1 (Grant Temporary Emergency License Revocation):
+  user_id: "ops-user-id"
+  role_assignment_id: "assignment-ops-id"
+  permission: "licenses.revoke"
+  action: "grant"
+  expiresAt: "2025-11-10T23:59:59Z"  # 24-hour grant
+  reason: "Emergency license fraud investigation - user account 12345"
+  grantedBy: "admin-test-id"
+  grantedAt: "2025-11-09T14:30:00Z"
+
+Override 2 (Revoke Default Credit Grant During Training):
+  user_id: "support-user-id"
+  role_assignment_id: "assignment-support-id"
+  permission: "credits.grant"
+  action: "revoke"
+  expiresAt: null  # Permanent revocation
+  reason: "Training period - restricted until Nov 30"
+  grantedBy: "admin-test-id"
+  grantedAt: "2025-11-09T09:00:00Z"
+
+Override 3 (Grant Temporary Subscription Refund to Support):
+  user_id: "support-user-id"
+  role_assignment_id: "assignment-support-id"
+  permission: "subscriptions.refund"
+  action: "grant"
+  expiresAt: "2025-11-30T23:59:59Z"  # Month-long grant
+  reason: "Special project: legacy customer migration support"
+  grantedBy: "admin-test-id"
+  grantedAt: "2025-11-01T08:00:00Z"
+
+Override 4 (Grant Temporary User Impersonation for Support):
+  user_id: "support-user-id"
+  role_assignment_id: "assignment-support-id"
+  permission: "users.impersonate"
+  action: "grant"
+  expiresAt: "2025-11-16T23:59:59Z"  # 1-week grant
+  reason: "Temporary authorization to debug customer account issues"
+  grantedBy: "super-admin-id"
+  grantedAt: "2025-11-09T11:00:00Z"
+```
+
+### Role Change Log Examples
+
+```yaml
+ChangeLog 1 (Role Assignment):
+  id: "changelog-001-id"
+  targetUserId: "ops-user-id"
+  changedBy: "admin-test-id"
+  action: "role_assigned"
+  oldRoleId: null
+  newRoleId: "role-ops-id"
+  oldPermissions: []
+  newPermissions: ["subscriptions.view", "subscriptions.create", ...]  # 25 permissions
+  reason: "New team member - operations"
+  ipAddress: "203.0.113.45"
+  userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  timestamp: "2025-10-15T08:30:00Z"
+
+ChangeLog 2 (Role Change):
+  id: "changelog-002-id"
+  targetUserId: "support-user-id"
+  changedBy: "admin-test-id"
+  action: "role_changed"
+  oldRoleId: "role-support-id"
+  newRoleId: "role-ops-id"
+  oldPermissions: [12 permissions from Support role]
+  newPermissions: [25 permissions from Ops role]
+  reason: "Promotion from Support to Operations"
+  ipAddress: "203.0.113.45"
+  userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+  timestamp: "2025-11-01T10:00:00Z"
+
+ChangeLog 3 (Permission Override Granted):
+  id: "changelog-003-id"
+  targetUserId: "ops-user-id"
+  changedBy: "admin-test-id"
+  action: "permission_override_granted"
+  oldRoleId: "role-ops-id"
+  newRoleId: "role-ops-id"  # Role unchanged
+  permissionOverrideAdded:
+    permission: "licenses.revoke"
+    action: "grant"
+    expiresAt: "2025-11-10T23:59:59Z"
+    reason: "Emergency fraud investigation"
+    grantedBy: "admin-test-id"
+    grantedAt: "2025-11-09T14:30:00Z"
+  oldPermissions: [25 permissions without licenses.revoke]
+  newPermissions: [26 permissions with licenses.revoke]
+  reason: "Emergency investigation authorization"
+  ipAddress: "203.0.113.45"
+  userAgent: "Mozilla/5.0"
+  timestamp: "2025-11-09T14:30:00Z"
+
+ChangeLog 4 (Permission Override Expired):
+  id: "changelog-004-id"
+  targetUserId: "ops-user-id"
+  changedBy: "system"
+  action: "permission_override_expired"
+  oldRoleId: "role-ops-id"
+  newRoleId: "role-ops-id"
+  permissionOverrideRemoved:
+    permission: "licenses.revoke"
+    action: "grant"
+    expiresAt: "2025-11-10T23:59:59Z"  # Expired
+    reason: "Emergency fraud investigation"
+    grantedBy: "admin-test-id"
+    grantedAt: "2025-11-09T14:30:00Z"
+  oldPermissions: [26 permissions with licenses.revoke]
+  newPermissions: [25 permissions without licenses.revoke]
+  reason: "Automatic expiration of temporary override"
+  ipAddress: "system"
+  userAgent: "background-job"
+  timestamp: "2025-11-10T23:59:59Z"
+
+ChangeLog 5 (Permission Revoked):
+  id: "changelog-005-id"
+  targetUserId: "support-user-id"
+  changedBy: "admin-test-id"
+  action: "permission_override_revoked"
+  oldRoleId: "role-support-id"
+  newRoleId: "role-support-id"
+  permissionOverrideRemoved:
+    permission: "credits.grant"
+    action: "revoke"
+    expiresAt: null
+    reason: "Training period - restricted"
+    grantedBy: "admin-test-id"
+    grantedAt: "2025-11-09T09:00:00Z"
+  oldPermissions: [11 permissions without credits.grant]
+  newPermissions: [12 permissions with credits.grant]
+  reason: "Training period ended - restoring default permissions"
+  ipAddress: "203.0.113.45"
+  userAgent: "Mozilla/5.0"
+  timestamp: "2025-11-30T17:00:00Z"
+```
+
+### RBAC Test Scenarios
+
+#### Scenario 1: Basic Role Permission Check
+**Flow**: Assign Ops role → Verify permissions allowed → Verify permissions denied
+
+```
+1. User: ops-user-id assigned role: ops
+2. Check allowed permission: subscriptions.view
+   ✓ Expected: ALLOWED (Ops has this permission)
+3. Check allowed permission: subscriptions.create
+   ✓ Expected: ALLOWED (Ops has this permission)
+4. Check denied permission: subscriptions.refund
+   ✓ Expected: DENIED (Only Admin+ has this)
+5. Check denied permission: roles.create
+   ✓ Expected: DENIED (Only Super Admin has this)
+```
+
+#### Scenario 2: Permission Override - Temporary Grant
+**Flow**: Ops role user → Grant temporary license.revoke → Verify access → Override expires → Access denied
+
+```
+1. User: ops-user-id assigned role: ops
+2. User tries licenses.revoke
+   ❌ Expected: DENIED (Ops doesn't have this)
+3. Admin grants temporary override for 24 hours
+   - Permission: licenses.revoke
+   - Action: grant
+   - Expires: 2025-11-10T23:59:59Z
+4. User tries licenses.revoke again
+   ✓ Expected: ALLOWED (Override is active)
+5. Wait for override expiration
+6. User tries licenses.revoke
+   ❌ Expected: DENIED (Override expired)
+```
+
+#### Scenario 3: Permission Override - Revoke Default
+**Flow**: Support role user → Revoke credits.grant → Verify access denied → Restore permission
+
+```
+1. User: support-user-id assigned role: support
+2. User tries credits.grant
+   ✓ Expected: ALLOWED (Support has this by default)
+3. Admin revokes permission (permanent)
+   - Permission: credits.grant
+   - Action: revoke
+   - Expires: null (permanent)
+   - Reason: Training period restriction
+4. User tries credits.grant
+   ❌ Expected: DENIED (Override revokes it)
+5. Admin restores permission at end of training
+6. User tries credits.grant
+   ✓ Expected: ALLOWED (Override removed)
+```
+
+#### Scenario 4: Multiple Roles - Permission Union
+**Flow**: Assign user Ops + temporary Analyst → Effective permissions = union of both
+
+```
+1. User: ops-user-id has role: ops (25 permissions)
+2. Assign temporary role: analyst (8 permissions) for 24 hours
+3. User's effective permissions = ops + analyst
+   - Includes all Ops permissions
+   - Includes all Analyst permissions (added: revenue analytics)
+   - Total: union of both sets
+4. Check permission: analytics.view_revenue
+   ✓ Expected: ALLOWED (From Analyst role)
+5. Wait for temporary Analyst role to expire
+6. User reverts to just Ops role
+7. Check permission: analytics.view_revenue
+   ❌ Expected: DENIED (Only in Analyst role, which expired)
+```
+
+#### Scenario 5: Role Hierarchy Enforcement
+**Flow**: Support user → Try to assign Admin role → Denied → Admin user → Assign Ops → Allowed
+
+```
+1. User: support-user-id (Support role)
+2. Try to assign Admin role to another user
+   ❌ Expected: PERMISSION_DENIED (Support cannot assign roles)
+3. User: admin-test-id (Admin role)
+4. Try to assign Ops role to another user
+   ✓ Expected: SUCCESS (Admin can assign lower roles)
+5. Try to assign Super Admin role
+   ❌ Expected: DENIED (Admin cannot assign Super Admin)
+```
+
+#### Scenario 6: Approval Workflow for Critical Operations
+**Flow**: Ops user → Try critical operation → Denied → Admin approves → Request succeeds
+
+```
+1. User: ops-user-id (Ops role)
+2. Request: subscriptions.refund (critical operation)
+   ❌ Expected: DENIED (Ops doesn't have permission)
+3. User: admin-test-id (Admin role)
+4. Request: subscriptions.refund
+   ✓ Expected: SUCCESS (Admin has permission with approval)
+5. Audit log records: Refund processed by admin-test-id
+   - Action: subscriptions.refund
+   - Amount: $99.99
+   - User: pro-user-id
+   - Timestamp: logged
+```
+
+#### Scenario 7: Audit Log Completeness
+**Flow**: Multiple role changes → Verify complete audit trail → Check IP and user-agent tracking
+
+```
+1. Admin: admin-test-id assigns Ops role to ops-user-id
+   ✓ Log created: role_assigned
+   ✓ IP tracked: 203.0.113.45
+   ✓ User-agent: tracked
+2. Change from Ops to different role
+   ✓ Log created: role_changed
+   ✓ Old permissions: captured
+   ✓ New permissions: captured
+3. Grant temporary override
+   ✓ Log created: permission_override_granted
+   ✓ Expiration: tracked
+   ✓ Reason: documented
+4. Override expires automatically
+   ✓ Log created: permission_override_expired
+   ✓ Action: automatic (system user)
+5. Query audit log for ops-user-id
+   ✓ All 4 logs visible in order
+   ✓ Complete audit trail
+```
+
+---
+
 ## Core Test Users
 
 ### Seeded User Accounts
@@ -908,6 +1519,66 @@ User 4 (Google OAuth):
   subscription_tier: pro
   subscription_status: active
   mfaEnabled: false
+
+User 5 (Operations Lead - Ops Role):
+  email: ops.user@rephlo.ai
+  firstName: Operations
+  lastName: Lead
+  username: opsuser
+  password: OpsPassword123!
+  role: user
+  emailVerified: true
+  authProvider: local
+  isActive: true
+  subscription_tier: pro
+  subscription_status: active
+  mfaEnabled: false
+  rbacRole: ops
+
+User 6 (Support Agent - Support Role):
+  email: support.user@rephlo.ai
+  firstName: Support
+  lastName: Agent
+  username: supportuser
+  password: SupportPassword123!
+  role: user
+  emailVerified: true
+  authProvider: local
+  isActive: true
+  subscription_tier: pro
+  subscription_status: active
+  mfaEnabled: false
+  rbacRole: support
+
+User 7 (Business Analyst - Analyst Role):
+  email: analyst.user@rephlo.ai
+  firstName: Business
+  lastName: Analyst
+  username: analystuser
+  password: AnalystPassword123!
+  role: user
+  emailVerified: true
+  authProvider: local
+  isActive: true
+  subscription_tier: pro
+  subscription_status: active
+  mfaEnabled: false
+  rbacRole: analyst
+
+User 8 (Compliance Auditor - Auditor Role):
+  email: auditor.user@rephlo.ai
+  firstName: Compliance
+  lastName: Auditor
+  username: auditoruser
+  password: AuditorPassword123!
+  role: user
+  emailVerified: true
+  authProvider: local
+  isActive: true
+  subscription_tier: pro
+  subscription_status: active
+  mfaEnabled: false
+  rbacRole: auditor
 ```
 
 ---
@@ -1334,27 +2005,69 @@ npm run db:seed:verify
 
 ### Testing Checklist
 
+**OAuth & Authentication**:
 - [ ] OAuth clients authenticate correctly
 - [ ] Users can login with correct credentials
 - [ ] MFA verification works for admin user
+
+**Subscriptions & Billing**:
 - [ ] Subscriptions render correctly with tiers
 - [ ] Credits allocate monthly automatically
+- [ ] Proration calculates correctly for mid-cycle changes
+- [ ] Dunning attempts schedule and retry correctly
+
+**Perpetual Licensing**:
 - [ ] License activation enforces 3-device limit
 - [ ] Machine fingerprint prevents duplicate activations
+- [ ] Version upgrades apply pricing correctly
+
+**Coupons & Discounts**:
 - [ ] Coupons apply correctly with fraud detection
-- [ ] Proration calculates correctly for mid-cycle changes
+- [ ] Campaign budgets are tracked accurately
+- [ ] Validation rules enforce restrictions
+
+**Token-to-Credit Conversion**:
 - [ ] Token usage converts to credits with margins
 - [ ] Daily summaries aggregate correctly
-- [ ] Dunning attempts schedule and retry correctly
+- [ ] Vendor pricing changes update margin calculations
+
+**RBAC & Permissions**:
+- [ ] Role assignments grant correct default permissions
+- [ ] Permission overrides grant/revoke as expected
+- [ ] Temporary overrides expire automatically
+- [ ] Multiple roles compute permission union correctly
+- [ ] Role hierarchy enforcement denies invalid assignments
+- [ ] Audit logs record all role changes with IP/user-agent
+- [ ] Support user cannot perform Ops operations
+- [ ] Admin user can assign lower roles but not Super Admin
+- [ ] Permission check correctly identifies approved operations
 
 ---
 
 ## Maintenance Schedule
 
-**Monthly**: Review and update pricing tiers based on vendor costs
-**Quarterly**: Audit fraud detection thresholds and adjust if needed
-**Bi-Annually**: Review coupon campaign performance and ROI
-**Annually**: Plan perpetual license upgrade pricing strategy
+**Weekly**:
+- Review permission override expirations
+- Monitor audit log for anomalies
+
+**Monthly**:
+- Review and update pricing tiers based on vendor costs
+- Audit fraud detection thresholds and adjust if needed
+- Verify role assignments are current and valid
+
+**Quarterly**:
+- Review coupon campaign performance and ROI
+- Audit role changes and permission overrides
+- Review RBAC permission boundaries
+
+**Bi-Annually**:
+- Analyze permission usage patterns
+- Identify unused roles or permissions
+
+**Annually**:
+- Plan perpetual license upgrade pricing strategy
+- Review 7-year audit log retention policy
+- Assess role hierarchy and permission structure
 
 ---
 
