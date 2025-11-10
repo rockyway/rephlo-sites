@@ -29,29 +29,13 @@ ALTER TABLE "subscription_monetization"
 -- Maps 'enterprise' to 'enterprise_pro' in arrays
 ALTER TABLE "coupon"
   ALTER COLUMN "tier_eligibility" TYPE "subscription_tier_new"[]
-  USING (
-    SELECT ARRAY(
-      SELECT CASE elem::text
-        WHEN 'enterprise' THEN 'enterprise_pro'::subscription_tier_new
-        ELSE elem::text::subscription_tier_new
-      END
-      FROM unnest("tier_eligibility") AS elem
-    )
-  );
+  USING array_replace("tier_eligibility"::text[], 'enterprise', 'enterprise_pro')::"subscription_tier_new"[];
 
 -- Update models table allowed_tiers array
 -- Maps 'enterprise' to 'enterprise_pro' in arrays
 ALTER TABLE "models"
   ALTER COLUMN "allowed_tiers" TYPE "subscription_tier_new"[]
-  USING (
-    SELECT ARRAY(
-      SELECT CASE elem::text
-        WHEN 'enterprise' THEN 'enterprise_pro'::subscription_tier_new
-        ELSE elem::text::subscription_tier_new
-      END
-      FROM unnest("allowed_tiers") AS elem
-    )
-  );
+  USING array_replace("allowed_tiers"::text[], 'enterprise', 'enterprise_pro')::"subscription_tier_new"[];
 
 -- ============================================================================
 -- STEP 3: Drop old enum and rename new one
