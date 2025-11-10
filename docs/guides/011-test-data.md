@@ -1,11 +1,11 @@
 # Test Data Documentation - Complete Reference
 
-**Version**: 3.1 (Plans 109-112 + Plan 119 RBAC)
-**Last Updated**: November 9, 2025
+**Version**: 3.2 (Plans 109-112 + Plan 119 RBAC + Gap Closure 130)
+**Last Updated**: November 10, 2025
 **Audience**: Developers, QA Engineers, Testers, Desktop App Developers, Product Managers, Operations Team
 **Status**: Authoritative Single Source of Truth for Test Data
 
-This document provides comprehensive information about all test data required for the Rephlo system, including Plans 109 (Subscription Monetization), 110 (Perpetual Licensing), 111 (Coupon & Discount System), 112 (Token-to-Credit Conversion), and 119 (User-Role-Permission RBAC System).
+This document provides comprehensive information about all test data required for the Rephlo system, including Plans 109 (Subscription Monetization), 110 (Perpetual Licensing), 111 (Coupon & Discount System), 112 (Token-to-Credit Conversion), 119 (User-Role-Permission RBAC System), and Plan 130 (Gap Closure Implementation).
 
 ---
 
@@ -739,6 +739,29 @@ Configuration 4 (Perpetual License - No Margin):
   effective_date: "2025-11-01T00:00:00Z"
   is_active: true
 ```
+
+### USD-to-Credit Conversion Rate (Gap Closure Documentation)
+
+**Standard Conversion**: **1 credit = $0.01 USD**
+
+This conversion rate is applied after the margin multiplier calculation:
+
+1. Calculate vendor cost: `(input_tokens * input_price) + (output_tokens * output_price)`
+2. Apply margin multiplier: `Vendor Cost * Margin Multiplier`
+3. Convert to credits: `(Margin-Adjusted Cost / 0.01)`
+4. Round up: `CEILING(credits)`
+
+**Example Calculation**:
+- Vendor Cost: $0.0045 (500 tokens at $0.009/1k)
+- Margin Multiplier: 1.5x (Pro tier, 50% margin)
+- Margin-Adjusted Cost: $0.0045 * 1.5 = $0.00675
+- Credits (before ceiling): $0.00675 / $0.01 = 0.675 credits
+- **Final Credit Deduction**: CEILING(0.675) = **1 credit**
+
+**Why 1 credit = 1 cent?**
+- Simple mental math for users ($19/mo = 1,900 cents = 19,000 credits for Pro tier)
+- Clean integer arithmetic (no floating point issues)
+- Easy pricing adjustments at tier level without changing conversion rate
 
 ### Token Usage Ledger Examples
 
@@ -1834,11 +1857,18 @@ Creating app version records...
 - `failed`: Upgrade failed (payment or system issue)
 - `refunded`: Upgrade refunded to user
 
-### Proration Change Type
+### User Status (New in Gap Closure)
+- `active`: User account is active and in good standing
+- `suspended`: User account temporarily suspended (with expiry date)
+- `banned`: User account permanently banned
+- `deleted`: User account soft-deleted
+
+### Proration Event Type (Updated in Gap Closure)
 - `upgrade`: User upgraded to higher tier
 - `downgrade`: User downgraded to lower tier
+- `interval_change`: User changed billing interval (monthly ↔ annual)
+- `migration`: User migrated between perpetual and subscription
 - `cancellation`: User cancelled subscription mid-cycle
-- `reactivation`: User reactivated cancelled subscription
 
 ### Proration Status
 - `pending`: Proration calculated, pending application
@@ -1846,12 +1876,12 @@ Creating app version records...
 - `failed`: Proration application failed
 - `reversed`: Proration reversed (e.g., refund)
 
-### Coupon Type
-- `percentage_discount`: Discount as percentage (e.g., 30% off)
-- `fixed_amount_discount`: Discount as fixed amount (e.g., $25 off)
-- `tier_specific_discount`: Discount specific to tier
-- `duration_bonus`: Additional credit or service duration
-- `byok_migration`: Bring-Your-Own-Key migration discount
+### Coupon Type (Updated in Gap Closure)
+- `percentage`: Discount as percentage (e.g., 30% off) - was `percentage_discount`
+- `fixed_amount`: Discount as fixed amount (e.g., $25 off) - was `fixed_amount_discount`
+- `tier_specific`: Discount specific to tier - was `tier_specific_discount`
+- `duration_bonus`: Additional credit or service duration (unchanged)
+- `perpetual_migration`: Perpetual license to subscription migration - was `byok_migration`
 
 ### Discount Type
 - `percentage`: Percentage-based discount

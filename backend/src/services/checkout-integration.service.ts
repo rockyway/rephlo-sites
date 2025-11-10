@@ -49,13 +49,13 @@ export class CheckoutIntegrationService {
 
     // Step 2: Apply discount based on type
     switch (discount.couponType) {
-      case 'percentage_discount':
+      case 'percentage':
         checkoutSession.total = checkoutSession.total * (1 - (discount.percentage || 0) / 100);
         break;
-      case 'fixed_amount_discount':
+      case 'fixed_amount':
         checkoutSession.total = Math.max(0, checkoutSession.total - (discount.fixedAmount || 0));
         break;
-      case 'tier_specific_discount':
+      case 'tier_specific':
         await this.applyPercentageDiscount(
           checkoutSession.subscriptionId,
           discount.percentage || 0,
@@ -65,7 +65,7 @@ export class CheckoutIntegrationService {
       case 'duration_bonus':
         await this.applyDurationBonus(checkoutSession.subscriptionId, discount.bonusMonths || 0);
         break;
-      case 'byok_migration':
+      case 'perpetual_migration':
         await this.grantPerpetualLicense(checkoutSession.userId, discount.couponId);
         checkoutSession.total = 0; // 100% off
         break;

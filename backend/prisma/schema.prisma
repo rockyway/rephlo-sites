@@ -227,6 +227,16 @@ enum CreditSourceType {
   @@map("credit_source_type")
 }
 
+// Plan 129 Gap Closure - User Status Enum
+enum UserStatus {
+  active
+  suspended
+  banned
+  deleted
+
+  @@map("user_status")
+}
+
 // Users Table
 // Stores user account information for authentication and profile management
 model User {
@@ -254,6 +264,15 @@ model User {
 
   // Account Management Fields
   deactivatedAt DateTime? @map("deactivated_at")
+
+  // Plan 129 Gap Closure - Status & LTV Fields
+  status                    UserStatus @default(active)
+  suspendedUntil            DateTime?  @map("suspended_until")
+  bannedAt                  DateTime?  @map("banned_at")
+  lifetimeValue             Int        @default(0) @map("lifetime_value") // In cents
+
+  // Plan 110 - Perpetual License Flag
+  hasActivePerpetualLicense Boolean    @default(false) @map("has_active_perpetual_license")
 
   // Social Auth Fields
   googleId         String? @unique @map("google_id") @db.VarChar(255)
@@ -322,6 +341,14 @@ model User {
   permissionGrantedByUser PermissionOverride[]   @relation("GrantedPermissionsByUser")
   roleChangeLogs          RoleChangeLog[]        @relation("RoleChangeLogs_TargetUser")
   roleChangedByUser       RoleChangeLog[]        @relation("RoleChangeLogs_ChangedBy")
+
+  // Plan 129 Gap Closure - RBAC Enhancement Relations
+  approvalRequests     ApprovalRequest[] @relation("ApprovalRequester")
+  approvalReviews      ApprovalRequest[] @relation("ApprovalReviewer")
+  ipWhitelists         IPWhitelist[]     @relation("UserIPWhitelist")
+  suspensions          UserSuspension[]  @relation("UserSuspensions")
+  suspendedUsers       UserSuspension[]  @relation("SuspenderActions")
+  liftedSuspensions    UserSuspension[]  @relation("LifterActions")
 
   @@index([email])
   @@index([createdAt])
@@ -884,13 +911,14 @@ enum UpgradeStatus {
   @@map("upgrade_status")
 }
 
-enum ProrationChangeType {
+enum ProrationEventType {
   upgrade // User upgraded to higher tier
   downgrade // User downgraded to lower tier
+  interval_change // Monthly to Annual or vice versa
+  migration // Perpetual to Subscription or vice versa
   cancellation // User cancelled subscription
-  reactivation // User reactivated subscription
 
-  @@map("proration_change_type")
+  @@map("proration_event_type")
 }
 
 enum ProrationStatus {
@@ -1049,7 +1077,7 @@ model ProrationEvent {
   toTier   String? @map("to_tier") @db.VarChar(50)
 
   // Change Type
-  changeType ProrationChangeType
+  changeType ProrationEventType
 
   // Billing Cycle Details
   daysRemaining Int @map("days_remaining")
@@ -1095,11 +1123,11 @@ model ProrationEvent {
 
 // Enums for Coupon System
 enum CouponType {
-  percentage_discount // Percentage off subscription price
-  fixed_amount_discount // Fixed dollar amount off
-  tier_specific_discount // Discount for specific tier upgrades
+  percentage // Percentage off subscription price
+  fixed_amount // Fixed dollar amount off
+  tier_specific // Discount for specific tier upgrades
   duration_bonus // Free additional months
-  byok_migration // Perpetual Plan migration discount
+  perpetual_migration // Perpetual Plan migration discount
 
   @@map("coupon_type")
 }
@@ -1861,13 +1889,15 @@ enum RoleChangeAction {
 
 // Role Definition Table
 // Defines 6 hierarchical roles with default permissions
+// Now supports custom roles with free-form name field
 model Role {
-  id                   String   @id @default(uuid()) @db.Uuid
-  name                 RoleName @unique
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String   @unique @db.VarChar(50) // Changed from RoleName enum to String for custom roles
   displayName          String   @map("display_name") @db.VarChar(100)
   description          String?  @db.Text
+  isSystemRole         Boolean  @default(false) @map("is_system_role") // NEW: Distinguishes system vs custom roles
   hierarchy            Int      @db.SmallInt // 1-6: 1=super_admin, 6=auditor
-  defaultPermissions   String   @map("default_permissions") @db.Text // JSON array of permission strings
+  defaultPermissions   Json     @map("default_permissions") // Changed from String to Json for proper array storage
   isActive             Boolean  @default(true) @map("is_active")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
@@ -1878,6 +1908,7 @@ model Role {
 
   @@index([hierarchy])
   @@index([isActive])
+  @@index([isSystemRole]) // NEW: Index for system role filtering
   @@map("role")
 }
 
@@ -1974,6 +2005,78 @@ model RoleChangeLog {
   @@index([action])
   @@index([timestamp])
   @@map("role_change_log")
+}
+
+// =============================================================================
+// RBAC ENHANCEMENT TABLES (Plan 129 Gap Closure - G-001)
+// Multi-tier approval workflows, IP whitelisting, and user suspension tracking
+// =============================================================================
+
+// Approval Request Table
+// Tracks admin approval requests for sensitive operations
+// Implements multi-tier approval workflow with expiration
+model ApprovalRequest {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestedBy    String    @map("requested_by") @db.Uuid
+  action         String    @db.VarChar(100) // "subscriptions.refund", "users.ban"
+  targetUserId   String?   @map("target_user_id") @db.Uuid
+  reason         String    @db.Text
+  status         String    @default("pending") @db.VarChar(20) // "pending", "approved", "denied"
+  reviewedBy     String?   @map("reviewed_by") @db.Uuid
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewNotes    String?   @map("review_notes") @db.Text
+  expiresAt      DateTime  @map("expires_at") // Auto-deny after 24h
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  requester User  @relation("ApprovalRequester", fields: [requestedBy], references: [id])
+  reviewer  User? @relation("ApprovalReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([status])
+  @@index([requestedBy])
+  @@index([expiresAt])
+  @@map("approval_requests")
+}
+
+// IP Whitelist Table
+// Tracks whitelisted IP addresses for Super Admin access
+// Implements IP-based access control with CIDR notation support
+model IPWhitelist {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid // Super Admin user ID
+  ipAddress   String   @map("ip_address") @db.VarChar(50) // CIDR notation
+  description String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserIPWhitelist", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([ipAddress])
+  @@map("ip_whitelists")
+}
+
+// User Suspension Table
+// Tracks user suspension and ban events with reason and duration
+// Implements temporary suspension (with expiresAt) and permanent ban (expiresAt = null)
+model UserSuspension {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  suspendedBy String    @map("suspended_by") @db.Uuid
+  reason      String    @db.Text
+  suspendedAt DateTime  @default(now()) @map("suspended_at")
+  expiresAt   DateTime? @map("expires_at") // null = indefinite (ban)
+  liftedAt    DateTime? @map("lifted_at")
+  liftedBy    String?   @map("lifted_by") @db.Uuid
+
+  user      User  @relation("UserSuspensions", fields: [userId], references: [id], onDelete: Cascade)
+  suspender User  @relation("SuspenderActions", fields: [suspendedBy], references: [id])
+  lifter    User? @relation("LifterActions", fields: [liftedBy], references: [id])
+
+  @@index([userId])
+  @@index([suspendedBy])
+  @@index([expiresAt])
+  @@map("user_suspensions")
 }
 
 // =============================================================================

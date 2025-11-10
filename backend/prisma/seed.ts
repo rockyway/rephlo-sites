@@ -622,7 +622,8 @@ Download and run the installer for your platform.`,
         displayName: 'Super Administrator',
         description: 'Full system access with all permissions',
         hierarchy: 1,
-        defaultPermissions: JSON.stringify([
+        isSystemRole: true, // NEW: Mark as system role
+        defaultPermissions: [
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -631,7 +632,7 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend', 'users.ban', 'users.delete', 'users.impersonate',
           'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
-        ]),
+        ], // Changed: Removed JSON.stringify() - now using Json type
         isActive: true,
       },
     }),
@@ -643,7 +644,8 @@ Download and run the installer for your platform.`,
         displayName: 'Administrator',
         description: 'Full administrative access except system configuration',
         hierarchy: 2,
-        defaultPermissions: JSON.stringify([
+        isSystemRole: true, // NEW: Mark as system role
+        defaultPermissions: [
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -652,7 +654,7 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend', 'users.ban', 'users.impersonate',
           'roles.view', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
-        ]),
+        ], // Changed: Removed JSON.stringify() - now using Json type
         isActive: true,
       },
     }),
@@ -664,14 +666,15 @@ Download and run the installer for your platform.`,
         displayName: 'Operations Manager',
         description: 'Operational access for managing subscriptions and licenses',
         hierarchy: 3,
-        defaultPermissions: JSON.stringify([
+        isSystemRole: true, // NEW: Mark as system role
+        defaultPermissions: [
           'subscriptions.view', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate',
           'licenses.view', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.approve_redemption',
           'credits.view_balance', 'credits.view_history', 'credits.grant', 'credits.deduct',
           'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage'
-        ]),
+        ], // Changed: Removed JSON.stringify() - now using Json type
         isActive: true,
       },
     }),
@@ -683,14 +686,15 @@ Download and run the installer for your platform.`,
         displayName: 'Support Specialist',
         description: 'Customer support access for resolving issues',
         hierarchy: 4,
-        defaultPermissions: JSON.stringify([
+        isSystemRole: true, // NEW: Mark as system role
+        defaultPermissions: [
           'subscriptions.view',
           'licenses.view',
           'coupons.view',
           'credits.view_balance', 'credits.view_history',
           'users.view', 'users.edit_profile',
           'analytics.view_dashboard'
-        ]),
+        ], // Changed: Removed JSON.stringify() - now using Json type
         isActive: true,
       },
     }),
@@ -702,13 +706,14 @@ Download and run the installer for your platform.`,
         displayName: 'Data Analyst',
         description: 'Analytics and reporting access',
         hierarchy: 5,
-        defaultPermissions: JSON.stringify([
+        isSystemRole: true, // NEW: Mark as system role
+        defaultPermissions: [
           'subscriptions.view',
           'licenses.view',
           'credits.view_history',
           'users.view',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
-        ]),
+        ], // Changed: Removed JSON.stringify() - now using Json type
         isActive: true,
       },
     }),
@@ -720,14 +725,15 @@ Download and run the installer for your platform.`,
         displayName: 'Auditor',
         description: 'Read-only access for compliance and audit',
         hierarchy: 6,
-        defaultPermissions: JSON.stringify([
+        isSystemRole: true, // NEW: Mark as system role
+        defaultPermissions: [
           'subscriptions.view',
           'licenses.view',
           'credits.view_history',
           'users.view',
           'roles.view_audit_log',
           'analytics.view_dashboard'
-        ]),
+        ], // Changed: Removed JSON.stringify() - now using Json type
         isActive: true,
       },
     }),

@@ -49,7 +49,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
     const coupon = await prisma.coupon.create({
       data: {
         code: 'BYOK2024TEST',
-        coupon_type: 'byok_migration',
+        coupon_type: 'perpetual_migration',
         discount_type: 'percentage',
         discount_value: 100,
         valid_from: new Date(),
@@ -133,7 +133,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
       const coupon2 = await prisma.coupon.create({
         data: {
           code: 'BYOK2024TEST2',
-          coupon_type: 'byok_migration',
+          coupon_type: 'perpetual_migration',
           discount_type: 'percentage',
           discount_value: 100,
           valid_from: new Date(),
@@ -201,7 +201,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
       const coupon2 = await prisma.coupon.create({
         data: {
           code: 'BYOK2024TEST_SECOND',
-          coupon_type: 'byok_migration',
+          coupon_type: 'perpetual_migration',
           discount_type: 'percentage',
           discount_value: 100,
           valid_from: new Date(),

@@ -105,7 +105,7 @@ export class CouponRedemptionService {
         // Step 6: Grant bonus credits or extend subscription
         if (discount.discountType === 'credits') {
           await this.grantBonusCredits(userId, discount.creditAmount!, couponId, tx);
-        } else if (discount.couponType === 'byok_migration') {
+        } else if (discount.couponType === 'perpetual_migration') {
           // Grant perpetual license + 100% off first month
           await this.grantBonusCredits(userId, discount.creditAmount || 0, couponId, tx);
         }
