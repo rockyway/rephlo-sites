@@ -437,7 +437,7 @@ Campaign 4 (Early Bird):
 ```yaml
 Coupon 1 (Percentage Discount):
   code: "BF2025-30OFF"
-  coupon_type: "percentage_discount"
+  coupon_type: "percentage"
   discount_value: 30.00
   discount_type: "percentage"
   max_uses: 1000
@@ -453,7 +453,7 @@ Coupon 1 (Percentage Discount):
 
 Coupon 2 (Fixed Amount Discount):
   code: "SAVE25"
-  coupon_type: "fixed_amount_discount"
+  coupon_type: "fixed_amount"
   discount_value: 25.00
   discount_type: "fixed_amount"
   max_uses: 500
@@ -483,7 +483,7 @@ Coupon 3 (Credits Bonus):
 
 Coupon 4 (First-Time User Only):
   code: "WELCOME20"
-  coupon_type: "percentage_discount"
+  coupon_type: "percentage"
   discount_value: 20.00
   discount_type: "percentage"
   max_uses: 10000
