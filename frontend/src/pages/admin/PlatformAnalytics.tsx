@@ -72,7 +72,7 @@ export default function PlatformAnalytics() {
       ]);
 
       setMetrics(metricsData);
-      setUserDistribution(distributionData.distribution);
+      setUserDistribution(distributionData.distribution || []); // Ensure array fallback
       setRevenueTrend(trendData.timeSeries || []); // Ensure array fallback
       setCreditsByModel(creditsData.models || []); // Ensure array fallback
       setConversionFunnel(funnelData.funnel || []); // Ensure array fallback
@@ -281,91 +281,103 @@ export default function PlatformAnalytics() {
       {/* Section 2: User Distribution by Tier */}
       <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 mb-8">
         <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">User Distribution by Tier</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pie Chart Visual Representation */}
-          <div className="flex items-center justify-center">
-            <div className="relative w-64 h-64">
-              {/* Simple pie chart using conic-gradient */}
-              <div
-                className="w-full h-full rounded-full"
-                style={{
-                  background: `conic-gradient(${userDistribution
-                    .map((d, index, arr) => {
-                      const startPercent = arr.slice(0, index).reduce((sum, item) => sum + item.percentage, 0);
-                      const endPercent = startPercent + d.percentage;
-                      const colors: Record<SubscriptionTier, string> = {
-                        [SubscriptionTier.FREE]: '#94a3b8',
-                        [SubscriptionTier.PRO]: '#3b82f6',
-                        [SubscriptionTier.PRO_MAX]: '#8b5cf6',
-                        [SubscriptionTier.ENTERPRISE_PRO]: '#f59e0b',
-                        [SubscriptionTier.ENTERPRISE_MAX]: '#ef4444',
-                        [SubscriptionTier.PERPETUAL]: '#10b981',
-                      };
-                      return `${colors[d.tier]} ${startPercent}% ${endPercent}%`;
-                    })
-                    .join(', ')})`,
-                }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="bg-white rounded-full w-32 h-32 flex flex-col items-center justify-center shadow-lg">
-                  <p className="text-h3 font-bold text-deep-navy-800">{formatNumber(totalUsers)}</p>
-                  <p className="text-caption text-deep-navy-600">Total Users</p>
+        {userDistribution.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Pie Chart Visual Representation */}
+            <div className="flex items-center justify-center">
+              <div className="relative w-64 h-64">
+                {/* Simple pie chart using conic-gradient */}
+                <div
+                  className="w-full h-full rounded-full"
+                  style={{
+                    background: `conic-gradient(${userDistribution
+                      .map((d, index, arr) => {
+                        const startPercent = arr.slice(0, index).reduce((sum, item) => sum + item.percentage, 0);
+                        const endPercent = startPercent + d.percentage;
+                        const colors: Record<SubscriptionTier, string> = {
+                          [SubscriptionTier.FREE]: '#94a3b8',
+                          [SubscriptionTier.PRO]: '#3b82f6',
+                          [SubscriptionTier.PRO_MAX]: '#8b5cf6',
+                          [SubscriptionTier.ENTERPRISE_PRO]: '#f59e0b',
+                          [SubscriptionTier.ENTERPRISE_MAX]: '#ef4444',
+                          [SubscriptionTier.PERPETUAL]: '#10b981',
+                        };
+                        return `${colors[d.tier]} ${startPercent}% ${endPercent}%`;
+                      })
+                      .join(', ')})`,
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white rounded-full w-32 h-32 flex flex-col items-center justify-center shadow-lg">
+                    <p className="text-h3 font-bold text-deep-navy-800">{formatNumber(totalUsers)}</p>
+                    <p className="text-caption text-deep-navy-600">Total Users</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Legend */}
-          <div className="flex flex-col justify-center space-y-3">
-            {userDistribution.map((d) => (
-              <div key={d.tier} className="flex items-center justify-between p-3 bg-deep-navy-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <TierBadge tier={d.tier} />
-                  <span className="text-body text-deep-navy-700">{getTierDisplayName(d.tier)}</span>
+            {/* Legend */}
+            <div className="flex flex-col justify-center space-y-3">
+              {userDistribution.map((d) => (
+                <div key={d.tier} className="flex items-center justify-between p-3 bg-deep-navy-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <TierBadge tier={d.tier} />
+                    <span className="text-body text-deep-navy-700">{getTierDisplayName(d.tier)}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-body font-semibold text-deep-navy-800">{formatNumber(d.count)}</p>
+                    <p className="text-caption text-deep-navy-600">{formatPercentage(d.percentage)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-body font-semibold text-deep-navy-800">{formatNumber(d.count)}</p>
-                  <p className="text-caption text-deep-navy-600">{formatPercentage(d.percentage)}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-12 text-deep-navy-600">
+            <p className="text-body">No user distribution data available</p>
+          </div>
+        )}
       </div>
 
       {/* Section 3: Revenue Trend (Last 12 Months) */}
       <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 mb-8">
         <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">Revenue Trend (Last 12 Months)</h2>
-        <div className="relative h-80">
-          {/* Simple bar chart */}
-          <div className="flex items-end justify-between h-full gap-2">
-            {revenueTrend.map((trend, index) => {
-              const heightPercent = maxRevenue > 0 ? (trend.mrr / maxRevenue) * 100 : 0;
-              return (
-                <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="relative w-full flex items-end justify-center h-full">
-                    <div
-                      className="w-full bg-rephlo-blue rounded-t-md transition-all hover:bg-rephlo-blue/80 cursor-pointer group relative"
-                      style={{ height: `${heightPercent}%` }}
-                    >
-                      {/* Tooltip on hover */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <div className="bg-deep-navy-800 text-white px-3 py-2 rounded-md shadow-lg whitespace-nowrap">
-                          <p className="text-caption font-semibold">MRR: {formatCurrency(trend.mrr, 0)}</p>
-                          <p className="text-caption opacity-75">ARR: {formatCurrency(trend.arr, 0)}</p>
-                          <p className="text-caption opacity-75">Growth: {formatPercentage(trend.growth)}</p>
+        {revenueTrend.length > 0 ? (
+          <div className="relative h-80">
+            {/* Simple bar chart */}
+            <div className="flex items-end justify-between h-full gap-2">
+              {revenueTrend.map((trend, index) => {
+                const heightPercent = maxRevenue > 0 ? (trend.mrr / maxRevenue) * 100 : 0;
+                return (
+                  <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                    <div className="relative w-full flex items-end justify-center h-full">
+                      <div
+                        className="w-full bg-rephlo-blue rounded-t-md transition-all hover:bg-rephlo-blue/80 cursor-pointer group relative"
+                        style={{ height: `${heightPercent}%` }}
+                      >
+                        {/* Tooltip on hover */}
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <div className="bg-deep-navy-800 text-white px-3 py-2 rounded-md shadow-lg whitespace-nowrap">
+                            <p className="text-caption font-semibold">MRR: {formatCurrency(trend.mrr, 0)}</p>
+                            <p className="text-caption opacity-75">ARR: {formatCurrency(trend.arr, 0)}</p>
+                            <p className="text-caption opacity-75">Growth: {formatPercentage(trend.growth)}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
+                    <p className="text-caption text-deep-navy-600 transform -rotate-45 origin-top-left mt-2">
+                      {trend.month}
+                    </p>
                   </div>
-                  <p className="text-caption text-deep-navy-600 transform -rotate-45 origin-top-left mt-2">
-                    {trend.month}
-                  </p>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-12 text-deep-navy-600">
+            <p className="text-body">No revenue trend data available</p>
+          </div>
+        )}
       </div>
 
       {/* Section 4: Credits by Model */}
