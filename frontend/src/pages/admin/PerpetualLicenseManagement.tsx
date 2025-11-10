@@ -96,7 +96,7 @@ function PerpetualLicenseManagement() {
         licenseApi.getStats(),
       ]);
 
-      setLicenses(licensesResponse.data);
+      setLicenses(licensesResponse.data || []);
       setTotalPages(licensesResponse.totalPages);
       setStats(statsData);
     } catch (err: any) {

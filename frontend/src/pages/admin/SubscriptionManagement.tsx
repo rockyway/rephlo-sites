@@ -85,7 +85,7 @@ function SubscriptionManagement() {
         subscriptionApi.getStats(),
       ]);
 
-      setSubscriptions(subsResponse.data);
+      setSubscriptions(subsResponse.data || []);
       setTotalPages(subsResponse.totalPages);
       setStats(statsData);
     } catch (err: any) {
@@ -359,7 +359,7 @@ function SubscriptionManagement() {
               <div className="flex items-center justify-center py-12">
                 <LoadingSpinner />
               </div>
-            ) : sortedSubscriptions.length === 0 ? (
+            ) : !sortedSubscriptions || sortedSubscriptions.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-body text-deep-navy-500">No subscriptions found</p>
               </div>

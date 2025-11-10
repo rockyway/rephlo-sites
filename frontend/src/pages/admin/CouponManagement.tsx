@@ -98,7 +98,7 @@ function CouponManagement() {
         pageSize
       );
 
-      setCoupons(response.coupons);
+      setCoupons(response.coupons || []);
       setTotalCoupons(response.total);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load coupons');
@@ -344,7 +344,7 @@ function CouponManagement() {
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="lg" />
           </div>
-        ) : coupons.length === 0 ? (
+        ) : !coupons || coupons.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-deep-navy-500">No coupons found</p>
             <Button onClick={handleCreateCoupon} className="mt-4">

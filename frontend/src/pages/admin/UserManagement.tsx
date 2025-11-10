@@ -94,7 +94,7 @@ function UserManagement() {
         limit,
       });
 
-      setUsers(response.data);
+      setUsers(response.data || []);
       setTotalPages(response.totalPages);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load users');
@@ -383,7 +383,7 @@ function UserManagement() {
               <div className="flex items-center justify-center py-12">
                 <LoadingSpinner />
               </div>
-            ) : users.length === 0 ? (
+            ) : !users || users.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-body text-deep-navy-500">No users found</p>
               </div>
@@ -394,7 +394,7 @@ function UserManagement() {
                     <th className="px-6 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size === users.length}
+                        checked={selectedUsers.size === users?.length}
                         onChange={toggleSelectAll}
                         className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
                       />
