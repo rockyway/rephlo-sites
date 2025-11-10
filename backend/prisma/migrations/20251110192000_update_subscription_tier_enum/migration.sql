@@ -66,38 +66,65 @@ ALTER TABLE "models"
 -- Restore default with new enum type
 ALTER TABLE "models" ALTER COLUMN "required_tier" SET DEFAULT 'free'::"subscription_tier_new";
 
--- Update subscriptions table tier column
+-- Update subscriptions table tier column (conditional - table may not exist)
 -- Maps 'enterprise' to 'enterprise_pro'
-ALTER TABLE "subscriptions"
-  ALTER COLUMN "tier" TYPE "subscription_tier_new"
-  USING (
-    CASE "tier"::text
-      WHEN 'enterprise' THEN 'enterprise_pro'
-      ELSE "tier"::text
-    END
-  )::"subscription_tier_new";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_name = 'subscriptions'
+  ) THEN
+    ALTER TABLE "subscriptions"
+      ALTER COLUMN "tier" TYPE "subscription_tier_new"
+      USING (
+        CASE "tier"::text
+          WHEN 'enterprise' THEN 'enterprise_pro'
+          ELSE "tier"::text
+        END
+      )::"subscription_tier_new";
+  END IF;
+END $$;
 
--- Update coupon_campaign table target_tier column
+-- Update coupon_campaign table target_tier column (conditional - table may not exist)
 -- Maps 'enterprise' to 'enterprise_pro'
-ALTER TABLE "coupon_campaign"
-  ALTER COLUMN "target_tier" TYPE "subscription_tier_new"
-  USING (
-    CASE "target_tier"::text
-      WHEN 'enterprise' THEN 'enterprise_pro'
-      ELSE "target_tier"::text
-    END
-  )::"subscription_tier_new";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_name = 'coupon_campaign'
+  ) THEN
+    ALTER TABLE "coupon_campaign"
+      ALTER COLUMN "target_tier" TYPE "subscription_tier_new"
+      USING (
+        CASE "target_tier"::text
+          WHEN 'enterprise' THEN 'enterprise_pro'
+          ELSE "target_tier"::text
+        END
+      )::"subscription_tier_new";
+  END IF;
+END $$;
 
--- Update pricing_configuration table tier column
+-- Update pricing_configuration table tier column (conditional - table may not exist)
 -- Maps 'enterprise' to 'enterprise_pro'
-ALTER TABLE "pricing_configuration"
-  ALTER COLUMN "tier" TYPE "subscription_tier_new"
-  USING (
-    CASE "tier"::text
-      WHEN 'enterprise' THEN 'enterprise_pro'
-      ELSE "tier"::text
-    END
-  )::"subscription_tier_new";
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_name = 'pricing_configuration'
+  ) THEN
+    ALTER TABLE "pricing_configuration"
+      ALTER COLUMN "tier" TYPE "subscription_tier_new"
+      USING (
+        CASE "tier"::text
+          WHEN 'enterprise' THEN 'enterprise_pro'
+          ELSE "tier"::text
+        END
+      )::"subscription_tier_new";
+  END IF;
+END $$;
 
 -- ============================================================================
 -- STEP 3: Drop old enum and rename new one
@@ -176,19 +203,16 @@ END $$;
 -- ============================================================================
 -- COLUMNS CONVERTED (7 total)
 -- ============================================================================
--- Scalar columns:
--- 1. subscription_monetization.tier
--- 2. subscriptions.tier
--- 3. models.required_tier
--- 4. coupon_campaign.target_tier
--- 5. pricing_configuration.tier
+-- Columns converted directly (from base schema - always exist):
+-- 1. subscription_monetization.tier (scalar)
+-- 2. coupon.tier_eligibility (array)
+-- 3. models.allowed_tiers (array)
+-- 4. models.required_tier (scalar)
 --
--- Array columns:
--- 6. coupon.tier_eligibility
--- 7. models.allowed_tiers
---
--- All columns converted directly without conditional checks since all tables
--- exist from previous migrations.
+-- Columns converted conditionally (tables may not exist in all environments):
+-- 5. subscriptions.tier (scalar) - conditional check
+-- 6. coupon_campaign.target_tier (scalar) - conditional check
+-- 7. pricing_configuration.tier (scalar) - conditional check
 
 -- ============================================================================
 -- NOTES
