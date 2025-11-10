@@ -100,8 +100,9 @@ app.get('/oauth/login', (req: Request, res: Response) => {
 /**
  * Step 2: OAuth callback
  * GET /callback?code=...&state=...
+ * Also handles /oauth/callback for seeded client configuration
  */
-app.get('/callback', async (req: Request, res: Response) => {
+app.get(['/callback', '/oauth/callback'], async (req: Request, res: Response) => {
   try {
     const { code, state, error, error_description } = req.query;
 
