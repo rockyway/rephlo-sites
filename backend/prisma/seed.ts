@@ -35,7 +35,7 @@ const OAUTH_CLIENTS_CONFIG = [
       'http://localhost:3000/callback',
       'rephlo://callback',
     ],
-    grantTypes: ['authorization_code', 'refresh_token'],
+    grantTypes: ['authorization_code'],
     responseTypes: ['code'],
     scope: 'openid email profile offline_access',
     config: {
@@ -53,7 +53,7 @@ const OAUTH_CLIENTS_CONFIG = [
       'http://localhost:8080/callback',
       'http://localhost:8080/oauth/callback',
     ],
-    grantTypes: ['authorization_code', 'refresh_token'],
+    grantTypes: ['authorization_code'],
     responseTypes: ['code'],
     scope: 'openid email profile offline_access',
     config: {
@@ -71,7 +71,7 @@ const OAUTH_CLIENTS_CONFIG = [
       'http://localhost:5173/callback',
       'http://localhost:5173/auth/callback',
     ],
-    grantTypes: ['authorization_code', 'refresh_token'],
+    grantTypes: ['authorization_code'],
     responseTypes: ['code'],
     scope: 'openid email profile offline_access',
     config: {
