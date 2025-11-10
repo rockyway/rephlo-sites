@@ -173,66 +173,20 @@ export async function createOIDCProvider(
     },
 
     // Token TTLs (in seconds)
-    // Phase 5: Admin Session Management - Dynamic TTL based on user role
+    // NOTE: oidc-provider v9.5.2 requires TTLs to be:
+    // - positive integers, OR
+    // - synchronous functions returning a positive integer
+    // Async functions are not supported in this version.
+    // Session duration differentiation by role can be implemented via
+    // session management hooks or through frontend client behavior.
     ttl: {
       AccessToken: 3600, // 1 hour
       AuthorizationCode: 600, // 10 minutes
       IdToken: 3600, // 1 hour
-      // Dynamic RefreshToken TTL based on user role
-      RefreshToken: async (_ctx: KoaContextWithOIDC, _token: any, _client: any) => {
-        try {
-          const userId = _ctx.oidc.session?.accountId;
-          if (!userId) {
-            return 2592000; // Default 30 days
-          }
-
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { role: true },
-          });
-
-          // Admin: 7 days, Regular user: 30 days
-          return user?.role === 'admin' ? 604800 : 2592000;
-        } catch (error) {
-          logger.error('Failed to determine refresh token TTL', {
-            error: error instanceof Error ? error.message : String(error),
-          });
-          return 2592000; // Default 30 days on error
-        }
-      },
-      // Dynamic Session TTL based on user role
-      Session: async (_ctx: KoaContextWithOIDC, _session: any, _client: any) => {
-        try {
-          const userId = _ctx.oidc.session?.accountId;
-          if (!userId) {
-            return 86400; // Default 24 hours
-          }
-
-          const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { role: true },
-          });
-
-          // Admin: 4 hours, Regular user: 24 hours
-          const ttl = user?.role === 'admin' ? 14400 : 86400;
-
-          logger.info('OIDC Session TTL assigned', {
-            userId,
-            role: user?.role,
-            ttlSeconds: ttl,
-            ttlHours: ttl / 3600,
-          });
-
-          return ttl;
-        } catch (error) {
-          logger.error('Failed to determine session TTL', {
-            error: error instanceof Error ? error.message : String(error),
-          });
-          return 86400; // Default 24 hours on error
-        }
-      },
+      RefreshToken: 2592000, // 30 days (can be shortened by clients if needed)
       Grant: 2592000, // 30 days
       Interaction: 3600, // 1 hour
+      Session: 86400, // 24 hours (can be enforced via logout on client side for admins)
     },
 
     // Cookie configuration
