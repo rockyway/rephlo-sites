@@ -126,16 +126,16 @@ export class CreditManagementService {
 
         // Update user credit balance (Plan 112 integration)
         await tx.userCreditBalance.upsert({
-          where: { user_id: userId },
+          where: { userId: userId },
           update: {
             amount: { increment: allocation.amount },
-            updated_at: new Date()
+            updatedAt: new Date()
           },
           create: {
-            user_id: userId,
+            userId: userId,
             amount: allocation.amount,
-            created_at: new Date(),
-            updated_at: new Date()
+            createdAt: new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -233,16 +233,16 @@ export class CreditManagementService {
 
         // Update user credit balance (Plan 112 integration)
         await tx.userCreditBalance.upsert({
-          where: { user_id: userId },
+          where: { userId: userId },
           update: {
             amount: { increment: amount },
-            updated_at: new Date()
+            updatedAt: new Date()
           },
           create: {
-            user_id: userId,
+            userId: userId,
             amount: amount,
-            created_at: new Date(),
-            updated_at: new Date()
+            createdAt: new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -404,7 +404,7 @@ export class CreditManagementService {
 
       // Calculate total deductions
       const deductions = await this.prisma.creditDeductionLedger.findMany({
-        where: { user_id: userId },
+        where: { userId: userId },
         select: { amount: true }
       });
 
@@ -414,16 +414,16 @@ export class CreditManagementService {
 
       // Update balance to match expected value
       await this.prisma.userCreditBalance.upsert({
-        where: { user_id: userId },
+        where: { userId: userId },
         update: {
           amount: expectedBalance,
-          updated_at: new Date()
+          updatedAt: new Date()
         },
         create: {
-          user_id: userId,
+          userId: userId,
           amount: expectedBalance,
-          created_at: new Date(),
-          updated_at: new Date()
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       });
 
