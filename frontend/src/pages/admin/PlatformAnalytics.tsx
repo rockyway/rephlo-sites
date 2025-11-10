@@ -65,7 +65,7 @@ export default function PlatformAnalytics() {
       ] = await Promise.all([
         analyticsApi.getDashboardMetrics(),
         analyticsApi.getUsersByTier(),
-        analyticsApi.getRevenueTimeSeries('last_12_months'),
+        analyticsApi.getRevenueTimeSeries('1y'), // Backend expects '7d' | '30d' | '90d' | '1y'
         analyticsApi.getCreditsByModel(),
         analyticsApi.getConversionFunnel(),
         analyticsApi.getTierTransitions(),
@@ -73,13 +73,27 @@ export default function PlatformAnalytics() {
 
       setMetrics(metricsData);
       setUserDistribution(distributionData.distribution);
-      setRevenueTrend(trendData.timeSeries);
-      setCreditsByModel(creditsData.models);
-      setConversionFunnel(funnelData.funnel);
-      setTierTransitions(transitionsData.transitions);
+      setRevenueTrend(trendData.timeSeries || []); // Ensure array fallback
+      setCreditsByModel(creditsData.models || []); // Ensure array fallback
+      setConversionFunnel(funnelData.funnel || []); // Ensure array fallback
+      setTierTransitions(transitionsData.transitions || []); // Ensure array fallback
     } catch (err: any) {
       console.error('Failed to load analytics:', err);
-      setError(err.response?.data?.error || 'Failed to load analytics data');
+
+      // Extract error message safely to prevent rendering errors
+      let errorMessage = 'Failed to load analytics data';
+      if (err?.response?.data?.error) {
+        // Handle backend error object
+        if (typeof err.response.data.error === 'string') {
+          errorMessage = err.response.data.error;
+        } else if (err.response.data.error.message) {
+          errorMessage = err.response.data.error.message;
+        }
+      } else if (err?.message && typeof err.message === 'string') {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -115,15 +129,23 @@ export default function PlatformAnalytics() {
     );
   }
 
-  // Calculate max revenue for chart scaling
-  const maxRevenue = Math.max(...revenueTrend.map((t) => t.mrr));
+  // Calculate max revenue for chart scaling (with guard)
+  const maxRevenue = Array.isArray(revenueTrend) && revenueTrend.length > 0
+    ? Math.max(...revenueTrend.map((t) => t.mrr))
+    : 0;
 
-  // Calculate total users for distribution percentages
-  const totalUsers = userDistribution.reduce((sum, d) => sum + d.count, 0);
+  // Calculate total users for distribution percentages (with guard)
+  const totalUsers = Array.isArray(userDistribution) && userDistribution.length > 0
+    ? userDistribution.reduce((sum, d) => sum + d.count, 0)
+    : 0;
 
-  // Prepare upgrade/downgrade data
-  const upgrades = tierTransitions.filter((t) => t.type === 'upgrade');
-  const downgrades = tierTransitions.filter((t) => t.type === 'downgrade');
+  // Prepare upgrade/downgrade data (with guards)
+  const upgrades = Array.isArray(tierTransitions)
+    ? tierTransitions.filter((t) => t.type === 'upgrade')
+    : [];
+  const downgrades = Array.isArray(tierTransitions)
+    ? tierTransitions.filter((t) => t.type === 'downgrade')
+    : [];
   const totalUpgrades = upgrades.reduce((sum, t) => sum + t.count, 0);
   const totalDowngrades = downgrades.reduce((sum, t) => sum + t.count, 0);
 

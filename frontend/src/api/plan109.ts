@@ -506,59 +506,101 @@ export const analyticsApi = {
 
   /**
    * Get conversion funnel data
+   * @param period - '7d' | '30d' | '90d' | '1y' (default: '30d')
    */
-  getConversionFunnel: async (period = '30d') => {
-    const response = await apiClient.get<{
-      freeTier: { count: number; percentage: number };
-      paidSubscription: { count: number; percentage: number; conversionRate: number };
-      perpetualLicense: { count: number; percentage: number; conversionRate: number };
-    }>('/admin/analytics/revenue/funnel', { params: { period } });
+  getConversionFunnel: async (period: '7d' | '30d' | '90d' | '1y' = '30d') => {
+    try {
+      const response = await apiClient.get<{
+        freeTier: { count: number; percentage: number };
+        paidSubscription: { count: number; percentage: number; conversionRate: number };
+        perpetualLicense: { count: number; percentage: number; conversionRate: number };
+      }>('/admin/analytics/revenue/funnel', { params: { period } });
 
-    // Transform backend response to frontend format
-    const data = response.data;
-    const funnel: ConversionFunnel[] = [
-      {
-        stage: 'Free Tier',
-        users: data.freeTier.count,
-        conversionRate: 100, // Starting point
-      },
-      {
-        stage: 'Paid Subscription',
-        users: data.paidSubscription.count,
-        conversionRate: data.paidSubscription.conversionRate,
-      },
-      {
-        stage: 'Perpetual License',
-        users: data.perpetualLicense.count,
-        conversionRate: data.perpetualLicense.conversionRate,
-      },
-    ];
+      // Validate response structure
+      if (!response.data || !response.data.freeTier) {
+        throw new Error('Invalid response format from conversion funnel endpoint');
+      }
 
-    return { funnel };
+      // Transform backend response to frontend format
+      const data = response.data;
+      const funnel: ConversionFunnel[] = [
+        {
+          stage: 'Free Tier',
+          users: data.freeTier.count,
+          conversionRate: 100, // Starting point
+        },
+        {
+          stage: 'Paid Subscription',
+          users: data.paidSubscription.count,
+          conversionRate: data.paidSubscription.conversionRate,
+        },
+        {
+          stage: 'Perpetual License',
+          users: data.perpetualLicense.count,
+          conversionRate: data.perpetualLicense.conversionRate,
+        },
+      ];
+
+      return { funnel };
+    } catch (error: any) {
+      // Handle Axios errors gracefully
+      if (error.response?.data?.error) {
+        const backendError = error.response.data.error;
+        const message = typeof backendError === 'string'
+          ? backendError
+          : backendError.message || 'Failed to fetch conversion funnel';
+        throw new Error(message);
+      } else if (error.message) {
+        throw new Error(`Conversion funnel error: ${error.message}`);
+      } else {
+        throw new Error('Failed to fetch conversion funnel data');
+      }
+    }
   },
 
   /**
    * Get revenue time series (trend data)
+   * @param period - '7d' | '30d' | '90d' | '1y' (default: '1y')
    */
-  getRevenueTimeSeries: async (period = '1y') => {
-    const response = await apiClient.get<{
-      data: Array<{
-        date: string;
-        totalRevenue: number;
-        subscriptionRevenue: number;
-        perpetualRevenue: number;
-      }>;
-    }>('/admin/analytics/revenue/trend', { params: { period } });
+  getRevenueTimeSeries: async (period: '7d' | '30d' | '90d' | '1y' = '1y') => {
+    try {
+      const response = await apiClient.get<{
+        data: Array<{
+          date: string;
+          totalRevenue: number;
+          subscriptionRevenue: number;
+          perpetualRevenue: number;
+        }>;
+      }>('/admin/analytics/revenue/trend', { params: { period } });
 
-    // Transform backend response to frontend format
-    const timeSeries: RevenueTimeSeries[] = response.data.data.map((item) => ({
-      month: item.date,
-      mrr: item.subscriptionRevenue / 100, // Convert cents to dollars
-      arr: (item.subscriptionRevenue * 12) / 100, // Annualized
-      growth: 0, // TODO: Calculate growth from previous period
-    }));
+      // Validate response structure
+      if (!response.data || !Array.isArray(response.data.data)) {
+        throw new Error('Invalid response format from revenue trend endpoint');
+      }
 
-    return { timeSeries };
+      // Transform backend response to frontend format
+      const timeSeries: RevenueTimeSeries[] = response.data.data.map((item) => ({
+        month: item.date,
+        mrr: item.subscriptionRevenue / 100, // Convert cents to dollars
+        arr: (item.subscriptionRevenue * 12) / 100, // Annualized
+        growth: 0, // TODO: Calculate growth from previous period
+      }));
+
+      return { timeSeries };
+    } catch (error: any) {
+      // Handle Axios errors gracefully
+      if (error.response?.data?.error) {
+        const backendError = error.response.data.error;
+        const message = typeof backendError === 'string'
+          ? backendError
+          : backendError.message || 'Failed to fetch revenue trend';
+        throw new Error(message);
+      } else if (error.message) {
+        throw new Error(`Revenue trend error: ${error.message}`);
+      } else {
+        throw new Error('Failed to fetch revenue trend data');
+      }
+    }
   },
 
   /**
@@ -573,28 +615,50 @@ export const analyticsApi = {
 
   /**
    * Get credits used by model
+   * @param period - '7d' | '30d' | '90d' | '1y' (default: '30d')
+   * @param limit - Maximum number of models to return (default: 10)
    */
-  getCreditsByModel: async (period = '30d', limit = 10) => {
-    const response = await apiClient.get<{
-      data: Array<{
-        model: string;
-        credits: number;
-        requests: number;
-        revenue_contribution: number;
-      }>;
-    }>('/admin/analytics/revenue/credit-usage', { params: { period, limit } });
+  getCreditsByModel: async (period: '7d' | '30d' | '90d' | '1y' = '30d', limit = 10) => {
+    try {
+      const response = await apiClient.get<{
+        data: Array<{
+          model: string;
+          credits: number;
+          requests: number;
+          revenue_contribution: number;
+        }>;
+      }>('/admin/analytics/revenue/credit-usage', { params: { period, limit } });
 
-    // Calculate total credits for percentage
-    const totalCredits = response.data.data.reduce((sum, item) => sum + item.credits, 0);
+      // Validate response structure
+      if (!response.data || !Array.isArray(response.data.data)) {
+        throw new Error('Invalid response format from credit usage endpoint');
+      }
 
-    // Transform backend response to frontend format
-    const models: CreditsByModel[] = response.data.data.map((item) => ({
-      modelName: item.model,
-      creditsUsed: item.credits,
-      percentage: totalCredits > 0 ? (item.credits / totalCredits) * 100 : 0,
-    }));
+      // Calculate total credits for percentage
+      const totalCredits = response.data.data.reduce((sum, item) => sum + item.credits, 0);
 
-    return { models };
+      // Transform backend response to frontend format
+      const models: CreditsByModel[] = response.data.data.map((item) => ({
+        modelName: item.model,
+        creditsUsed: item.credits,
+        percentage: totalCredits > 0 ? (item.credits / totalCredits) * 100 : 0,
+      }));
+
+      return { models };
+    } catch (error: any) {
+      // Handle Axios errors gracefully
+      if (error.response?.data?.error) {
+        const backendError = error.response.data.error;
+        const message = typeof backendError === 'string'
+          ? backendError
+          : backendError.message || 'Failed to fetch credit usage';
+        throw new Error(message);
+      } else if (error.message) {
+        throw new Error(`Credit usage error: ${error.message}`);
+      } else {
+        throw new Error('Failed to fetch credit usage data');
+      }
+    }
   },
 };
 
