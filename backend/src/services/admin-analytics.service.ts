@@ -302,26 +302,26 @@ export class AdminAnalyticsService {
   private async getCreditsConsumed(periodConfig: PeriodConfig) {
     const currentCredits = await this.prisma.tokenUsageLedger.aggregate({
       where: {
-        timestamp: {
+        createdAt: {
           gte: periodConfig.startDate,
           lte: periodConfig.endDate,
         },
       },
-      _sum: { credits_deducted: true },
+      _sum: { creditsDeducted: true },
     });
 
     const previousCredits = await this.prisma.tokenUsageLedger.aggregate({
       where: {
-        timestamp: {
+        createdAt: {
           gte: periodConfig.previousStartDate,
           lte: periodConfig.previousEndDate,
         },
       },
-      _sum: { credits_deducted: true },
+      _sum: { creditsDeducted: true },
     });
 
-    const currentValue = currentCredits._sum.credits_deducted || 0;
-    const previousValue = previousCredits._sum.credits_deducted || 0;
+    const currentValue = currentCredits._sum.creditsDeducted || 0;
+    const previousValue = previousCredits._sum.creditsDeducted || 0;
 
     return {
       value: currentValue,
