@@ -57,6 +57,12 @@ export class MockAuthService implements IAuthService {
       mfaBackupCodes: '',
       mfaVerifiedAt: null,
       mfaMethod: 'totp',
+      // User Status and Suspension Fields (Gap Closure)
+      status: 'active',
+      suspendedUntil: null,
+      bannedAt: null,
+      lifetimeValue: 0,
+      hasActivePerpetualLicense: false,
     };
 
     this.users.set(user.id, user);

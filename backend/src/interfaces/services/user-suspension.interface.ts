@@ -28,14 +28,12 @@ export interface IUserSuspensionService {
    * Lift (remove) a user suspension before expiration
    * @param suspensionId - Suspension record ID
    * @param liftedBy - Admin user ID lifting the suspension
-   * @param liftReason - Reason for lifting the suspension
    * @returns Updated suspension record
    * @throws Error if suspension not found or already lifted/expired
    */
   liftSuspension(
     suspensionId: string,
-    liftedBy: string,
-    liftReason: string
+    liftedBy: string
   ): Promise<UserSuspensionResponse>;
 
   /**
@@ -100,23 +98,19 @@ export interface UserSuspensionResponse {
   expiresAt: Date | null;
   liftedAt: Date | null;
   liftedBy: string | null;
-  liftReason: string | null;
-  createdAt: Date;
+  suspendedAt: Date;
   user?: {
     id: string;
     email: string;
-    name: string | null;
     status: string;
   };
   suspender?: {
     id: string;
     email: string;
-    name: string | null;
   };
   lifter?: {
     id: string;
     email: string;
-    name: string | null;
   } | null;
 }
 
@@ -124,6 +118,6 @@ export interface SuspensionFilters {
   userId?: string;
   suspendedBy?: string;
   active?: boolean; // true = only active, false = only lifted/expired, undefined = all
-  createdAfter?: Date;
-  createdBefore?: Date;
+  suspendedAfter?: Date;
+  suspendedBefore?: Date;
 }

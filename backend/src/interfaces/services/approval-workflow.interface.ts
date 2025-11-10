@@ -110,12 +110,10 @@ export interface ApprovalRequestResponse {
   requester?: {
     id: string;
     email: string;
-    name: string | null;
   };
   reviewer?: {
     id: string;
     email: string;
-    name: string | null;
   } | null;
 }
 

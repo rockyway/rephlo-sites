@@ -106,6 +106,5 @@ export interface IPWhitelistResponse {
   user?: {
     id: string;
     email: string;
-    name: string | null;
   };
 }

@@ -67,7 +67,6 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -121,14 +120,12 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           reviewer: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -158,14 +155,12 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           reviewer: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -255,7 +250,6 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -384,14 +378,12 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           reviewer: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -434,14 +426,12 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
         ? {
             id: request.requester.id,
             email: request.requester.email,
-            name: request.requester.name,
           }
         : undefined,
       reviewer: request.reviewer
         ? {
             id: request.reviewer.id,
             email: request.reviewer.email,
-            name: request.reviewer.name,
           }
         : null,
     };

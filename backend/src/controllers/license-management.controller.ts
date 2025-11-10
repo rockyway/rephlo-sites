@@ -424,7 +424,7 @@ export class LicenseManagementController {
    * GET /admin/licenses/stats
    * Get license statistics (admin only)
    */
-  async getLicenseStats(req: Request, res: Response): Promise<void> {
+  async getLicenseStats(_req: Request, res: Response): Promise<void> {
     logger.info('LicenseManagementController.getLicenseStats');
 
     try {

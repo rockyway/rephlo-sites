@@ -73,7 +73,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -81,7 +80,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -121,8 +119,7 @@ export class UserSuspensionService implements IUserSuspensionService {
    */
   async liftSuspension(
     suspensionId: string,
-    liftedBy: string,
-    liftReason: string
+    liftedBy: string
   ): Promise<UserSuspensionResponse> {
     logger.info('UserSuspensionService: Lifting suspension', { suspensionId, liftedBy });
 
@@ -135,7 +132,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -161,14 +157,12 @@ export class UserSuspensionService implements IUserSuspensionService {
         data: {
           liftedAt: new Date(),
           liftedBy,
-          liftReason,
         },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -176,14 +170,12 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           lifter: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -229,7 +221,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -237,19 +228,17 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           lifter: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          suspendedAt: 'desc',
         },
       });
 
@@ -286,7 +275,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -294,12 +282,11 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          suspendedAt: 'desc',
         },
       });
 
@@ -356,10 +343,10 @@ export class UserSuspensionService implements IUserSuspensionService {
           }
         }
 
-        if (filters.createdAfter || filters.createdBefore) {
-          where.createdAt = {};
-          if (filters.createdAfter) where.createdAt.gte = filters.createdAfter;
-          if (filters.createdBefore) where.createdAt.lte = filters.createdBefore;
+        if (filters.suspendedAfter || filters.suspendedBefore) {
+          where.suspendedAt = {};
+          if (filters.suspendedAfter) where.suspendedAt.gte = filters.suspendedAfter;
+          if (filters.suspendedBefore) where.suspendedAt.lte = filters.suspendedBefore;
         }
       }
 
@@ -370,7 +357,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -378,19 +364,17 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           lifter: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          suspendedAt: 'desc',
         },
       });
 
@@ -439,7 +423,6 @@ export class UserSuspensionService implements IUserSuspensionService {
           where: { id: suspension.id },
           data: {
             liftedAt: now,
-            liftReason: 'Automatically expired',
           },
         });
 
@@ -510,7 +493,6 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
               status: true,
             },
           },
@@ -518,14 +500,12 @@ export class UserSuspensionService implements IUserSuspensionService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
           lifter: {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -567,13 +547,11 @@ export class UserSuspensionService implements IUserSuspensionService {
       expiresAt: suspension.expiresAt,
       liftedAt: suspension.liftedAt,
       liftedBy: suspension.liftedBy,
-      liftReason: suspension.liftReason,
-      createdAt: suspension.createdAt,
+      suspendedAt: suspension.suspendedAt,
       user: suspension.user
         ? {
             id: suspension.user.id,
             email: suspension.user.email,
-            name: suspension.user.name,
             status: suspension.user.status,
           }
         : undefined,
@@ -581,14 +559,12 @@ export class UserSuspensionService implements IUserSuspensionService {
         ? {
             id: suspension.suspender.id,
             email: suspension.suspender.email,
-            name: suspension.suspender.name,
           }
         : undefined,
       lifter: suspension.lifter
         ? {
             id: suspension.lifter.id,
             email: suspension.lifter.email,
-            name: suspension.lifter.name,
           }
         : null,
     };

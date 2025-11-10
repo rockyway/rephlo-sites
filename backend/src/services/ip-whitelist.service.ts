@@ -68,7 +68,6 @@ export class IPWhitelistService implements IIPWhitelistService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -110,7 +109,6 @@ export class IPWhitelistService implements IIPWhitelistService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -160,7 +158,6 @@ export class IPWhitelistService implements IIPWhitelistService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -193,7 +190,6 @@ export class IPWhitelistService implements IIPWhitelistService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -310,7 +306,6 @@ export class IPWhitelistService implements IIPWhitelistService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -394,7 +389,6 @@ export class IPWhitelistService implements IIPWhitelistService {
             select: {
               id: true,
               email: true,
-              name: true,
             },
           },
         },
@@ -466,7 +460,6 @@ export class IPWhitelistService implements IIPWhitelistService {
         ? {
             id: entry.user.id,
             email: entry.user.email,
-            name: entry.user.name,
           }
         : undefined,
     };

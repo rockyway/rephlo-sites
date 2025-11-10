@@ -684,14 +684,10 @@ export class LicenseManagementService {
     logger.debug('LicenseManagementService.getLicenseStats');
 
     try {
-      const [total, byStatus, byTier] = await Promise.all([
+      const [total, byStatus] = await Promise.all([
         this.prisma.perpetualLicense.count(),
         this.prisma.perpetualLicense.groupBy({
           by: ['status'],
-          _count: { id: true },
-        }),
-        this.prisma.perpetualLicense.groupBy({
-          by: ['tier'],
           _count: { id: true },
         }),
       ]);
@@ -704,20 +700,12 @@ export class LicenseManagementService {
         {} as Record<string, number>
       );
 
-      const tierCounts = byTier.reduce(
-        (acc, item) => {
-          acc[item.tier] = item._count.id;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
-
       return {
         total,
         active: statusCounts.active || 0,
         suspended: statusCounts.suspended || 0,
         revoked: statusCounts.revoked || 0,
-        byTier: tierCounts,
+        byTier: {}, // Perpetual licenses don't have tiers
       };
     } catch (error) {
       logger.error('LicenseManagementService.getLicenseStats: Error', { error });
