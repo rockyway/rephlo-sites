@@ -191,6 +191,11 @@ function shouldSkipRateLimit(req: Request): boolean {
     return true;
   }
 
+  // Skip for admin endpoints (admins have their own authentication checks)
+  if (req.path.startsWith('/admin')) {
+    return true;
+  }
+
   // Check for bypass header (for testing purposes only)
   // TODO: Remove in production or restrict to admin users
   const bypassHeader = req.headers['x-ratelimit-bypass'];

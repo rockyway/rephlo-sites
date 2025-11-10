@@ -300,6 +300,18 @@ export function createPlan110Router(): Router {
     asyncHandler(licenseController.listAllLicenses.bind(licenseController))
   );
 
+  /**
+   * GET /admin/licenses/stats
+   * Get license statistics (admin only)
+   * Requires admin authentication
+   */
+  router.get(
+    '/admin/licenses/stats',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(licenseController.getLicenseStats.bind(licenseController))
+  );
+
   // =============================================================================
   // Admin Proration Routes
   // =============================================================================

@@ -146,6 +146,24 @@ export function createPlan109Router(): Router {
     asyncHandler(subscriptionController.getActiveSubscription.bind(subscriptionController))
   );
 
+  /**
+   * GET /admin/subscriptions/all
+   * List all subscriptions with pagination and filters
+   */
+  router.get(
+    '/subscriptions/all',
+    asyncHandler(subscriptionController.listAllSubscriptions.bind(subscriptionController))
+  );
+
+  /**
+   * GET /admin/subscriptions/stats
+   * Get subscription statistics
+   */
+  router.get(
+    '/subscriptions/stats',
+    asyncHandler(subscriptionController.getSubscriptionStats.bind(subscriptionController))
+  );
+
   // =============================================================================
   // User Management Routes
   // =============================================================================

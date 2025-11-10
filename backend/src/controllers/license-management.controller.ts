@@ -387,14 +387,56 @@ export class LicenseManagementController {
    * GET /admin/licenses
    * List all licenses (admin only)
    */
-  async listAllLicenses(_req: Request, res: Response): Promise<void> {
-    // This would be implemented with pagination and filters
-    // Placeholder for now
-    res.status(501).json({
-      error: {
-        code: 'not_implemented',
-        message: 'Admin license listing not yet implemented',
-      },
+  async listAllLicenses(req: Request, res: Response): Promise<void> {
+    const { page, limit, status, tier } = req.query;
+
+    logger.info('LicenseManagementController.listAllLicenses', {
+      query: req.query,
     });
+
+    try {
+      const filters = {
+        page: page ? parseInt(page as string, 10) : undefined,
+        limit: limit ? parseInt(limit as string, 10) : undefined,
+        status: status as string | undefined,
+        tier: tier as string | undefined,
+      };
+
+      const result = await this.licenseService.listAllLicenses(filters);
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        pagination: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: Math.ceil(result.total / result.limit),
+        },
+      });
+    } catch (error) {
+      logger.error('LicenseManagementController.listAllLicenses: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * GET /admin/licenses/stats
+   * Get license statistics (admin only)
+   */
+  async getLicenseStats(req: Request, res: Response): Promise<void> {
+    logger.info('LicenseManagementController.getLicenseStats');
+
+    try {
+      const stats = await this.licenseService.getLicenseStats();
+
+      res.status(200).json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      logger.error('LicenseManagementController.getLicenseStats: Error', { error });
+      throw error;
+    }
   }
 }

@@ -610,6 +610,120 @@ export class LicenseManagementService {
     });
   }
 
+  /**
+   * List all licenses with pagination and filters
+   * @param filters - Optional filters (page, limit, status, tier)
+   * @returns Paginated licenses
+   */
+  async listAllLicenses(filters?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    tier?: string;
+  }): Promise<{ data: PerpetualLicense[]; total: number; page: number; limit: number }> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 50;
+    const skip = (page - 1) * limit;
+
+    logger.debug('LicenseManagementService.listAllLicenses', { filters });
+
+    try {
+      const where: any = {};
+
+      if (filters?.status) {
+        where.status = filters.status;
+      }
+
+      if (filters?.tier) {
+        where.tier = filters.tier;
+      }
+
+      const [licenses, total] = await Promise.all([
+        this.prisma.perpetualLicense.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                displayName: true,
+              },
+            },
+          },
+        }),
+        this.prisma.perpetualLicense.count({ where }),
+      ]);
+
+      return {
+        data: licenses,
+        total,
+        page,
+        limit,
+      };
+    } catch (error) {
+      logger.error('LicenseManagementService.listAllLicenses: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get license statistics for dashboard
+   * @returns License stats (total, by status, by tier)
+   */
+  async getLicenseStats(): Promise<{
+    total: number;
+    active: number;
+    suspended: number;
+    revoked: number;
+    byTier: Record<string, number>;
+  }> {
+    logger.debug('LicenseManagementService.getLicenseStats');
+
+    try {
+      const [total, byStatus, byTier] = await Promise.all([
+        this.prisma.perpetualLicense.count(),
+        this.prisma.perpetualLicense.groupBy({
+          by: ['status'],
+          _count: { id: true },
+        }),
+        this.prisma.perpetualLicense.groupBy({
+          by: ['tier'],
+          _count: { id: true },
+        }),
+      ]);
+
+      const statusCounts = byStatus.reduce(
+        (acc, item) => {
+          acc[item.status] = item._count.id;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      const tierCounts = byTier.reduce(
+        (acc, item) => {
+          acc[item.tier] = item._count.id;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      return {
+        total,
+        active: statusCounts.active || 0,
+        suspended: statusCounts.suspended || 0,
+        revoked: statusCounts.revoked || 0,
+        byTier: tierCounts,
+      };
+    } catch (error) {
+      logger.error('LicenseManagementService.getLicenseStats: Error', { error });
+      throw error;
+    }
+  }
+
   // ===========================================================================
   // Helper Methods
   // ===========================================================================

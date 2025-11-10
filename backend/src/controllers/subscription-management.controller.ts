@@ -490,4 +490,67 @@ export class SubscriptionManagementController {
       throw error;
     }
   }
+
+  /**
+   * GET /admin/subscriptions/all
+   * List all subscriptions with pagination and filters
+   *
+   * Requires: Admin authentication
+   *
+   * Query: { page?: number, limit?: number, status?: string, tier?: string }
+   */
+  async listAllSubscriptions(req: Request, res: Response): Promise<void> {
+    const { page, limit, status, tier } = req.query;
+
+    logger.info('SubscriptionManagementController.listAllSubscriptions', {
+      query: req.query,
+    });
+
+    try {
+      const filters = {
+        page: page ? parseInt(page as string, 10) : undefined,
+        limit: limit ? parseInt(limit as string, 10) : undefined,
+        status: status as string | undefined,
+        tier: tier as string | undefined,
+      };
+
+      const result = await this.subscriptionService.listAllSubscriptions(filters);
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        pagination: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: Math.ceil(result.total / result.limit),
+        },
+      });
+    } catch (error) {
+      logger.error('SubscriptionManagementController.listAllSubscriptions: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * GET /admin/subscriptions/stats
+   * Get subscription statistics
+   *
+   * Requires: Admin authentication
+   */
+  async getSubscriptionStats(req: Request, res: Response): Promise<void> {
+    logger.info('SubscriptionManagementController.getSubscriptionStats');
+
+    try {
+      const stats = await this.subscriptionService.getSubscriptionStats();
+
+      res.status(200).json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      logger.error('SubscriptionManagementController.getSubscriptionStats: Error', { error });
+      throw error;
+    }
+  }
 }

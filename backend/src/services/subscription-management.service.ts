@@ -634,6 +634,122 @@ export class SubscriptionManagementService {
     }
   }
 
+  /**
+   * List all subscriptions with pagination and filters
+   * @param filters - Optional filters (page, limit, status, tier)
+   * @returns Paginated subscriptions
+   */
+  async listAllSubscriptions(filters?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    tier?: string;
+  }): Promise<{ data: Subscription[]; total: number; page: number; limit: number }> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 50;
+    const skip = (page - 1) * limit;
+
+    logger.debug('SubscriptionManagementService.listAllSubscriptions', { filters });
+
+    try {
+      const where: any = {};
+
+      if (filters?.status) {
+        where.status = filters.status;
+      }
+
+      if (filters?.tier) {
+        where.tier = filters.tier;
+      }
+
+      const [subscriptions, total] = await Promise.all([
+        this.prisma.subscriptionMonetization.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                displayName: true,
+              },
+            },
+          },
+        }),
+        this.prisma.subscriptionMonetization.count({ where }),
+      ]);
+
+      return {
+        data: subscriptions.map((sub) => this.mapSubscription(sub)),
+        total,
+        page,
+        limit,
+      };
+    } catch (error) {
+      logger.error('SubscriptionManagementService.listAllSubscriptions: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get subscription statistics for dashboard
+   * @returns Subscription stats (total, by status, by tier)
+   */
+  async getSubscriptionStats(): Promise<{
+    total: number;
+    active: number;
+    trial: number;
+    cancelled: number;
+    expired: number;
+    byTier: Record<string, number>;
+  }> {
+    logger.debug('SubscriptionManagementService.getSubscriptionStats');
+
+    try {
+      const [total, byStatus, byTier] = await Promise.all([
+        this.prisma.subscriptionMonetization.count(),
+        this.prisma.subscriptionMonetization.groupBy({
+          by: ['status'],
+          _count: { id: true },
+        }),
+        this.prisma.subscriptionMonetization.groupBy({
+          by: ['tier'],
+          _count: { id: true },
+        }),
+      ]);
+
+      const statusCounts = byStatus.reduce(
+        (acc, item) => {
+          acc[item.status] = item._count.id;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      const tierCounts = byTier.reduce(
+        (acc, item) => {
+          acc[item.tier] = item._count.id;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      return {
+        total,
+        active: statusCounts.active || 0,
+        trial: statusCounts.trial || 0,
+        cancelled: statusCounts.cancelled || 0,
+        expired: statusCounts.expired || 0,
+        byTier: tierCounts,
+      };
+    } catch (error) {
+      logger.error('SubscriptionManagementService.getSubscriptionStats: Error', { error });
+      throw error;
+    }
+  }
+
   // ===========================================================================
   // Private Helper Methods
   // ===========================================================================
