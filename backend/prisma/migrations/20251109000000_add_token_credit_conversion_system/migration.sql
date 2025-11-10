@@ -2,27 +2,60 @@
 -- Plan: docs/plan/112-token-to-credit-conversion-mechanism.md
 -- Design: docs/reference/token-credit-schema-design.md
 -- Created: 2025-11-09
+-- Updated: 2025-11-10 (Added safety checks for idempotency)
 -- Author: Database Schema Architect
 
 -- =============================================================================
--- ENUMS
+-- ENUMS (with existence checks for idempotency)
 -- =============================================================================
 
--- Pricing Config Enums
-CREATE TYPE "pricing_config_scope_type" AS ENUM ('tier', 'provider', 'model', 'combination');
-CREATE TYPE "pricing_config_reason" AS ENUM ('initial_setup', 'vendor_price_change', 'tier_optimization', 'margin_protection', 'manual_adjustment');
-CREATE TYPE "pricing_config_approval_status" AS ENUM ('pending', 'approved', 'rejected');
+DO $$ BEGIN
+    CREATE TYPE "pricing_config_scope_type" AS ENUM ('tier', 'provider', 'model', 'combination');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Request Enums
-CREATE TYPE "request_type" AS ENUM ('completion', 'streaming', 'batch');
-CREATE TYPE "request_status" AS ENUM ('success', 'failed', 'cancelled', 'rate_limited');
+DO $$ BEGIN
+    CREATE TYPE "pricing_config_reason" AS ENUM ('initial_setup', 'vendor_price_change', 'tier_optimization', 'margin_protection', 'manual_adjustment');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Credit Deduction Enums
-CREATE TYPE "credit_deduction_reason" AS ENUM ('api_completion', 'subscription_allocation', 'manual_adjustment', 'refund', 'overage', 'bonus', 'referral', 'coupon');
-CREATE TYPE "credit_deduction_status" AS ENUM ('pending', 'completed', 'reversed');
+DO $$ BEGIN
+    CREATE TYPE "pricing_config_approval_status" AS ENUM ('pending', 'approved', 'rejected');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- Credit Source Enum
-CREATE TYPE "credit_source_type" AS ENUM ('monthly_allocation', 'referral_reward', 'coupon_promotion', 'bonus', 'refund', 'admin_grant');
+DO $$ BEGIN
+    CREATE TYPE "request_type" AS ENUM ('completion', 'streaming', 'batch');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "request_status" AS ENUM ('success', 'failed', 'cancelled', 'rate_limited');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "credit_deduction_reason" AS ENUM ('api_completion', 'subscription_allocation', 'manual_adjustment', 'refund', 'overage', 'bonus', 'referral', 'coupon');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "credit_deduction_status" AS ENUM ('pending', 'completed', 'reversed');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "credit_source_type" AS ENUM ('monthly_allocation', 'referral_reward', 'coupon_promotion', 'bonus', 'refund', 'admin_grant');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- =============================================================================
 -- CORE TABLES
@@ -30,7 +63,7 @@ CREATE TYPE "credit_source_type" AS ENUM ('monthly_allocation', 'referral_reward
 
 -- Provider Table
 -- Registry of AI model vendors (OpenAI, Anthropic, Google, Azure)
-CREATE TABLE "providers" (
+CREATE TABLE IF NOT EXISTS "providers" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "name" VARCHAR(100) UNIQUE NOT NULL,
     "api_type" VARCHAR(50) NOT NULL,
@@ -40,13 +73,13 @@ CREATE TABLE "providers" (
 );
 
 -- Provider Indexes
-CREATE INDEX "providers_is_enabled_idx" ON "providers"("is_enabled");
+CREATE INDEX IF NOT EXISTS "providers_is_enabled_idx" ON "providers"("is_enabled");
 
 -- =============================================================================
 
 -- Model Provider Pricing Table
 -- Tracks vendor token pricing with historical tracking and change detection
-CREATE TABLE "model_provider_pricing" (
+CREATE TABLE IF NOT EXISTS "model_provider_pricing" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     -- Identification
@@ -88,20 +121,20 @@ CREATE TABLE "model_provider_pricing" (
 );
 
 -- Model Provider Pricing Indexes
-CREATE UNIQUE INDEX "model_provider_pricing_provider_id_model_name_effective_from_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "model_provider_pricing_provider_id_model_name_effective_from_key"
     ON "model_provider_pricing"("provider_id", "model_name", "effective_from");
-CREATE INDEX "model_provider_pricing_provider_id_model_name_is_active_idx"
+CREATE INDEX IF NOT EXISTS "model_provider_pricing_provider_id_model_name_is_active_idx"
     ON "model_provider_pricing"("provider_id", "model_name", "is_active");
-CREATE INDEX "model_provider_pricing_effective_from_effective_until_idx"
+CREATE INDEX IF NOT EXISTS "model_provider_pricing_effective_from_effective_until_idx"
     ON "model_provider_pricing"("effective_from", "effective_until");
-CREATE INDEX "model_provider_pricing_is_active_idx"
+CREATE INDEX IF NOT EXISTS "model_provider_pricing_is_active_idx"
     ON "model_provider_pricing"("is_active");
 
 -- =============================================================================
 
 -- Pricing Config Table
 -- Margin multiplier configuration with scope hierarchy and approval workflow
-CREATE TABLE "pricing_configs" (
+CREATE TABLE IF NOT EXISTS "pricing_configs" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
     -- Scope
@@ -153,17 +186,17 @@ CREATE TABLE "pricing_configs" (
 );
 
 -- Pricing Config Indexes
-CREATE INDEX "pricing_configs_scope_type_idx" ON "pricing_configs"("scope_type");
-CREATE INDEX "pricing_configs_subscription_tier_is_active_idx" ON "pricing_configs"("subscription_tier", "is_active");
-CREATE INDEX "pricing_configs_provider_id_is_active_idx" ON "pricing_configs"("provider_id", "is_active");
-CREATE INDEX "pricing_configs_is_active_effective_from_idx" ON "pricing_configs"("is_active", "effective_from");
-CREATE INDEX "pricing_configs_approval_status_idx" ON "pricing_configs"("approval_status");
+CREATE INDEX IF NOT EXISTS "pricing_configs_scope_type_idx" ON "pricing_configs"("scope_type");
+CREATE INDEX IF NOT EXISTS "pricing_configs_subscription_tier_is_active_idx" ON "pricing_configs"("subscription_tier", "is_active");
+CREATE INDEX IF NOT EXISTS "pricing_configs_provider_id_is_active_idx" ON "pricing_configs"("provider_id", "is_active");
+CREATE INDEX IF NOT EXISTS "pricing_configs_is_active_effective_from_idx" ON "pricing_configs"("is_active", "effective_from");
+CREATE INDEX IF NOT EXISTS "pricing_configs_approval_status_idx" ON "pricing_configs"("approval_status");
 
 -- =============================================================================
 
 -- Token Usage Ledger Table
 -- Immutable audit trail of every API request with token counts and costs
-CREATE TABLE "token_usage_ledger" (
+CREATE TABLE IF NOT EXISTS "token_usage_ledger" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "request_id" UUID UNIQUE NOT NULL,
 
@@ -225,18 +258,18 @@ CREATE TABLE "token_usage_ledger" (
 );
 
 -- Token Usage Ledger Indexes
-CREATE INDEX "token_usage_ledger_user_id_created_at_idx" ON "token_usage_ledger"("user_id", "created_at");
-CREATE INDEX "token_usage_ledger_model_id_created_at_idx" ON "token_usage_ledger"("model_id", "created_at");
-CREATE INDEX "token_usage_ledger_provider_id_created_at_idx" ON "token_usage_ledger"("provider_id", "created_at");
-CREATE INDEX "token_usage_ledger_user_id_vendor_cost_idx" ON "token_usage_ledger"("user_id", "vendor_cost");
-CREATE INDEX "token_usage_ledger_request_id_idx" ON "token_usage_ledger"("request_id");
-CREATE INDEX "token_usage_ledger_status_idx" ON "token_usage_ledger"("status");
+CREATE INDEX IF NOT EXISTS "token_usage_ledger_user_id_created_at_idx" ON "token_usage_ledger"("user_id", "created_at");
+CREATE INDEX IF NOT EXISTS "token_usage_ledger_model_id_created_at_idx" ON "token_usage_ledger"("model_id", "created_at");
+CREATE INDEX IF NOT EXISTS "token_usage_ledger_provider_id_created_at_idx" ON "token_usage_ledger"("provider_id", "created_at");
+CREATE INDEX IF NOT EXISTS "token_usage_ledger_user_id_vendor_cost_idx" ON "token_usage_ledger"("user_id", "vendor_cost");
+CREATE INDEX IF NOT EXISTS "token_usage_ledger_request_id_idx" ON "token_usage_ledger"("request_id");
+CREATE INDEX IF NOT EXISTS "token_usage_ledger_status_idx" ON "token_usage_ledger"("status");
 
 -- =============================================================================
 
 -- User Credit Balance Table
 -- Single source of truth for user credit balances
-CREATE TABLE "user_credit_balance" (
+CREATE TABLE IF NOT EXISTS "user_credit_balance" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID UNIQUE NOT NULL,
 
@@ -253,13 +286,13 @@ CREATE TABLE "user_credit_balance" (
 );
 
 -- User Credit Balance Indexes
-CREATE INDEX "user_credit_balance_user_id_idx" ON "user_credit_balance"("user_id");
+CREATE INDEX IF NOT EXISTS "user_credit_balance_user_id_idx" ON "user_credit_balance"("user_id");
 
 -- =============================================================================
 
 -- Credit Deduction Ledger Table
 -- Immutable audit trail of every credit deduction
-CREATE TABLE "credit_deduction_ledger" (
+CREATE TABLE IF NOT EXISTS "credit_deduction_ledger" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
 
@@ -297,16 +330,16 @@ CREATE TABLE "credit_deduction_ledger" (
 );
 
 -- Credit Deduction Ledger Indexes
-CREATE INDEX "credit_deduction_ledger_user_id_created_at_idx" ON "credit_deduction_ledger"("user_id", "created_at");
-CREATE INDEX "credit_deduction_ledger_request_id_idx" ON "credit_deduction_ledger"("request_id");
-CREATE INDEX "credit_deduction_ledger_status_idx" ON "credit_deduction_ledger"("status");
-CREATE INDEX "credit_deduction_ledger_reason_idx" ON "credit_deduction_ledger"("reason");
+CREATE INDEX IF NOT EXISTS "credit_deduction_ledger_user_id_created_at_idx" ON "credit_deduction_ledger"("user_id", "created_at");
+CREATE INDEX IF NOT EXISTS "credit_deduction_ledger_request_id_idx" ON "credit_deduction_ledger"("request_id");
+CREATE INDEX IF NOT EXISTS "credit_deduction_ledger_status_idx" ON "credit_deduction_ledger"("status");
+CREATE INDEX IF NOT EXISTS "credit_deduction_ledger_reason_idx" ON "credit_deduction_ledger"("reason");
 
 -- =============================================================================
 
 -- User Credit Source Table
 -- Track credit sources and expiration
-CREATE TABLE "user_credit_source" (
+CREATE TABLE IF NOT EXISTS "user_credit_source" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
 
@@ -323,15 +356,15 @@ CREATE TABLE "user_credit_source" (
 );
 
 -- User Credit Source Indexes
-CREATE INDEX "user_credit_source_user_id_expires_at_idx" ON "user_credit_source"("user_id", "expires_at");
-CREATE INDEX "user_credit_source_source_idx" ON "user_credit_source"("source");
+CREATE INDEX IF NOT EXISTS "user_credit_source_user_id_expires_at_idx" ON "user_credit_source"("user_id", "expires_at");
+CREATE INDEX IF NOT EXISTS "user_credit_source_source_idx" ON "user_credit_source"("source");
 
 -- =============================================================================
 -- ANALYTICS TABLES
 -- =============================================================================
 
 -- Token Usage Daily Summary Table
-CREATE TABLE "token_usage_daily_summary" (
+CREATE TABLE IF NOT EXISTS "token_usage_daily_summary" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "summary_date" DATE NOT NULL,
@@ -354,14 +387,14 @@ CREATE TABLE "token_usage_daily_summary" (
 );
 
 -- Token Usage Daily Summary Indexes
-CREATE UNIQUE INDEX "token_usage_daily_summary_user_id_summary_date_key" ON "token_usage_daily_summary"("user_id", "summary_date");
-CREATE INDEX "token_usage_daily_summary_user_id_summary_date_idx" ON "token_usage_daily_summary"("user_id", "summary_date");
-CREATE INDEX "token_usage_daily_summary_summary_date_idx" ON "token_usage_daily_summary"("summary_date");
+CREATE UNIQUE INDEX IF NOT EXISTS "token_usage_daily_summary_user_id_summary_date_key" ON "token_usage_daily_summary"("user_id", "summary_date");
+CREATE INDEX IF NOT EXISTS "token_usage_daily_summary_user_id_summary_date_idx" ON "token_usage_daily_summary"("user_id", "summary_date");
+CREATE INDEX IF NOT EXISTS "token_usage_daily_summary_summary_date_idx" ON "token_usage_daily_summary"("summary_date");
 
 -- =============================================================================
 
 -- Credit Usage Daily Summary Table
-CREATE TABLE "credit_usage_daily_summary" (
+CREATE TABLE IF NOT EXISTS "credit_usage_daily_summary" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "summary_date" DATE NOT NULL,
@@ -379,15 +412,24 @@ CREATE TABLE "credit_usage_daily_summary" (
 );
 
 -- Credit Usage Daily Summary Indexes
-CREATE UNIQUE INDEX "credit_usage_daily_summary_user_id_summary_date_key" ON "credit_usage_daily_summary"("user_id", "summary_date");
-CREATE INDEX "credit_usage_daily_summary_user_id_summary_date_idx" ON "credit_usage_daily_summary"("user_id", "summary_date");
+CREATE UNIQUE INDEX IF NOT EXISTS "credit_usage_daily_summary_user_id_summary_date_key" ON "credit_usage_daily_summary"("user_id", "summary_date");
+CREATE INDEX IF NOT EXISTS "credit_usage_daily_summary_user_id_summary_date_idx" ON "credit_usage_daily_summary"("user_id", "summary_date");
 
 -- =============================================================================
 
 -- Add deduction_record_id foreign key to token_usage_ledger (after credit_deduction_ledger exists)
-ALTER TABLE "token_usage_ledger"
-    ADD CONSTRAINT "token_usage_ledger_deduction_record_id_fkey"
-    FOREIGN KEY ("deduction_record_id") REFERENCES "credit_deduction_ledger"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'token_usage_ledger_deduction_record_id_fkey'
+        AND table_name = 'token_usage_ledger'
+    ) THEN
+        ALTER TABLE "token_usage_ledger"
+            ADD CONSTRAINT "token_usage_ledger_deduction_record_id_fkey"
+            FOREIGN KEY ("deduction_record_id") REFERENCES "credit_deduction_ledger"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- =============================================================================
 -- COMMENTS (for documentation)
