@@ -53,9 +53,9 @@ const OAUTH_CLIENTS_CONFIG = [
       'http://localhost:8080/callback',
       'http://localhost:8080/oauth/callback',
     ],
-    grantTypes: ['authorization_code'],
+    grantTypes: ['authorization_code', 'refresh_token'],
     responseTypes: ['code'],
-    scope: 'openid email profile llm.inference models.read user.info credits.read',
+    scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
       description: 'Proof of Concept Client for Testing',

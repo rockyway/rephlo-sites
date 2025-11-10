@@ -86,7 +86,7 @@ app.get('/oauth/login', (req: Request, res: Response) => {
   authorizationUrl.searchParams.set('client_id', CLIENT_ID);
   authorizationUrl.searchParams.set('redirect_uri', CLIENT_REDIRECT_URI);
   authorizationUrl.searchParams.set('response_type', 'code');
-  authorizationUrl.searchParams.set('scope', 'openid email profile llm.inference models.read user.info credits.read');
+  authorizationUrl.searchParams.set('scope', 'openid email profile offline_access llm.inference models.read user.info credits.read');
   authorizationUrl.searchParams.set('code_challenge', codeChallenge);
   authorizationUrl.searchParams.set('code_challenge_method', 'S256');
   authorizationUrl.searchParams.set('state', sessionId);
