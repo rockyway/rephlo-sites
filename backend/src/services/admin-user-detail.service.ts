@@ -108,10 +108,10 @@ export class AdminUserDetailService {
 
       // Get credit balance
       const creditBalance = await this.prisma.userCreditBalance.findUnique({
-        where: { user_id: userId },
+        where: { userId: userId },
         select: {
           amount: true,
-          updated_at: true,
+          updatedAt: true,
         },
       });
 
@@ -125,8 +125,8 @@ export class AdminUserDetailService {
             where: { userId },
           }),
           this.prisma.tokenUsageLedger.aggregate({
-            where: { user_id: userId },
-            _sum: { credits_deducted: true },
+            where: { userId: userId },
+            _sum: { creditsDeducted: true },
           }),
           this.prisma.couponRedemption.count({
             where: {
@@ -179,12 +179,12 @@ export class AdminUserDetailService {
           : null,
         creditBalance: {
           amount: creditBalance?.amount || 0,
-          last_updated: creditBalance?.updated_at || new Date(),
+          last_updated: creditBalance?.updatedAt || new Date(),
         },
         quickStats: {
           total_subscriptions: totalSubscriptions,
           total_licenses: totalLicenses,
-          total_credits_consumed: totalCreditsConsumed._sum.credits_deducted || 0,
+          total_credits_consumed: totalCreditsConsumed._sum?.creditsDeducted || 0,
           total_coupons_redeemed: totalCouponsRedeemed,
         },
       };
@@ -431,10 +431,10 @@ export class AdminUserDetailService {
 
       // Get current balance
       const balance = await this.prisma.userCreditBalance.findUnique({
-        where: { user_id: userId },
+        where: { userId: userId },
         select: {
           amount: true,
-          updated_at: true,
+          updatedAt: true,
         },
       });
 
@@ -460,53 +460,55 @@ export class AdminUserDetailService {
 
       // Get usage by model (aggregated from TokenUsageLedger)
       const usageByModel = await this.prisma.tokenUsageLedger.groupBy({
-        by: ['model_pricing_id'],
+        by: ['modelId'],
         where: {
-          user_id: userId,
-          timestamp: {
+          userId: userId,
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
         },
         _sum: {
-          credits_deducted: true,
+          creditsDeducted: true,
         },
         _count: {
           id: true,
         },
       });
 
-      // Get model names for each model_pricing_id
-      const modelPricingIds = usageByModel.map((u) => u.model_pricing_id);
-      const modelPricings = await this.prisma.modelProviderPricing.findMany({
+      // Usage by model now groups by modelId (string), no need to fetch model names
+      // Just use the modelId as the model identifier
+      const modelIdMap = new Map(usageByModel.map((u) => [u.modelId, u.modelId]));
+      const modelPricings = [] as any[]; // Not needed anymore but keeping for compatibility
+      const dummy = await this.prisma.modelProviderPricing.findMany({
         where: {
-          id: { in: modelPricingIds },
+          modelName: { in: Array.from(modelIdMap.values()) },
         },
         select: {
           id: true,
-          model_name: true,
+          modelName: true,
         },
       });
 
-      const modelPricingMap = new Map(modelPricings.map((mp) => [mp.id, mp.model_name]));
+      const modelPricingMap = new Map(usageByModel.map((u) => [u.modelId, u.modelId]));
 
       // Get deductions
       const deductions = await this.prisma.creditDeductionLedger.findMany({
         where: {
-          user_id: userId,
-          timestamp: {
+          userId: userId,
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
         },
         skip: safeOffset,
         take: safeLimit,
-        orderBy: { timestamp: 'desc' },
+        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           amount: true,
-          timestamp: true,
-          related_usage_id: true,
+          createdAt: true,
+          requestId: true,
         },
       });
 
@@ -517,7 +519,7 @@ export class AdminUserDetailService {
           _sum: { amount: true },
         }),
         this.prisma.creditDeductionLedger.aggregate({
-          where: { user_id: userId },
+          where: { userId: userId },
           _sum: { amount: true },
         }),
       ]);
@@ -533,7 +535,7 @@ export class AdminUserDetailService {
       return {
         balance: {
           amount: balance?.amount || 0,
-          last_updated: balance?.updated_at || new Date(),
+          last_updated: balance?.updatedAt || new Date(),
         },
         allocations: allocations.map((alloc) => ({
           id: alloc.id,
@@ -543,22 +545,22 @@ export class AdminUserDetailService {
           allocated_at: alloc.createdAt,
         })),
         usage: usageByModel.map((usage) => ({
-          model: modelPricingMap.get(usage.model_pricing_id) || 'Unknown Model',
-          total_credits: usage._sum.credits_deducted || 0,
-          request_count: usage._count.id,
+          model: modelPricingMap.get(usage.modelId) || 'Unknown Model',
+          total_credits: usage._sum?.creditsDeducted || 0,
+          request_count: usage._count?.id || 0,
         })),
         deductions: deductions.map((deduction) => ({
           id: deduction.id,
           amount: deduction.amount,
           model_used: 'Unknown', // Would need to join with usage ledger
-          timestamp: deduction.timestamp,
+          timestamp: deduction.createdAt,
         })),
-        total_allocations: totalAllocations._sum.amount || 0,
+        total_allocations: totalAllocations._sum?.amount || 0,
         total_usage: usageByModel.reduce(
-          (sum, u) => sum + (u._sum.credits_deducted || 0),
+          (sum, u) => sum + (u._sum?.creditsDeducted || 0),
           0
         ),
-        total_deductions: totalDeductions._sum.amount || 0,
+        total_deductions: totalDeductions._sum?.amount || 0,
       };
     } catch (error) {
       logger.error('AdminUserDetailService.getUserCredits: Error', {
