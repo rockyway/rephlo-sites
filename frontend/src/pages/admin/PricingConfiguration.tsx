@@ -248,7 +248,7 @@ function PricingConfiguration() {
                             Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-gray-100 text-gray-600">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-600 dark:text-deep-navy-200">
                             Not Set
                           </span>
                         )}

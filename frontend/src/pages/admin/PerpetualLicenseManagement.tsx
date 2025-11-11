@@ -681,7 +681,7 @@ function PerpetualLicenseManagement() {
                                                       ? 'text-green-600'
                                                       : upgrade.status === 'failed'
                                                       ? 'text-red-600'
-                                                      : 'text-gray-600'
+                                                      : 'text-deep-navy-600 dark:text-deep-navy-200'
                                                   )}
                                                 >
                                                   {upgrade.status}

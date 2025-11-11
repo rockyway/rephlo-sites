@@ -406,7 +406,7 @@ const ActivityIcon: React.FC<{ type: string }> = ({ type }) => {
   };
   return (
     <div className="p-2 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg shrink-0">
-      {icons[type] || <Circle className={`${iconClass} text-gray-500`} />}
+      {icons[type] || <Circle className={`${iconClass} text-deep-navy-500 dark:text-deep-navy-300`} />}
     </div>
   );
 };
@@ -442,8 +442,8 @@ const QuickActionsPanel: React.FC = () => {
       icon: <Settings className="h-6 w-6" />,
       label: 'Settings',
       to: '/admin/settings',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50',
+      color: 'text-deep-navy-600 dark:text-deep-navy-200',
+      bgColor: 'bg-deep-navy-50 dark:bg-deep-navy-900',
     },
   ];
 

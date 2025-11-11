@@ -373,7 +373,7 @@ function BillingDashboard() {
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
                                 invoice.status === InvoiceStatus.PAID && 'bg-green-100 text-green-700 border-green-300',
                                 invoice.status === InvoiceStatus.OPEN && 'bg-blue-100 text-blue-700 border-blue-300',
-                                invoice.status === InvoiceStatus.VOID && 'bg-gray-100 text-gray-700 border-gray-300',
+                                invoice.status === InvoiceStatus.VOID && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
                                 invoice.status === InvoiceStatus.UNCOLLECTIBLE && 'bg-red-100 text-red-700 border-red-300'
                               )}>
                                 {invoice.status}
@@ -455,7 +455,7 @@ function BillingDashboard() {
                                 transaction.status === TransactionStatus.SUCCEEDED && 'bg-green-100 text-green-700 border-green-300',
                                 transaction.status === TransactionStatus.PENDING && 'bg-blue-100 text-blue-700 border-blue-300',
                                 transaction.status === TransactionStatus.FAILED && 'bg-red-100 text-red-700 border-red-300',
-                                transaction.status === TransactionStatus.REFUNDED && 'bg-gray-100 text-gray-700 border-gray-300'
+                                transaction.status === TransactionStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
                               )}>
                                 {transaction.status}
                               </span>

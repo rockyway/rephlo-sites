@@ -369,8 +369,8 @@ function DeviceActivationManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Device Activation Management</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Device Activation Management</h1>
+          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
             Manage device activations for perpetual licenses
           </p>
         </div>
@@ -388,50 +388,50 @@ function DeviceActivationManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-3">
-                <Shield className="h-6 w-6 text-green-600" />
+              <div className="rounded-full bg-green-100 dark:bg-green-900 p-3">
+                <Shield className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Active Devices</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalActive.toLocaleString()}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Total Active Devices</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.totalActive.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-3">
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
+              <div className="rounded-full bg-amber-100 dark:bg-amber-900 p-3">
+                <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Licenses at Max Capacity</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.licensesAtMaxCapacity}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Licenses at Max Capacity</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.licensesAtMaxCapacity}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3">
-                <Clock className="h-6 w-6 text-blue-600" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
+                <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Recently Activated (24h)</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.recentlyActivated24h}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Recently Activated (24h)</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.recentlyActivated24h}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-red-100 p-3">
-                <Ban className="h-6 w-6 text-red-600" />
+              <div className="rounded-full bg-red-100 dark:bg-red-900 p-3">
+                <Ban className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Suspicious Activations</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.suspiciousActivations}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Suspicious Activations</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.suspiciousActivations}</p>
               </div>
             </div>
           </div>
@@ -439,12 +439,12 @@ function DeviceActivationManagement() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-6">
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Search</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-navy-400 dark:text-deep-navy-500" />
               <Input
                 type="text"
                 placeholder="User, license, device..."
@@ -456,11 +456,11 @@ function DeviceActivationManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value={ActivationStatus.ACTIVE}>Active</option>
@@ -471,11 +471,11 @@ function DeviceActivationManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">OS</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">OS</label>
             <select
               value={filterOS}
               onChange={(e) => setFilterOS(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="windows">Windows</option>
@@ -485,11 +485,11 @@ function DeviceActivationManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Suspicious</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Suspicious</label>
             <select
               value={filterSuspicious}
               onChange={(e) => setFilterSuspicious(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="true">Suspicious Only</option>
@@ -597,31 +597,31 @@ function DeviceActivationManagement() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
           </div>
         ) : devices.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-gray-500">No device activations found</p>
+            <p className="text-deep-navy-500 dark:text-deep-navy-300">No device activations found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50">
+                <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
                         checked={selectedDeviceIds.size === devices.length && devices.length > 0}
                         onChange={toggleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-blue-600 focus:ring-blue-500"
                       />
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('user')}
                     >
                       <div className="flex items-center gap-1">
@@ -632,7 +632,7 @@ function DeviceActivationManagement() {
                       </div>
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('license')}
                     >
                       <div className="flex items-center gap-1">
@@ -642,17 +642,17 @@ function DeviceActivationManagement() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Device Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       OS
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       IP Address
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('activated')}
                     >
                       <div className="flex items-center gap-1">
@@ -663,7 +663,7 @@ function DeviceActivationManagement() {
                       </div>
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('lastSeen')}
                     >
                       <div className="flex items-center gap-1">
@@ -673,21 +673,21 @@ function DeviceActivationManagement() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                   {devices.map((device) => (
                     <tr
                       key={device.id}
                       className={cn(
-                        'hover:bg-gray-50',
-                        device.isSuspicious && 'bg-yellow-50'
+                        'hover:bg-deep-navy-50 dark:hover:bg-deep-navy-900',
+                        device.isSuspicious && 'bg-yellow-50 dark:bg-yellow-950'
                       )}
                     >
                       <td className="px-4 py-4">
@@ -695,36 +695,36 @@ function DeviceActivationManagement() {
                           type="checkbox"
                           checked={selectedDeviceIds.has(device.id)}
                           onChange={() => toggleDeviceSelection(device.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-blue-600 focus:ring-blue-500"
                         />
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="font-medium text-gray-900">{device.userName}</p>
-                          <p className="text-sm text-gray-500">{device.userEmail}</p>
+                          <p className="font-medium text-deep-navy-800 dark:text-white">{device.userName}</p>
+                          <p className="text-sm text-deep-navy-500 dark:text-deep-navy-300">{device.userEmail}</p>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <code className="rounded bg-gray-100 px-2 py-1 text-sm font-mono text-gray-800">
+                        <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-700 px-2 py-1 text-sm font-mono text-deep-navy-800 dark:text-white">
                           {device.licenseKey}
                         </code>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <p className="text-gray-900">{device.deviceName}</p>
+                          <p className="text-deep-navy-800 dark:text-white">{device.deviceName}</p>
                           {device.isSuspicious && (
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" title="Suspicious activity detected" />
+                            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" title="Suspicious activity detected" />
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-gray-900">{device.os}</td>
+                      <td className="px-4 py-4 text-deep-navy-800 dark:text-white">{device.os}</td>
                       <td className="px-4 py-4">
-                        <code className="text-sm font-mono text-gray-600">{device.ipAddress}</code>
+                        <code className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-300">{device.ipAddress}</code>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-500">
+                      <td className="px-4 py-4 text-sm text-deep-navy-500 dark:text-deep-navy-300">
                         {formatDate(device.activatedAt)}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-500">
+                      <td className="px-4 py-4 text-sm text-deep-navy-500 dark:text-deep-navy-300">
                         {formatDate(device.lastSeenAt)}
                       </td>
                       <td className="px-4 py-4">
@@ -732,13 +732,13 @@ function DeviceActivationManagement() {
                           className={cn(
                             'inline-flex rounded-full px-2 py-1 text-xs font-medium',
                             device.status === ActivationStatus.ACTIVE &&
-                              'bg-green-100 text-green-700',
+                              'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400',
                             device.status === ActivationStatus.INACTIVE &&
-                              'bg-gray-100 text-gray-700',
+                              'bg-deep-navy-100 dark:bg-deep-navy-700 text-deep-navy-700 dark:text-deep-navy-200',
                             device.status === ActivationStatus.STALE &&
-                              'bg-yellow-100 text-yellow-700',
+                              'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-400',
                             device.status === ActivationStatus.DEACTIVATED &&
-                              'bg-red-100 text-red-700'
+                              'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-400'
                           )}
                         >
                           {device.status}
@@ -790,8 +790,8 @@ function DeviceActivationManagement() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-                <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between border-t border-deep-navy-200 dark:border-deep-navy-700 px-4 py-3">
+                <div className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                   Page {page} of {totalPages}
                 </div>
                 <div className="flex gap-2">
@@ -835,12 +835,12 @@ function DeviceActivationManagement() {
       {selectedDevice && showRevokeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">Revoke Device</h2>
-            <p className="mb-4 text-sm text-gray-600">
+            <h2 className="mb-4 text-xl font-bold text-deep-navy-800 dark:text-white">Revoke Device</h2>
+            <p className="mb-4 text-sm text-deep-navy-600 dark:text-deep-navy-200">
               Revoking this device is permanent. The user will not be able to reactivate this device.
             </p>
             <div className="mb-4">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                 Reason <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -879,13 +879,13 @@ function DeviceActivationManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Device Details</h2>
+              <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Device Details</h2>
               <button
                 onClick={() => {
                   setShowDetailsModal(false);
                   setSelectedDevice(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-deep-navy-500 dark:text-deep-navy-400 hover:text-deep-navy-700 dark:hover:text-deep-navy-200"
               >
                 <XIcon className="h-6 w-6" />
               </button>
@@ -894,51 +894,51 @@ function DeviceActivationManagement() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">User</p>
-                  <p className="text-gray-900">{selectedDevice.userName}</p>
-                  <p className="text-sm text-gray-500">{selectedDevice.userEmail}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">User</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedDevice.userName}</p>
+                  <p className="text-sm text-deep-navy-500 dark:text-deep-navy-300">{selectedDevice.userEmail}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">License Key</p>
-                  <code className="text-sm text-gray-900">{selectedDevice.licenseKey}</code>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">License Key</p>
+                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedDevice.licenseKey}</code>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Device Name</p>
-                  <p className="text-gray-900">{selectedDevice.deviceName}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Device Name</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedDevice.deviceName}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Device ID</p>
-                  <code className="text-sm text-gray-600">{selectedDevice.deviceId}</code>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Device ID</p>
+                  <code className="text-sm text-deep-navy-600 dark:text-deep-navy-300">{selectedDevice.deviceId}</code>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Operating System</p>
-                  <p className="text-gray-900">{selectedDevice.os}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Operating System</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedDevice.os}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">IP Address</p>
-                  <code className="text-sm text-gray-900">{selectedDevice.ipAddress}</code>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">IP Address</p>
+                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedDevice.ipAddress}</code>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Activated At</p>
-                  <p className="text-gray-900">{formatDate(selectedDevice.activatedAt, 'long')}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Activated At</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedDevice.activatedAt, 'long')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Last Seen</p>
-                  <p className="text-gray-900">{formatDate(selectedDevice.lastSeenAt, 'long')}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Last Seen</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedDevice.lastSeenAt, 'long')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Status</p>
                   <span
                     className={cn(
                       'inline-flex rounded-full px-2 py-1 text-xs font-medium',
                       selectedDevice.status === ActivationStatus.ACTIVE &&
-                        'bg-green-100 text-green-700',
+                        'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400',
                       selectedDevice.status === ActivationStatus.INACTIVE &&
-                        'bg-gray-100 text-gray-700',
+                        'bg-deep-navy-100 dark:bg-deep-navy-700 text-deep-navy-700 dark:text-deep-navy-200',
                       selectedDevice.status === ActivationStatus.STALE &&
-                        'bg-yellow-100 text-yellow-700',
+                        'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-400',
                       selectedDevice.status === ActivationStatus.DEACTIVATED &&
-                        'bg-red-100 text-red-700'
+                        'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-400'
                     )}
                   >
                     {selectedDevice.status}
@@ -969,18 +969,18 @@ function DeviceActivationManagement() {
       {showBulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">
+            <h2 className="mb-4 text-xl font-bold text-deep-navy-800 dark:text-white">
               Bulk {bulkAction === 'deactivate' ? 'Deactivate' : 'Revoke'}
             </h2>
 
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                 {selectedDeviceIds.size} device{selectedDeviceIds.size > 1 ? 's' : ''} selected
               </p>
 
               {bulkAction === 'revoke' && (
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                     Reason <span className="text-red-500">*</span>
                   </label>
                   <textarea

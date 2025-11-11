@@ -507,7 +507,7 @@ function ProrationTracking() {
                                 : proration.status === ProrationStatus.FAILED
                                 ? 'text-red-600 bg-red-50 border-red-200'
                                 : proration.status === ProrationStatus.REVERSED
-                                ? 'text-gray-600 bg-gray-50 border-gray-200'
+                                ? 'text-deep-navy-600 dark:text-deep-navy-200 bg-deep-navy-50 dark:bg-deep-navy-900 border-deep-navy-200 dark:border-deep-navy-700'
                                 : 'text-yellow-600 bg-yellow-50 border-yellow-200'
                             )}
                           >

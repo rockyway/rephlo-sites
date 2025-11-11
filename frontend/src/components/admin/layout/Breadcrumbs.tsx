@@ -53,7 +53,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
               {index > 0 && (
                 <li>
                   <ChevronRight
-                    className="w-4 h-4 text-deep-navy-400"
+                    className="w-4 h-4 text-deep-navy-400 dark:text-deep-navy-500"
                     aria-hidden="true"
                   />
                 </li>
@@ -65,14 +65,14 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
                   // Clickable link
                   <NavLink
                     to={crumb.href}
-                    className="flex items-center gap-1.5 text-deep-navy-600 hover:text-rephlo-blue transition-colors"
+                    className="flex items-center gap-1.5 text-deep-navy-600 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors"
                   >
                     {Icon && <Icon className="w-4 h-4" />}
                     <span>{crumb.label}</span>
                   </NavLink>
                 ) : (
                   // Current page (not clickable)
-                  <div className="flex items-center gap-1.5 font-semibold text-deep-navy-900">
+                  <div className="flex items-center gap-1.5 font-semibold text-deep-navy-800 dark:text-white">
                     {Icon && <Icon className="w-4 h-4" />}
                     <span>{crumb.label}</span>
                   </div>

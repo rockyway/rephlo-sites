@@ -245,7 +245,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   <select
                     value={scenario.tier || ''}
                     onChange={(e) => setScenario({ ...scenario, tier: e.target.value })}
-                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                   >
                     <option value="">All Tiers</option>
                     <option value="free">Free</option>
@@ -257,7 +257,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   <select
                     value={scenario.providerId || ''}
                     onChange={(e) => setScenario({ ...scenario, providerId: e.target.value })}
-                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                   >
                     <option value="">All Providers</option>
                     <option value="openai">OpenAI</option>
@@ -268,7 +268,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   <select
                     value={scenario.modelId || ''}
                     onChange={(e) => setScenario({ ...scenario, modelId: e.target.value })}
-                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                   >
                     <option value="">All Models</option>
                     <option value="gpt-4o">GPT-4o</option>
@@ -318,7 +318,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                 <select
                   value={selectedDateRange}
                   onChange={(e) => handleDateRangeChange(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                  className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                 >
                   {dateRangeOptions.map((option) => (
                     <option key={option.label} value={option.label}>

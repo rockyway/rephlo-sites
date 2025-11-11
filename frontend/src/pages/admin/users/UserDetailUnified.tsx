@@ -1298,7 +1298,7 @@ const ActivityIcon: React.FC<{ type: string }> = ({ type }) => {
   };
   return (
     <div className="p-2 bg-deep-navy-50 rounded-lg shrink-0">
-      {icons[type] || <Activity className={`${iconClass} text-gray-500`} />}
+      {icons[type] || <Activity className={`${iconClass} text-deep-navy-500 dark:text-deep-navy-300`} />}
     </div>
   );
 };
