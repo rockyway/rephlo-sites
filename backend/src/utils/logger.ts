@@ -62,7 +62,7 @@ const consoleFormat = winston.format.combine(
   })
 );
 
-console.log('process.env.NODE_ENV 1', process.env.NODE_ENV);
+console.log('process.env.NODE_ENV', process.env.NODE_ENV);
 
 /**
  * Transports configuration
@@ -77,7 +77,7 @@ transports.push(
 );
 
 // File transports (production only)
-if (process.env.NODE_ENV === 'production') {
+// if (process.env.NODE_ENV === 'production') {
   // Error log file - only error level
   transports.push(
     new winston.transports.File({
@@ -94,11 +94,12 @@ if (process.env.NODE_ENV === 'production') {
     new winston.transports.File({
       filename: path.join(LOG_DIR, 'combined.log'),
       format: logFormat,
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
+      maxsize: 5242880 * 2, // 10MB
+      maxFiles: 10,
+      zippedArchive: true
     })
   );
-}
+// }
 
 /**
  * Create Winston logger instance
