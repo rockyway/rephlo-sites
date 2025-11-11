@@ -129,7 +129,7 @@ function MarginTracking() {
               <h1 className="text-h1 font-bold text-deep-navy-800">
                 Margin Tracking
               </h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Real-time profitability monitoring and analysis
               </p>
             </div>
@@ -188,7 +188,7 @@ function MarginTracking() {
               >
                 {metrics && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-500">Target:</span>
+                    <span className="text-caption text-deep-navy-700">Target:</span>
                     <span className="text-body-sm font-semibold text-deep-navy-700">
                       {(metrics.targetMargin ?? 0).toFixed(1)}%
                     </span>
@@ -205,7 +205,7 @@ function MarginTracking() {
               >
                 {metrics && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-500">Credit Value:</span>
+                    <span className="text-caption text-deep-navy-700">Credit Value:</span>
                     <span className="text-body-sm font-semibold text-deep-navy-700">
                       ${metrics.creditValue.toLocaleString()}
                     </span>
@@ -222,7 +222,7 @@ function MarginTracking() {
               >
                 {metrics && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-500">Status:</span>
+                    <span className="text-caption text-deep-navy-700">Status:</span>
                     <span className={cn('text-body-sm font-semibold', getStatusColor(metrics.status))}>
                       {metrics.status === 'on_target'
                         ? 'On Target'
@@ -353,13 +353,13 @@ function MarginTracking() {
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between text-body-sm">
-                          <span className="text-deep-navy-500">Requests:</span>
+                          <span className="text-deep-navy-700">Requests:</span>
                           <span className="font-medium text-deep-navy-800">
                             {provider.requests.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-body-sm">
-                          <span className="text-deep-navy-500">Cost:</span>
+                          <span className="text-deep-navy-700">Cost:</span>
                           <span className="font-medium text-deep-navy-800">
                             ${provider.vendorCost.toLocaleString()}
                           </span>
@@ -457,7 +457,7 @@ function MarginTracking() {
                             {tier.tier.replace(/_/g, ' ')} tier margin {tier.variance < 0 ? 'below' : 'above'} target by{' '}
                             {Math.abs(tier.variance ?? 0).toFixed(1)}%
                           </p>
-                          <p className="text-caption text-deep-navy-500">
+                          <p className="text-caption text-deep-navy-700">
                             Current: {(tier.marginPercent ?? 0).toFixed(1)}% | Target: {(tier.targetMargin ?? 0).toFixed(1)}%
                           </p>
                         </div>

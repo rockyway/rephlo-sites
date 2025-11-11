@@ -34,7 +34,7 @@ export default function Login() {
       <Card className="max-w-md w-full p-8">
         {/* Logo/Branding */}
         <div className="text-center mb-8">
-          <h1 className="text-h2 font-bold text-deep-navy-500 mb-2">
+          <h1 className="text-h2 font-bold text-deep-navy-700 mb-2">
             Welcome to Rephlo
           </h1>
           <p className="text-body text-deep-navy-300">

@@ -276,7 +276,7 @@ function UserManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800">User Management</h1>
-          <p className="text-body text-deep-navy-500 mt-1">
+          <p className="text-body text-deep-navy-700 mt-1">
             View, moderate, and manage platform users
           </p>
         </div>
@@ -404,7 +404,7 @@ function UserManagement() {
               </div>
             ) : !users || users.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-500">No users found</p>
+                <p className="text-body text-deep-navy-700">No users found</p>
               </div>
             ) : (
               <table className="w-full">
@@ -600,27 +600,27 @@ function UserManagement() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-caption text-deep-navy-500">Email</p>
+                  <p className="text-caption text-deep-navy-700">Email</p>
                   <p className="text-body font-medium">{userDetails.email}</p>
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-500">Name</p>
+                  <p className="text-caption text-deep-navy-700">Name</p>
                   <p className="text-body font-medium">{userDetails.name || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-500">Tier</p>
+                  <p className="text-caption text-deep-navy-700">Tier</p>
                   <TierBadge tier={userDetails.currentTier} />
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-500">Status</p>
+                  <p className="text-caption text-deep-navy-700">Status</p>
                   <StatusBadge status={userDetails.status} type="user" />
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-500">Credits Balance</p>
+                  <p className="text-caption text-deep-navy-700">Credits Balance</p>
                   <p className="text-body font-medium">{formatNumber(userDetails.creditsBalance)}</p>
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-500">Joined</p>
+                  <p className="text-caption text-deep-navy-700">Joined</p>
                   <p className="text-body">{formatDate(userDetails.createdAt, 'long')}</p>
                 </div>
               </div>
@@ -630,15 +630,15 @@ function UserManagement() {
                 <h3 className="text-h4 font-semibold mb-2">Usage Statistics</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-deep-navy-50 p-4 rounded-md">
-                    <p className="text-caption text-deep-navy-500">Total API Calls</p>
+                    <p className="text-caption text-deep-navy-700">Total API Calls</p>
                     <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats?.totalApiCalls ?? 0)}</p>
                   </div>
                   <div className="bg-deep-navy-50 p-4 rounded-md">
-                    <p className="text-caption text-deep-navy-500">Credits Used</p>
+                    <p className="text-caption text-deep-navy-700">Credits Used</p>
                     <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats?.creditsUsed ?? 0)}</p>
                   </div>
                   <div className="bg-deep-navy-50 p-4 rounded-md">
-                    <p className="text-caption text-deep-navy-500">Avg Calls/Day</p>
+                    <p className="text-caption text-deep-navy-700">Avg Calls/Day</p>
                     <p className="text-h3 font-semibold">{(userDetails.usageStats?.averageCallsPerDay ?? 0).toFixed(1)}</p>
                   </div>
                 </div>

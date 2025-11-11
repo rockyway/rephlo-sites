@@ -524,7 +524,7 @@ export default function PlatformAnalytics() {
 
           {/* No transitions */}
           {upgrades.length === 0 && downgrades.length === 0 && (
-            <div className="text-center py-8 text-deep-navy-500">
+            <div className="text-center py-8 text-deep-navy-700">
               <p className="text-body">No tier transitions in the last 30 days</p>
             </div>
           )}

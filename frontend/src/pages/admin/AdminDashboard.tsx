@@ -299,7 +299,7 @@ const UserGrowthChart: React.FC = () => {
           <p className="text-deep-navy-600 font-medium">
             Chart placeholder - Historical data endpoint needed
           </p>
-          <p className="text-sm text-deep-navy-500 mt-1">
+          <p className="text-sm text-deep-navy-700 mt-1">
             This chart will display user growth trends over time
           </p>
         </div>

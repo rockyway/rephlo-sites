@@ -246,7 +246,7 @@ function CampaignCalendar() {
             </div>
             <div className="mt-2 text-3xl font-bold text-deep-navy-900">
               {formatCurrency(stats.budgetUtilized)}
-              <span className="text-sm font-normal text-deep-navy-500 ml-2">
+              <span className="text-sm font-normal text-deep-navy-700 ml-2">
                 (
                 {formatPercentage(
                   calculateBudgetUtilization(
@@ -318,35 +318,35 @@ function CampaignCalendar() {
             </div>
           ) : campaigns.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-deep-navy-500">No campaigns found</p>
+              <p className="text-deep-navy-700">No campaigns found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-deep-navy-200">
                 <thead className="bg-deep-navy-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Campaign Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Start Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       End Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Budget
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Spent
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-deep-navy-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-deep-navy-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -365,7 +365,7 @@ function CampaignCalendar() {
                             {campaign.name}
                           </div>
                           {campaign.description && (
-                            <div className="text-sm text-deep-navy-500">
+                            <div className="text-sm text-deep-navy-700">
                               {campaign.description}
                             </div>
                           )}
@@ -373,10 +373,10 @@ function CampaignCalendar() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <CampaignTypeBadge type={campaign.type} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-700">
                           {formatDate(campaign.starts_at)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-700">
                           {formatDate(campaign.ends_at)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-900">

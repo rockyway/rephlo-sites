@@ -146,7 +146,7 @@ function PricingConfiguration() {
               <h1 className="text-h1 font-bold text-deep-navy-800">
                 Pricing Configuration
               </h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Manage margin multipliers and pricing strategy
               </p>
             </div>
@@ -186,7 +186,7 @@ function PricingConfiguration() {
             <h2 className="text-h3 font-semibold text-deep-navy-800">
               Current Tier Multipliers
             </h2>
-            <p className="text-body-sm text-deep-navy-500 mt-1">
+            <p className="text-body-sm text-deep-navy-700 mt-1">
               Active pricing configurations by subscription tier
             </p>
           </div>
@@ -272,7 +272,7 @@ function PricingConfiguration() {
             <h2 className="text-h3 font-semibold text-deep-navy-800">
               Model-Specific Overrides
             </h2>
-            <p className="text-body-sm text-deep-navy-500 mt-1">
+            <p className="text-body-sm text-deep-navy-700 mt-1">
               Custom multipliers for specific providers and models
             </p>
           </div>
@@ -307,7 +307,7 @@ function PricingConfiguration() {
                 {modelOverrides.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center">
-                      <p className="text-body text-deep-navy-500">
+                      <p className="text-body text-deep-navy-700">
                         No model-specific overrides configured
                       </p>
                       <Button size="sm" className="mt-2" onClick={() => setIsCreateDialogOpen(true)}>
@@ -385,7 +385,7 @@ function PricingConfiguration() {
                         {' - '}
                         <span className="text-rephlo-blue">{config.marginMultiplier.toFixed(2)}×</span>
                       </p>
-                      <p className="text-caption text-deep-navy-500 mt-1">
+                      <p className="text-caption text-deep-navy-700 mt-1">
                         {config.reason.replace(/_/g, ' ')} - {config.reasonDetails}
                       </p>
                     </div>

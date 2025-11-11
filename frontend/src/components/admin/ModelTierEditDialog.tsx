@@ -126,7 +126,7 @@ function ModelTierEditDialog({
               <Dialog.Title className="text-h3 font-semibold text-deep-navy-800">
                 Edit Model Tier
               </Dialog.Title>
-              <p className="text-body-sm text-deep-navy-500 mt-1">
+              <p className="text-body-sm text-deep-navy-700 mt-1">
                 {model.displayName} ({model.provider})
               </p>
             </div>
@@ -149,19 +149,19 @@ function ModelTierEditDialog({
               </p>
               <div className="grid grid-cols-3 gap-4 text-body-sm">
                 <div>
-                  <span className="text-deep-navy-500">Required Tier:</span>
+                  <span className="text-deep-navy-700">Required Tier:</span>
                   <div className="mt-1">
                     <TierBadge tier={model.requiredTier} size="sm" />
                   </div>
                 </div>
                 <div>
-                  <span className="text-deep-navy-500">Mode:</span>
+                  <span className="text-deep-navy-700">Mode:</span>
                   <p className="mt-1 font-medium text-deep-navy-800">
                     {model.tierRestrictionMode}
                   </p>
                 </div>
                 <div>
-                  <span className="text-deep-navy-500">Allowed Tiers:</span>
+                  <span className="text-deep-navy-700">Allowed Tiers:</span>
                   <div className="mt-1 flex gap-1 flex-wrap">
                     {model.allowedTiers.map((tier) => (
                       <TierBadge key={tier} tier={tier} size="sm" />

@@ -178,7 +178,7 @@ function SubscriptionManagement() {
           <h1 className="text-h1 font-bold text-deep-navy-800">
             Subscription Management
           </h1>
-          <p className="text-body text-deep-navy-500 mt-1">
+          <p className="text-body text-deep-navy-700 mt-1">
             View and manage all user subscriptions, tier changes, and cancellations
           </p>
         </div>
@@ -365,7 +365,7 @@ function SubscriptionManagement() {
               </div>
             ) : !sortedSubscriptions || sortedSubscriptions.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-500">No subscriptions found</p>
+                <p className="text-body text-deep-navy-700">No subscriptions found</p>
               </div>
             ) : (
               <table className="w-full">
@@ -453,7 +453,7 @@ function SubscriptionManagement() {
                             <span className="text-body font-medium text-deep-navy-800">
                               {formatCurrency(subscription.finalPriceUsd)}
                             </span>
-                            <span className="text-caption text-deep-navy-500 ml-1">
+                            <span className="text-caption text-deep-navy-700 ml-1">
                               /{subscription.billingCycle === 'monthly' ? 'mo' : 'yr'}
                             </span>
                           </div>
@@ -466,7 +466,7 @@ function SubscriptionManagement() {
                         <td className="px-6 py-4">
                           <div className="text-body-sm text-deep-navy-600">
                             <div>{formatDate(subscription.currentPeriodStart)}</div>
-                            <div className="text-caption text-deep-navy-500">
+                            <div className="text-caption text-deep-navy-700">
                               to {formatDate(subscription.currentPeriodEnd)}
                             </div>
                           </div>
@@ -477,7 +477,7 @@ function SubscriptionManagement() {
                               <div className="text-deep-navy-700">{formatDate(subscription.nextBillingDate)}</div>
                               <div className={cn(
                                 'text-caption',
-                                daysUntilBilling && daysUntilBilling <= 7 ? 'text-amber-600' : 'text-deep-navy-500'
+                                daysUntilBilling && daysUntilBilling <= 7 ? 'text-amber-600' : 'text-deep-navy-700'
                               )}>
                                 {daysUntilBilling && daysUntilBilling >= 0 ? `in ${daysUntilBilling} days` : 'Past due'}
                               </div>

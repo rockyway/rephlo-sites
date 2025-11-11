@@ -247,7 +247,7 @@ function AdminSettings() {
 {/* Header */}
       <div>
         <h1 className="text-h1 font-bold text-deep-navy-800">Settings</h1>
-        <p className="text-body text-deep-navy-500 mt-1">
+        <p className="text-body text-deep-navy-700 mt-1">
           Configure platform settings and preferences
         </p>
       </div>
@@ -568,7 +568,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
             </>
           )}
         </Button>
-        <p className="text-body-sm text-deep-navy-500 mt-2">
+        <p className="text-body-sm text-deep-navy-700 mt-2">
           Send a test email to verify SMTP configuration
         </p>
       </div>
@@ -595,7 +595,7 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
               onChange={(e) => onChange('session_timeout_minutes', parseInt(e.target.value) || 1440)}
               placeholder="1440"
             />
-            <p className="text-body-sm text-deep-navy-500 mt-1">
+            <p className="text-body-sm text-deep-navy-700 mt-1">
               Default: 1440 minutes (24 hours)
             </p>
           </div>
@@ -828,7 +828,7 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
             onChange={(e) => onChange('webhook_url', e.target.value)}
             placeholder="https://api.example.com/webhooks"
           />
-          <p className="text-body-sm text-deep-navy-500 mt-1">
+          <p className="text-body-sm text-deep-navy-700 mt-1">
             External webhook URL for platform events
           </p>
         </div>
@@ -1042,7 +1042,7 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
               </>
             )}
           </Button>
-          <p className="text-body-sm text-deep-navy-500 mt-2">
+          <p className="text-body-sm text-deep-navy-700 mt-2">
             Create a full database backup now
           </p>
         </div>
@@ -1068,7 +1068,7 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
               </>
             )}
           </Button>
-          <p className="text-body-sm text-deep-navy-500 mt-2">
+          <p className="text-body-sm text-deep-navy-700 mt-2">
             Clear all cached data (Redis, in-memory caches)
           </p>
         </div>

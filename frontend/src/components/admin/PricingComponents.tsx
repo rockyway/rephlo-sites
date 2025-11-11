@@ -121,7 +121,7 @@ export function MarginBadge({ marginPercent, targetMargin, size = 'md' }: Margin
         {marginPercent.toFixed(1)}%
       </span>
       {targetMargin !== undefined && variance !== 0 && (
-        <span className="flex items-center gap-0.5 text-caption text-deep-navy-500">
+        <span className="flex items-center gap-0.5 text-caption text-deep-navy-700">
           {variance > 0 ? (
             <TrendingUp className="h-3 w-3 text-green-600" />
           ) : variance < 0 ? (
@@ -168,7 +168,7 @@ export function ImpactPreview({
       <div className="grid grid-cols-2 gap-3">
         {additionalMargin !== undefined && (
           <div>
-            <p className="text-caption text-deep-navy-500">Additional Margin</p>
+            <p className="text-caption text-deep-navy-700">Additional Margin</p>
             <p className={cn('text-body font-semibold', isPositive ? 'text-green-600' : 'text-red-600')}>
               ${additionalMargin.toLocaleString()}
             </p>
@@ -177,7 +177,7 @@ export function ImpactPreview({
 
         {marginChange !== undefined && (
           <div>
-            <p className="text-caption text-deep-navy-500">Margin Change</p>
+            <p className="text-caption text-deep-navy-700">Margin Change</p>
             <p className={cn('text-body font-semibold', marginChange >= 0 ? 'text-green-600' : 'text-red-600')}>
               {marginChange >= 0 ? '+' : ''}{marginChange.toFixed(1)}%
             </p>
@@ -186,7 +186,7 @@ export function ImpactPreview({
 
         {affectedUsers !== undefined && (
           <div>
-            <p className="text-caption text-deep-navy-500">Affected Users</p>
+            <p className="text-caption text-deep-navy-700">Affected Users</p>
             <p className="text-body font-semibold text-deep-navy-800">
               {affectedUsers.toLocaleString()}
             </p>
@@ -195,7 +195,7 @@ export function ImpactPreview({
 
         {creditCostIncrease !== undefined && (
           <div>
-            <p className="text-caption text-deep-navy-500">Credit Cost Change</p>
+            <p className="text-caption text-deep-navy-700">Credit Cost Change</p>
             <p className={cn('text-body font-semibold', creditCostIncrease >= 0 ? 'text-amber-600' : 'text-green-600')}>
               {creditCostIncrease >= 0 ? '+' : ''}{creditCostIncrease.toFixed(1)}%
             </p>
@@ -204,7 +204,7 @@ export function ImpactPreview({
 
         {revenueImpact !== undefined && (
           <div>
-            <p className="text-caption text-deep-navy-500">Revenue Impact</p>
+            <p className="text-caption text-deep-navy-700">Revenue Impact</p>
             <p className={cn('text-body font-semibold', revenueImpact >= 0 ? 'text-green-600' : 'text-red-600')}>
               ${revenueImpact.toLocaleString()}
             </p>
@@ -213,7 +213,7 @@ export function ImpactPreview({
 
         {churnImpact && (
           <div>
-            <p className="text-caption text-deep-navy-500">Est. Churn Impact</p>
+            <p className="text-caption text-deep-navy-700">Est. Churn Impact</p>
             <p className="text-body font-semibold text-amber-600">
               {churnImpact.min}-{churnImpact.max} users
             </p>
@@ -223,7 +223,7 @@ export function ImpactPreview({
 
       {netBenefit !== undefined && (
         <div className="pt-3 border-t border-deep-navy-200">
-          <p className="text-caption text-deep-navy-500">Net Financial Impact</p>
+          <p className="text-caption text-deep-navy-700">Net Financial Impact</p>
           <p className={cn('text-h4 font-bold', netBenefit >= 0 ? 'text-green-600' : 'text-red-600')}>
             {netBenefit >= 0 ? '+' : ''}${netBenefit.toLocaleString()}/month
           </p>

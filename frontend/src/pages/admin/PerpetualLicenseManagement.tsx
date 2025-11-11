@@ -264,7 +264,7 @@ function PerpetualLicenseManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800">Perpetual License Management</h1>
-          <p className="text-body text-deep-navy-500 mt-1">
+          <p className="text-body text-deep-navy-700 mt-1">
             View and manage perpetual licenses, device activations, and version upgrades
           </p>
         </div>
@@ -421,7 +421,7 @@ function PerpetualLicenseManagement() {
               </div>
             ) : sortedLicenses.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-500">No licenses found</p>
+                <p className="text-body text-deep-navy-700">No licenses found</p>
               </div>
             ) : (
               <table className="w-full">
@@ -591,7 +591,7 @@ function PerpetualLicenseManagement() {
                                     Device Activations ({activations.length}/{license.maxActivations})
                                   </h4>
                                   {activations.length === 0 ? (
-                                    <p className="text-body-sm text-deep-navy-500">No active devices</p>
+                                    <p className="text-body-sm text-deep-navy-700">No active devices</p>
                                   ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       {activations.map((activation) => (
@@ -611,7 +611,7 @@ function PerpetualLicenseManagement() {
                                     Version Upgrade History
                                   </h4>
                                   {upgrades.length === 0 ? (
-                                    <p className="text-body-sm text-deep-navy-500">No upgrades purchased</p>
+                                    <p className="text-body-sm text-deep-navy-700">No upgrades purchased</p>
                                   ) : (
                                     <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
                                       <table className="w-full">
@@ -652,7 +652,7 @@ function PerpetualLicenseManagement() {
                                                     {formatCurrency(upgrade.finalPrice)}
                                                   </span>
                                                   {upgrade.discountApplied && upgrade.discountApplied > 0 && (
-                                                    <div className="text-caption text-deep-navy-500 line-through">
+                                                    <div className="text-caption text-deep-navy-700 line-through">
                                                       {formatCurrency(upgrade.upgradePrice)}
                                                     </div>
                                                   )}
@@ -665,7 +665,7 @@ function PerpetualLicenseManagement() {
                                                     percentage={upgrade.discountApplied}
                                                   />
                                                 ) : (
-                                                  <span className="text-caption text-deep-navy-500">None</span>
+                                                  <span className="text-caption text-deep-navy-700">None</span>
                                                 )}
                                               </td>
                                               <td className="px-4 py-2">

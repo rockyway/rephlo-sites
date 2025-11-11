@@ -140,7 +140,7 @@ function BillingDashboard() {
                 Back to Admin
               </Link>
               <h1 className="text-h1 font-bold text-deep-navy-800">Billing Dashboard</h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Revenue tracking, invoice management, and payment monitoring
               </p>
             </div>
@@ -192,7 +192,7 @@ function BillingDashboard() {
                 <TrendingUp className="h-5 w-5 text-rephlo-blue" />
               </div>
               <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(revenueMetrics.totalARR, 0)}</p>
-              <p className="text-caption text-deep-navy-500 mt-2">Annual Recurring Revenue</p>
+              <p className="text-caption text-deep-navy-700 mt-2">Annual Recurring Revenue</p>
             </div>
 
             <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
@@ -201,7 +201,7 @@ function BillingDashboard() {
                 <CreditCard className="h-5 w-5 text-purple-600" />
               </div>
               <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(revenueMetrics.avgRevenuePerUser)}</p>
-              <p className="text-caption text-deep-navy-500 mt-2">ARPU</p>
+              <p className="text-caption text-deep-navy-700 mt-2">ARPU</p>
             </div>
 
             <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
@@ -232,7 +232,7 @@ function BillingDashboard() {
                       <span className="text-body text-deep-navy-700">
                         {formatCurrency(tier.revenue, 0)}
                       </span>
-                      <span className="text-caption text-deep-navy-500">
+                      <span className="text-caption text-deep-navy-700">
                         ({tier.subscriberCount} subscribers)
                       </span>
                     </div>
@@ -348,7 +348,7 @@ function BillingDashboard() {
                     <tbody className="divide-y divide-deep-navy-100">
                       {invoices.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-500">
+                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700">
                             No invoices found
                           </td>
                         </tr>
@@ -424,7 +424,7 @@ function BillingDashboard() {
                     <tbody className="divide-y divide-deep-navy-100">
                       {transactions.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-500">
+                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700">
                             No transactions found
                           </td>
                         </tr>
@@ -502,7 +502,7 @@ function BillingDashboard() {
                     <tbody className="divide-y divide-deep-navy-100">
                       {dunningAttempts.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-500">
+                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700">
                             No failed payments
                           </td>
                         </tr>

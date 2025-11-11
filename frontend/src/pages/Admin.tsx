@@ -75,7 +75,7 @@ function Admin() {
                 Back to Home
               </Link>
               <h1 className="text-h1 font-bold text-deep-navy-800">Rephlo Metrics Dashboard</h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Real-time insights into downloads, feedback, and diagnostics
               </p>
             </div>
@@ -103,7 +103,7 @@ function Admin() {
                     <h3 className="text-h4 font-semibold text-deep-navy-800">
                       Model Tier Management
                     </h3>
-                    <p className="text-body-sm text-deep-navy-500">
+                    <p className="text-body-sm text-deep-navy-700">
                       Configure subscription tiers for AI models
                     </p>
                   </div>
@@ -121,7 +121,7 @@ function Admin() {
                     <h3 className="text-h4 font-semibold text-deep-navy-800">
                       Pricing Configuration
                     </h3>
-                    <p className="text-body-sm text-deep-navy-500">
+                    <p className="text-body-sm text-deep-navy-700">
                       Manage margin multipliers and pricing
                     </p>
                   </div>
@@ -139,7 +139,7 @@ function Admin() {
                     <h3 className="text-h4 font-semibold text-deep-navy-800">
                       Pricing Simulation
                     </h3>
-                    <p className="text-body-sm text-deep-navy-500">
+                    <p className="text-body-sm text-deep-navy-700">
                       What-if analysis for pricing changes
                     </p>
                   </div>
@@ -157,7 +157,7 @@ function Admin() {
                     <h3 className="text-h4 font-semibold text-deep-navy-800">
                       Vendor Price Monitoring
                     </h3>
-                    <p className="text-body-sm text-deep-navy-500">
+                    <p className="text-body-sm text-deep-navy-700">
                       Track and respond to vendor price changes
                     </p>
                   </div>
@@ -175,7 +175,7 @@ function Admin() {
                     <h3 className="text-h4 font-semibold text-deep-navy-800">
                       Margin Tracking
                     </h3>
-                    <p className="text-body-sm text-deep-navy-500">
+                    <p className="text-body-sm text-deep-navy-700">
                       Real-time profitability monitoring
                     </p>
                   </div>
@@ -218,19 +218,19 @@ function Admin() {
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="text-deep-navy-500">Windows</span>
+                    <span className="text-deep-navy-700">Windows</span>
                     <span className="font-semibold text-deep-navy-800">
                       {metrics.downloads.windows.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="text-deep-navy-500">macOS</span>
+                    <span className="text-deep-navy-700">macOS</span>
                     <span className="font-semibold text-deep-navy-800">
                       {metrics.downloads.macos.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="text-deep-navy-500">Linux</span>
+                    <span className="text-deep-navy-700">Linux</span>
                     <span className="font-semibold text-deep-navy-800">
                       {metrics.downloads.linux.toLocaleString()}
                     </span>

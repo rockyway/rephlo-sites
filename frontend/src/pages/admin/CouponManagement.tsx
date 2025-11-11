@@ -214,7 +214,7 @@ function CouponManagement() {
           <h1 className="text-h1 font-bold text-deep-navy-800">
             Coupon Management
           </h1>
-          <p className="text-body text-deep-navy-500 mt-1">
+          <p className="text-body text-deep-navy-700 mt-1">
             Create and manage promotional discount coupons
           </p>
         </div>
@@ -350,7 +350,7 @@ function CouponManagement() {
           </div>
         ) : !coupons || coupons.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-deep-navy-500">No coupons found</p>
+            <p className="text-deep-navy-700">No coupons found</p>
             <Button onClick={handleCreateCoupon} className="mt-4">
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Coupon
@@ -401,7 +401,7 @@ function CouponManagement() {
                               {coupon.code}
                             </div>
                             {coupon.description && (
-                              <div className="text-sm text-deep-navy-500">
+                              <div className="text-sm text-deep-navy-700">
                                 {coupon.description}
                               </div>
                             )}

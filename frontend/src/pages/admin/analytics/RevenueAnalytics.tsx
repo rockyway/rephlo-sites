@@ -377,7 +377,7 @@ const RevenueAnalytics: React.FC = () => {
                     <span>{stage.name}</span>
                     <span className="font-medium">
                       {formatNumber(stage.count)} ({formatPercentage(stage.percentage / 100)})
-                      {conversionRate && <span className="text-deep-navy-500"> → {conversionRate}%</span>}
+                      {conversionRate && <span className="text-deep-navy-700"> → {conversionRate}%</span>}
                     </span>
                   </div>
                 );

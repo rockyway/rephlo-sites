@@ -77,7 +77,7 @@ function TierAuditLog({
     return (
       <div className="text-center py-12 bg-deep-navy-50 rounded-lg">
         <AlertCircle className="h-12 w-12 text-deep-navy-300 mx-auto mb-3" />
-        <p className="text-body text-deep-navy-500">No audit logs found</p>
+        <p className="text-body text-deep-navy-700">No audit logs found</p>
       </div>
     );
   }
@@ -112,10 +112,10 @@ function TierAuditLog({
                   {/* Old Values */}
                   {log.oldValues.requiredTier && (
                     <div>
-                      <span className="text-deep-navy-500">From: </span>
+                      <span className="text-deep-navy-700">From: </span>
                       <TierBadge tier={log.oldValues.requiredTier} size="sm" />
                       {log.oldValues.tierRestrictionMode && (
-                        <span className="ml-2 text-deep-navy-500">
+                        <span className="ml-2 text-deep-navy-700">
                           ({log.oldValues.tierRestrictionMode})
                         </span>
                       )}
@@ -125,10 +125,10 @@ function TierAuditLog({
                   {/* New Values */}
                   {log.newValues.requiredTier && (
                     <div>
-                      <span className="text-deep-navy-500">To: </span>
+                      <span className="text-deep-navy-700">To: </span>
                       <TierBadge tier={log.newValues.requiredTier} size="sm" />
                       {log.newValues.tierRestrictionMode && (
-                        <span className="ml-2 text-deep-navy-500">
+                        <span className="ml-2 text-deep-navy-700">
                           ({log.newValues.tierRestrictionMode})
                         </span>
                       )}
@@ -140,7 +140,7 @@ function TierAuditLog({
                     log.newValues.allowedTiers && (
                       <>
                         <div>
-                          <span className="text-deep-navy-500">
+                          <span className="text-deep-navy-700">
                             Old allowed:{' '}
                           </span>
                           <div className="inline-flex gap-1">
@@ -150,7 +150,7 @@ function TierAuditLog({
                           </div>
                         </div>
                         <div>
-                          <span className="text-deep-navy-500">
+                          <span className="text-deep-navy-700">
                             New allowed:{' '}
                           </span>
                           <div className="inline-flex gap-1">
@@ -221,7 +221,7 @@ function TierAuditLog({
       {isLoading && logs.length === 0 && (
         <div className="text-center py-12">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-rephlo-blue border-r-transparent"></div>
-          <p className="mt-3 text-body-sm text-deep-navy-500">
+          <p className="mt-3 text-body-sm text-deep-navy-700">
             Loading audit logs...
           </p>
         </div>

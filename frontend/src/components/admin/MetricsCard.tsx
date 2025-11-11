@@ -22,7 +22,7 @@ function MetricsCard({ title, value, subtitle, icon: Icon, color = 'blue', child
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-body-sm font-medium text-deep-navy-500">
+        <CardTitle className="text-body-sm font-medium text-deep-navy-700">
           {title}
         </CardTitle>
         <div className={`rounded-lg p-2 ${colorClasses[color]}`}>

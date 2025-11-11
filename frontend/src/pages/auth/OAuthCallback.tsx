@@ -221,7 +221,7 @@ export default function OAuthCallback() {
       <div className="min-h-screen bg-cream flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-8 text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <h2 className="text-h3 font-bold text-deep-navy-500 mb-2">
+          <h2 className="text-h3 font-bold text-deep-navy-700 mb-2">
             Completing Login
           </h2>
           <p className="text-body text-deep-navy-300">
@@ -254,7 +254,7 @@ export default function OAuthCallback() {
             </svg>
           </div>
 
-          <h2 className="text-h3 font-bold text-deep-navy-500 mb-2">
+          <h2 className="text-h3 font-bold text-deep-navy-700 mb-2">
             Login Successful!
           </h2>
           <p className="text-body text-deep-navy-300 mb-6">
@@ -302,7 +302,7 @@ export default function OAuthCallback() {
           </svg>
         </div>
 
-        <h2 className="text-h3 font-bold text-deep-navy-500 mb-2 text-center">
+        <h2 className="text-h3 font-bold text-deep-navy-700 mb-2 text-center">
           {errorDetails?.title}
         </h2>
         <p className="text-body text-deep-navy-300 mb-6 text-center">

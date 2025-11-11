@@ -62,25 +62,25 @@ export default function DeviceActivationCard({
             <div className="space-y-1 text-body-sm text-deep-navy-600">
               {activation.osVersion && (
                 <div>
-                  <span className="text-deep-navy-500">OS:</span> {activation.osVersion}
+                  <span className="text-deep-navy-700">OS:</span> {activation.osVersion}
                 </div>
               )}
               <div>
-                <span className="text-deep-navy-500">Fingerprint:</span>{' '}
+                <span className="text-deep-navy-700">Fingerprint:</span>{' '}
                 <span className="font-mono text-caption">
                   {formatMachineFingerprint(activation.machineFingerprint)}
                 </span>
               </div>
               <div>
-                <span className="text-deep-navy-500">Activated:</span> {formatDateTime(activation.activatedAt)}
+                <span className="text-deep-navy-700">Activated:</span> {formatDateTime(activation.activatedAt)}
               </div>
               <div>
-                <span className="text-deep-navy-500">Last Seen:</span>{' '}
+                <span className="text-deep-navy-700">Last Seen:</span>{' '}
                 <span className={statusColor}>{formatDateTime(activation.lastSeenAt)}</span>
               </div>
               {activation.deactivatedAt && (
                 <div>
-                  <span className="text-deep-navy-500">Deactivated:</span>{' '}
+                  <span className="text-deep-navy-700">Deactivated:</span>{' '}
                   {formatDateTime(activation.deactivatedAt)}
                 </div>
               )}

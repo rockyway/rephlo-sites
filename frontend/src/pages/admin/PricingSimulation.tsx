@@ -175,7 +175,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
               <h1 className="text-h1 font-bold text-deep-navy-800">
                 Pricing Simulation
               </h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 What-if analysis for margin multiplier changes
               </p>
             </div>
@@ -346,25 +346,25 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-caption text-deep-navy-500">Additional Margin</p>
+                      <p className="text-caption text-deep-navy-700">Additional Margin</p>
                       <p className="text-h3 font-bold text-green-600">
                         ${result.revenueImpact.additionalMargin.toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-deep-navy-500">Margin Change</p>
+                      <p className="text-caption text-deep-navy-700">Margin Change</p>
                       <p className="text-h3 font-bold text-rephlo-blue">
                         +{result.revenueImpact.marginPercentChange.toFixed(1)}%
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-deep-navy-500">Current Margin</p>
+                      <p className="text-caption text-deep-navy-700">Current Margin</p>
                       <p className="text-body font-semibold text-deep-navy-700">
                         ${result.revenueImpact.currentMargin.toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-deep-navy-500">New Projected</p>
+                      <p className="text-caption text-deep-navy-700">New Projected</p>
                       <p className="text-body font-semibold text-deep-navy-700">
                         ${result.revenueImpact.newProjectedMargin.toLocaleString()}
                       </p>
@@ -493,7 +493,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
             ) : (
               <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
                 <AlertTriangle className="h-12 w-12 text-deep-navy-300 mx-auto mb-4" />
-                <p className="text-body text-deep-navy-500">
+                <p className="text-body text-deep-navy-700">
                   Configure simulation parameters and click "Run Simulation" to see impact preview
                 </p>
               </div>

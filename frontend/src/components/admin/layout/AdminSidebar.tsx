@@ -360,7 +360,7 @@ const AdminSidebar: React.FC = () => {
       {/* Footer */}
       {!sidebarCollapsed && (
         <div className="p-4 border-t border-deep-navy-200">
-          <p className="text-xs text-deep-navy-500 text-center">
+          <p className="text-xs text-deep-navy-700 text-center">
             Rephlo Admin v2.1.0
           </p>
         </div>
@@ -435,7 +435,7 @@ const AdminSidebar: React.FC = () => {
 
                 {/* Footer */}
                 <div className="border-t border-deep-navy-200 pt-4">
-                  <p className="text-xs text-deep-navy-500 text-center">
+                  <p className="text-xs text-deep-navy-700 text-center">
                     Rephlo Admin v2.1.0
                   </p>
                 </div>

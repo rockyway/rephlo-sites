@@ -177,7 +177,7 @@ function ProrationTracking() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800">Proration Tracking</h1>
-          <p className="text-body text-deep-navy-500 mt-1">
+          <p className="text-body text-deep-navy-700 mt-1">
             Monitor mid-cycle tier changes, proration calculations, and financial impact
           </p>
         </div>
@@ -227,7 +227,7 @@ function ProrationTracking() {
                 {stats.netRevenue >= 0 ? '+' : ''}
                 {formatCurrency(stats.netRevenue, 0)}
               </p>
-              <p className="text-caption text-deep-navy-500 mt-1">
+              <p className="text-caption text-deep-navy-700 mt-1">
                 {stats.netRevenue >= 0 ? 'Collected' : 'Refunded'}
               </p>
             </div>
@@ -372,7 +372,7 @@ function ProrationTracking() {
               </div>
             ) : sortedProrations.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-500">No proration events found</p>
+                <p className="text-body text-deep-navy-700">No proration events found</p>
               </div>
             ) : (
               <table className="w-full">

@@ -73,7 +73,7 @@ const RestrictionModeSelect = forwardRef<
           <option value="whitelist">{modeDescriptions.whitelist}</option>
         </select>
         {value && !allowEmpty && (
-          <p className="mt-1 text-caption text-deep-navy-500">
+          <p className="mt-1 text-caption text-deep-navy-700">
             {modeDescriptions[value]}
           </p>
         )}

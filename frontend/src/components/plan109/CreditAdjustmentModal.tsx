@@ -253,7 +253,7 @@ export default function CreditAdjustmentModal({
                   disabled={isProcessing}
                   min={new Date().toISOString().split('T')[0]}
                 />
-                <p className="text-caption text-deep-navy-500 mt-1">
+                <p className="text-caption text-deep-navy-700 mt-1">
                   Leave blank for no expiration
                 </p>
               </div>

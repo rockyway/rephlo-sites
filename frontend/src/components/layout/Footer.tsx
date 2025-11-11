@@ -16,7 +16,7 @@ function Footer() {
               </div>
               <span className="text-h4 font-bold text-deep-navy-800 dark:text-white">Rephlo</span>
             </div>
-            <p className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300">
+            <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300">
               Text that flows.
             </p>
             <p className="text-caption text-deep-navy-400 dark:text-deep-navy-400">
@@ -29,22 +29,22 @@ function Footer() {
             <h3 className="text-body font-semibold text-deep-navy-800 dark:text-white mb-lg">Product</h3>
             <ul className="space-y-sm">
               <li>
-                <a href="#features" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="#features" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Features
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="#pricing" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Pricing
                 </a>
               </li>
               <li>
-                <a href="#download" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="#download" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Download
                 </a>
               </li>
               <li>
-                <a href="#docs" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="#docs" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Documentation
                 </a>
               </li>
@@ -56,17 +56,17 @@ function Footer() {
             <h3 className="text-body font-semibold text-deep-navy-800 dark:text-white mb-lg">Company</h3>
             <ul className="space-y-sm">
               <li>
-                <a href="#about" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="#about" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   About
                 </a>
               </li>
               <li>
-                <a href="#blog" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="#blog" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Blog
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@rephlo.io" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <a href="mailto:hello@rephlo.io" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Contact
                 </a>
               </li>
@@ -78,12 +78,12 @@ function Footer() {
             <h3 className="text-body font-semibold text-deep-navy-800 dark:text-white mb-lg">Legal</h3>
             <ul className="space-y-sm">
               <li>
-                <Link to="/privacy" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <Link to="/privacy" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-body-sm text-deep-navy-500 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
+                <Link to="/terms" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors duration-base ease-out">
                   Terms of Service
                 </Link>
               </li>

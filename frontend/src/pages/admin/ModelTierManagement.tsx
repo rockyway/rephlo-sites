@@ -250,7 +250,7 @@ function ModelTierManagement() {
               <h1 className="text-h1 font-bold text-deep-navy-800">
                 Model Tier Management
               </h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Configure subscription tier requirements for AI models
               </p>
             </div>
@@ -416,7 +416,7 @@ function ModelTierManagement() {
                 ) : filteredModels.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
-                      <p className="text-body text-deep-navy-500">
+                      <p className="text-body text-deep-navy-700">
                         No models found
                       </p>
                     </td>
@@ -440,7 +440,7 @@ function ModelTierManagement() {
                           <p className="font-medium text-deep-navy-800">
                             {model.displayName}
                           </p>
-                          <p className="text-caption text-deep-navy-500">
+                          <p className="text-caption text-deep-navy-700">
                             {model.name}
                           </p>
                         </div>

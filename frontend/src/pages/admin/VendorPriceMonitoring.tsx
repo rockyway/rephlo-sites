@@ -156,7 +156,7 @@ function VendorPriceMonitoring() {
               <h1 className="text-h1 font-bold text-deep-navy-800">
                 Vendor Price Monitoring
               </h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Track vendor price changes and manage pricing alerts
               </p>
             </div>
@@ -193,7 +193,7 @@ function VendorPriceMonitoring() {
             <div className="flex items-center justify-between p-4 border border-deep-navy-200 rounded-lg">
               <div>
                 <p className="text-body-sm font-medium text-deep-navy-700">Auto-Apply</p>
-                <p className="text-caption text-deep-navy-500">
+                <p className="text-caption text-deep-navy-700">
                   Auto-apply for changes &lt; {autoApplyThreshold}%
                 </p>
               </div>
@@ -280,7 +280,7 @@ function VendorPriceMonitoring() {
           ) : alerts.length === 0 ? (
             <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
               <Bell className="h-12 w-12 text-deep-navy-300 mx-auto mb-4" />
-              <p className="text-body text-deep-navy-500">No alerts found</p>
+              <p className="text-body text-deep-navy-700">No alerts found</p>
             </div>
           ) : (
             alerts.map((alert) => {
@@ -323,7 +323,7 @@ function VendorPriceMonitoring() {
                           Margin Impact: {alert.impactOnMargin > 0 ? '+' : ''}{alert.impactOnMargin.toFixed(1)}%
                         </span>
                       </div>
-                      <p className="text-caption text-deep-navy-500 mt-2">
+                      <p className="text-caption text-deep-navy-700 mt-2">
                         Detected {new Date(alert.detectedAt).toLocaleDateString()} at{' '}
                         {new Date(alert.detectedAt).toLocaleTimeString()}
                       </p>
@@ -386,7 +386,7 @@ function VendorPriceMonitoring() {
             <LineChart className="h-5 w-5 mr-2 text-rephlo-blue" />
             Price History
           </h2>
-          <div className="text-center py-12 text-deep-navy-500">
+          <div className="text-center py-12 text-deep-navy-700">
             <LineChart className="h-12 w-12 mx-auto mb-4 text-deep-navy-300" />
             <p className="text-body">Price history chart will be displayed here</p>
             <p className="text-caption mt-1">Showing vendor price changes over time with margin overlay</p>

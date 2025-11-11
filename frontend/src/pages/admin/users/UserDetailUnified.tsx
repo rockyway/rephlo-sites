@@ -207,7 +207,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                 <StatusBadge status={user.status as any} />
               </div>
               <p className="text-deep-navy-600 mb-1">{user.email}</p>
-              <div className="flex items-center gap-4 text-sm text-deep-navy-500">
+              <div className="flex items-center gap-4 text-sm text-deep-navy-700">
                 <span>Joined {formatDate(user.createdAt)}</span>
                 {user.lastLogin && (
                   <>
