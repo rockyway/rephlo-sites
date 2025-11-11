@@ -419,6 +419,47 @@ export class ProrationService {
     return event;
   }
 
+  /**
+   * Get proration statistics (admin only)
+   * @returns Proration stats including total, net revenue, avg charge, and pending count
+   */
+  async getProrationStats(): Promise<{
+    totalProrations: number;
+    netRevenue: number;
+    avgNetCharge: number;
+    pendingProrations: number;
+  }> {
+    logger.info('ProrationService.getProrationStats');
+
+    try {
+      // Get aggregate stats
+      const stats = await this.prisma.prorationEvent.aggregate({
+        _count: true,
+        _sum: {
+          netChargeUsd: true,
+        },
+        _avg: {
+          netChargeUsd: true,
+        },
+      });
+
+      // Get pending prorations count
+      const pendingCount = await this.prisma.prorationEvent.count({
+        where: { status: 'pending' },
+      });
+
+      return {
+        totalProrations: stats._count,
+        netRevenue: Number(stats._sum.netChargeUsd || 0),
+        avgNetCharge: Number(stats._avg.netChargeUsd || 0),
+        pendingProrations: pendingCount,
+      };
+    } catch (error) {
+      logger.error('ProrationService.getProrationStats: Error', { error });
+      throw error;
+    }
+  }
+
   // ===========================================================================
   // Helper Methods
   // ===========================================================================

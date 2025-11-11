@@ -265,6 +265,31 @@ export class ProrationController {
   }
 
   /**
+   * GET /admin/prorations/stats
+   * Get proration statistics (admin only)
+   */
+  async getProrationStats(_req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await this.prorationService.getProrationStats();
+
+      res.status(200).json({
+        totalProrations: stats.totalProrations,
+        netRevenue: stats.netRevenue,
+        avgNetCharge: stats.avgNetCharge,
+        pendingProrations: stats.pendingProrations,
+      });
+    } catch (error) {
+      logger.error('Failed to get proration stats', { error });
+      res.status(500).json({
+        error: {
+          code: 'internal_server_error',
+          message: 'Failed to retrieve proration statistics',
+        },
+      });
+    }
+  }
+
+  /**
    * POST /admin/prorations/:id/reverse
    * Reverse a proration (admin only)
    */

@@ -329,6 +329,18 @@ export function createPlan110Router(): Router {
   );
 
   /**
+   * GET /admin/prorations/stats
+   * Get proration statistics (admin only)
+   * Requires admin authentication
+   */
+  router.get(
+    '/admin/prorations/stats',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(prorationController.getProrationStats.bind(prorationController))
+  );
+
+  /**
    * POST /admin/prorations/:id/reverse
    * Reverse a proration (admin only)
    * Requires admin authentication
