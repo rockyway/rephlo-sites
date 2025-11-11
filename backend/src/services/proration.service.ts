@@ -394,6 +394,86 @@ export class ProrationService {
   }
 
   /**
+   * Get all proration events with filters (admin only)
+   * @param filters - Filter criteria
+   * @returns Paginated list of proration events
+   */
+  async getAllProrations(filters: {
+    changeType?: string;
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: ProrationEvent[]; total: number; totalPages: number }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 50;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+
+    if (filters.changeType) {
+      where.changeType = filters.changeType;
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    if (filters.search) {
+      // Search in user email or stripe invoice ID
+      where.OR = [
+        {
+          user: {
+            email: {
+              contains: filters.search,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          stripeInvoiceId: {
+            contains: filters.search,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    // Get total count and data
+    const [total, data] = await Promise.all([
+      this.prisma.prorationEvent.count({ where }),
+      this.prisma.prorationEvent.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          subscription: {
+            select: {
+              tier: true,
+              status: true,
+              basePriceUsd: true,
+            },
+          },
+        },
+        orderBy: { effectiveDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return { data, total, totalPages };
+  }
+
+  /**
    * Get proration event by ID
    * @param eventId - Proration event ID
    * @returns Proration event

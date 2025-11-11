@@ -234,24 +234,66 @@ export class ProrationController {
 
   /**
    * GET /admin/prorations
-   * List all proration events (admin only)
+   * List all proration events with filters (admin only)
    */
-  async listAllProrations(_req: Request, res: Response): Promise<void> {
+  async listAllProrations(req: Request, res: Response): Promise<void> {
     try {
-      const prorations = await this.prorationService.getPendingProrations();
+      const { changeType, status, search, page, limit } = req.query;
+
+      const result = await this.prorationService.getAllProrations({
+        changeType: changeType as string,
+        status: status as string,
+        search: search as string,
+        page: page ? parseInt(page as string, 10) : undefined,
+        limit: limit ? parseInt(limit as string, 10) : undefined,
+      });
 
       res.status(200).json({
-        pending_prorations: prorations.map((event) => ({
-          id: event.id,
-          user_id: event.userId,
-          user_email: (event as any).user?.email,
-          subscription_id: event.subscriptionId,
-          from_tier: event.fromTier,
-          to_tier: event.toTier,
-          net_charge_usd: event.netChargeUsd,
-          status: event.status,
-          effective_date: event.effectiveDate.toISOString(),
-        })),
+        status: 'success',
+        data: {
+          data: result.data.map((event) => {
+            const subscription = (event as any).subscription;
+            return {
+              id: event.id,
+              userId: event.userId,
+              subscriptionId: event.subscriptionId,
+
+              // Map backend property names to frontend expectations
+              eventType: event.changeType, // Frontend expects eventType
+              fromTier: event.fromTier,
+              toTier: event.toTier,
+
+              // Proration calculation fields - map to frontend names
+              daysInPeriod: event.daysInCycle, // Frontend expects daysInPeriod
+              daysUsed: event.daysInCycle - event.daysRemaining,
+              daysRemaining: event.daysRemaining,
+              unusedCredit: Number(event.unusedCreditValueUsd), // Frontend expects number
+              newTierCost: Number(event.newTierProratedCostUsd),
+              netCharge: Number(event.netChargeUsd),
+
+              // Date fields - map effectiveDate to changeDate
+              periodStart: subscription?.currentPeriodStart?.toISOString() || event.createdAt.toISOString(),
+              periodEnd: subscription?.currentPeriodEnd?.toISOString() || event.createdAt.toISOString(),
+              changeDate: event.effectiveDate.toISOString(), // Frontend expects changeDate
+              effectiveDate: event.effectiveDate.toISOString(),
+              nextBillingDate: subscription?.currentPeriodEnd?.toISOString() || event.effectiveDate.toISOString(),
+
+              status: event.status,
+              stripeInvoiceId: event.stripeInvoiceId,
+
+              // User object matching frontend expectations
+              user: (event as any).user ? {
+                email: (event as any).user.email,
+              } : undefined,
+
+              createdAt: event.createdAt.toISOString(),
+            };
+          }),
+          total: result.total,
+          totalPages: result.totalPages,
+          page: parseInt((page as string) || '1', 10),
+          limit: parseInt((limit as string) || '50', 10),
+        },
       });
     } catch (error) {
       logger.error('Failed to list proration events', { error });
@@ -273,10 +315,13 @@ export class ProrationController {
       const stats = await this.prorationService.getProrationStats();
 
       res.status(200).json({
-        totalProrations: stats.totalProrations,
-        netRevenue: stats.netRevenue,
-        avgNetCharge: stats.avgNetCharge,
-        pendingProrations: stats.pendingProrations,
+        status: 'success',
+        data: {
+          totalProrations: stats.totalProrations,
+          netRevenue: stats.netRevenue,
+          avgNetCharge: stats.avgNetCharge,
+          pendingProrations: stats.pendingProrations,
+        },
       });
     } catch (error) {
       logger.error('Failed to get proration stats', { error });
