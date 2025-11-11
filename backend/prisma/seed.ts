@@ -402,6 +402,254 @@ async function seedCredits(users: any[]) {
   return createdCredits;
 }
 
+/**
+ * Seed LLM Models
+ * Seeds top-tier models from major providers with current pricing
+ */
+async function seedModels() {
+  console.log('Creating LLM models...');
+
+  const models = [
+    // OpenAI Models
+    {
+      id: 'gpt-4-turbo',
+      name: 'gpt-4-turbo',
+      displayName: 'GPT-4 Turbo',
+      provider: 'openai',
+      description: 'Most capable GPT-4 model with 128K context, optimized for chat and complex tasks',
+      capabilities: ['chat', 'completion'],
+      contextLength: 128000,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 10000,
+      outputCostPerMillionTokens: 30000,
+      creditsPer1kTokens: 100,
+      requiredTier: 'pro',
+    },
+    {
+      id: 'gpt-4',
+      name: 'gpt-4',
+      displayName: 'GPT-4',
+      provider: 'openai',
+      description: 'Original GPT-4 model with 8K context',
+      capabilities: ['chat', 'completion'],
+      contextLength: 8192,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 30000,
+      outputCostPerMillionTokens: 60000,
+      creditsPer1kTokens: 150,
+      requiredTier: 'pro',
+    },
+    {
+      id: 'gpt-3.5-turbo',
+      name: 'gpt-3.5-turbo',
+      displayName: 'GPT-3.5 Turbo',
+      provider: 'openai',
+      description: 'Fast and efficient model for most tasks',
+      capabilities: ['chat', 'completion'],
+      contextLength: 16385,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 500,
+      outputCostPerMillionTokens: 1500,
+      creditsPer1kTokens: 10,
+      requiredTier: 'free',
+    },
+
+    // Anthropic Models
+    {
+      id: 'claude-3-opus',
+      name: 'claude-3-opus-20240229',
+      displayName: 'Claude 3 Opus',
+      provider: 'anthropic',
+      description: 'Most capable Claude model for highly complex tasks',
+      capabilities: ['chat', 'completion', 'vision'],
+      contextLength: 200000,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 15000,
+      outputCostPerMillionTokens: 75000,
+      creditsPer1kTokens: 180,
+      requiredTier: 'pro_max',
+    },
+    {
+      id: 'claude-3-sonnet',
+      name: 'claude-3-sonnet-20240229',
+      displayName: 'Claude 3 Sonnet',
+      provider: 'anthropic',
+      description: 'Balanced performance and speed for most tasks',
+      capabilities: ['chat', 'completion', 'vision'],
+      contextLength: 200000,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 3000,
+      outputCostPerMillionTokens: 15000,
+      creditsPer1kTokens: 40,
+      requiredTier: 'pro',
+    },
+    {
+      id: 'claude-3-haiku',
+      name: 'claude-3-haiku-20240307',
+      displayName: 'Claude 3 Haiku',
+      provider: 'anthropic',
+      description: 'Fastest Claude model for simple tasks',
+      capabilities: ['chat', 'completion', 'vision'],
+      contextLength: 200000,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 250,
+      outputCostPerMillionTokens: 1250,
+      creditsPer1kTokens: 8,
+      requiredTier: 'free',
+    },
+
+    // Google Models
+    {
+      id: 'gemini-pro',
+      name: 'gemini-pro',
+      displayName: 'Gemini Pro',
+      provider: 'google',
+      description: 'Google\'s most capable model for text and reasoning',
+      capabilities: ['chat', 'completion'],
+      contextLength: 32768,
+      maxOutputTokens: 2048,
+      inputCostPerMillionTokens: 500,
+      outputCostPerMillionTokens: 1500,
+      creditsPer1kTokens: 10,
+      requiredTier: 'free',
+    },
+    {
+      id: 'gemini-pro-vision',
+      name: 'gemini-pro-vision',
+      displayName: 'Gemini Pro Vision',
+      provider: 'google',
+      description: 'Multimodal model supporting text and images',
+      capabilities: ['chat', 'completion', 'vision'],
+      contextLength: 16384,
+      maxOutputTokens: 2048,
+      inputCostPerMillionTokens: 2500,
+      outputCostPerMillionTokens: 5000,
+      creditsPer1kTokens: 30,
+      requiredTier: 'pro',
+    },
+
+    // Mistral Models
+    {
+      id: 'mistral-large',
+      name: 'mistral-large-latest',
+      displayName: 'Mistral Large',
+      provider: 'mistral',
+      description: 'Mistral\'s flagship model for complex tasks',
+      capabilities: ['chat', 'completion'],
+      contextLength: 32000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 8000,
+      outputCostPerMillionTokens: 24000,
+      creditsPer1kTokens: 80,
+      requiredTier: 'pro',
+    },
+    {
+      id: 'mistral-medium',
+      name: 'mistral-medium-latest',
+      displayName: 'Mistral Medium',
+      provider: 'mistral',
+      description: 'Balanced performance for most tasks',
+      capabilities: ['chat', 'completion'],
+      contextLength: 32000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 2700,
+      outputCostPerMillionTokens: 8100,
+      creditsPer1kTokens: 28,
+      requiredTier: 'pro',
+    },
+    {
+      id: 'mistral-small',
+      name: 'mistral-small-latest',
+      displayName: 'Mistral Small',
+      provider: 'mistral',
+      description: 'Fast and efficient for simple tasks',
+      capabilities: ['chat', 'completion'],
+      contextLength: 32000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 1000,
+      outputCostPerMillionTokens: 3000,
+      creditsPer1kTokens: 12,
+      requiredTier: 'free',
+    },
+
+    // Meta Models
+    {
+      id: 'llama-3-70b',
+      name: 'llama-3-70b-instruct',
+      displayName: 'Llama 3 70B',
+      provider: 'meta',
+      description: 'Meta\'s large open-source model',
+      capabilities: ['chat', 'completion'],
+      contextLength: 8192,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 650,
+      outputCostPerMillionTokens: 800,
+      creditsPer1kTokens: 8,
+      requiredTier: 'free',
+    },
+    {
+      id: 'llama-3-8b',
+      name: 'llama-3-8b-instruct',
+      displayName: 'Llama 3 8B',
+      provider: 'meta',
+      description: 'Efficient open-source model for simple tasks',
+      capabilities: ['chat', 'completion'],
+      contextLength: 8192,
+      maxOutputTokens: 4096,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 250,
+      creditsPer1kTokens: 3,
+      requiredTier: 'free',
+    },
+  ];
+
+  const createdModels = [];
+
+  for (const model of models) {
+    const created = await prisma.model.upsert({
+      where: { id: model.id },
+      update: {
+        name: model.name,
+        displayName: model.displayName,
+        provider: model.provider,
+        description: model.description,
+        capabilities: model.capabilities,
+        contextLength: model.contextLength,
+        maxOutputTokens: model.maxOutputTokens,
+        inputCostPerMillionTokens: model.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: model.outputCostPerMillionTokens,
+        creditsPer1kTokens: model.creditsPer1kTokens,
+        requiredTier: model.requiredTier,
+        isAvailable: true,
+        isDeprecated: false,
+      },
+      create: {
+        id: model.id,
+        name: model.name,
+        displayName: model.displayName,
+        provider: model.provider,
+        description: model.description,
+        capabilities: model.capabilities,
+        contextLength: model.contextLength,
+        maxOutputTokens: model.maxOutputTokens,
+        inputCostPerMillionTokens: model.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: model.outputCostPerMillionTokens,
+        creditsPer1kTokens: model.creditsPer1kTokens,
+        requiredTier: model.requiredTier,
+        isAvailable: true,
+        isDeprecated: false,
+      },
+    });
+
+    createdModels.push(created);
+  }
+
+  console.log(`✓ Created/Updated ${createdModels.length} LLM models`);
+  console.log(`  Providers: OpenAI, Anthropic, Google, Mistral, Meta\n`);
+
+  return createdModels;
+}
+
 async function main() {
   console.log('🌱 Starting comprehensive database seed...\n');
 
@@ -414,12 +662,14 @@ async function main() {
 
   let subscriptions: any[] = [];
   let credits: any[] = [];
+  let models: any[] = [];
 
   try {
     subscriptions = await seedSubscriptions(users);
     credits = await seedCredits(users);
+    models = await seedModels();
   } catch (err: any) {
-    console.log('⚠️  Subscriptions or credits tables not available - skipping\n');
+    console.log('⚠️  Subscriptions, credits, or models tables not available - skipping\n');
   }
 
   // ========================================================================
@@ -889,6 +1139,10 @@ Download and run the installer for your platform.`,
   console.log('\n💳 Subscriptions & Billing:');
   console.log(`   Subscriptions: ${subscriptions.length}`);
   console.log(`   Credit Pools:  ${credits.length}`);
+
+  console.log('\n🤖 LLM Models:');
+  console.log(`   Models:        ${models.length}`);
+  console.log('   Providers:     OpenAI, Anthropic, Google, Mistral, Meta');
 
   console.log('\n📈 Legacy Branding:');
   console.log(`   Downloads:     ${downloads.length}`);

@@ -273,7 +273,7 @@ function MarginTracking() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-deep-navy-100">
-                    {tierMargins.map((tier) => (
+                    {tierMargins && tierMargins.map((tier) => (
                       <tr key={tier.tier} className="hover:bg-deep-navy-50 transition-colors">
                         <td className="px-6 py-4">
                           <span className="font-medium text-deep-navy-800 capitalize">

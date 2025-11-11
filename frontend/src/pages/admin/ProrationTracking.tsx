@@ -150,7 +150,7 @@ function ProrationTracking() {
   };
 
   // Sort prorations
-  const sortedProrations = [...prorations].sort((a, b) => {
+  const sortedProrations = prorations && Array.isArray(prorations) ? [...prorations].sort((a, b) => {
     let compareValue = 0;
 
     switch (sortBy) {
@@ -166,7 +166,7 @@ function ProrationTracking() {
     }
 
     return sortOrder === 'asc' ? compareValue : -compareValue;
-  });
+  }) : [];
 
   return (
     <div className="space-y-6">

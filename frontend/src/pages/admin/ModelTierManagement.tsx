@@ -376,8 +376,8 @@ function ModelTierManagement() {
                     <input
                       type="checkbox"
                       checked={
-                        models && models.length > 0 &&
-                        selectedModels.size === models.length
+                        !!(models && models.length > 0 &&
+                        selectedModels.size === models.length)
                       }
                       onChange={toggleSelectAll}
                       className="h-4 w-4 rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
