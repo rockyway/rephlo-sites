@@ -10,9 +10,9 @@ interface TierBadgeProps extends HTMLAttributes<HTMLDivElement> {
 const tierConfig = {
   free: {
     label: 'Free',
-    bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
-    borderColor: 'border-green-300',
+    bgColor: 'bg-gray-100',
+    textColor: 'text-gray-800',
+    borderColor: 'border-gray-300',
   },
   pro: {
     label: 'Pro',
@@ -20,11 +20,36 @@ const tierConfig = {
     textColor: 'text-blue-800',
     borderColor: 'border-blue-300',
   },
-  enterprise: {
-    label: 'Enterprise',
+  pro_max: {
+    label: 'Pro Max',
     bgColor: 'bg-purple-100',
     textColor: 'text-purple-800',
     borderColor: 'border-purple-300',
+  },
+  enterprise_pro: {
+    label: 'Enterprise Pro',
+    bgColor: 'bg-amber-100',
+    textColor: 'text-amber-800',
+    borderColor: 'border-amber-300',
+  },
+  enterprise_max: {
+    label: 'Enterprise Max',
+    bgColor: 'bg-orange-100',
+    textColor: 'text-orange-800',
+    borderColor: 'border-orange-300',
+  },
+  perpetual: {
+    label: 'Perpetual',
+    bgColor: 'bg-green-100',
+    textColor: 'text-green-800',
+    borderColor: 'border-green-300',
+  },
+  // Legacy mapping for old 'enterprise' tier
+  enterprise: {
+    label: 'Enterprise',
+    bgColor: 'bg-amber-100',
+    textColor: 'text-amber-800',
+    borderColor: 'border-amber-300',
   },
 };
 
@@ -37,13 +62,21 @@ const sizeClasses = {
 /**
  * TierBadge Component
  *
- * Displays a subscription tier as a colored badge.
- * - free: green
+ * Displays a subscription tier as a colored badge with Plan 129 6-tier model:
+ * - free: gray
  * - pro: blue
- * - enterprise: purple
+ * - pro_max: purple
+ * - enterprise_pro: amber
+ * - enterprise_max: orange
+ * - perpetual: green
  */
 function TierBadge({ tier, size = 'md', className, ...props }: TierBadgeProps) {
-  const config = tierConfig[tier];
+  const config = tierConfig[tier] || {
+    label: tier?.toUpperCase() || 'UNKNOWN',
+    bgColor: 'bg-gray-100',
+    textColor: 'text-gray-800',
+    borderColor: 'border-gray-300',
+  };
 
   return (
     <div
