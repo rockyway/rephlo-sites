@@ -233,7 +233,7 @@ export class ProrationService {
     await this.prisma.subscriptionMonetization.update({
       where: { id: subscriptionId },
       data: {
-        tier: newTier,
+        tier: newTier as any, // Cast to enum type
         basePriceUsd: this.TIER_PRICING[newTier] || 0,
       },
     });
