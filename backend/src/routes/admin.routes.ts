@@ -26,6 +26,8 @@ import { ModelTierAdminController } from '../controllers/admin/model-tier-admin.
 import { AuditLogController } from '../controllers/audit-log.controller';
 import { RevenueAnalyticsController } from '../controllers/revenue-analytics.controller';
 import { SettingsController } from '../controllers/admin/settings.controller';
+import { BillingController } from '../controllers/billing.controller';
+import { ProfitabilityController } from '../controllers/admin/profitability.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -44,6 +46,8 @@ const modelTierAdminController = container.resolve(ModelTierAdminController);
 const auditLogController = container.resolve(AuditLogController);
 const revenueAnalyticsController = container.resolve(RevenueAnalyticsController);
 const settingsController = container.resolve(SettingsController);
+const billingController = container.resolve(BillingController);
+const profitabilityController = container.resolve(ProfitabilityController);
 
 // =============================================================================
 // Admin Endpoints
@@ -742,6 +746,208 @@ router.post(
   '/settings/run-backup',
   auditLog({ action: 'update', resourceType: 'settings' }),
   asyncHandler(settingsController.runBackup.bind(settingsController))
+);
+
+// =============================================================================
+// Billing Endpoints (Plan 131 Phase 6: Missing Backend Endpoints)
+// =============================================================================
+
+/**
+ * GET /admin/billing/invoices
+ * List all billing invoices (admin view)
+ *
+ * Query parameters:
+ * - page: number (default: 1)
+ * - limit: number (default: 50, max: 100)
+ *
+ * Returns:
+ * - data: Invoice[]
+ * - meta: { total, page, limit, totalPages }
+ */
+router.get(
+  '/billing/invoices',
+  auditLog({ action: 'read', resourceType: 'billing' }),
+  asyncHandler(billingController.listInvoices.bind(billingController))
+);
+
+/**
+ * GET /admin/billing/transactions
+ * List all payment transactions (admin view)
+ *
+ * Query parameters:
+ * - page: number (default: 1)
+ * - limit: number (default: 50, max: 100)
+ *
+ * Returns:
+ * - data: Transaction[]
+ * - meta: { total, page, limit, totalPages }
+ */
+router.get(
+  '/billing/transactions',
+  auditLog({ action: 'read', resourceType: 'billing' }),
+  asyncHandler(billingController.listTransactions.bind(billingController))
+);
+
+/**
+ * GET /admin/billing/dunning
+ * List all dunning attempts (failed payment recovery)
+ *
+ * Returns:
+ * - attempts: DunningAttempt[]
+ */
+router.get(
+  '/billing/dunning',
+  auditLog({ action: 'read', resourceType: 'billing' }),
+  asyncHandler(billingController.listDunningAttempts.bind(billingController))
+);
+
+// =============================================================================
+// Profitability & Pricing Endpoints (Plan 131 Phase 6: Missing Backend Endpoints)
+// =============================================================================
+
+/**
+ * GET /admin/pricing/margin-metrics
+ * Get margin metrics with optional date range
+ *
+ * Query parameters:
+ * - startDate: ISO date string (optional)
+ * - endDate: ISO date string (optional)
+ *
+ * Returns:
+ * - totalRevenue: number
+ * - totalCost: number
+ * - grossMargin: number
+ * - marginPercentage: number
+ * - period: string
+ */
+router.get(
+  '/pricing/margin-metrics',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getMarginMetrics.bind(profitabilityController))
+);
+
+/**
+ * GET /admin/pricing/margin-by-tier
+ * Get margin breakdown by subscription tier
+ *
+ * Query parameters:
+ * - startDate: ISO date string (optional)
+ * - endDate: ISO date string (optional)
+ *
+ * Returns:
+ * - data: Array of { tier, revenue, cost, margin, marginPercentage, requests }
+ */
+router.get(
+  '/pricing/margin-by-tier',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getMarginByTier.bind(profitabilityController))
+);
+
+/**
+ * GET /admin/pricing/margin-by-provider
+ * Get margin breakdown by LLM provider
+ *
+ * Query parameters:
+ * - startDate: ISO date string (optional)
+ * - endDate: ISO date string (optional)
+ *
+ * Returns:
+ * - data: Array of { provider, revenue, cost, margin, marginPercentage, requests }
+ */
+router.get(
+  '/pricing/margin-by-provider',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getMarginByProvider.bind(profitabilityController))
+);
+
+/**
+ * GET /admin/pricing/top-models
+ * Get top performing models by profitability
+ *
+ * Query parameters:
+ * - limit: number (default 10, max 100)
+ * - startDate: ISO date string (optional)
+ * - endDate: ISO date string (optional)
+ *
+ * Returns:
+ * - data: Array of { modelId, modelName, provider, revenue, cost, margin, marginPercentage, requests }
+ */
+router.get(
+  '/pricing/top-models',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getTopModels.bind(profitabilityController))
+);
+
+/**
+ * GET /admin/pricing/configs
+ * Get pricing configuration rules
+ *
+ * Query parameters:
+ * - onlyActive: boolean (default true)
+ *
+ * Returns:
+ * - data: Array of pricing configurations
+ */
+router.get(
+  '/pricing/configs',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getPricingConfigs.bind(profitabilityController))
+);
+
+/**
+ * GET /admin/pricing/alerts
+ * Get pricing alerts for margin thresholds
+ *
+ * Returns:
+ * - data: Array of { id, type, severity, message, affectedEntity, currentValue, threshold, createdAt }
+ */
+router.get(
+  '/pricing/alerts',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getPricingAlerts.bind(profitabilityController))
+);
+
+/**
+ * GET /admin/pricing/vendor-prices
+ * Get vendor price monitoring data
+ *
+ * Query parameters:
+ * - includeHistorical: boolean (default false)
+ *
+ * Returns:
+ * - data: Array of vendor prices with change tracking
+ */
+router.get(
+  '/pricing/vendor-prices',
+  auditLog({ action: 'read', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.getVendorPrices.bind(profitabilityController))
+);
+
+/**
+ * POST /admin/pricing/simulate
+ * Simulate pricing changes
+ *
+ * Request body:
+ * - modelId?: string (UUID)
+ * - providerId?: string (UUID)
+ * - tier?: string
+ * - newMultiplier: number (required)
+ * - simulationPeriodDays?: number (default 30)
+ *
+ * Returns:
+ * - currentMarginDollars: number
+ * - projectedMarginDollars: number
+ * - marginChange: number
+ * - marginChangePercent: number
+ * - currentMarginPercent: number
+ * - projectedMarginPercent: number
+ * - affectedRequests: number
+ * - revenueImpact: number
+ */
+router.post(
+  '/pricing/simulate',
+  auditLog({ action: 'update', resourceType: 'profitability' }),
+  asyncHandler(profitabilityController.simulatePricing.bind(profitabilityController))
 );
 
 export default router;

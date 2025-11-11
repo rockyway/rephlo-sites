@@ -710,4 +710,112 @@ export class BillingPaymentsService {
       nextRetryAt: attempt.nextRetryAt,
     };
   }
+
+  // ===========================================================================
+  // Admin Endpoints: List All Data
+  // ===========================================================================
+
+  /**
+   * List all invoices (admin endpoint)
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 50, max: 100)
+   * @returns Paginated invoice list
+   */
+  async listAllInvoices(page: number = 1, limit: number = 50): Promise<{
+    data: Invoice[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    logger.info('BillingPaymentsService.listAllInvoices', { page, limit });
+
+    try {
+      const skip = (page - 1) * limit;
+
+      const [invoices, total] = await Promise.all([
+        this.prisma.billingInvoice.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.billingInvoice.count(),
+      ]);
+
+      const mappedInvoices = invoices.map((inv) => this.mapInvoice(inv));
+
+      return {
+        data: mappedInvoices,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      logger.error('BillingPaymentsService.listAllInvoices: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * List all payment transactions (admin endpoint)
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 50, max: 100)
+   * @returns Paginated transaction list
+   */
+  async listAllTransactions(page: number = 1, limit: number = 50): Promise<{
+    data: PaymentTransaction[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    logger.info('BillingPaymentsService.listAllTransactions', { page, limit });
+
+    try {
+      const skip = (page - 1) * limit;
+
+      const [transactions, total] = await Promise.all([
+        this.prisma.paymentTransaction.findMany({
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.paymentTransaction.count(),
+      ]);
+
+      const mappedTransactions = transactions.map((txn) => this.mapTransaction(txn));
+
+      return {
+        data: mappedTransactions,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      logger.error('BillingPaymentsService.listAllTransactions: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * List all dunning attempts (admin endpoint)
+   * @returns All dunning attempts ordered by scheduled date
+   */
+  async listDunningAttempts(): Promise<DunningAttempt[]> {
+    logger.info('BillingPaymentsService.listDunningAttempts');
+
+    try {
+      const attempts = await this.prisma.dunningAttempt.findMany({
+        orderBy: { scheduledAt: 'desc' },
+        take: 100, // Limit to recent 100 attempts
+      });
+
+      return attempts.map((attempt) => this.mapDunningAttempt(attempt));
+    } catch (error) {
+      logger.error('BillingPaymentsService.listDunningAttempts: Error', { error });
+      throw error;
+    }
+  }
 }

@@ -219,6 +219,9 @@ import { SessionManagementService } from './services/session-management.service'
 // Plan 131 Phase 2: Settings Management
 import { SettingsService } from './services/settings.service';
 
+// Plan 131 Phase 6: Admin Profitability Service
+import { AdminProfitabilityService } from './services/admin-profitability.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -261,6 +264,9 @@ container.registerSingleton(SessionManagementService);
 
 // Register Settings service (Plan 131 Phase 2)
 container.registerSingleton(SettingsService);
+
+// Register Admin Profitability service (Plan 131 Phase 6)
+container.register('AdminProfitabilityService', { useClass: AdminProfitabilityService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -321,6 +327,9 @@ import { RevenueAnalyticsController } from './controllers/revenue-analytics.cont
 // Plan 131 Phase 2: Settings Controller
 import { SettingsController } from './controllers/admin/settings.controller';
 
+// Plan 131 Phase 6: Profitability Controller
+import { ProfitabilityController } from './controllers/admin/profitability.controller';
+
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
 container.registerSingleton(ModelsController);
@@ -349,6 +358,9 @@ container.registerSingleton(RevenueAnalyticsController);
 
 // Register Settings controller (Plan 131 Phase 2)
 container.registerSingleton(SettingsController);
+
+// Register Profitability controller (Plan 131 Phase 6)
+container.registerSingleton(ProfitabilityController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [

@@ -1077,7 +1077,7 @@ model ProrationEvent {
   toTier   String? @map("to_tier") @db.VarChar(50)
 
   // Change Type
-  changeType ProrationEventType
+  changeType ProrationEventType @map("change_type")
 
   // Billing Cycle Details
   daysRemaining Int @map("days_remaining")

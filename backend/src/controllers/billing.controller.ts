@@ -222,8 +222,9 @@ export class BillingController {
   }
 
   /**
+   * GET /admin/billing/invoices
    * GET /admin/billing/invoices/:userId
-   * List invoices for a user
+   * List all invoices (admin) or invoices for a specific user
    *
    * Requires: Admin authentication
    *
@@ -233,7 +234,7 @@ export class BillingController {
     const { userId } = req.params;
 
     logger.info('BillingController.listInvoices', {
-      userId,
+      userId: userId || 'all',
       query: req.query,
     });
 
@@ -253,11 +254,36 @@ export class BillingController {
       throw validationError('Query validation failed', errors);
     }
 
-    // TODO: Implement listInvoices in BillingPaymentsService
-    res.status(501).json({
-      success: false,
-      message: 'Method not yet implemented',
-    });
+    const { page, limit } = parseResult.data;
+
+    try {
+      // If userId is provided, filter by user (not yet implemented)
+      // If no userId, return all invoices (admin view)
+      if (userId) {
+        // TODO: Implement user-specific invoice filtering
+        res.status(501).json({
+          success: false,
+          message: 'User-specific invoice listing not yet implemented',
+        });
+        return;
+      }
+
+      const result = await this.billingService.listAllInvoices(page, limit);
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        meta: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
+        },
+      });
+    } catch (error) {
+      logger.error('BillingController.listInvoices: Error', { error });
+      throw error;
+    }
   }
 
   // ===========================================================================
@@ -265,8 +291,9 @@ export class BillingController {
   // ===========================================================================
 
   /**
+   * GET /admin/billing/transactions
    * GET /admin/billing/transactions/:userId
-   * List transactions for a user
+   * List all transactions (admin) or transactions for a specific user
    *
    * Requires: Admin authentication
    *
@@ -276,7 +303,7 @@ export class BillingController {
     const { userId } = req.params;
 
     logger.info('BillingController.listTransactions', {
-      userId,
+      userId: userId || 'all',
       query: req.query,
     });
 
@@ -296,11 +323,36 @@ export class BillingController {
       throw validationError('Query validation failed', errors);
     }
 
-    // TODO: Implement listTransactions in BillingPaymentsService
-    res.status(501).json({
-      success: false,
-      message: 'Method not yet implemented',
-    });
+    const { page, limit } = parseResult.data;
+
+    try {
+      // If userId is provided, filter by user (not yet implemented)
+      // If no userId, return all transactions (admin view)
+      if (userId) {
+        // TODO: Implement user-specific transaction filtering
+        res.status(501).json({
+          success: false,
+          message: 'User-specific transaction listing not yet implemented',
+        });
+        return;
+      }
+
+      const result = await this.billingService.listAllTransactions(page, limit);
+
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        meta: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          totalPages: result.totalPages,
+        },
+      });
+    } catch (error) {
+      logger.error('BillingController.listTransactions: Error', { error });
+      throw error;
+    }
   }
 
   /**
@@ -345,6 +397,28 @@ export class BillingController {
   // ===========================================================================
   // Dunning (Failed Payment Recovery) Endpoints
   // ===========================================================================
+
+  /**
+   * GET /admin/billing/dunning
+   * List all dunning attempts
+   *
+   * Requires: Admin authentication
+   */
+  async listDunningAttempts(_req: Request, res: Response): Promise<void> {
+    logger.info('BillingController.listDunningAttempts');
+
+    try {
+      const attempts = await this.billingService.listDunningAttempts();
+
+      res.status(200).json({
+        success: true,
+        attempts,
+      });
+    } catch (error) {
+      logger.error('BillingController.listDunningAttempts: Error', { error });
+      throw error;
+    }
+  }
 
   /**
    * POST /admin/billing/dunning/:attemptId/retry
