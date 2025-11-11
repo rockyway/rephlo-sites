@@ -95,7 +95,22 @@ function UserManagement() {
         limit,
       });
 
-      setUsers(response.users || []);
+      // Map API response to frontend User type
+      const mappedUsers = (response.users || []).map((apiUser: any) => ({
+        id: apiUser.id,
+        email: apiUser.email,
+        name: apiUser.firstName && apiUser.lastName
+          ? `${apiUser.firstName} ${apiUser.lastName}`
+          : apiUser.firstName || apiUser.lastName || null,
+        status: UserStatus.ACTIVE, // Default to ACTIVE since API doesn't return this in list
+        currentTier: apiUser.subscription?.tier || SubscriptionTier.FREE,
+        creditsBalance: 0, // TODO: API doesn't return this in list, needs separate query
+        createdAt: apiUser.createdAt,
+        lastActiveAt: apiUser.lastLoginAt,
+        subscription: apiUser.subscription,
+      }));
+
+      setUsers(mappedUsers);
       setTotalPages(response.pagination?.totalPages || 1);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load users');
@@ -461,7 +476,7 @@ function UserManagement() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-body-sm text-deep-navy-600">
-                          {formatDate(user.createdAt)}
+                          {formatDate(user.createdAt, 'long')}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -616,15 +631,15 @@ function UserManagement() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-deep-navy-50 p-4 rounded-md">
                     <p className="text-caption text-deep-navy-500">Total API Calls</p>
-                    <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats.totalApiCalls)}</p>
+                    <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats?.totalApiCalls ?? 0)}</p>
                   </div>
                   <div className="bg-deep-navy-50 p-4 rounded-md">
                     <p className="text-caption text-deep-navy-500">Credits Used</p>
-                    <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats.creditsUsed)}</p>
+                    <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats?.creditsUsed ?? 0)}</p>
                   </div>
                   <div className="bg-deep-navy-50 p-4 rounded-md">
                     <p className="text-caption text-deep-navy-500">Avg Calls/Day</p>
-                    <p className="text-h3 font-semibold">{(userDetails.usageStats.averageCallsPerDay ?? 0).toFixed(1)}</p>
+                    <p className="text-h3 font-semibold">{(userDetails.usageStats?.averageCallsPerDay ?? 0).toFixed(1)}</p>
                   </div>
                 </div>
               </div>

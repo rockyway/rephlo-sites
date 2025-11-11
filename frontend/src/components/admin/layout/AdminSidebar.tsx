@@ -234,10 +234,13 @@ const AdminSidebar: React.FC = () => {
   // Navigation link renderer (for single items)
   const renderNavLink = (item: NavItem, collapsed: boolean = false, isChild: boolean = false) => {
     // For Dashboard (/admin), use exact match to prevent it from always being active
-    // For other routes, use startsWith to match nested routes
+    // For child items in a group, use exact match only (no startsWith)
+    // This prevents sibling routes from both showing as active
     const isActive = item.href === '/admin'
       ? location.pathname === '/admin'
-      : (location.pathname === item.href || location.pathname.startsWith(item.href + '/'));
+      : isChild
+        ? location.pathname === item.href  // Exact match for children
+        : (location.pathname === item.href || location.pathname.startsWith(item.href + '/'));
     const Icon = item.icon;
 
     return (
