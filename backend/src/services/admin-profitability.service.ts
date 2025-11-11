@@ -147,23 +147,23 @@ export class AdminProfitabilityService {
       // Build where clause for date filtering
       const whereClause: any = {};
       if (startDate || endDate) {
-        whereClause.timestamp = {};
-        if (startDate) whereClause.timestamp.gte = startDate;
-        if (endDate) whereClause.timestamp.lte = endDate;
+        whereClause.requestStartedAt = {};
+        if (startDate) whereClause.requestStartedAt.gte = startDate;
+        if (endDate) whereClause.requestStartedAt.lte = endDate;
       }
 
-      // Aggregate usage data to calculate revenue and cost
-      const usageData = await this.prisma.usageHistory.aggregate({
+      // Aggregate token usage ledger to calculate revenue and cost
+      const usageData = await this.prisma.tokenUsageLedger.aggregate({
         where: whereClause,
         _sum: {
-          totalCostUsd: true,
-          creditsCost: true,
+          vendorCost: true,
+          creditValueUsd: true,
         },
         _count: true,
       });
 
-      const totalCost = Number(usageData._sum.totalCostUsd || 0);
-      const totalRevenue = Number(usageData._sum.creditsCost || 0); // Credits charged to users
+      const totalCost = Number(usageData._sum?.vendorCost || 0);
+      const totalRevenue = Number(usageData._sum?.creditValueUsd || 0);
       const grossMargin = totalRevenue - totalCost;
       const marginPercentage = totalRevenue > 0 ? (grossMargin / totalRevenue) * 100 : 0;
 
@@ -190,17 +190,17 @@ export class AdminProfitabilityService {
     logger.info('AdminProfitabilityService.getMarginByTier', { startDate, endDate });
 
     try {
-      // Query usage data grouped by user's subscription tier
+      // Query token usage ledger grouped by user's subscription tier
       const query = `
         SELECT
           s.tier,
-          COUNT(uh.id) as requests,
-          COALESCE(SUM(uh.total_cost_usd), 0) as cost,
-          COALESCE(SUM(uh.credits_cost), 0) as revenue
-        FROM usage_history uh
-        JOIN users u ON uh.user_id = u.id
+          COUNT(tul.id) as requests,
+          COALESCE(SUM(tul.vendor_cost), 0) as cost,
+          COALESCE(SUM(tul.credit_value_usd), 0) as revenue
+        FROM token_usage_ledger tul
+        JOIN users u ON tul.user_id = u.id
         LEFT JOIN subscription_monetization s ON u.id = s.user_id AND s.status = 'active'
-        ${startDate || endDate ? `WHERE ${startDate ? `uh.timestamp >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `uh.timestamp <= '${endDate.toISOString()}'` : ''}` : ''}
+        ${startDate || endDate ? `WHERE ${startDate ? `tul.request_started_at >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `tul.request_started_at <= '${endDate.toISOString()}'` : ''}` : ''}
         GROUP BY s.tier
         ORDER BY revenue DESC
       `;
@@ -238,17 +238,16 @@ export class AdminProfitabilityService {
     logger.info('AdminProfitabilityService.getMarginByProvider', { startDate, endDate });
 
     try {
-      // Query usage data grouped by provider
+      // Query token usage ledger grouped by provider
       const query = `
         SELECT
           p.provider_name as provider,
-          COUNT(uh.id) as requests,
-          COALESCE(SUM(uh.total_cost_usd), 0) as cost,
-          COALESCE(SUM(uh.credits_cost), 0) as revenue
-        FROM usage_history uh
-        JOIN models m ON uh.model_id = m.id
-        JOIN providers p ON m.provider_id = p.id
-        ${startDate || endDate ? `WHERE ${startDate ? `uh.timestamp >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `uh.timestamp <= '${endDate.toISOString()}'` : ''}` : ''}
+          COUNT(tul.id) as requests,
+          COALESCE(SUM(tul.vendor_cost), 0) as cost,
+          COALESCE(SUM(tul.credit_value_usd), 0) as revenue
+        FROM token_usage_ledger tul
+        JOIN providers p ON tul.provider_id = p.id
+        ${startDate || endDate ? `WHERE ${startDate ? `tul.request_started_at >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `tul.request_started_at <= '${endDate.toISOString()}'` : ''}` : ''}
         GROUP BY p.provider_name
         ORDER BY revenue DESC
       `;
@@ -289,18 +288,16 @@ export class AdminProfitabilityService {
     try {
       const query = `
         SELECT
-          m.id as model_id,
-          m.model_name,
+          tul.model_id,
           p.provider_name as provider,
-          COUNT(uh.id) as requests,
-          COALESCE(SUM(uh.total_cost_usd), 0) as cost,
-          COALESCE(SUM(uh.credits_cost), 0) as revenue
-        FROM usage_history uh
-        JOIN models m ON uh.model_id = m.id
-        JOIN providers p ON m.provider_id = p.id
-        ${startDate || endDate ? `WHERE ${startDate ? `uh.timestamp >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `uh.timestamp <= '${endDate.toISOString()}'` : ''}` : ''}
-        GROUP BY m.id, m.model_name, p.provider_name
-        ORDER BY (COALESCE(SUM(uh.credits_cost), 0) - COALESCE(SUM(uh.total_cost_usd), 0)) DESC
+          COUNT(tul.id) as requests,
+          COALESCE(SUM(tul.vendor_cost), 0) as cost,
+          COALESCE(SUM(tul.credit_value_usd), 0) as revenue
+        FROM token_usage_ledger tul
+        JOIN providers p ON tul.provider_id = p.id
+        ${startDate || endDate ? `WHERE ${startDate ? `tul.request_started_at >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `tul.request_started_at <= '${endDate.toISOString()}'` : ''}` : ''}
+        GROUP BY tul.model_id, p.provider_name
+        ORDER BY (COALESCE(SUM(tul.credit_value_usd), 0) - COALESCE(SUM(tul.vendor_cost), 0)) DESC
         LIMIT ${limit}
       `;
 
@@ -314,7 +311,7 @@ export class AdminProfitabilityService {
 
         return {
           modelId: row.model_id,
-          modelName: row.model_name,
+          modelName: row.model_id, // TokenUsageLedger stores model_id as string
           provider: row.provider,
           revenue,
           cost,
@@ -379,18 +376,17 @@ export class AdminProfitabilityService {
       // Check for low margin models (margin < 20%)
       const lowMarginModels = await this.prisma.$queryRaw<any[]>`
         SELECT
-          m.id,
-          m.model_name,
+          tul.model_id as id,
+          tul.model_id as model_name,
           p.provider_name,
-          COALESCE(SUM(uh.credits_cost), 0) as revenue,
-          COALESCE(SUM(uh.total_cost_usd), 0) as cost
-        FROM usage_history uh
-        JOIN models m ON uh.model_id = m.id
-        JOIN providers p ON m.provider_id = p.id
-        WHERE uh.timestamp >= NOW() - INTERVAL '7 days'
-        GROUP BY m.id, m.model_name, p.provider_name
-        HAVING COALESCE(SUM(uh.credits_cost), 0) > 0
-          AND ((COALESCE(SUM(uh.credits_cost), 0) - COALESCE(SUM(uh.total_cost_usd), 0)) / COALESCE(SUM(uh.credits_cost), 0)) < 0.2
+          COALESCE(SUM(tul.credit_value_usd), 0) as revenue,
+          COALESCE(SUM(tul.vendor_cost), 0) as cost
+        FROM token_usage_ledger tul
+        JOIN providers p ON tul.provider_id = p.id
+        WHERE tul.request_started_at >= NOW() - INTERVAL '7 days'
+        GROUP BY tul.model_id, p.provider_name
+        HAVING COALESCE(SUM(tul.credit_value_usd), 0) > 0
+          AND ((COALESCE(SUM(tul.credit_value_usd), 0) - COALESCE(SUM(tul.vendor_cost), 0)) / COALESCE(SUM(tul.credit_value_usd), 0)) < 0.2
         LIMIT 20
       `;
 
@@ -437,7 +433,7 @@ export class AdminProfitabilityService {
         include: {
           provider: {
             select: {
-              providerName: true,
+              name: true,
             },
           },
         },
@@ -447,7 +443,7 @@ export class AdminProfitabilityService {
 
       return prices.map((price) => ({
         id: price.id,
-        provider: price.provider.providerName,
+        provider: price.provider.name,
         modelName: price.modelName,
         inputPricePer1k: Number(price.inputPricePer1k),
         outputPricePer1k: Number(price.outputPricePer1k),
@@ -472,11 +468,11 @@ export class AdminProfitabilityService {
     logger.info('AdminProfitabilityService.simulatePricing', { input });
 
     try {
-      const { modelId, providerId, tier, newMultiplier, simulationPeriodDays = 30 } = input;
+      const { modelId, providerId, newMultiplier, simulationPeriodDays = 30 } = input;
 
       // Build where clause for affected requests
       const where: any = {
-        timestamp: {
+        requestStartedAt: {
           gte: new Date(Date.now() - simulationPeriodDays * 24 * 60 * 60 * 1000),
         },
       };
@@ -486,23 +482,21 @@ export class AdminProfitabilityService {
       }
 
       if (providerId) {
-        where.model = {
-          providerId,
-        };
+        where.providerId = providerId;
       }
 
       // Get affected usage data
-      const usageData = await this.prisma.usageHistory.aggregate({
+      const usageData = await this.prisma.tokenUsageLedger.aggregate({
         where,
         _sum: {
-          totalCostUsd: true,
-          creditsCost: true,
+          vendorCost: true,
+          creditValueUsd: true,
         },
         _count: true,
       });
 
-      const currentCost = Number(usageData._sum.totalCostUsd || 0);
-      const currentRevenue = Number(usageData._sum.creditsCost || 0);
+      const currentCost = Number(usageData._sum?.vendorCost || 0);
+      const currentRevenue = Number(usageData._sum?.creditValueUsd || 0);
       const currentMargin = currentRevenue - currentCost;
       const currentMarginPercent = currentRevenue > 0 ? (currentMargin / currentRevenue) * 100 : 0;
 
@@ -522,7 +516,7 @@ export class AdminProfitabilityService {
         marginChangePercent,
         currentMarginPercent,
         projectedMarginPercent,
-        affectedRequests: usageData._count,
+        affectedRequests: Number(usageData._count || 0),
         revenueImpact,
       };
     } catch (error) {
