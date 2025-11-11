@@ -68,10 +68,19 @@ function MarginTracking() {
         pricingApi.getTopModelsByUsage(10, range),
       ]);
 
-      setMetrics(metricsData);
-      setTierMargins(tiersData.tiers);
-      setProviderMargins(providersData.providers);
-      setTopModels(modelsData.models);
+      // Backend wraps responses in { success: true, data: {...} }
+      // Unwrap data if wrapped
+      const unwrap = (response: any) => response?.data || response;
+
+      const metricsUnwrapped = unwrap(metricsData);
+      const tiersUnwrapped = unwrap(tiersData);
+      const providersUnwrapped = unwrap(providersData);
+      const modelsUnwrapped = unwrap(modelsData);
+
+      setMetrics(metricsUnwrapped);
+      setTierMargins(tiersUnwrapped.tiers || tiersUnwrapped || []);
+      setProviderMargins(providersUnwrapped.providers || providersUnwrapped || []);
+      setTopModels(modelsUnwrapped.models || modelsUnwrapped || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load margin data');
     } finally {
