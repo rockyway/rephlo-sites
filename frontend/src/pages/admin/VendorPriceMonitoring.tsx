@@ -277,7 +277,7 @@ function VendorPriceMonitoring() {
             <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
               <LoadingSpinner size="lg" />
             </div>
-          ) : alerts.length === 0 ? (
+          ) : !alerts || alerts.length === 0 ? (
             <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
               <Bell className="h-12 w-12 text-deep-navy-300 mx-auto mb-4" />
               <p className="text-body text-deep-navy-700">No alerts found</p>

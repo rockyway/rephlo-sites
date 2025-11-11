@@ -203,7 +203,7 @@ function MarginTracking() {
                 icon={DollarSign}
                 color="amber"
               >
-                {metrics && (
+                {metrics && metrics.creditValue !== undefined && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
                     <span className="text-caption text-deep-navy-700">Credit Value:</span>
                     <span className="text-body-sm font-semibold text-deep-navy-700">

@@ -376,7 +376,7 @@ function ModelTierManagement() {
                     <input
                       type="checkbox"
                       checked={
-                        models.length > 0 &&
+                        models && models.length > 0 &&
                         selectedModels.size === models.length
                       }
                       onChange={toggleSelectAll}
