@@ -12,6 +12,14 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Cpu,
+  DollarSign,
+  Receipt,
+  TrendingUp,
+  Calculator,
+  LineChart,
+  Calendar,
+  Tag,
 } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
 
@@ -26,10 +34,18 @@ const navigationItems: NavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: Home },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
+  { name: 'Billing', href: '/admin/billing', icon: Receipt },
   { name: 'Licenses', href: '/admin/licenses', icon: Key },
   { name: 'Coupons', href: '/admin/coupons', icon: Ticket },
+  { name: 'Coupon Analytics', href: '/admin/coupons/analytics', icon: Tag },
+  { name: 'Campaign Calendar', href: '/admin/coupons/calendar', icon: Calendar },
+  { name: 'Models', href: '/admin/models', icon: Cpu },
+  { name: 'Margin Tracking', href: '/admin/profitability/margins', icon: TrendingUp },
+  { name: 'Pricing Config', href: '/admin/profitability/pricing', icon: DollarSign },
+  { name: 'Price Simulator', href: '/admin/profitability/simulator', icon: Calculator },
+  { name: 'Vendor Prices', href: '/admin/profitability/vendor-prices', icon: LineChart },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/admin/settings', icon: Settings, disabled: true },
+  { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 /**

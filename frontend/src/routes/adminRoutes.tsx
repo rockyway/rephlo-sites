@@ -26,6 +26,19 @@ const CouponManagement = lazy(() => import('../pages/admin/CouponManagement'));
 const UserDetailUnified = lazy(() => import('../pages/admin/users/UserDetailUnified'));
 const RevenueAnalytics = lazy(() => import('../pages/admin/analytics/RevenueAnalytics'));
 
+// Plan 131 Phase 1: Quick wins - connecting existing pages
+const MarginTracking = lazy(() => import('../pages/admin/MarginTracking'));
+const PricingConfiguration = lazy(() => import('../pages/admin/PricingConfiguration'));
+const PricingSimulation = lazy(() => import('../pages/admin/PricingSimulation'));
+const VendorPriceMonitoring = lazy(() => import('../pages/admin/VendorPriceMonitoring'));
+const CouponAnalytics = lazy(() => import('../pages/admin/CouponAnalytics'));
+const CampaignCalendar = lazy(() => import('../pages/admin/CampaignCalendar'));
+const ModelTierManagement = lazy(() => import('../pages/admin/ModelTierManagement'));
+const BillingDashboard = lazy(() => import('../pages/admin/BillingDashboard'));
+
+// Plan 131 Phase 2: Admin Settings
+const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
+
 // Admin route configuration
 export const adminRoutes: RouteObject[] = [
   {
@@ -81,6 +94,14 @@ export const adminRoutes: RouteObject[] = [
         path: 'coupons',
         element: <CouponManagement />,
       },
+      {
+        path: 'coupons/analytics',
+        element: <CouponAnalytics />,
+      },
+      {
+        path: 'coupons/calendar',
+        element: <CampaignCalendar />,
+      },
       // {
       //   path: 'coupons/campaigns',
       //   element: <CampaignManagement />,
@@ -100,11 +121,41 @@ export const adminRoutes: RouteObject[] = [
         element: <RevenueAnalytics />,
       },
 
-      // Settings (future)
-      // {
-      //   path: 'settings',
-      //   element: <AdminSettings />,
-      // },
+      // Models (Plan 131)
+      {
+        path: 'models',
+        element: <ModelTierManagement />,
+      },
+
+      // Profitability (Plan 131)
+      {
+        path: 'profitability/margins',
+        element: <MarginTracking />,
+      },
+      {
+        path: 'profitability/pricing',
+        element: <PricingConfiguration />,
+      },
+      {
+        path: 'profitability/simulator',
+        element: <PricingSimulation />,
+      },
+      {
+        path: 'profitability/vendor-prices',
+        element: <VendorPriceMonitoring />,
+      },
+
+      // Billing (Plan 131)
+      {
+        path: 'billing',
+        element: <BillingDashboard />,
+      },
+
+      // Settings (Plan 131 Phase 2)
+      {
+        path: 'settings',
+        element: <AdminSettings />,
+      },
     ],
   },
 ];

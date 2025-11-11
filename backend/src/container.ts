@@ -216,6 +216,9 @@ import { PermissionCacheService } from './services/permission-cache.service';
 // Phase 5 Admin Session Management: Session Tracking (Plan 126/127)
 import { SessionManagementService } from './services/session-management.service';
 
+// Plan 131 Phase 2: Settings Management
+import { SettingsService } from './services/settings.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -255,6 +258,9 @@ container.registerSingleton(RoleCacheService);
 container.registerSingleton(PermissionCacheService);
 // Register Session Management service (Phase 5 Admin Session Management)
 container.registerSingleton(SessionManagementService);
+
+// Register Settings service (Plan 131 Phase 2)
+container.registerSingleton(SettingsService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -312,6 +318,9 @@ import { AdminAnalyticsController } from './controllers/admin-analytics.controll
 import { AdminUserDetailController } from './controllers/admin-user-detail.controller';
 import { RevenueAnalyticsController } from './controllers/revenue-analytics.controller';
 
+// Plan 131 Phase 2: Settings Controller
+import { SettingsController } from './controllers/admin/settings.controller';
+
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
 container.registerSingleton(ModelsController);
@@ -337,6 +346,9 @@ container.registerSingleton(AuditLogController);
 container.registerSingleton(AdminAnalyticsController);
 container.registerSingleton(AdminUserDetailController);
 container.registerSingleton(RevenueAnalyticsController);
+
+// Register Settings controller (Plan 131 Phase 2)
+container.registerSingleton(SettingsController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [

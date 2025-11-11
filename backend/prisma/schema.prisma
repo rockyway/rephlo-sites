@@ -2103,3 +2103,23 @@ model OIDCModel {
   @@index([userCode])
   @@map("oidc_models")
 }
+
+// =============================================================================
+// APPLICATION SETTINGS (Plan 131 Phase 2)
+// =============================================================================
+
+/// Application settings table for admin configuration
+/// Stores key-value pairs organized by category for system-wide settings
+model AppSetting {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category  String   @db.VarChar(50)  // general, email, security, integrations, feature_flags, system
+  key       String   @db.VarChar(100)
+  value     Json                      // Store any type of value (string, number, boolean, array, object)
+  isEncrypted Boolean @default(false) @map("is_encrypted") // Whether value is encrypted (for API keys, passwords)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([category, key])
+  @@index([category])
+  @@map("app_settings")
+}

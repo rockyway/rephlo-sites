@@ -25,6 +25,7 @@ import { AdminUserDetailController } from '../controllers/admin-user-detail.cont
 import { ModelTierAdminController } from '../controllers/admin/model-tier-admin.controller';
 import { AuditLogController } from '../controllers/audit-log.controller';
 import { RevenueAnalyticsController } from '../controllers/revenue-analytics.controller';
+import { SettingsController } from '../controllers/admin/settings.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -42,6 +43,7 @@ const adminUserDetailController = container.resolve(AdminUserDetailController);
 const modelTierAdminController = container.resolve(ModelTierAdminController);
 const auditLogController = container.resolve(AuditLogController);
 const revenueAnalyticsController = container.resolve(RevenueAnalyticsController);
+const settingsController = container.resolve(SettingsController);
 
 // =============================================================================
 // Admin Endpoints
@@ -636,6 +638,110 @@ router.patch(
       },
     });
   })
+);
+
+// =============================================================================
+// Admin Settings Endpoints (Plan 131 Phase 2)
+// =============================================================================
+
+/**
+ * GET /admin/settings
+ * Get all settings from all categories
+ *
+ * Returns:
+ * - All settings organized by category
+ */
+router.get(
+  '/settings',
+  auditLog({ action: 'read', resourceType: 'settings' }),
+  asyncHandler(settingsController.getAllSettings.bind(settingsController))
+);
+
+/**
+ * GET /admin/settings/:category
+ * Get settings for a specific category
+ *
+ * Path parameters:
+ * - category: 'general' | 'email' | 'security' | 'integrations' | 'feature_flags' | 'system'
+ *
+ * Returns:
+ * - Settings for the specified category
+ */
+router.get(
+  '/settings/:category',
+  auditLog({ action: 'read', resourceType: 'settings' }),
+  asyncHandler(settingsController.getCategorySettings.bind(settingsController))
+);
+
+/**
+ * PUT /admin/settings/:category
+ * Update settings for a specific category
+ *
+ * Path parameters:
+ * - category: 'general' | 'email' | 'security' | 'integrations' | 'feature_flags' | 'system'
+ *
+ * Request body:
+ * - Key-value pairs of settings to update
+ *
+ * Returns:
+ * - Updated settings for the category
+ */
+router.put(
+  '/settings/:category',
+  auditLog({ action: 'update', resourceType: 'settings' }),
+  asyncHandler(settingsController.updateCategorySettings.bind(settingsController))
+);
+
+/**
+ * POST /admin/settings/test-email
+ * Test email configuration
+ *
+ * Request body:
+ * - smtp_host: string
+ * - smtp_port: number
+ * - smtp_username: string
+ * - smtp_password: string
+ * - smtp_secure: boolean
+ * - from_email: string
+ * - from_name: string
+ *
+ * Returns:
+ * - success: boolean
+ * - message: string
+ */
+router.post(
+  '/settings/test-email',
+  auditLog({ action: 'update', resourceType: 'settings' }),
+  asyncHandler(settingsController.testEmailConfig.bind(settingsController))
+);
+
+/**
+ * POST /admin/settings/clear-cache
+ * Clear application cache
+ *
+ * Returns:
+ * - success: boolean
+ * - message: string
+ */
+router.post(
+  '/settings/clear-cache',
+  auditLog({ action: 'update', resourceType: 'settings' }),
+  asyncHandler(settingsController.clearCache.bind(settingsController))
+);
+
+/**
+ * POST /admin/settings/run-backup
+ * Create database backup
+ *
+ * Returns:
+ * - success: boolean
+ * - message: string
+ * - timestamp: string (ISO 8601)
+ */
+router.post(
+  '/settings/run-backup',
+  auditLog({ action: 'update', resourceType: 'settings' }),
+  asyncHandler(settingsController.runBackup.bind(settingsController))
 );
 
 export default router;
