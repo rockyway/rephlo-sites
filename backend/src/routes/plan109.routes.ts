@@ -469,6 +469,15 @@ export function createPlan109Router(): Router {
   // =============================================================================
 
   /**
+   * GET /admin/analytics/revenue
+   * Get combined revenue metrics (MRR, ARR, ARPU, monthly revenue, MRR growth)
+   */
+  router.get(
+    '/analytics/revenue',
+    asyncHandler(analyticsController.getRevenueMetrics.bind(analyticsController))
+  );
+
+  /**
    * GET /admin/analytics/revenue/mrr
    * Get Monthly Recurring Revenue
    */

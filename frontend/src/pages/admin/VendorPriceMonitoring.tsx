@@ -262,7 +262,7 @@ function VendorPriceMonitoring() {
               )}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-              {status === 'new' && alerts.filter((a) => a.status === 'new').length > 0 && (
+              {status === 'new' && alerts && alerts.filter((a) => a.status === 'new').length > 0 && (
                 <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-white text-rephlo-blue rounded-full">
                   {alerts.filter((a) => a.status === 'new').length}
                 </span>

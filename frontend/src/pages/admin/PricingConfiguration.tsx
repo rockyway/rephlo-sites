@@ -367,7 +367,7 @@ function PricingConfiguration() {
         </div>
 
         {/* Pending Approvals */}
-        {configs.filter((c) => c.approvalStatus === 'pending').length > 0 && (
+        {configs && configs.filter((c) => c.approvalStatus === 'pending').length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-8">
             <h3 className="text-h4 font-semibold text-amber-900 mb-4">
               Pending Approvals ({configs.filter((c) => c.approvalStatus === 'pending').length})

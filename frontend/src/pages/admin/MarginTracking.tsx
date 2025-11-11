@@ -198,7 +198,7 @@ function MarginTracking() {
 
               <MetricsCard
                 title="This Month Vendor Cost"
-                value={`$${metrics?.thisMonthVendorCost.toLocaleString() || 0}`}
+                value={`$${(metrics?.thisMonthVendorCost ?? 0).toLocaleString()}`}
                 subtitle="Tokens consumed"
                 icon={DollarSign}
                 color="amber"

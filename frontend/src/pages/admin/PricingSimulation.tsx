@@ -367,7 +367,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
           {/* Impact Preview */}
           <div className="space-y-6">
-            {result ? (
+            {result && result.revenueImpact ? (
               <>
                 {/* Revenue Impact */}
                 <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
@@ -379,19 +379,19 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                     <div>
                       <p className="text-caption text-deep-navy-700">Additional Margin</p>
                       <p className="text-h3 font-bold text-green-600">
-                        ${result.revenueImpact.additionalMargin.toLocaleString()}
+                        ${(result.revenueImpact.additionalMargin ?? 0).toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <p className="text-caption text-deep-navy-700">Margin Change</p>
                       <p className="text-h3 font-bold text-rephlo-blue">
-                        +{result.revenueImpact.marginPercentChange.toFixed(1)}%
+                        +{(result.revenueImpact.marginPercentChange ?? 0).toFixed(1)}%
                       </p>
                     </div>
                     <div>
                       <p className="text-caption text-deep-navy-700">Current Margin</p>
                       <p className="text-body font-semibold text-deep-navy-700">
-                        ${result.revenueImpact.currentMargin.toLocaleString()}
+                        ${(result.revenueImpact.currentMargin ?? 0).toLocaleString()}
                       </p>
                     </div>
                     <div>

@@ -559,6 +559,17 @@ router.get(
 );
 
 /**
+ * GET /admin/analytics/revenue/funnel
+ * Alias for /admin/analytics/revenue/conversion-funnel
+ * Get user conversion funnel: free -> paid -> perpetual
+ */
+router.get(
+  '/analytics/revenue/funnel',
+  auditLog({ action: 'read', resourceType: 'analytics' }),
+  asyncHandler(revenueAnalyticsController.getRevenueFunnel.bind(revenueAnalyticsController))
+);
+
+/**
  * GET /admin/analytics/revenue/credit-usage
  * Get credit usage by model with revenue contribution estimates
  *

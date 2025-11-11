@@ -271,7 +271,7 @@ const RevenueAnalytics: React.FC = () => {
           <h2 className="text-lg font-semibold text-deep-navy-900 mb-4">Revenue Mix</h2>
           {revenueMixLoading ? (
             <LoadingState message="Loading chart..." />
-          ) : revenueMixError || !revenueMixData?.data.length ? (
+          ) : revenueMixError || !revenueMixData?.data || !revenueMixData.data.length ? (
             <EmptyState title="No data available" description="No revenue data for this period." />
           ) : (
             <ResponsiveContainer width="100%" height={300}>

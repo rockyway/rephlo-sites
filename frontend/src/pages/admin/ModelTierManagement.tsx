@@ -216,7 +216,7 @@ function ModelTierManagement() {
     }
   };
 
-  const filteredModels = models.filter((model) => {
+  const filteredModels = (models || []).filter((model) => {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
