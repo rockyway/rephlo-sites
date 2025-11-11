@@ -251,4 +251,21 @@ export class ModelTierAdminController {
       throw error;
     }
   };
+
+  /**
+   * GET /admin/models/providers
+   * Get list of unique providers for filtering
+   */
+  getProviders = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const providers = await this.modelTierAdminService.getUniqueProviders();
+
+      res.status(200).json({
+        providers,
+      });
+    } catch (error) {
+      logger.error('Failed to get providers', { error });
+      throw error;
+    }
+  };
 }

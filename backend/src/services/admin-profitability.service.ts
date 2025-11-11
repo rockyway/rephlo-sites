@@ -241,14 +241,14 @@ export class AdminProfitabilityService {
       // Query token usage ledger grouped by provider
       const query = `
         SELECT
-          p.provider_name as provider,
+          p.name as provider,
           COUNT(tul.id) as requests,
           COALESCE(SUM(tul.vendor_cost), 0) as cost,
           COALESCE(SUM(tul.credit_value_usd), 0) as revenue
         FROM token_usage_ledger tul
         JOIN providers p ON tul.provider_id = p.id
         ${startDate || endDate ? `WHERE ${startDate ? `tul.request_started_at >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `tul.request_started_at <= '${endDate.toISOString()}'` : ''}` : ''}
-        GROUP BY p.provider_name
+        GROUP BY p.name
         ORDER BY revenue DESC
       `;
 
@@ -289,14 +289,14 @@ export class AdminProfitabilityService {
       const query = `
         SELECT
           tul.model_id,
-          p.provider_name as provider,
+          p.name as provider,
           COUNT(tul.id) as requests,
           COALESCE(SUM(tul.vendor_cost), 0) as cost,
           COALESCE(SUM(tul.credit_value_usd), 0) as revenue
         FROM token_usage_ledger tul
         JOIN providers p ON tul.provider_id = p.id
         ${startDate || endDate ? `WHERE ${startDate ? `tul.request_started_at >= '${startDate.toISOString()}'` : ''} ${startDate && endDate ? 'AND' : ''} ${endDate ? `tul.request_started_at <= '${endDate.toISOString()}'` : ''}` : ''}
-        GROUP BY tul.model_id, p.provider_name
+        GROUP BY tul.model_id, p.name
         ORDER BY (COALESCE(SUM(tul.credit_value_usd), 0) - COALESCE(SUM(tul.vendor_cost), 0)) DESC
         LIMIT ${limit}
       `;
@@ -378,13 +378,13 @@ export class AdminProfitabilityService {
         SELECT
           tul.model_id as id,
           tul.model_id as model_name,
-          p.provider_name,
+          p.name as provider_name,
           COALESCE(SUM(tul.credit_value_usd), 0) as revenue,
           COALESCE(SUM(tul.vendor_cost), 0) as cost
         FROM token_usage_ledger tul
         JOIN providers p ON tul.provider_id = p.id
         WHERE tul.request_started_at >= NOW() - INTERVAL '7 days'
-        GROUP BY tul.model_id, p.provider_name
+        GROUP BY tul.model_id, p.name
         HAVING COALESCE(SUM(tul.credit_value_usd), 0) > 0
           AND ((COALESCE(SUM(tul.credit_value_usd), 0) - COALESCE(SUM(tul.vendor_cost), 0)) / COALESCE(SUM(tul.credit_value_usd), 0)) < 0.2
         LIMIT 20

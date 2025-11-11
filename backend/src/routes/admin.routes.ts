@@ -246,6 +246,18 @@ router.post(
   asyncHandler(modelTierAdminController.revertTierChange.bind(modelTierAdminController))
 );
 
+/**
+ * GET /admin/models/providers
+ * Get list of unique providers for filtering
+ *
+ * Returns:
+ * - providers: string[] (list of provider names)
+ */
+router.get(
+  '/models/providers',
+  asyncHandler(modelTierAdminController.getProviders.bind(modelTierAdminController))
+);
+
 // =============================================================================
 // Audit Log Viewer Endpoints (Phase 4 P0 Fixes)
 // =============================================================================
@@ -529,7 +541,7 @@ router.get(
 );
 
 /**
- * GET /admin/analytics/revenue/funnel
+ * GET /admin/analytics/revenue/conversion-funnel
  * Get user conversion funnel: free -> paid -> perpetual
  *
  * Query parameters:
@@ -541,7 +553,7 @@ router.get(
  * - perpetualLicense: { count, percentage, conversionRate }
  */
 router.get(
-  '/analytics/revenue/funnel',
+  '/analytics/revenue/conversion-funnel',
   auditLog({ action: 'read', resourceType: 'analytics' }),
   asyncHandler(revenueAnalyticsController.getRevenueFunnel.bind(revenueAnalyticsController))
 );

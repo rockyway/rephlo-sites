@@ -110,7 +110,7 @@ function PricingConfiguration() {
   };
 
   // Group configs by tier for summary
-  const tierSummary = configs
+  const tierSummary = (configs || [])
     .filter((c) => c.scopeType === 'tier' && c.isActive)
     .reduce((acc, config) => {
       if (config.subscriptionTier) {
@@ -122,7 +122,7 @@ function PricingConfiguration() {
   const tiers = ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'];
 
   // Model-specific overrides
-  const modelOverrides = configs.filter(
+  const modelOverrides = (configs || []).filter(
     (c) => (c.scopeType === 'model' || c.scopeType === 'combination') && c.isActive
   );
 

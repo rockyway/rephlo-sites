@@ -428,6 +428,29 @@ export class ModelTierAdminService {
   }
 
   /**
+   * Get list of unique providers from models
+   *
+   * @returns Array of provider names
+   */
+  async getUniqueProviders(): Promise<string[]> {
+    logger.info('ModelTierAdminService.getUniqueProviders');
+
+    try {
+      const providers = await this.prisma.model.findMany({
+        distinct: ['provider'],
+        select: {
+          provider: true,
+        },
+      });
+
+      return providers.map((p: { provider: string | null }) => p.provider).filter((p: string | null): p is string => !!p);
+    } catch (error) {
+      logger.error('Failed to get unique providers', { error });
+      throw error;
+    }
+  }
+
+  /**
    * Determine change type based on which fields were changed
    *
    * @param changes - Object containing changed fields

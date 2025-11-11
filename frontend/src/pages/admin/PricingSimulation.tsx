@@ -70,20 +70,51 @@ function PricingSimulation() {
   };
 
   const handleRunSimulation = async () => {
-    if (!scenario.currentMultiplier || !scenario.proposedMultiplier) {
-      setError('Please set both current and proposed multipliers');
+    if (!scenario.proposedMultiplier || scenario.proposedMultiplier <= 0) {
+      setError('Please set a valid proposed multiplier (greater than 0)');
       return;
     }
 
     setIsSimulating(true);
     setError(null);
     try {
-      const simulationResult = await pricingApi.simulateMultiplierChange(scenario as SimulationScenario);
+      // Transform the scenario to match backend expectations
+      const backendPayload: any = {
+        newMultiplier: scenario.proposedMultiplier,
+        simulationPeriodDays: 30,
+      };
+
+      // Only include modelId if it's a valid UUID (not empty string)
+      if (scenario.modelId && scenario.modelId.trim() !== '') {
+        backendPayload.modelId = scenario.modelId;
+      }
+
+      // Only include providerId if it's a valid UUID (not empty string)
+      if (scenario.providerId && scenario.providerId.trim() !== '') {
+        backendPayload.providerId = scenario.providerId;
+      }
+
+      // Only include tier if specified
+      if (scenario.tier && scenario.tier.trim() !== '') {
+        backendPayload.tier = scenario.tier;
+      }
+
+      const simulationResult = await pricingApi.simulateMultiplierChange(backendPayload as SimulationScenario);
       setResult(simulationResult);
       setSuccessMessage('Simulation completed successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to run simulation');
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.message || 'Failed to run simulation';
+      const errorDetails = err.response?.data?.error?.details;
+
+      if (errorDetails) {
+        const detailMessages = Object.entries(errorDetails)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join(', ');
+        setError(`${errorMessage} - ${detailMessages}`);
+      } else {
+        setError(errorMessage);
+      }
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsSimulating(false);
