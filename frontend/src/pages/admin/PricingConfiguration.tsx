@@ -129,12 +129,12 @@ function PricingConfiguration() {
   );
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
 {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -145,10 +145,10 @@ function PricingConfiguration() {
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Admin
               </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">
+              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Pricing Configuration
               </h1>
-              <p className="text-body text-deep-navy-700 mt-1">
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 Manage margin multipliers and pricing strategy
               </p>
             </div>
@@ -183,40 +183,40 @@ function PricingConfiguration() {
         )}
 
         {/* Current Multipliers Summary */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden mb-8">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
           <div className="p-6 border-b border-deep-navy-200">
-            <h2 className="text-h3 font-semibold text-deep-navy-800">
+            <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
               Current Tier Multipliers
             </h2>
-            <p className="text-body-sm text-deep-navy-700 mt-1">
+            <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
               Active pricing configurations by subscription tier
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Tier
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Multiplier
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Target Margin %
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Actual Margin %
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-deep-navy-100">
+              <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                 {tiers.map((tier) => {
                   const config = tierSummary[tier];
                   const multiplier = config?.marginMultiplier || 1.5;
@@ -225,9 +225,9 @@ function PricingConfiguration() {
                   const actualMargin = targetMargin - (Math.random() * 4 - 2); // Mock data
 
                   return (
-                    <tr key={tier} className="hover:bg-deep-navy-50 transition-colors">
+                    <tr key={tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="font-medium text-deep-navy-800 capitalize">
+                        <span className="font-medium text-deep-navy-800 dark:text-white capitalize">
                           {tier.replace(/_/g, ' ')}
                         </span>
                       </td>
@@ -237,7 +237,7 @@ function PricingConfiguration() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-body text-deep-navy-700">
+                        <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                           {targetMargin.toFixed(1)}%
                         </span>
                       </td>
@@ -250,7 +250,7 @@ function PricingConfiguration() {
                             Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-gray-100 text-gray-600">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-600 dark:text-deep-navy-200">
                             Not Set
                           </span>
                         )}
@@ -269,47 +269,47 @@ function PricingConfiguration() {
         </div>
 
         {/* Model-Specific Overrides */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden mb-8">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
           <div className="p-6 border-b border-deep-navy-200">
-            <h2 className="text-h3 font-semibold text-deep-navy-800">
+            <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
               Model-Specific Overrides
             </h2>
-            <p className="text-body-sm text-deep-navy-700 mt-1">
+            <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
               Custom multipliers for specific providers and models
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Provider
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Model
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Base Multiplier
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Override
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Margin %
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Active
                   </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-deep-navy-100">
+              <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                 {modelOverrides.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center">
-                      <p className="text-body text-deep-navy-700">
+                      <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                         No model-specific overrides configured
                       </p>
                       <Button size="sm" className="mt-2" onClick={() => setIsCreateDialogOpen(true)}>
@@ -323,19 +323,19 @@ function PricingConfiguration() {
                     const marginPercent = ((config.marginMultiplier - 1) / config.marginMultiplier) * 100;
 
                     return (
-                      <tr key={config.id} className="hover:bg-deep-navy-50 transition-colors">
+                      <tr key={config.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
-                          <span className="font-medium text-deep-navy-800">
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
                             {config.providerId || 'All Providers'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             {config.modelId || 'All Models'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-600">
+                          <span className="text-body text-deep-navy-600 dark:text-deep-navy-200">
                             {baseMultiplier.toFixed(2)}×
                           </span>
                         </td>
@@ -378,16 +378,16 @@ function PricingConfiguration() {
               {configs
                 .filter((c) => c.approvalStatus === 'pending')
                 .map((config) => (
-                  <div key={config.id} className="bg-white rounded-md p-4 flex items-center justify-between">
+                  <div key={config.id} className="bg-white dark:bg-deep-navy-800 rounded-md p-4 flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-deep-navy-800">
+                      <p className="font-medium text-deep-navy-800 dark:text-white">
                         {config.scopeType === 'tier' && `${config.subscriptionTier} tier`}
                         {config.scopeType === 'provider' && `Provider: ${config.providerId}`}
                         {config.scopeType === 'model' && `Model: ${config.modelId}`}
                         {' - '}
                         <span className="text-rephlo-blue">{config.marginMultiplier.toFixed(2)}×</span>
                       </p>
-                      <p className="text-caption text-deep-navy-700 mt-1">
+                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                         {config.reason.replace(/_/g, ' ')} - {config.reasonDetails}
                       </p>
                     </div>
@@ -409,9 +409,9 @@ function PricingConfiguration() {
       {/* Create/Edit Dialog */}
       {(isCreateDialogOpen || editingConfig) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-deep-navy-200">
-              <h2 className="text-h3 font-semibold text-deep-navy-800">
+              <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
                 {editingConfig ? 'Edit Configuration' : 'Create Pricing Configuration'}
               </h2>
             </div>

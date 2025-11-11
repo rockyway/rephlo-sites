@@ -179,10 +179,10 @@ function SubscriptionManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 font-bold text-deep-navy-800">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
             Subscription Management
           </h1>
-          <p className="text-body text-deep-navy-700 mt-1">
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             View and manage all user subscriptions, tier changes, and cancellations
           </p>
         </div>
@@ -208,25 +208,25 @@ function SubscriptionManagement() {
         {/* Quick Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total Active Subscriptions</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Active Subscriptions</h3>
                 <Users className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatNumber(stats.totalActive)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalActive)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">MRR</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">MRR</h3>
                 <DollarSign className="h-5 w-5 text-green-600" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(stats.mrr, 0)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.mrr, 0)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Past Due Subscriptions</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Past Due Subscriptions</h3>
                 <AlertCircle className={cn('h-5 w-5', stats.pastDueCount > 0 ? 'text-red-600' : 'text-deep-navy-400')} />
               </div>
               <p className={cn(
@@ -237,23 +237,23 @@ function SubscriptionManagement() {
               </p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Trial Conversions This Month</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Trial Conversions This Month</h3>
                 <TrendingUp className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{stats.trialConversionsThisMonth}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{stats.trialConversionsThisMonth}</p>
             </div>
           </div>
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-6">
-          <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Filters</h3>
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Tier Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Tier
               </label>
               <select
@@ -262,7 +262,7 @@ function SubscriptionManagement() {
                   setFilterTier(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               >
                 <option value="">All Tiers</option>
                 <option value={SubscriptionTier.FREE}>Free</option>
@@ -276,7 +276,7 @@ function SubscriptionManagement() {
 
             {/* Status Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Status
               </label>
               <select
@@ -285,7 +285,7 @@ function SubscriptionManagement() {
                   setFilterStatus(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               >
                 <option value="">All Status</option>
                 <option value={SubscriptionStatus.TRIAL}>Trial</option>
@@ -299,7 +299,7 @@ function SubscriptionManagement() {
 
             {/* Search */}
             <div className="md:col-span-2">
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Search
               </label>
               <div className="relative">
@@ -313,7 +313,7 @@ function SubscriptionManagement() {
                   placeholder="Search by email or subscription ID..."
                   className="pl-10"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
               </div>
             </div>
           </div>
@@ -321,9 +321,9 @@ function SubscriptionManagement() {
           {/* Active Filters Display */}
           {(filterTier || filterStatus || searchQuery) && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-body-sm text-deep-navy-600">Active filters:</span>
+              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Active filters:</span>
               {filterTier && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Tier: {filterTier}
                   <button onClick={() => setFilterTier('')}>
                     <XIcon className="h-3 w-3" />
@@ -331,7 +331,7 @@ function SubscriptionManagement() {
                 </span>
               )}
               {filterStatus && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Status: {filterStatus}
                   <button onClick={() => setFilterStatus('')}>
                     <XIcon className="h-3 w-3" />
@@ -339,7 +339,7 @@ function SubscriptionManagement() {
                 </span>
               )}
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Search: {searchQuery}
                   <button onClick={() => setSearchQuery('')}>
                     <XIcon className="h-3 w-3" />
@@ -361,7 +361,7 @@ function SubscriptionManagement() {
         </div>
 
         {/* Subscriptions Table */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -369,16 +369,16 @@ function SubscriptionManagement() {
               </div>
             ) : !sortedSubscriptions || sortedSubscriptions.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-700">No subscriptions found</p>
+                <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">No subscriptions found</p>
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       User Email
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('tier')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -389,7 +389,7 @@ function SubscriptionManagement() {
                         )}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('status')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -400,7 +400,7 @@ function SubscriptionManagement() {
                         )}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('price')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -411,13 +411,13 @@ function SubscriptionManagement() {
                         )}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Credits
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Current Period
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('billingDate')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -428,21 +428,21 @@ function SubscriptionManagement() {
                         )}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-deep-navy-100">
+                <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {sortedSubscriptions.map((subscription) => {
                     const daysUntilBilling = subscription.nextBillingDate
                       ? calculateDaysBetween(new Date(), subscription.nextBillingDate)
                       : null;
 
                     return (
-                      <tr key={subscription.id} className="hover:bg-deep-navy-50 transition-colors">
+                      <tr key={subscription.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-800">
+                          <span className="text-body text-deep-navy-800 dark:text-white">
                             {subscription.user?.email || 'N/A'}
                           </span>
                         </td>
@@ -454,23 +454,23 @@ function SubscriptionManagement() {
                         </td>
                         <td className="px-6 py-4">
                           <div>
-                            <span className="text-body font-medium text-deep-navy-800">
+                            <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                               {formatCurrency(subscription.finalPriceUsd)}
                             </span>
-                            <span className="text-caption text-deep-navy-700 ml-1">
+                            <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200 ml-1">
                               /{subscription.billingCycle === 'monthly' ? 'mo' : 'yr'}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             {formatNumber(subscription.monthlyCreditsAllocated)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-body-sm text-deep-navy-600">
+                          <div className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                             <div>{formatDate(subscription.currentPeriodStart)}</div>
-                            <div className="text-caption text-deep-navy-700">
+                            <div className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
                               to {formatDate(subscription.currentPeriodEnd)}
                             </div>
                           </div>
@@ -478,7 +478,7 @@ function SubscriptionManagement() {
                         <td className="px-6 py-4">
                           {subscription.nextBillingDate ? (
                             <div className="text-body-sm">
-                              <div className="text-deep-navy-700">{formatDate(subscription.nextBillingDate)}</div>
+                              <div className="text-deep-navy-700 dark:text-deep-navy-200">{formatDate(subscription.nextBillingDate)}</div>
                               <div className={cn(
                                 'text-caption',
                                 daysUntilBilling && daysUntilBilling <= 7 ? 'text-amber-600' : 'text-deep-navy-700'
@@ -487,7 +487,7 @@ function SubscriptionManagement() {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-body-sm text-deep-navy-400">-</span>
+                            <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
@@ -529,7 +529,7 @@ function SubscriptionManagement() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-deep-navy-200 flex items-center justify-between">
-              <p className="text-body-sm text-deep-navy-600">
+              <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">

@@ -136,7 +136,7 @@ function CouponAnalytics() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumbs */}
         <Breadcrumbs />
@@ -145,17 +145,17 @@ function CouponAnalytics() {
         <div className="mb-6">
           <Link
             to="/admin"
-            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center text-sm text-deep-navy-600 dark:text-deep-navy-200 hover:text-deep-navy-800 dark:text-white mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Back to Admin Dashboard
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">
                 Coupon Analytics
               </h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
                 Performance metrics and fraud detection dashboard
               </p>
             </div>
@@ -187,11 +187,11 @@ function CouponAnalytics() {
           </div>
         ) : metrics ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="text-sm font-medium text-gray-600">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+              <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
                 Total Redemptions
               </div>
-              <div className="mt-2 text-3xl font-bold text-gray-900">
+              <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
                 {formatNumber(metrics.total_redemptions)}
               </div>
               {metrics.month_over_month_change?.redemptions !== undefined && (
@@ -215,11 +215,11 @@ function CouponAnalytics() {
                 </div>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="text-sm font-medium text-gray-600">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+              <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
                 Total Discount Value
               </div>
-              <div className="mt-2 text-3xl font-bold text-gray-900">
+              <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
                 {formatCurrency(metrics.total_discount_value)}
               </div>
               {metrics.month_over_month_change?.discount_value !==
@@ -244,16 +244,16 @@ function CouponAnalytics() {
                 </div>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="text-sm font-medium text-gray-600">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+              <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
                 Avg Discount/Redemption
               </div>
-              <div className="mt-2 text-3xl font-bold text-gray-900">
+              <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
                 {formatCurrency(metrics.average_discount_per_redemption)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="text-sm font-medium text-gray-600">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+              <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
                 Conversion Rate
               </div>
               <div
@@ -261,14 +261,14 @@ function CouponAnalytics() {
                   'mt-2 text-3xl font-bold',
                   metrics.conversion_rate > 10
                     ? 'text-green-600'
-                    : 'text-gray-900'
+                    : 'text-deep-navy-800 dark:text-white'
                 )}
               >
                 {formatPercentage(metrics.conversion_rate)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="text-sm font-medium text-gray-600">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+              <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
                 Fraud Detection Rate
               </div>
               <div
@@ -276,7 +276,7 @@ function CouponAnalytics() {
                   'mt-2 text-3xl font-bold',
                   metrics.fraud_detection_rate > 5
                     ? 'text-red-600'
-                    : 'text-gray-900'
+                    : 'text-deep-navy-800 dark:text-white'
                 )}
               >
                 {formatPercentage(metrics.fraud_detection_rate)}
@@ -286,9 +286,9 @@ function CouponAnalytics() {
         ) : null}
 
         {/* Top Performing Coupons */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 mb-6">
+          <div className="px-6 py-4 border-b border-deep-navy-200 dark:border-deep-navy-700">
+            <h2 className="text-lg font-semibold text-deep-navy-800 dark:text-white">
               Top Performing Coupons
             </h2>
           </div>
@@ -298,46 +298,46 @@ function CouponAnalytics() {
             </div>
           ) : topCoupons.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">No coupon data available</p>
+              <p className="text-deep-navy-500 dark:text-deep-navy-300">No coupon data available</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Code
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Redemptions
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Discount Value
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Conversion Rate
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Avg Discount
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                   {topCoupons.map((coupon, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={index} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-deep-navy-800 dark:text-white">
                         {coupon.code}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {formatNumber(coupon.redemptions)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {formatCurrency(coupon.discount_value)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {formatPercentage(coupon.conversion_rate)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {formatCurrency(coupon.average_discount)}
                       </td>
                     </tr>
@@ -349,10 +349,10 @@ function CouponAnalytics() {
         </div>
 
         {/* Fraud Detection Dashboard */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="px-6 py-4 border-b border-deep-navy-200 dark:border-deep-navy-700">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-deep-navy-800 dark:text-white">
                 Fraud Detection Events
               </h2>
               <div className="flex gap-4">
@@ -361,7 +361,7 @@ function CouponAnalytics() {
                   onChange={(e) =>
                     setFilterSeverity(e.target.value as FraudSeverity | '')
                   }
-                  className="text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue dark:focus:border-electric-cyan focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 >
                   <option value="">All Severity</option>
                   <option value="low">Low</option>
@@ -374,7 +374,7 @@ function CouponAnalytics() {
                   onChange={(e) =>
                     setFilterStatus(e.target.value as FraudResolution | '')
                   }
-                  className="text-sm rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue dark:focus:border-electric-cyan focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 >
                   <option value="">All Status</option>
                   <option value="pending">Pending</option>
@@ -393,52 +393,52 @@ function CouponAnalytics() {
             </div>
           ) : fraudEvents.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">No fraud events detected</p>
+              <p className="text-deep-navy-500 dark:text-deep-navy-300">No fraud events detected</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Coupon Code
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       User Email
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Detection Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Severity
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Detected Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-deep-navy-500 dark:text-deep-navy-300 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                   {fraudEvents.map((event) => (
-                    <tr key={event.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={event.id} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-deep-navy-800 dark:text-white">
                         {event.coupon_code}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500 dark:text-deep-navy-300">
                         {event.user_email}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {event.detection_type.replace(/_/g, ' ')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <FraudSeverityBadge severity={event.severity} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500 dark:text-deep-navy-300">
                         {formatDateTime(event.detected_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -488,7 +488,7 @@ function CouponAnalytics() {
                               <X className="w-4 h-4" />
                             </button>
                             <button
-                              className="text-gray-600 hover:text-gray-900"
+                              className="text-deep-navy-600 dark:text-deep-navy-200 hover:text-deep-navy-800 dark:text-white"
                               title="View Details"
                             >
                               <Eye className="w-4 h-4" />

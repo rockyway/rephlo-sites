@@ -82,12 +82,12 @@ const AdminPagination: React.FC<AdminPaginationProps> = ({
   }, [currentPage]);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-white border-t border-deep-navy-200">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-white dark:bg-deep-navy-800 border-t border-deep-navy-200 dark:border-deep-navy-700">
       {/* Left: Page info */}
-      <div className="text-sm text-deep-navy-600">
-        Showing <span className="font-medium text-deep-navy-800">{startItem}</span> to{' '}
-        <span className="font-medium text-deep-navy-800">{endItem}</span> of{' '}
-        <span className="font-medium text-deep-navy-800">{totalItems}</span> results
+      <div className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
+        Showing <span className="font-medium text-deep-navy-800 dark:text-white">{startItem}</span> to{' '}
+        <span className="font-medium text-deep-navy-800 dark:text-white">{endItem}</span> of{' '}
+        <span className="font-medium text-deep-navy-800 dark:text-white">{totalItems}</span> results
       </div>
 
       {/* Center: Page navigation */}
@@ -96,7 +96,7 @@ const AdminPagination: React.FC<AdminPaginationProps> = ({
         <button
           onClick={handlePrevious}
           disabled={currentPage <= 1}
-          className="p-2 rounded-lg border border-deep-navy-300 text-deep-navy-600 hover:bg-deep-navy-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-rephlo-blue"
+          className="p-2 rounded-lg border border-deep-navy-300 dark:border-deep-navy-600 text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
           aria-label="Previous page"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -104,22 +104,22 @@ const AdminPagination: React.FC<AdminPaginationProps> = ({
 
         {/* Page input */}
         <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2">
-          <span className="text-sm text-deep-navy-600">Page</span>
+          <span className="text-sm text-deep-navy-600 dark:text-deep-navy-200">Page</span>
           <input
             type="text"
             value={pageInput}
             onChange={handlePageInputChange}
-            className="w-16 px-2 py-1 text-center border border-deep-navy-300 rounded-lg text-sm text-deep-navy-700 focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-transparent transition-all"
+            className="w-16 px-2 py-1 text-center border border-deep-navy-300 dark:border-deep-navy-600 rounded-lg text-sm text-deep-navy-700 dark:text-deep-navy-100 bg-white dark:bg-deep-navy-900 focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-transparent transition-all"
             aria-label="Current page"
           />
-          <span className="text-sm text-deep-navy-600">of {totalPages}</span>
+          <span className="text-sm text-deep-navy-600 dark:text-deep-navy-200">of {totalPages}</span>
         </form>
 
         {/* Next button */}
         <button
           onClick={handleNext}
           disabled={currentPage >= totalPages}
-          className="p-2 rounded-lg border border-deep-navy-300 text-deep-navy-600 hover:bg-deep-navy-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-rephlo-blue"
+          className="p-2 rounded-lg border border-deep-navy-300 dark:border-deep-navy-600 text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
           aria-label="Next page"
         >
           <ChevronRight className="w-5 h-5" />
@@ -129,14 +129,14 @@ const AdminPagination: React.FC<AdminPaginationProps> = ({
       {/* Right: Per-page selector */}
       {onPageSizeChange && (
         <div className="flex items-center gap-2">
-          <label htmlFor="page-size" className="text-sm text-deep-navy-600">
+          <label htmlFor="page-size" className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
             Per page:
           </label>
           <select
             id="page-size"
             value={pageSize}
             onChange={handlePageSizeChange}
-            className="px-3 py-1 border border-deep-navy-300 rounded-lg text-sm text-deep-navy-700 focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-transparent transition-all"
+            className="px-3 py-1 border border-deep-navy-300 dark:border-deep-navy-600 rounded-lg text-sm text-deep-navy-700 dark:text-deep-navy-100 bg-white dark:bg-deep-navy-900 focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-transparent transition-all"
           >
             {pageSizeOptions.map((option) => (
               <option key={option} value={option}>

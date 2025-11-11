@@ -14,21 +14,22 @@ const buttonVariants = cva(
     // Scale feedback on active state
     'active:scale-95',
     // Focus states
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rephlo-blue focus-visible:ring-offset-2',
-    // Disabled state
-    'disabled:pointer-events-none disabled:opacity-50'
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rephlo-blue dark:focus-visible:ring-electric-cyan focus-visible:ring-offset-2',
+    // Disabled state with explicit colors for better contrast
+    'disabled:pointer-events-none disabled:bg-deep-navy-200 dark:disabled:bg-deep-navy-800',
+    'disabled:text-deep-navy-500 dark:disabled:text-deep-navy-500 disabled:border-deep-navy-300 dark:disabled:border-deep-navy-700'
   ),
   {
     variants: {
       variant: {
         primary:
-          'bg-rephlo-blue text-white hover:bg-rephlo-blue-600 active:bg-rephlo-blue-700',
+          'bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 hover:bg-rephlo-blue-600 dark:hover:bg-electric-cyan-600 active:bg-rephlo-blue-700 dark:active:bg-electric-cyan-700',
         secondary:
-          'border-2 border-rephlo-blue bg-transparent text-rephlo-blue hover:bg-rephlo-blue/10 active:bg-rephlo-blue/20',
+          'border-2 border-rephlo-blue dark:border-electric-cyan bg-transparent text-rephlo-blue dark:text-electric-cyan hover:bg-rephlo-blue/10 dark:hover:bg-electric-cyan/10 active:bg-rephlo-blue/20 dark:active:bg-electric-cyan/20',
         ghost:
-          'bg-transparent text-deep-navy-700 hover:bg-deep-navy-100 active:bg-deep-navy-200',
+          'bg-transparent text-deep-navy-700 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800 active:bg-deep-navy-200 dark:active:bg-deep-navy-700',
         destructive:
-          'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
+          'bg-red-500 dark:bg-red-600 text-white hover:bg-red-600 dark:hover:bg-red-700 active:bg-red-700 dark:active:bg-red-800',
       },
       size: {
         default: 'h-10 px-lg py-sm',

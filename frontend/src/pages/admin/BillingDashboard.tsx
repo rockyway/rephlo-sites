@@ -121,14 +121,14 @@ function BillingDashboard() {
   const activeDunning = dunningAttempts.filter(d => d.status === 'scheduled' || d.status === 'failed');
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
       {/* Breadcrumbs */}
-      <div className="bg-white px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="bg-white dark:bg-deep-navy-800 px-4 sm:px-6 lg:px-8 pt-6">
         <Breadcrumbs />
       </div>
 
       {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -139,8 +139,8 @@ function BillingDashboard() {
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Admin
               </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">Billing Dashboard</h1>
-              <p className="text-body text-deep-navy-700 mt-1">
+              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Billing Dashboard</h1>
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 Revenue tracking, invoice management, and payment monitoring
               </p>
             </div>
@@ -171,12 +171,12 @@ function BillingDashboard() {
         {/* Revenue Overview Cards */}
         {revenueMetrics && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total MRR</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total MRR</h3>
                 <DollarSign className="h-5 w-5 text-green-600" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(revenueMetrics.totalMRR, 0)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(revenueMetrics.totalMRR, 0)}</p>
               <div className={cn(
                 'flex items-center gap-1 mt-2 text-caption',
                 revenueMetrics.mrrGrowth >= 0 ? 'text-green-600' : 'text-red-600'
@@ -186,38 +186,38 @@ function BillingDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total ARR</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total ARR</h3>
                 <TrendingUp className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(revenueMetrics.totalARR, 0)}</p>
-              <p className="text-caption text-deep-navy-700 mt-2">Annual Recurring Revenue</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(revenueMetrics.totalARR, 0)}</p>
+              <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-2">Annual Recurring Revenue</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Avg Revenue Per User</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Avg Revenue Per User</h3>
                 <CreditCard className="h-5 w-5 text-purple-600" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(revenueMetrics.avgRevenuePerUser)}</p>
-              <p className="text-caption text-deep-navy-700 mt-2">ARPU</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(revenueMetrics.avgRevenuePerUser)}</p>
+              <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-2">ARPU</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total Revenue This Month</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Revenue This Month</h3>
                 <DollarSign className="h-5 w-5 text-amber-600" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(revenueMetrics.totalRevenueThisMonth, 0)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(revenueMetrics.totalRevenueThisMonth, 0)}</p>
             </div>
           </div>
         )}
 
         {/* Revenue by Tier */}
         {revenueByTier && revenueByTier.length > 0 && (
-          <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-8">
-            <h2 className="text-h3 font-semibold text-deep-navy-800 mb-4">Revenue by Tier</h2>
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
+            <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4">Revenue by Tier</h2>
             <div className="space-y-4">
               {revenueByTier.map((tier) => (
                 <div key={tier.tier}>
@@ -229,14 +229,14 @@ function BillingDashboard() {
                       )}>
                         {getTierDisplayName(tier.tier)}
                       </span>
-                      <span className="text-body text-deep-navy-700">
+                      <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                         {formatCurrency(tier.revenue, 0)}
                       </span>
-                      <span className="text-caption text-deep-navy-700">
+                      <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
                         ({tier.subscriberCount} subscribers)
                       </span>
                     </div>
-                    <span className="text-body-sm font-medium text-deep-navy-600">
+                    <span className="text-body-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
                       {formatPercentage(tier.percentage)}
                     </span>
                   </div>
@@ -277,7 +277,7 @@ function BillingDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
           {/* Tab Headers */}
           <div className="border-b border-deep-navy-200 flex">
             <button
@@ -334,37 +334,37 @@ function BillingDashboard() {
                 {/* Invoices Tab */}
                 {activeTab === 'invoices' && (
                   <table className="w-full">
-                    <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                    <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Invoice ID</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">User Email</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Amount</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Status</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Due Date</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Paid Date</th>
-                        <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">Actions</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Invoice ID</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">User Email</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Amount</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Status</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Due Date</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Paid Date</th>
+                        <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-deep-navy-100">
+                    <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                       {invoices.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700">
+                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700 dark:text-deep-navy-200">
                             No invoices found
                           </td>
                         </tr>
                       ) : (
                         invoices.map((invoice) => (
-                          <tr key={invoice.id} className="hover:bg-deep-navy-50 transition-colors">
+                          <tr key={invoice.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                             <td className="px-6 py-4">
-                              <span className="text-body-sm font-mono text-deep-navy-700">
+                              <span className="text-body-sm font-mono text-deep-navy-700 dark:text-deep-navy-200">
                                 {invoice.stripeInvoiceId.slice(-8)}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800">{invoice.user?.email || 'N/A'}</span>
+                              <span className="text-body text-deep-navy-800 dark:text-white">{invoice.user?.email || 'N/A'}</span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body font-medium text-deep-navy-800">
+                              <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                                 {formatCurrency(invoice.amountDue)}
                               </span>
                             </td>
@@ -373,19 +373,19 @@ function BillingDashboard() {
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
                                 invoice.status === InvoiceStatus.PAID && 'bg-green-100 text-green-700 border-green-300',
                                 invoice.status === InvoiceStatus.OPEN && 'bg-blue-100 text-blue-700 border-blue-300',
-                                invoice.status === InvoiceStatus.VOID && 'bg-gray-100 text-gray-700 border-gray-300',
+                                invoice.status === InvoiceStatus.VOID && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
                                 invoice.status === InvoiceStatus.UNCOLLECTIBLE && 'bg-red-100 text-red-700 border-red-300'
                               )}>
                                 {invoice.status}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm text-deep-navy-600">
+                              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                 {invoice.dueDate ? formatDate(invoice.dueDate) : '-'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm text-deep-navy-600">
+                              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                 {invoice.paidAt ? formatDate(invoice.paidAt) : '-'}
                               </span>
                             </td>
@@ -410,42 +410,42 @@ function BillingDashboard() {
                 {/* Transactions Tab */}
                 {activeTab === 'transactions' && (
                   <table className="w-full">
-                    <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                    <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Transaction ID</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">User Email</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Amount</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Payment Method</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Status</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Date</th>
-                        <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">Actions</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Transaction ID</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">User Email</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Amount</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Payment Method</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Status</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Date</th>
+                        <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-deep-navy-100">
+                    <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                       {transactions.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700">
+                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700 dark:text-deep-navy-200">
                             No transactions found
                           </td>
                         </tr>
                       ) : (
                         transactions.map((transaction) => (
-                          <tr key={transaction.id} className="hover:bg-deep-navy-50 transition-colors">
+                          <tr key={transaction.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                             <td className="px-6 py-4">
-                              <span className="text-body-sm font-mono text-deep-navy-700">
+                              <span className="text-body-sm font-mono text-deep-navy-700 dark:text-deep-navy-200">
                                 {transaction.stripePaymentIntentId.slice(-8)}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800">{transaction.user?.email || 'N/A'}</span>
+                              <span className="text-body text-deep-navy-800 dark:text-white">{transaction.user?.email || 'N/A'}</span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body font-medium text-deep-navy-800">
+                              <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                                 {formatCurrency(transaction.amount)}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm text-deep-navy-600">
+                              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                 {transaction.paymentMethodType || 'N/A'} {transaction.last4 && `****${transaction.last4}`}
                               </span>
                             </td>
@@ -455,13 +455,13 @@ function BillingDashboard() {
                                 transaction.status === TransactionStatus.SUCCEEDED && 'bg-green-100 text-green-700 border-green-300',
                                 transaction.status === TransactionStatus.PENDING && 'bg-blue-100 text-blue-700 border-blue-300',
                                 transaction.status === TransactionStatus.FAILED && 'bg-red-100 text-red-700 border-red-300',
-                                transaction.status === TransactionStatus.REFUNDED && 'bg-gray-100 text-gray-700 border-gray-300'
+                                transaction.status === TransactionStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
                               )}>
                                 {transaction.status}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm text-deep-navy-600">
+                              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                 {formatDate(transaction.createdAt)}
                               </span>
                             </td>
@@ -488,21 +488,21 @@ function BillingDashboard() {
                 {/* Dunning Tab */}
                 {activeTab === 'dunning' && (
                   <table className="w-full">
-                    <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                    <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">User Email</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Invoice ID</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Amount</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Failed Date</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Retry Attempt</th>
-                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">Next Retry</th>
-                        <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">Actions</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">User Email</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Invoice ID</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Amount</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Failed Date</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Retry Attempt</th>
+                        <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Next Retry</th>
+                        <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-deep-navy-100">
+                    <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                       {dunningAttempts.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700">
+                          <td colSpan={7} className="px-6 py-8 text-center text-body text-deep-navy-700 dark:text-deep-navy-200">
                             No failed payments
                           </td>
                         </tr>
@@ -513,22 +513,22 @@ function BillingDashboard() {
                             attempt.attemptNumber >= 3 && 'bg-red-50'
                           )}>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800">
+                              <span className="text-body text-deep-navy-800 dark:text-white">
                                 {attempt.subscription?.user?.email || 'N/A'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm font-mono text-deep-navy-700">
+                              <span className="text-body-sm font-mono text-deep-navy-700 dark:text-deep-navy-200">
                                 {attempt.invoice?.stripeInvoiceId.slice(-8)}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body font-medium text-deep-navy-800">
+                              <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                                 {attempt.invoice ? formatCurrency(attempt.invoice.amountDue) : '-'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm text-deep-navy-600">
+                              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                 {formatDate(attempt.createdAt)}
                               </span>
                             </td>
@@ -543,7 +543,7 @@ function BillingDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body-sm text-deep-navy-600">
+                              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                 {attempt.retryAt ? formatDate(attempt.retryAt) : '-'}
                               </span>
                             </td>

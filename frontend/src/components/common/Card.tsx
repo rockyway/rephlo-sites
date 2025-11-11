@@ -67,7 +67,7 @@ const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPara
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={cn('text-body-sm text-deep-navy-700 dark:text-deep-navy-300', className)}
+      className={cn('text-body-sm text-deep-navy-700 dark:text-deep-navy-200', className)}
       {...props}
     />
   )

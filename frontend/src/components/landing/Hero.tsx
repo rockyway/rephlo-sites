@@ -16,12 +16,12 @@ function Hero() {
           </h1>
 
           {/* Subheading - Delayed animation */}
-          <p className="text-xl sm:text-2xl text-white/90 mb-2xl animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
+          <p className="text-xl sm:text-2xl text-white/95 mb-2xl animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
             AI-powered writing enhancement—system-wide, across every Windows application
           </p>
 
           {/* Body Copy - Delayed animation */}
-          <p className="text-body-lg text-white/80 mb-3xl max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'backwards' }}>
+          <p className="text-body-lg text-white/90 mb-3xl max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'backwards' }}>
             Rephlo brings intelligent text transformation directly into your workflow. Select text,
             choose a command, and watch your content refine instantly—in Outlook, Slack, VS Code,
             browsers, and every app you use daily.
@@ -49,7 +49,7 @@ function Hero() {
           </div>
 
           {/* Supporting Text - Final animation */}
-          <p className="text-body-sm text-white/70 mt-2xl animate-fade-in" style={{ animationDelay: '0.8s', animationFillMode: 'backwards' }}>
+          <p className="text-body-sm text-white/90 mt-2xl animate-fade-in" style={{ animationDelay: '0.8s', animationFillMode: 'backwards' }}>
             Free download · Windows 10/11 · Works with ChatGPT, Claude, and local AI models
           </p>
         </div>

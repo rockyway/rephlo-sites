@@ -394,8 +394,8 @@ function CreditManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Credit Management</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Credit Management</h1>
+          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
             View and manage user credit balances and allocations
           </p>
         </div>
@@ -418,60 +418,60 @@ function CreditManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3">
-                <DollarSign className="h-6 w-6 text-blue-600" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
+                <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Credits Allocated</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Total Credits Allocated</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
                   {formatNumber(stats.totalAllocated)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-3">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="rounded-full bg-green-100 dark:bg-green-900 p-3">
+                <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Credits Used</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Total Credits Used</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
                   {formatNumber(stats.totalUsed)}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
                   {((stats.totalUsed / stats.totalAllocated) * 100).toFixed(1)}% utilization
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-purple-100 p-3">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="rounded-full bg-purple-100 dark:bg-purple-900 p-3">
+                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Avg Usage per User</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Avg Usage per User</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
                   {formatNumber(stats.avgUsagePerUser)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-red-100 p-3">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="rounded-full bg-red-100 dark:bg-red-900 p-3">
+                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Users Near Zero</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.usersNearZero}</p>
-                <p className="text-xs text-gray-500">&lt; 100 credits remaining</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Users Near Zero</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.usersNearZero}</p>
+                <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">&lt; 100 credits remaining</p>
               </div>
             </div>
           </div>
@@ -479,12 +479,12 @@ function CreditManagement() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-5">
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Search</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-navy-400 dark:text-deep-navy-500" />
               <Input
                 type="text"
                 placeholder="Search by name or email..."
@@ -496,11 +496,11 @@ function CreditManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Tier</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Tier</label>
             <select
               value={filterTier}
               onChange={(e) => setFilterTier(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All Tiers</option>
               <option value={SubscriptionTier.FREE}>Free</option>
@@ -513,11 +513,11 @@ function CreditManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Balance Status</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Balance Status</label>
             <select
               value={filterBalanceStatus}
               onChange={(e) => setFilterBalanceStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="low">Low (&lt; 100)</option>
@@ -639,37 +639,37 @@ function CreditManagement() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
           </div>
         ) : users.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-gray-500">No users found</p>
+            <p className="text-deep-navy-500 dark:text-deep-navy-300">No users found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50">
+                <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <input
                         type="checkbox"
                         checked={selectedUserIds.size === users.length && users.length > 0}
                         onChange={toggleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-blue-600 focus:ring-blue-500"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       User
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Tier
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('balance')}
                     >
                       <div className="flex items-center gap-1">
@@ -680,7 +680,7 @@ function CreditManagement() {
                       </div>
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('allocation')}
                     >
                       <div className="flex items-center gap-1">
@@ -691,7 +691,7 @@ function CreditManagement() {
                       </div>
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('usage')}
                     >
                       <div className="flex items-center gap-1">
@@ -702,7 +702,7 @@ function CreditManagement() {
                       </div>
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800"
                       onClick={() => handleSort('updated')}
                     >
                       <div className="flex items-center gap-1">
@@ -712,18 +712,18 @@ function CreditManagement() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                   {users.map((user) => (
                     <tr
                       key={user.userId}
                       className={cn(
-                        'hover:bg-gray-50',
-                        user.currentBalance < 100 && 'bg-red-50'
+                        'hover:bg-deep-navy-50 dark:hover:bg-deep-navy-900',
+                        user.currentBalance < 100 && 'bg-red-50 dark:bg-red-950'
                       )}
                     >
                       <td className="px-4 py-4">
@@ -731,13 +731,13 @@ function CreditManagement() {
                           type="checkbox"
                           checked={selectedUserIds.has(user.userId)}
                           onChange={() => toggleUserSelection(user.userId)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-blue-600 focus:ring-blue-500"
                         />
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="font-medium text-gray-900">{user.userName}</p>
-                          <p className="text-sm text-gray-500">{user.userEmail}</p>
+                          <p className="font-medium text-deep-navy-800 dark:text-white">{user.userName}</p>
+                          <p className="text-sm text-deep-navy-500 dark:text-deep-navy-300">{user.userEmail}</p>
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -745,21 +745,21 @@ function CreditManagement() {
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-deep-navy-800 dark:text-white">
                             {formatNumber(user.currentBalance)}
                           </p>
                           {user.currentBalance < 100 && (
-                            <p className="text-xs text-red-600">Low balance!</p>
+                            <p className="text-xs text-red-600 dark:text-red-400">Low balance!</p>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-gray-900">
+                      <td className="px-4 py-4 text-deep-navy-800 dark:text-white">
                         {formatNumber(user.monthlyAllocation)}
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="text-gray-900">{formatNumber(user.usageThisMonth)}</p>
-                          <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-gray-200">
+                          <p className="text-deep-navy-800 dark:text-white">{formatNumber(user.usageThisMonth)}</p>
+                          <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-deep-navy-200 dark:bg-deep-navy-700">
                             <div
                               className={cn(
                                 'h-full transition-all',
@@ -770,12 +770,12 @@ function CreditManagement() {
                               style={{ width: `${Math.min(user.utilizationPercent, 100)}%` }}
                             />
                           </div>
-                          <p className="mt-0.5 text-xs text-gray-500">
+                          <p className="mt-0.5 text-xs text-deep-navy-500 dark:text-deep-navy-300">
                             {user.utilizationPercent.toFixed(1)}%
                           </p>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-500">
+                      <td className="px-4 py-4 text-sm text-deep-navy-500 dark:text-deep-navy-300">
                         {formatDate(user.lastUpdated)}
                       </td>
                       <td className="px-4 py-4 text-right">
@@ -810,8 +810,8 @@ function CreditManagement() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-                <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between border-t border-deep-navy-200 dark:border-deep-navy-700 px-4 py-3">
+                <div className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                   Page {page} of {totalPages}
                 </div>
                 <div className="flex gap-2">
@@ -855,11 +855,11 @@ function CreditManagement() {
 
       {selectedUser && showHistoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Credit Usage History</h2>
-                <p className="text-sm text-gray-600">{selectedUser.userEmail}</p>
+                <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Credit Usage History</h2>
+                <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">{selectedUser.userEmail}</p>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleExportHistory}>
@@ -872,7 +872,7 @@ function CreditManagement() {
                     setSelectedUser(null);
                     setUsageHistory([]);
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-deep-navy-500 dark:text-deep-navy-400 hover:text-deep-navy-700 dark:hover:text-deep-navy-200"
                 >
                   <XIcon className="h-6 w-6" />
                 </button>
@@ -881,42 +881,42 @@ function CreditManagement() {
 
             <div className="max-h-96 overflow-y-auto">
               {usageHistory.length === 0 ? (
-                <p className="py-8 text-center text-gray-500">No usage history found</p>
+                <p className="py-8 text-center text-deep-navy-500 dark:text-deep-navy-300">No usage history found</p>
               ) : (
                 <table className="w-full">
-                  <thead className="border-b border-gray-200 bg-gray-50">
+                  <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                         Date
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                         Model
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                         Tokens Used
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                         Credits Deducted
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                         Request ID
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                     {usageHistory.map((item) => (
-                      <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm text-gray-900">
+                      <tr key={item.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-900">
+                        <td className="px-4 py-3 text-sm text-deep-navy-800 dark:text-white">
                           {formatDate(item.date, 'long')}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{item.model}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
+                        <td className="px-4 py-3 text-sm text-deep-navy-800 dark:text-white">{item.model}</td>
+                        <td className="px-4 py-3 text-sm text-deep-navy-800 dark:text-white">
                           {formatNumber(item.tokensUsed)}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
+                        <td className="px-4 py-3 text-sm text-deep-navy-800 dark:text-white">
                           {formatNumber(item.creditsDeducted)}
                         </td>
-                        <td className="px-4 py-3 text-sm font-mono text-gray-600">
+                        <td className="px-4 py-3 text-sm font-mono text-deep-navy-600 dark:text-deep-navy-300">
                           {item.requestId}
                         </td>
                       </tr>
@@ -931,21 +931,21 @@ function CreditManagement() {
 
       {showBulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
+            <h2 className="mb-4 text-xl font-bold text-deep-navy-800 dark:text-white">
               Bulk Credit Adjustment
             </h2>
 
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                   {selectedUserIds.size} user{selectedUserIds.size > 1 ? 's' : ''} selected
                 </p>
               </div>
 
               {bulkAction !== 'reset' && (
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                     Amount
                   </label>
                   <Input
@@ -959,7 +959,7 @@ function CreditManagement() {
               )}
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                   Reason <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -967,7 +967,7 @@ function CreditManagement() {
                   onChange={(e) => setBulkReason(e.target.value)}
                   placeholder="Enter reason for adjustment"
                   rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 />
               </div>
 

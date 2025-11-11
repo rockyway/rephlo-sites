@@ -111,7 +111,7 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
               <Icon className="h-8 w-8 text-white transition-transform duration-base ease-out group-hover:scale-110" />
             </div>
             <div className="flex-1">
-              <div className="text-caption font-semibold text-electric-cyan-600 dark:text-electric-cyan-400 uppercase tracking-wide mb-xs">
+              <div className="text-caption font-semibold text-electric-cyan-600 dark:text-electric-cyan-300 uppercase tracking-wide mb-xs">
                 {audience.title}
               </div>
               <CardTitle className="text-h4 leading-tight">{audience.headline}</CardTitle>
@@ -120,7 +120,7 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
 
           {/* App Icons */}
           <div className="mb-lg">
-            <div className="text-caption font-medium text-deep-navy-700 dark:text-deep-navy-400 mb-sm">
+            <div className="text-caption font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-sm">
               Works with:
             </div>
             <AppIconGrid apps={audience.apps} />
@@ -132,7 +132,7 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
               {audience.useCases.map((useCase, idx) => (
                 <li
                   key={idx}
-                  className="flex items-start text-body-sm text-deep-navy-600 dark:text-deep-navy-300"
+                  className="flex items-start text-body-sm text-deep-navy-600 dark:text-deep-navy-200"
                 >
                   <span className="mr-sm text-electric-cyan-500 dark:text-electric-cyan-400 mt-[2px] flex-shrink-0">•</span>
                   <span>{useCase}</span>
@@ -143,14 +143,14 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
 
           {/* Stat Highlight */}
           <div className="mb-lg p-md bg-electric-cyan-50 dark:bg-electric-cyan-900/10 rounded-md border border-electric-cyan-200 dark:border-electric-cyan-800/30">
-            <p className="text-body-sm font-semibold text-electric-cyan-700 dark:text-electric-cyan-400">
+            <p className="text-body-sm font-semibold text-electric-cyan-700 dark:text-electric-cyan-300">
               {audience.stat}
             </p>
           </div>
 
           {/* Workflow Visualization */}
           <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700 mb-sm">
-            <div className="text-caption font-medium text-deep-navy-700 dark:text-deep-navy-400 mb-sm">
+            <div className="text-caption font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-sm">
               Workflow:
             </div>
             <WorkflowVisual steps={audience.workflow} />
@@ -158,7 +158,7 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
 
           {/* Expandable Full Description */}
           <ExpandableContent>
-            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 leading-relaxed">
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 leading-relaxed">
               {audience.fullDescription}
             </p>
           </ExpandableContent>
@@ -183,7 +183,7 @@ function TargetAudience() {
           <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Built for how you work
           </h2>
-          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-300">
+          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-200">
             Tailored experiences for every workflow and writing style
           </p>
         </div>

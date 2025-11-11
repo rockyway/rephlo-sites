@@ -119,12 +119,12 @@ function MarginTracking() {
   };
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
 {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -135,10 +135,10 @@ function MarginTracking() {
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Admin
               </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">
+              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Margin Tracking
               </h1>
-              <p className="text-body text-deep-navy-700 mt-1">
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 Real-time profitability monitoring and analysis
               </p>
             </div>
@@ -146,7 +146,7 @@ function MarginTracking() {
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
-                className="flex h-10 rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan"
               >
                 <option value="7">Last 7 days</option>
                 <option value="30">Last 30 days</option>
@@ -171,7 +171,7 @@ function MarginTracking() {
         )}
 
         {isLoading && !metrics ? (
-          <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
             <LoadingSpinner size="lg" />
           </div>
         ) : (
@@ -197,8 +197,8 @@ function MarginTracking() {
               >
                 {metrics && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-700">Target:</span>
-                    <span className="text-body-sm font-semibold text-deep-navy-700">
+                    <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Target:</span>
+                    <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       {(metrics.targetMargin ?? 0).toFixed(1)}%
                     </span>
                   </div>
@@ -214,8 +214,8 @@ function MarginTracking() {
               >
                 {metrics && metrics.creditValue !== undefined && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-700">Credit Value:</span>
-                    <span className="text-body-sm font-semibold text-deep-navy-700">
+                    <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credit Value:</span>
+                    <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       ${metrics.creditValue.toLocaleString()}
                     </span>
                   </div>
@@ -231,7 +231,7 @@ function MarginTracking() {
               >
                 {metrics && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-700">Status:</span>
+                    <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Status:</span>
                     <span className={cn('text-body-sm font-semibold', getStatusColor(metrics.status))}>
                       {metrics.status === 'on_target'
                         ? 'On Target'
@@ -245,47 +245,47 @@ function MarginTracking() {
             </div>
 
             {/* Margin by Tier */}
-            <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden mb-8">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
               <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-rephlo-blue" />
-                  <h2 className="text-h3 font-semibold text-deep-navy-800">
+                  <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
                     Margin by Tier
                   </h2>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                  <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Tier
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Margin %
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Target %
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Variance
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Requests
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Vendor Cost
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Status
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-deep-navy-100">
+                  <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                     {tierMargins && tierMargins.map((tier) => (
-                      <tr key={tier.tier} className="hover:bg-deep-navy-50 transition-colors">
+                      <tr key={tier.tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
-                          <span className="font-medium text-deep-navy-800 capitalize">
+                          <span className="font-medium text-deep-navy-800 dark:text-white capitalize">
                             {tier.tier.replace(/_/g, ' ')}
                           </span>
                         </td>
@@ -293,7 +293,7 @@ function MarginTracking() {
                           <MarginBadge marginPercent={tier.marginPercent} targetMargin={tier.targetMargin} />
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             {(tier.targetMargin ?? 0).toFixed(1)}%
                           </span>
                         </td>
@@ -313,12 +313,12 @@ function MarginTracking() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             {tier.requests.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             ${tier.vendorCost.toLocaleString()}
                           </span>
                         </td>
@@ -338,11 +338,11 @@ function MarginTracking() {
             </div>
 
             {/* Margin by Provider */}
-            <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden mb-8">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
               <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <PieChart className="h-5 w-5 text-rephlo-blue" />
-                  <h2 className="text-h3 font-semibold text-deep-navy-800">
+                  <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
                     Margin by Provider
                   </h2>
                 </div>
@@ -352,24 +352,24 @@ function MarginTracking() {
                   {providerMargins.map((provider) => (
                     <div
                       key={provider.providerId}
-                      className="border border-deep-navy-200 rounded-lg p-4"
+                      className="border border-deep-navy-200 dark:border-deep-navy-700 rounded-lg p-4"
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-deep-navy-800">
+                        <h3 className="font-semibold text-deep-navy-800 dark:text-white">
                           {provider.providerName}
                         </h3>
                         <MarginBadge marginPercent={provider.marginPercent} />
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between text-body-sm">
-                          <span className="text-deep-navy-700">Requests:</span>
-                          <span className="font-medium text-deep-navy-800">
+                          <span className="text-deep-navy-700 dark:text-deep-navy-200">Requests:</span>
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
                             {provider.requests.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-body-sm">
-                          <span className="text-deep-navy-700">Cost:</span>
-                          <span className="font-medium text-deep-navy-800">
+                          <span className="text-deep-navy-700 dark:text-deep-navy-200">Cost:</span>
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
                             ${provider.vendorCost.toLocaleString()}
                           </span>
                         </div>
@@ -381,56 +381,56 @@ function MarginTracking() {
             </div>
 
             {/* Top Models by Usage */}
-            <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
               <div className="p-6 border-b border-deep-navy-200">
-                <h2 className="text-h3 font-semibold text-deep-navy-800">
+                <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
                   Top Models by Usage
                 </h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                  <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Model
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Requests
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Tokens (M)
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Vendor Cost
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Margin %
                       </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         Status
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-deep-navy-100">
+                  <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                     {topModels.map((model) => (
-                      <tr key={model.modelId} className="hover:bg-deep-navy-50 transition-colors">
+                      <tr key={model.modelId} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
-                          <span className="font-medium text-deep-navy-800">
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
                             {model.modelName}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             {model.requests.toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             {(model.tokensMillions ?? 0).toFixed(1)}M
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                             ${model.vendorCost.toLocaleString()}
                           </span>
                         </td>
@@ -460,13 +460,13 @@ function MarginTracking() {
                   {tierMargins
                     .filter((t) => t.status !== 'on_target')
                     .map((tier) => (
-                      <div key={tier.tier} className="bg-white rounded-md p-3 flex items-center justify-between">
+                      <div key={tier.tier} className="bg-white dark:bg-deep-navy-800 rounded-md p-3 flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-deep-navy-800 capitalize">
+                          <p className="font-medium text-deep-navy-800 dark:text-white capitalize">
                             {tier.tier.replace(/_/g, ' ')} tier margin {tier.variance < 0 ? 'below' : 'above'} target by{' '}
                             {Math.abs(tier.variance ?? 0).toFixed(1)}%
                           </p>
-                          <p className="text-caption text-deep-navy-700">
+                          <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
                             Current: {(tier.marginPercent ?? 0).toFixed(1)}% | Target: {(tier.targetMargin ?? 0).toFixed(1)}%
                           </p>
                         </div>

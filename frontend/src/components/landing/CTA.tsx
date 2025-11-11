@@ -43,7 +43,7 @@ function CTA() {
             </Button>
           </div>
 
-          <p className="text-body-sm text-white/70 mt-2xl">
+          <p className="text-body-sm text-white/90 mt-2xl">
             Free to download. No credit card required.
           </p>
         </div>

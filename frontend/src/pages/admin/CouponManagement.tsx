@@ -211,10 +211,10 @@ function CouponManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 font-bold text-deep-navy-800">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
             Coupon Management
           </h1>
-          <p className="text-body text-deep-navy-700 mt-1">
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Create and manage promotional discount coupons
           </p>
         </div>
@@ -246,38 +246,38 @@ function CouponManagement() {
 
       {/* Quick Stats Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
-          <div className="text-sm font-medium text-deep-navy-600">
+        <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
             Total Active Coupons
           </div>
-          <div className="mt-2 text-3xl font-bold text-deep-navy-800">
+          <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
             {stats.totalActive}
           </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
-          <div className="text-sm font-medium text-deep-navy-600">
+        <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
             Total Redemptions This Month
           </div>
-          <div className="mt-2 text-3xl font-bold text-deep-navy-800">
+          <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
             {stats.totalRedemptions}
           </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
-          <div className="text-sm font-medium text-deep-navy-600">
+        <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
             Total Discount Value
           </div>
-          <div className="mt-2 text-3xl font-bold text-deep-navy-800">
+          <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
             {formatCurrency(stats.totalDiscountValue)}
           </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-deep-navy-200">
-          <div className="text-sm font-medium text-deep-navy-600">
+        <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+          <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
             Fraud Events Flagged
           </div>
           <div
             className={cn(
               'mt-2 text-3xl font-bold',
-              stats.fraudEventsFlagged > 0 ? 'text-red-600' : 'text-deep-navy-800'
+              stats.fraudEventsFlagged > 0 ? 'text-red-600' : 'text-deep-navy-800 dark:text-white'
             )}
           >
             {stats.fraudEventsFlagged}
@@ -286,10 +286,10 @@ function CouponManagement() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-deep-navy-200">
+      <div className="bg-white dark:bg-deep-navy-800 p-4 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-deep-navy-700 mb-1">
+            <label className="block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
               Search by Code
             </label>
               <div className="flex gap-2">
@@ -306,7 +306,7 @@ function CouponManagement() {
               </div>
             </div>
           <div>
-            <label className="block text-sm font-medium text-deep-navy-700 mb-1">
+            <label className="block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
               Status
             </label>
             <select
@@ -314,7 +314,7 @@ function CouponManagement() {
               onChange={(e) =>
                 setFilterStatus(e.target.value as typeof filterStatus)
               }
-              className="w-full rounded-md border-deep-navy-300 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue"
+              className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue dark:focus:border-electric-cyan dark:focus:ring-electric-cyan"
             >
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -323,13 +323,13 @@ function CouponManagement() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-deep-navy-700 mb-1">
+            <label className="block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
               Coupon Type
             </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as CouponType | '')}
-              className="w-full rounded-md border-deep-navy-300 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue"
+              className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue dark:focus:border-electric-cyan dark:focus:ring-electric-cyan"
             >
                 <option value="">All Types</option>
                 <option value="percentage">Percentage</option>
@@ -343,14 +343,14 @@ function CouponManagement() {
       </div>
 
       {/* Main Coupon Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="lg" />
           </div>
         ) : !coupons || coupons.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-deep-navy-700">No coupons found</p>
+            <p className="text-deep-navy-700 dark:text-deep-navy-200">No coupons found</p>
             <Button onClick={handleCreateCoupon} className="mt-4">
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Coupon
@@ -359,49 +359,49 @@ function CouponManagement() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-deep-navy-200">
-                <thead className="bg-deep-navy-50">
+              <table className="min-w-full divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Code
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Discount Value
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Max Uses
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Used
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Valid From
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Valid Until
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-deep-navy-600 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-deep-navy-100">
+                <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {coupons.map((coupon) => (
-                    <tr key={coupon.id} className="hover:bg-deep-navy-50">
+                    <tr key={coupon.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-deep-navy-800">
+                            <div className="text-sm font-medium text-deep-navy-800 dark:text-white">
                               {coupon.code}
                             </div>
                             {coupon.description && (
-                              <div className="text-sm text-deep-navy-700">
+                              <div className="text-sm text-deep-navy-700 dark:text-deep-navy-300">
                                 {coupon.description}
                               </div>
                             )}
@@ -411,7 +411,7 @@ function CouponManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <CouponTypeBadge type={coupon.type} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {formatDiscountValue(
                           coupon.type,
                           coupon.discount_percentage ||
@@ -420,16 +420,16 @@ function CouponManagement() {
                             0
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
                         {coupon.max_discount_applications || '∞'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {coupon.redemption_count || 0}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
                         {formatDate(coupon.valid_from)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
                         {formatDate(coupon.valid_until)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -446,7 +446,7 @@ function CouponManagement() {
                           </button>
                           <button
                             onClick={() => handleEditCoupon(coupon)}
-                            className="text-deep-navy-600 hover:text-deep-navy-800"
+                            className="text-deep-navy-600 dark:text-deep-navy-300 hover:text-deep-navy-800 dark:hover:text-white"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
@@ -457,7 +457,7 @@ function CouponManagement() {
                               'hover:opacity-70',
                               coupon.is_active
                                 ? 'text-green-600'
-                                : 'text-deep-navy-400'
+                                : 'text-deep-navy-400 dark:text-deep-navy-500'
                             )}
                             title={
                               coupon.is_active ? 'Deactivate' : 'Activate'
@@ -486,7 +486,7 @@ function CouponManagement() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-deep-navy-200 sm:px-6">
+              <div className="bg-white dark:bg-deep-navy-800 px-4 py-3 flex items-center justify-between border-t border-deep-navy-200 dark:border-deep-navy-700 sm:px-6">
                 <div className="flex-1 flex justify-between sm:hidden">
                   <Button
                     variant="secondary"
@@ -507,7 +507,7 @@ function CouponManagement() {
                 </div>
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm text-deep-navy-700">
+                    <p className="text-sm text-deep-navy-700 dark:text-deep-navy-200">
                       Showing{' '}
                       <span className="font-medium">
                         {(currentPage - 1) * pageSize + 1}
@@ -533,7 +533,7 @@ function CouponManagement() {
                             'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                             (i + 1) === currentPage
                               ? 'z-10 bg-rephlo-blue/10 border-rephlo-blue text-rephlo-blue'
-                              : 'bg-white border-deep-navy-300 text-deep-navy-600 hover:bg-deep-navy-50'
+                              : 'bg-white dark:bg-deep-navy-800 border-deep-navy-300 dark:border-deep-navy-600 text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700'
                           )}
                         >
                           {i + 1}

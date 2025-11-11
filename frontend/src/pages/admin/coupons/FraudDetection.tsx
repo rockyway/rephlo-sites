@@ -364,7 +364,7 @@ function FraudDetection() {
       block_user: 'bg-red-100 text-red-700 border-red-300',
       block_coupon: 'bg-orange-100 text-orange-700 border-orange-300',
       block_ip: 'bg-purple-100 text-purple-700 border-purple-300',
-      false_positive: 'bg-gray-100 text-gray-700 border-gray-300',
+      false_positive: 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
     };
     return colors[status] || colors.pending;
   };
@@ -381,8 +381,8 @@ function FraudDetection() {
 {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Fraud Detection</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection</h1>
+          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
             Monitor and prevent coupon abuse
           </p>
         </div>
@@ -418,50 +418,50 @@ function FraudDetection() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-yellow-100 p-3">
-                <AlertTriangle className="h-6 w-6 text-yellow-600" />
+              <div className="rounded-full bg-yellow-100 dark:bg-yellow-900 p-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Suspicious (Today)</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalSuspicious}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Suspicious (Today)</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.totalSuspicious}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-red-100 p-3">
-                <Ban className="h-6 w-6 text-red-600" />
+              <div className="rounded-full bg-red-100 dark:bg-red-900 p-3">
+                <Ban className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Blocked Attempts</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.blockedAttempts}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Blocked Attempts</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.blockedAttempts}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3">
-                <Shield className="h-6 w-6 text-blue-600" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
+                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">False Positive Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.falsePositiveRate}%</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">False Positive Rate</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.falsePositiveRate}%</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-orange-100 p-3">
-                <Flag className="h-6 w-6 text-orange-600" />
+              <div className="rounded-full bg-orange-100 dark:bg-orange-900 p-3">
+                <Flag className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">High Severity</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.highSeverityCount}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">High Severity</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.highSeverityCount}</p>
               </div>
             </div>
           </div>
@@ -469,12 +469,12 @@ function FraudDetection() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-5">
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Search</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-navy-400 dark:text-deep-navy-500" />
               <Input
                 type="text"
                 placeholder="Email, coupon code, IP..."
@@ -486,11 +486,11 @@ function FraudDetection() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Severity</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Severity</label>
             <select
               value={filterSeverity}
               onChange={(e) => setFilterSeverity(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="critical">Critical</option>
@@ -501,11 +501,11 @@ function FraudDetection() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="pending">Pending</option>
@@ -576,24 +576,24 @@ function FraudDetection() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
           </div>
         ) : events.length === 0 ? (
           <div className="p-12 text-center">
-            <Shield className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-gray-500">No suspicious activity detected</p>
+            <Shield className="mx-auto h-12 w-12 text-deep-navy-400 dark:text-deep-navy-500" />
+            <p className="mt-4 text-deep-navy-500 dark:text-deep-navy-300">No suspicious activity detected</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50">
+                <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:bg-deep-navy-800"
                       onClick={() => handleSort('detected')}
                     >
                       <div className="flex items-center gap-1">
@@ -603,14 +603,14 @@ function FraudDetection() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       User / Coupon
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Detection Type
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:bg-deep-navy-800"
                       onClick={() => handleSort('severity')}
                     >
                       <div className="flex items-center gap-1">
@@ -621,7 +621,7 @@ function FraudDetection() {
                       </div>
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:bg-deep-navy-800"
                       onClick={() => handleSort('riskScore')}
                     >
                       <div className="flex items-center gap-1">
@@ -631,39 +631,39 @@ function FraudDetection() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       IP Address
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                   {events.map((event) => (
                     <tr
                       key={event.id}
                       className={cn(
-                        'hover:bg-gray-50',
+                        'hover:bg-deep-navy-50 dark:bg-deep-navy-900',
                         event.severity === 'critical' && 'bg-red-50',
                         event.severity === 'high' && 'bg-orange-50'
                       )}
                     >
-                      <td className="px-4 py-4 text-sm text-gray-500">
+                      <td className="px-4 py-4 text-sm text-deep-navy-500 dark:text-deep-navy-300">
                         {formatDate(event.detected_at, 'long')}
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{event.user_email}</p>
-                          <p className="text-xs text-gray-500">
-                            Coupon: <code className="rounded bg-gray-100 px-1">{event.coupon_code}</code>
+                          <p className="text-sm font-medium text-deep-navy-800 dark:text-white">{event.user_email}</p>
+                          <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
+                            Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{event.coupon_code}</code>
                           </p>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900 capitalize">
+                      <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white capitalize">
                         {event.detection_type.replace('_', ' ')}
                       </td>
                       <td className="px-4 py-4">
@@ -678,8 +678,8 @@ function FraudDetection() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{event.risk_score}</span>
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
+                          <span className="font-medium text-deep-navy-800 dark:text-white">{event.risk_score}</span>
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-deep-navy-200 dark:bg-deep-navy-700">
                             <div
                               className={cn(
                                 'h-full transition-all',
@@ -694,7 +694,7 @@ function FraudDetection() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <code className="text-sm font-mono text-gray-600">{event.ip_address}</code>
+                        <code className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-200">{event.ip_address}</code>
                       </td>
                       <td className="px-4 py-4">
                         <span
@@ -740,8 +740,8 @@ function FraudDetection() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-                <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between border-t border-deep-navy-200 dark:border-deep-navy-700 px-4 py-3">
+                <div className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                   Page {page} of {totalPages}
                 </div>
                 <div className="flex gap-2">
@@ -771,15 +771,15 @@ function FraudDetection() {
       {/* Details Modal */}
       {selectedEvent && showDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Fraud Detection Details</h2>
+              <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection Details</h2>
               <button
                 onClick={() => {
                   setShowDetailsModal(false);
                   setSelectedEvent(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-deep-navy-500 dark:text-deep-navy-300 hover:text-deep-navy-700 dark:text-deep-navy-200"
               >
                 <XIcon className="h-6 w-6" />
               </button>
@@ -788,23 +788,23 @@ function FraudDetection() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">User Email</p>
-                  <p className="text-gray-900">{selectedEvent.user_email}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">User Email</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.user_email}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Coupon Code</p>
-                  <code className="rounded bg-gray-100 px-2 py-1 text-sm text-gray-900">
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupon Code</p>
+                  <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-2 py-1 text-sm text-deep-navy-800 dark:text-white">
                     {selectedEvent.coupon_code}
                   </code>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Detection Type</p>
-                  <p className="text-gray-900 capitalize">
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detection Type</p>
+                  <p className="text-deep-navy-800 dark:text-white capitalize">
                     {selectedEvent.detection_type.replace('_', ' ')}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Severity</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Severity</p>
                   <span
                     className={cn(
                       'inline-flex rounded-full border px-2 py-1 text-xs font-medium capitalize',
@@ -815,19 +815,19 @@ function FraudDetection() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Risk Score</p>
-                  <p className="text-gray-900">{selectedEvent.risk_score}/100</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Risk Score</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.risk_score}/100</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">IP Address</p>
-                  <code className="text-sm text-gray-900">{selectedEvent.ip_address}</code>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">IP Address</p>
+                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedEvent.ip_address}</code>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Detected At</p>
-                  <p className="text-gray-900">{formatDate(selectedEvent.detected_at, 'long')}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detected At</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedEvent.detected_at, 'long')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Status</p>
                   <span
                     className={cn(
                       'inline-flex rounded-full border px-2 py-1 text-xs font-medium',
@@ -840,8 +840,8 @@ function FraudDetection() {
               </div>
 
               <div>
-                <p className="text-sm font-medium text-gray-600">Detection Reasons</p>
-                <ul className="mt-2 list-inside list-disc space-y-1 text-gray-900">
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detection Reasons</p>
+                <ul className="mt-2 list-inside list-disc space-y-1 text-deep-navy-800 dark:text-white">
                   {selectedEvent.reasons.map((reason, i) => (
                     <li key={i}>{reason}</li>
                   ))}
@@ -855,27 +855,27 @@ function FraudDetection() {
       {/* Review Modal */}
       {selectedEvent && showReviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">Review Fraud Event</h2>
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
+            <h2 className="mb-4 text-xl font-bold text-deep-navy-800 dark:text-white">Review Fraud Event</h2>
 
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                   User: <strong>{selectedEvent.user_email}</strong>
                 </p>
-                <p className="text-sm text-gray-600">
-                  Coupon: <code className="rounded bg-gray-100 px-1">{selectedEvent.coupon_code}</code>
+                <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
+                  Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{selectedEvent.coupon_code}</code>
                 </p>
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                   Resolution <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={reviewResolution}
                   onChange={(e) => setReviewResolution(e.target.value as FraudResolution)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 >
                   <option value="legitimate">Legitimate - Allow</option>
                   <option value="block_user">Block User</option>
@@ -886,7 +886,7 @@ function FraudDetection() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                   Notes <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -894,7 +894,7 @@ function FraudDetection() {
                   onChange={(e) => setReviewNotes(e.target.value)}
                   placeholder="Explain your decision..."
                   rows={4}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 />
               </div>
             </div>
@@ -926,27 +926,27 @@ function FraudDetection() {
       {/* Blacklist Modal */}
       {showBlacklistModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-3xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Blacklist Management</h2>
+              <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Blacklist Management</h2>
               <button
                 onClick={() => setShowBlacklistModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-deep-navy-500 dark:text-deep-navy-300 hover:text-deep-navy-700 dark:text-deep-navy-200"
               >
                 <XIcon className="h-6 w-6" />
               </button>
             </div>
 
             {/* Add to Blacklist Form */}
-            <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h3 className="mb-3 font-medium text-gray-900">Add to Blacklist</h3>
+            <div className="mb-6 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900 p-4">
+              <h3 className="mb-3 font-medium text-deep-navy-800 dark:text-white">Add to Blacklist</h3>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Type</label>
                   <select
                     value={blacklistType}
                     onChange={(e) => setBlacklistType(e.target.value as 'user' | 'email' | 'ip')}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                   >
                     <option value="email">Email</option>
                     <option value="user">User ID</option>
@@ -954,7 +954,7 @@ function FraudDetection() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Value</label>
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Value</label>
                   <Input
                     value={blacklistValue}
                     onChange={(e) => setBlacklistValue(e.target.value)}
@@ -966,7 +966,7 @@ function FraudDetection() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Reason</label>
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Reason</label>
                   <Input
                     value={blacklistReason}
                     onChange={(e) => setBlacklistReason(e.target.value)}
@@ -987,40 +987,40 @@ function FraudDetection() {
 
             {/* Blacklist Table */}
             <div>
-              <h3 className="mb-3 font-medium text-gray-900">Current Blacklist</h3>
+              <h3 className="mb-3 font-medium text-deep-navy-800 dark:text-white">Current Blacklist</h3>
               {blacklist.length === 0 ? (
-                <p className="py-8 text-center text-gray-500">No entries in blacklist</p>
+                <p className="py-8 text-center text-deep-navy-500 dark:text-deep-navy-300">No entries in blacklist</p>
               ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <div className="overflow-x-auto rounded-lg border border-deep-navy-200 dark:border-deep-navy-700">
                   <table className="w-full">
-                    <thead className="border-b border-gray-200 bg-gray-50">
+                    <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                           Type
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                           Value
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                           Reason
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-600">
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                           Added
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium uppercase text-gray-600">
+                        <th className="px-4 py-3 text-right text-xs font-medium uppercase text-deep-navy-600 dark:text-deep-navy-200">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                       {blacklist.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm capitalize text-gray-900">{entry.type}</td>
+                        <tr key={entry.id} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
+                          <td className="px-4 py-3 text-sm capitalize text-deep-navy-800 dark:text-white">{entry.type}</td>
                           <td className="px-4 py-3">
-                            <code className="text-sm text-gray-900">{entry.value}</code>
+                            <code className="text-sm text-deep-navy-800 dark:text-white">{entry.value}</code>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{entry.reason}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 text-sm text-deep-navy-600 dark:text-deep-navy-200">{entry.reason}</td>
+                          <td className="px-4 py-3 text-sm text-deep-navy-500 dark:text-deep-navy-300">
                             {formatDate(entry.addedAt)}
                           </td>
                           <td className="px-4 py-3 text-right">
@@ -1047,19 +1047,19 @@ function FraudDetection() {
       {/* Rules Modal (Placeholder) */}
       {showRulesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Fraud Detection Rules</h2>
+              <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection Rules</h2>
               <button
                 onClick={() => setShowRulesModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-deep-navy-500 dark:text-deep-navy-300 hover:text-deep-navy-700 dark:text-deep-navy-200"
               >
                 <XIcon className="h-6 w-6" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p className="text-deep-navy-600 dark:text-deep-navy-200">
                 Configure fraud detection rules and thresholds here.
               </p>
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">

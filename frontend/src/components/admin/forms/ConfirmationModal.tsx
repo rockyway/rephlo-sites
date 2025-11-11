@@ -68,18 +68,18 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   // Button styles based on variant
   const confirmButtonClass = {
     danger:
-      'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-400',
+      'bg-red-600 dark:bg-red-500 text-white hover:bg-red-700 dark:hover:bg-red-600 focus:ring-red-500 disabled:bg-red-400 dark:disabled:bg-red-600',
     warning:
-      'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-500 disabled:bg-orange-400',
+      'bg-orange-600 dark:bg-orange-500 text-white hover:bg-orange-700 dark:hover:bg-orange-600 focus:ring-orange-500 disabled:bg-orange-400 dark:disabled:bg-orange-600',
     primary:
-      'bg-rephlo-blue text-white hover:bg-rephlo-blue/90 focus:ring-rephlo-blue disabled:bg-rephlo-blue/50',
+      'bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 hover:bg-rephlo-blue/90 dark:hover:bg-electric-cyan/90 focus:ring-rephlo-blue dark:focus:ring-electric-cyan disabled:bg-rephlo-blue/50 dark:disabled:bg-electric-cyan/50',
   }[confirmVariant];
 
   // Icon color based on variant
   const iconColorClass = {
-    danger: 'text-red-600 bg-red-100',
-    warning: 'text-orange-600 bg-orange-100',
-    primary: 'text-rephlo-blue bg-rephlo-blue/10',
+    danger: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30',
+    warning: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30',
+    primary: 'text-blue-700 dark:text-cyan-300 bg-blue-100 dark:bg-cyan-900/30 border border-blue-200 dark:border-cyan-800/50',
   }[confirmVariant];
 
   const isLoading = isProcessing || loading;
@@ -102,7 +102,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-deep-navy-900/75 transition-opacity" />
+          <div className="fixed inset-0 bg-deep-navy-900/75 dark:bg-black/80 transition-opacity" />
         </Transition.Child>
 
         {/* Modal container */}
@@ -117,8 +117,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-                <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white dark:bg-deep-navy-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                <div className="bg-white dark:bg-deep-navy-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                   <div className="sm:flex sm:items-start">
                     {/* Icon */}
                     <div
@@ -131,24 +131,24 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                       <Dialog.Title
                         as="h3"
-                        className="text-lg font-semibold leading-6 text-deep-navy-900"
+                        className="text-lg font-semibold leading-6 text-deep-navy-900 dark:text-white"
                       >
                         {title}
                       </Dialog.Title>
                       <div className="mt-2">
-                        <p className="text-sm text-deep-navy-600">{message}</p>
+                        <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">{message}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="bg-deep-navy-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+                <div className="bg-deep-navy-50 dark:bg-deep-navy-900 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
                   <button
                     type="button"
                     onClick={handleConfirm}
                     disabled={isLoading}
-                    className={`inline-flex w-full justify-center items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm sm:w-auto focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:cursor-not-allowed ${confirmButtonClass}`}
+                    className={`inline-flex w-full justify-center items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm sm:w-auto focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-deep-navy-900 transition-colors disabled:cursor-not-allowed ${confirmButtonClass}`}
                   >
                     {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                     {confirmText}
@@ -157,7 +157,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     type="button"
                     onClick={onCancel}
                     disabled={isLoading}
-                    className="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-deep-navy-900 shadow-sm ring-1 ring-inset ring-deep-navy-300 hover:bg-deep-navy-50 sm:mt-0 sm:w-auto focus:outline-none focus:ring-2 focus:ring-deep-navy-500 focus:ring-offset-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-3 inline-flex w-full justify-center rounded-lg bg-white dark:bg-deep-navy-700 px-4 py-2 text-sm font-semibold text-deep-navy-900 dark:text-deep-navy-100 shadow-sm ring-1 ring-inset ring-deep-navy-300 dark:ring-deep-navy-600 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-600 sm:mt-0 sm:w-auto focus:outline-none focus:ring-2 focus:ring-deep-navy-500 dark:focus:ring-deep-navy-400 focus:ring-offset-2 dark:focus:ring-offset-deep-navy-900 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {cancelText}
                   </button>

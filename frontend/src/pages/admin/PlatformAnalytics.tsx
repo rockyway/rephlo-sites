@@ -166,8 +166,8 @@ export default function PlatformAnalytics() {
 {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 font-bold text-deep-navy-800">Platform Analytics</h1>
-          <p className="text-body text-deep-navy-600 mt-2">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Platform Analytics</h1>
+          <p className="text-body text-deep-navy-600 dark:text-deep-navy-200 mt-2">
             Data-driven insights for business growth and optimization
           </p>
         </div>
@@ -181,15 +181,15 @@ export default function PlatformAnalytics() {
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Total Active Users */}
-          <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-rephlo-blue/10 rounded-lg">
                 <Users className="h-6 w-6 text-rephlo-blue" />
               </div>
-              <h3 className="text-body font-medium text-deep-navy-600">Total Active Users</h3>
+              <h3 className="text-body font-medium text-deep-navy-600 dark:text-deep-navy-200">Total Active Users</h3>
             </div>
             <div className="flex items-baseline gap-2">
-              <p className="text-h2 font-bold text-deep-navy-800">{formatNumber(metrics.totalActiveUsers)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(metrics.totalActiveUsers)}</p>
               <div className={cn(
                 'flex items-center gap-1 text-caption',
                 metrics.userGrowth >= 0 ? 'text-green-600' : 'text-red-600'
@@ -201,15 +201,15 @@ export default function PlatformAnalytics() {
           </div>
 
           {/* MRR */}
-          <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-green-100 rounded-lg">
                 <DollarSign className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="text-body font-medium text-deep-navy-600">Monthly Recurring Revenue</h3>
+              <h3 className="text-body font-medium text-deep-navy-600 dark:text-deep-navy-200">Monthly Recurring Revenue</h3>
             </div>
             <div className="flex items-baseline gap-2">
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(metrics.mrr, 0)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(metrics.mrr, 0)}</p>
               <div className={cn(
                 'flex items-center gap-1 text-caption',
                 metrics.mrrGrowth >= 0 ? 'text-green-600' : 'text-red-600'
@@ -221,18 +221,18 @@ export default function PlatformAnalytics() {
           </div>
 
           {/* ARR */}
-          <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-green-100 rounded-lg">
                 <DollarSign className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="text-body font-medium text-deep-navy-600">Annual Recurring Revenue</h3>
+              <h3 className="text-body font-medium text-deep-navy-600 dark:text-deep-navy-200">Annual Recurring Revenue</h3>
             </div>
-            <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(metrics.arr, 0)}</p>
+            <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(metrics.arr, 0)}</p>
           </div>
 
           {/* Monthly Churn Rate */}
-          <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className={cn(
                 'p-3 rounded-lg',
@@ -243,7 +243,7 @@ export default function PlatformAnalytics() {
                   metrics.monthlyChurnRate > 5 ? 'text-red-600' : 'text-green-600'
                 )} />
               </div>
-              <h3 className="text-body font-medium text-deep-navy-600">Monthly Churn Rate</h3>
+              <h3 className="text-body font-medium text-deep-navy-600 dark:text-deep-navy-200">Monthly Churn Rate</h3>
             </div>
             <p className={cn(
               'text-h2 font-bold',
@@ -254,7 +254,7 @@ export default function PlatformAnalytics() {
           </div>
 
           {/* Trial Conversion Rate */}
-          <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className={cn(
                 'p-3 rounded-lg',
@@ -265,7 +265,7 @@ export default function PlatformAnalytics() {
                   metrics.trialConversionRate > 20 ? 'text-green-600' : 'text-amber-600'
                 )} />
               </div>
-              <h3 className="text-body font-medium text-deep-navy-600">Trial Conversion Rate</h3>
+              <h3 className="text-body font-medium text-deep-navy-600 dark:text-deep-navy-200">Trial Conversion Rate</h3>
             </div>
             <p className={cn(
               'text-h2 font-bold',
@@ -276,12 +276,12 @@ export default function PlatformAnalytics() {
           </div>
 
           {/* Average Credit Utilization */}
-          <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-purple-100 rounded-lg">
                 <Target className="h-6 w-6 text-purple-600" />
               </div>
-              <h3 className="text-body font-medium text-deep-navy-600">Avg Credit Utilization</h3>
+              <h3 className="text-body font-medium text-deep-navy-600 dark:text-deep-navy-200">Avg Credit Utilization</h3>
             </div>
             <p className="text-h2 font-bold text-purple-600">
               {formatPercentage(metrics.avgCreditUtilization)}
@@ -291,8 +291,8 @@ export default function PlatformAnalytics() {
       )}
 
       {/* Section 2: User Distribution by Tier */}
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 mb-8">
-        <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">User Distribution by Tier</h2>
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
+        <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-6">User Distribution by Tier</h2>
         {userDistribution.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Pie Chart Visual Representation */}
@@ -320,9 +320,9 @@ export default function PlatformAnalytics() {
                   }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-white rounded-full w-32 h-32 flex flex-col items-center justify-center shadow-lg">
-                    <p className="text-h3 font-bold text-deep-navy-800">{formatNumber(totalUsers)}</p>
-                    <p className="text-caption text-deep-navy-600">Total Users</p>
+                  <div className="bg-white dark:bg-deep-navy-800 rounded-full w-32 h-32 flex flex-col items-center justify-center shadow-lg">
+                    <p className="text-h3 font-bold text-deep-navy-800 dark:text-white">{formatNumber(totalUsers)}</p>
+                    <p className="text-caption text-deep-navy-600 dark:text-deep-navy-200">Total Users</p>
                   </div>
                 </div>
               </div>
@@ -331,29 +331,29 @@ export default function PlatformAnalytics() {
             {/* Legend */}
             <div className="flex flex-col justify-center space-y-3">
               {userDistribution.map((d) => (
-                <div key={d.tier} className="flex items-center justify-between p-3 bg-deep-navy-50 rounded-lg">
+                <div key={d.tier} className="flex items-center justify-between p-3 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg">
                   <div className="flex items-center gap-3">
                     <TierBadge tier={d.tier} />
-                    <span className="text-body text-deep-navy-700">{getTierDisplayName(d.tier)}</span>
+                    <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">{getTierDisplayName(d.tier)}</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-body font-semibold text-deep-navy-800">{formatNumber(d.count)}</p>
-                    <p className="text-caption text-deep-navy-600">{formatPercentage(d.percentage)}</p>
+                    <p className="text-body font-semibold text-deep-navy-800 dark:text-white">{formatNumber(d.count)}</p>
+                    <p className="text-caption text-deep-navy-600 dark:text-deep-navy-200">{formatPercentage(d.percentage)}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="text-center py-12 text-deep-navy-600">
+          <div className="text-center py-12 text-deep-navy-600 dark:text-deep-navy-200">
             <p className="text-body">No user distribution data available</p>
           </div>
         )}
       </div>
 
       {/* Section 3: Revenue Trend (Last 12 Months) */}
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 mb-8">
-        <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">Revenue Trend (Last 12 Months)</h2>
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
+        <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-6">Revenue Trend (Last 12 Months)</h2>
         {revenueTrend.length > 0 ? (
           <div className="relative h-80">
             {/* Simple bar chart */}
@@ -377,7 +377,7 @@ export default function PlatformAnalytics() {
                         </div>
                       </div>
                     </div>
-                    <p className="text-caption text-deep-navy-600 transform -rotate-45 origin-top-left mt-2">
+                    <p className="text-caption text-deep-navy-600 dark:text-deep-navy-200 transform -rotate-45 origin-top-left mt-2">
                       {trend.month}
                     </p>
                   </div>
@@ -386,7 +386,7 @@ export default function PlatformAnalytics() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-12 text-deep-navy-600">
+          <div className="text-center py-12 text-deep-navy-600 dark:text-deep-navy-200">
             <p className="text-body">No revenue trend data available</p>
           </div>
         )}
@@ -394,8 +394,8 @@ export default function PlatformAnalytics() {
 
       {/* Section 4: Credits by Model */}
       {creditsByModel.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 mb-8">
-          <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">Credit Usage by Model</h2>
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-6">Credit Usage by Model</h2>
           <div className="space-y-3">
             {creditsByModel.map((model) => {
               const totalCredits = creditsByModel.reduce((sum, m) => sum + m.creditsUsed, 0);
@@ -403,14 +403,14 @@ export default function PlatformAnalytics() {
               return (
                 <div key={model.modelName} className="flex items-center gap-4">
                   <div className="w-48">
-                    <p className="text-body font-medium text-deep-navy-800">{model.modelName}</p>
+                    <p className="text-body font-medium text-deep-navy-800 dark:text-white">{model.modelName}</p>
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-body-sm text-deep-navy-700">
+                      <span className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
                         {formatNumber(model.creditsUsed)} credits
                       </span>
-                      <span className="text-body-sm font-semibold text-deep-navy-800">
+                      <span className="text-body-sm font-semibold text-deep-navy-800 dark:text-white">
                         {formatPercentage(percentage)}
                       </span>
                     </div>
@@ -430,8 +430,8 @@ export default function PlatformAnalytics() {
 
       {/* Section 5: Conversion Funnel */}
       {conversionFunnel.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 mb-8">
-          <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">Conversion Funnel</h2>
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-6">Conversion Funnel</h2>
           <div className="space-y-4">
             {conversionFunnel.map((stage, index) => {
               const isFirst = index === 0;
@@ -439,8 +439,8 @@ export default function PlatformAnalytics() {
               return (
                 <div key={stage.stage} className="relative">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-body font-medium text-deep-navy-700">{stage.stage}</span>
-                    <span className="text-body font-semibold text-deep-navy-800">{formatNumber(stage.count)}</span>
+                    <span className="text-body font-medium text-deep-navy-700 dark:text-deep-navy-200">{stage.stage}</span>
+                    <span className="text-body font-semibold text-deep-navy-800 dark:text-white">{formatNumber(stage.count)}</span>
                   </div>
                   <div className="w-full bg-deep-navy-100 rounded-full h-8">
                     <div
@@ -460,8 +460,8 @@ export default function PlatformAnalytics() {
       )}
 
       {/* Section 6: Upgrade/Downgrade Analysis */}
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
-        <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">Tier Transitions (Last 30 Days)</h2>
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+        <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-6">Tier Transitions (Last 30 Days)</h2>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -469,7 +469,7 @@ export default function PlatformAnalytics() {
           <div className="p-4 bg-green-50 rounded-lg border border-green-200">
             <div className="flex items-center gap-3 mb-3">
               <ArrowUpCircle className="h-6 w-6 text-green-600" />
-              <h3 className="text-body font-semibold text-deep-navy-700">Total Upgrades</h3>
+              <h3 className="text-body font-semibold text-deep-navy-700 dark:text-deep-navy-200">Total Upgrades</h3>
             </div>
             <p className="text-h2 font-bold text-green-600">{formatNumber(totalUpgrades)}</p>
           </div>
@@ -478,7 +478,7 @@ export default function PlatformAnalytics() {
           <div className="p-4 bg-red-50 rounded-lg border border-red-200">
             <div className="flex items-center gap-3 mb-3">
               <ArrowDownCircle className="h-6 w-6 text-red-600" />
-              <h3 className="text-body font-semibold text-deep-navy-700">Total Downgrades</h3>
+              <h3 className="text-body font-semibold text-deep-navy-700 dark:text-deep-navy-200">Total Downgrades</h3>
             </div>
             <p className="text-h2 font-bold text-red-600">{formatNumber(totalDowngrades)}</p>
           </div>
@@ -498,7 +498,7 @@ export default function PlatformAnalytics() {
                   <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
                     <div className="flex items-center gap-3">
                       <TierBadge tier={transition.fromTier} />
-                      <span className="text-deep-navy-400">→</span>
+                      <span className="text-deep-navy-400 dark:text-deep-navy-500">→</span>
                       <TierBadge tier={transition.toTier} />
                     </div>
                     <span className="text-body font-semibold text-green-700">{formatNumber(transition.count)} users</span>
@@ -520,7 +520,7 @@ export default function PlatformAnalytics() {
                   <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
                     <div className="flex items-center gap-3">
                       <TierBadge tier={transition.fromTier} />
-                      <span className="text-deep-navy-400">→</span>
+                      <span className="text-deep-navy-400 dark:text-deep-navy-500">→</span>
                       <TierBadge tier={transition.toTier} />
                     </div>
                     <span className="text-body font-semibold text-red-700">{formatNumber(transition.count)} users</span>
@@ -532,7 +532,7 @@ export default function PlatformAnalytics() {
 
           {/* No transitions */}
           {upgrades.length === 0 && downgrades.length === 0 && (
-            <div className="text-center py-8 text-deep-navy-700">
+            <div className="text-center py-8 text-deep-navy-700 dark:text-deep-navy-200">
               <p className="text-body">No tier transitions in the last 30 days</p>
             </div>
           )}

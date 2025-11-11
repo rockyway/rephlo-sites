@@ -275,8 +275,8 @@ function UserManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 font-bold text-deep-navy-800">User Management</h1>
-          <p className="text-body text-deep-navy-700 mt-1">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">User Management</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             View, moderate, and manage platform users
           </p>
         </div>
@@ -319,7 +319,7 @@ function UserManagement() {
                 size="sm"
                 variant="ghost"
                 onClick={() => setSelectedUsers(new Set())}
-                className="text-white hover:bg-white/10"
+                className="text-white hover:bg-white dark:bg-deep-navy-800/10"
               >
                 Clear Selection
               </Button>
@@ -328,12 +328,12 @@ function UserManagement() {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-6">
-          <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Filters</h3>
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Status Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Status
               </label>
               <select
@@ -342,7 +342,7 @@ function UserManagement() {
                   setFilterStatus(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               >
                 <option value="">All Status</option>
                 <option value={UserStatus.ACTIVE}>Active</option>
@@ -353,7 +353,7 @@ function UserManagement() {
 
             {/* Tier Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Tier
               </label>
               <select
@@ -362,7 +362,7 @@ function UserManagement() {
                   setFilterTier(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               >
                 <option value="">All Tiers</option>
                 <option value={SubscriptionTier.FREE}>Free</option>
@@ -375,7 +375,7 @@ function UserManagement() {
 
             {/* Search */}
             <div className="md:col-span-2">
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Search
               </label>
               <div className="relative">
@@ -389,14 +389,14 @@ function UserManagement() {
                   placeholder="Search by email, name, or user ID..."
                   className="pl-10"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -404,64 +404,64 @@ function UserManagement() {
               </div>
             ) : !users || users.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-700">No users found</p>
+                <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">No users found</p>
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                   <tr>
                     <th className="px-6 py-3 text-left">
                       <input
                         type="checkbox"
                         checked={selectedUsers.size === users?.length}
                         onChange={toggleSelectAll}
-                        className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+                        className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
                       />
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Email
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Name
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Tier
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Credits
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Joined
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Last Active
                     </th>
-                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-deep-navy-100">
+                <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-deep-navy-50 transition-colors">
+                    <tr key={user.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
                           checked={selectedUsers.has(user.id)}
                           onChange={() => toggleUserSelection(user.id)}
-                          className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+                          className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
                         />
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-body font-medium text-deep-navy-800">
+                        <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                           {user.email}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-body text-deep-navy-700">{user.name || '-'}</span>
+                        <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">{user.name || '-'}</span>
                       </td>
                       <td className="px-6 py-4">
                         <TierBadge tier={user.currentTier} />
@@ -470,17 +470,17 @@ function UserManagement() {
                         <StatusBadge status={user.status} type="user" />
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-body font-medium text-deep-navy-800">
+                        <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                           {formatNumber(user.creditsBalance)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-body-sm text-deep-navy-600">
+                        <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                           {formatDate(user.createdAt, 'long')}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-body-sm text-deep-navy-600">
+                        <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                           {user.lastActiveAt ? formatRelativeTime(user.lastActiveAt) : 'Never'}
                         </span>
                       </td>
@@ -559,7 +559,7 @@ function UserManagement() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-deep-navy-200 flex items-center justify-between">
-              <p className="text-body-sm text-deep-navy-600">
+              <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">
@@ -587,12 +587,12 @@ function UserManagement() {
       {/* User Details Modal */}
       {showDetailsModal && userDetails && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
-              <h2 className="text-h3 font-semibold text-deep-navy-800">User Details</h2>
+              <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">User Details</h2>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="text-deep-navy-400 hover:text-deep-navy-600"
+                className="text-deep-navy-400 dark:text-deep-navy-500 hover:text-deep-navy-600 dark:text-deep-navy-200"
               >
                 <XIcon className="h-5 w-5" />
               </button>
@@ -600,27 +600,27 @@ function UserManagement() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-caption text-deep-navy-700">Email</p>
+                  <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Email</p>
                   <p className="text-body font-medium">{userDetails.email}</p>
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-700">Name</p>
+                  <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Name</p>
                   <p className="text-body font-medium">{userDetails.name || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-700">Tier</p>
+                  <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Tier</p>
                   <TierBadge tier={userDetails.currentTier} />
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-700">Status</p>
+                  <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Status</p>
                   <StatusBadge status={userDetails.status} type="user" />
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-700">Credits Balance</p>
+                  <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credits Balance</p>
                   <p className="text-body font-medium">{formatNumber(userDetails.creditsBalance)}</p>
                 </div>
                 <div>
-                  <p className="text-caption text-deep-navy-700">Joined</p>
+                  <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Joined</p>
                   <p className="text-body">{formatDate(userDetails.createdAt, 'long')}</p>
                 </div>
               </div>
@@ -629,22 +629,22 @@ function UserManagement() {
               <div>
                 <h3 className="text-h4 font-semibold mb-2">Usage Statistics</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-deep-navy-50 p-4 rounded-md">
-                    <p className="text-caption text-deep-navy-700">Total API Calls</p>
+                  <div className="bg-deep-navy-50 dark:bg-deep-navy-900 p-4 rounded-md">
+                    <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Total API Calls</p>
                     <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats?.totalApiCalls ?? 0)}</p>
                   </div>
-                  <div className="bg-deep-navy-50 p-4 rounded-md">
-                    <p className="text-caption text-deep-navy-700">Credits Used</p>
+                  <div className="bg-deep-navy-50 dark:bg-deep-navy-900 p-4 rounded-md">
+                    <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credits Used</p>
                     <p className="text-h3 font-semibold">{formatNumber(userDetails.usageStats?.creditsUsed ?? 0)}</p>
                   </div>
-                  <div className="bg-deep-navy-50 p-4 rounded-md">
-                    <p className="text-caption text-deep-navy-700">Avg Calls/Day</p>
+                  <div className="bg-deep-navy-50 dark:bg-deep-navy-900 p-4 rounded-md">
+                    <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Avg Calls/Day</p>
                     <p className="text-h3 font-semibold">{(userDetails.usageStats?.averageCallsPerDay ?? 0).toFixed(1)}</p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-deep-navy-50 border-t border-deep-navy-200 flex justify-end">
+            <div className="px-6 py-4 bg-deep-navy-50 dark:bg-deep-navy-900 border-t border-deep-navy-200 flex justify-end">
               <Button onClick={() => setShowDetailsModal(false)}>Close</Button>
             </div>
           </div>

@@ -300,7 +300,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
             <textarea
               name="reason"
               rows={3}
-              className="w-full px-3 py-2 border border-deep-navy-200 rounded-lg focus:ring-2 focus:ring-rephlo-blue focus:border-transparent"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-lg focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               placeholder="Enter reason for adjustment"
             />
           </div>
@@ -1298,7 +1298,7 @@ const ActivityIcon: React.FC<{ type: string }> = ({ type }) => {
   };
   return (
     <div className="p-2 bg-deep-navy-50 rounded-lg shrink-0">
-      {icons[type] || <Activity className={`${iconClass} text-gray-500`} />}
+      {icons[type] || <Activity className={`${iconClass} text-deep-navy-500 dark:text-deep-navy-300`} />}
     </div>
   );
 };

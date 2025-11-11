@@ -126,7 +126,7 @@ function FeatureCard({ feature, delay }: { feature: typeof features[0]; delay: n
             {feature.highlights.map((highlight, idx) => (
               <li
                 key={idx}
-                className="flex items-start text-body-sm text-deep-navy-600 dark:text-deep-navy-300"
+                className="flex items-start text-body-sm text-deep-navy-600 dark:text-deep-navy-200"
               >
                 <span className="mr-sm text-rephlo-blue dark:text-electric-cyan mt-[2px] flex-shrink-0">•</span>
                 <span>{highlight}</span>
@@ -136,14 +136,14 @@ function FeatureCard({ feature, delay }: { feature: typeof features[0]; delay: n
 
           {/* Key Point - Call to Action */}
           <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700 mb-sm">
-            <p className="text-caption font-medium text-electric-cyan-600 dark:text-electric-cyan-400">
+            <p className="text-caption font-medium text-electric-cyan-600 dark:text-electric-cyan-300">
               {feature.keyPoint}
             </p>
           </div>
 
           {/* Expandable Full Description */}
           <ExpandableContent>
-            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 leading-relaxed">
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 leading-relaxed">
               {feature.fullDescription}
             </p>
           </ExpandableContent>
@@ -168,7 +168,7 @@ function Features() {
           <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Write anywhere. Enhance everywhere.
           </h2>
-          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-300">
+          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-200">
             System-wide AI writing assistance that adapts to your workflow
           </p>
         </div>

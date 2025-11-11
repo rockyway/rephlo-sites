@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Menu } from '@headlessui/react';
 import { ChevronRight, Menu as MenuIcon, Search, User, LogOut } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
 /**
  * AdminHeader Component
@@ -27,17 +28,17 @@ const AdminHeader: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-deep-navy-200 shadow-sm">
+    <header className="sticky top-0 z-40 bg-white dark:bg-deep-navy-900 border-b border-deep-navy-200 dark:border-deep-navy-700 shadow-sm">
       <div className="flex items-center justify-between h-16 px-6">
         {/* Left: Mobile Menu + Breadcrumbs */}
         <div className="flex items-center gap-4">
           {/* Mobile Hamburger */}
           <button
-            className="lg:hidden p-2 rounded-lg hover:bg-deep-navy-100 transition-colors"
+            className="lg:hidden p-2 rounded-lg hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800 transition-colors"
             onClick={handleMobileMenuClick}
             aria-label="Open sidebar"
           >
-            <MenuIcon className="w-6 h-6 text-deep-navy-600" />
+            <MenuIcon className="w-6 h-6 text-deep-navy-600 dark:text-deep-navy-300" />
           </button>
 
           {/* Breadcrumbs */}
@@ -45,17 +46,17 @@ const AdminHeader: React.FC = () => {
             {breadcrumbs.map((crumb, index) => (
               <React.Fragment key={index}>
                 {index > 0 && (
-                  <ChevronRight className="w-4 h-4 text-deep-navy-400" aria-hidden="true" />
+                  <ChevronRight className="w-4 h-4 text-deep-navy-400 dark:text-deep-navy-500" aria-hidden="true" />
                 )}
                 {crumb.href ? (
                   <Link
                     to={crumb.href}
-                    className="text-sm font-medium text-deep-navy-600 hover:text-rephlo-blue transition-colors"
+                    className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-300 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors"
                   >
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className="text-sm font-medium text-deep-navy-800">
+                  <span className="text-sm font-medium text-deep-navy-800 dark:text-deep-navy-200">
                     {crumb.label}
                   </span>
                 )}
@@ -64,32 +65,35 @@ const AdminHeader: React.FC = () => {
           </nav>
         </div>
 
-        {/* Right: Search + User Menu */}
+        {/* Right: Search + Theme Toggle + User Menu */}
         <div className="flex items-center gap-4">
           {/* Global Search (Placeholder) */}
           <div className="hidden md:flex items-center relative">
-            <Search className="absolute left-3 w-4 h-4 text-deep-navy-400 pointer-events-none" />
+            <Search className="absolute left-3 w-4 h-4 text-deep-navy-600 dark:text-deep-navy-400 pointer-events-none" />
             <input
               type="text"
               placeholder="Search..."
               disabled
-              className="pl-10 pr-4 py-2 w-64 border border-deep-navy-200 rounded-lg bg-deep-navy-50 text-sm text-deep-navy-700 placeholder-deep-navy-400 focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="pl-10 pr-4 py-2 w-64 border border-deep-navy-200 dark:border-deep-navy-700 rounded-lg bg-deep-navy-50 dark:bg-deep-navy-800 text-sm text-deep-navy-700 dark:text-deep-navy-200 placeholder-deep-navy-600 dark:placeholder-deep-navy-400 focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-transparent transition-all disabled:cursor-not-allowed"
               aria-label="Global search"
             />
           </div>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* User Menu */}
           <Menu as="div" className="relative">
             {({ open }) => (
               <>
                 <Menu.Button
-                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-deep-navy-100 transition-colors focus:outline-none focus:ring-2 focus:ring-rephlo-blue"
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800 transition-colors focus:outline-none focus:ring-2 focus:ring-rephlo-blue"
                   aria-label="User menu"
                 >
-                  <div className="w-8 h-8 rounded-full bg-rephlo-blue flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 rounded-full bg-rephlo-blue dark:bg-electric-cyan flex items-center justify-center">
+                    <User className="w-5 h-5 text-white dark:text-deep-navy-900" />
                   </div>
-                  <span className="hidden md:block text-sm font-medium text-deep-navy-700">
+                  <span className="hidden md:block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                     Admin
                   </span>
                 </Menu.Button>
@@ -97,15 +101,15 @@ const AdminHeader: React.FC = () => {
                 {open && (
                   <Menu.Items
                     static
-                    className="absolute right-0 mt-2 w-48 origin-top-right rounded-lg bg-white shadow-lg ring-1 ring-deep-navy-200 focus:outline-none"
+                    className="absolute right-0 mt-2 w-48 origin-top-right rounded-lg bg-white dark:bg-deep-navy-800 shadow-lg ring-1 ring-deep-navy-200 dark:ring-deep-navy-700 focus:outline-none"
                   >
                     <div className="p-1">
                       <Menu.Item>
                         {({ active }) => (
                           <button
                             className={`${
-                              active ? 'bg-deep-navy-100' : ''
-                            } flex items-center gap-2 w-full px-4 py-2 text-sm text-deep-navy-700 rounded-md transition-colors`}
+                              active ? 'bg-deep-navy-100 dark:bg-deep-navy-700' : ''
+                            } flex items-center gap-2 w-full px-4 py-2 text-sm text-deep-navy-700 dark:text-deep-navy-200 rounded-md transition-colors`}
                             onClick={() => {
                               // TODO: Navigate to profile
                               console.log('Navigate to profile');
@@ -121,8 +125,8 @@ const AdminHeader: React.FC = () => {
                         {({ active }) => (
                           <button
                             className={`${
-                              active ? 'bg-deep-navy-100' : ''
-                            } flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 rounded-md transition-colors`}
+                              active ? 'bg-deep-navy-100 dark:bg-deep-navy-700' : ''
+                            } flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 rounded-md transition-colors`}
                             onClick={() => {
                               // TODO: Implement logout
                               console.log('Logout');

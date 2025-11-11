@@ -141,12 +141,12 @@ function VendorPriceMonitoring() {
   };
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
 {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -157,10 +157,10 @@ function VendorPriceMonitoring() {
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Admin
               </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">
+              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Vendor Price Monitoring
               </h1>
-              <p className="text-body text-deep-navy-700 mt-1">
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 Track vendor price changes and manage pricing alerts
               </p>
             </div>
@@ -189,15 +189,15 @@ function VendorPriceMonitoring() {
         )}
 
         {/* Auto-Apply Settings */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-8">
-          <h2 className="text-h3 font-semibold text-deep-navy-800 mb-4">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4">
             Alert Settings
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center justify-between p-4 border border-deep-navy-200 rounded-lg">
+            <div className="flex items-center justify-between p-4 border border-deep-navy-200 dark:border-deep-navy-700 rounded-lg">
               <div>
-                <p className="text-body-sm font-medium text-deep-navy-700">Auto-Apply</p>
-                <p className="text-caption text-deep-navy-700">
+                <p className="text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Auto-Apply</p>
+                <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
                   Auto-apply for changes &lt; {autoApplyThreshold}%
                 </p>
               </div>
@@ -218,14 +218,14 @@ function VendorPriceMonitoring() {
             </div>
 
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Auto-Apply Threshold
               </label>
               <select
                 value={autoApplyThreshold}
                 onChange={(e) => setAutoApplyThreshold(Number(e.target.value))}
                 disabled={!autoApplyEnabled}
-                className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan disabled:opacity-50"
               >
                 <option value={3}>3%</option>
                 <option value={5}>5%</option>
@@ -235,13 +235,13 @@ function VendorPriceMonitoring() {
             </div>
 
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Require Approval &gt;
               </label>
               <select
                 value={approvalThreshold}
                 onChange={(e) => setApprovalThreshold(Number(e.target.value))}
-                className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan"
               >
                 <option value={10}>10%</option>
                 <option value={15}>15%</option>
@@ -262,12 +262,12 @@ function VendorPriceMonitoring() {
                 'px-4 py-2 rounded-md text-body-sm font-medium transition-colors',
                 filterStatus === status
                   ? 'bg-rephlo-blue text-white'
-                  : 'bg-white text-deep-navy-700 border border-deep-navy-200 hover:bg-deep-navy-50'
+                  : 'bg-white text-deep-navy-700 border border-deep-navy-200 dark:border-deep-navy-700 hover:bg-deep-navy-50'
               )}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
               {status === 'new' && alerts && alerts.filter((a) => a.status === 'new').length > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-white text-rephlo-blue rounded-full">
+                <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-white dark:bg-deep-navy-800 text-rephlo-blue rounded-full">
                   {alerts.filter((a) => a.status === 'new').length}
                 </span>
               )}
@@ -278,13 +278,13 @@ function VendorPriceMonitoring() {
         {/* Active Alerts */}
         <div className="space-y-4">
           {isLoading ? (
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
               <LoadingSpinner size="lg" />
             </div>
           ) : !alerts || alerts.length === 0 ? (
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
               <Bell className="h-12 w-12 text-deep-navy-300 mx-auto mb-4" />
-              <p className="text-body text-deep-navy-700">No alerts found</p>
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">No alerts found</p>
             </div>
           ) : (
             alerts.map((alert) => {
@@ -327,7 +327,7 @@ function VendorPriceMonitoring() {
                           Margin Impact: {alert.impactOnMargin > 0 ? '+' : ''}{alert.impactOnMargin.toFixed(1)}%
                         </span>
                       </div>
-                      <p className="text-caption text-deep-navy-700 mt-2">
+                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-2">
                         Detected {new Date(alert.detectedAt).toLocaleDateString()} at{' '}
                         {new Date(alert.detectedAt).toLocaleTimeString()}
                       </p>
@@ -335,13 +335,13 @@ function VendorPriceMonitoring() {
                   </div>
 
                   {alert.recommendedAction && (
-                    <div className="bg-white/50 rounded-md p-4 mb-4">
-                      <p className="text-body-sm font-medium text-deep-navy-700 mb-2">
+                    <div className="bg-white dark:bg-deep-navy-800/50 rounded-md p-4 mb-4">
+                      <p className="text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                         Recommended Action
                       </p>
-                      <p className="text-body-sm text-deep-navy-600">{alert.recommendedAction}</p>
+                      <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">{alert.recommendedAction}</p>
                       {alert.recommendedMultiplier && (
-                        <p className="text-body-sm text-deep-navy-600 mt-1">
+                        <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 mt-1">
                           Suggested multiplier: <span className="font-semibold text-rephlo-blue">
                             {alert.recommendedMultiplier.toFixed(2)}×
                           </span>
@@ -385,12 +385,12 @@ function VendorPriceMonitoring() {
         </div>
 
         {/* Price History Chart (Placeholder) */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mt-8">
-          <h2 className="text-h3 font-semibold text-deep-navy-800 mb-4 flex items-center">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mt-8">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4 flex items-center">
             <LineChart className="h-5 w-5 mr-2 text-rephlo-blue" />
             Price History
           </h2>
-          <div className="text-center py-12 text-deep-navy-700">
+          <div className="text-center py-12 text-deep-navy-700 dark:text-deep-navy-200">
             <LineChart className="h-12 w-12 mx-auto mb-4 text-deep-navy-300" />
             <p className="text-body">Price history chart will be displayed here</p>
             <p className="text-caption mt-1">Showing vendor price changes over time with margin overlay</p>

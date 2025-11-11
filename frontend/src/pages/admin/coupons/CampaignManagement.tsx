@@ -324,7 +324,7 @@ function CampaignManagement() {
 
   const getStatusBadge = (status: CampaignStatus) => {
     const colors = {
-      planning: 'bg-gray-100 text-gray-700 border-gray-300',
+      planning: 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
       active: 'bg-green-100 text-green-700 border-green-300',
       paused: 'bg-yellow-100 text-yellow-700 border-yellow-300',
       ended: 'bg-blue-100 text-blue-700 border-blue-300',
@@ -344,8 +344,8 @@ function CampaignManagement() {
 {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Campaign Management</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Campaign Management</h1>
+          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
             Create and manage marketing campaigns with coupon batches
           </p>
         </div>
@@ -368,62 +368,62 @@ function CampaignManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-5">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3">
-                <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
+                <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Campaigns</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalCampaigns}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Total Campaigns</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.totalCampaigns}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-3">
-                <Play className="h-6 w-6 text-green-600" />
+              <div className="rounded-full bg-green-100 dark:bg-green-900 p-3">
+                <Play className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Active Campaigns</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.activeCampaigns}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Active Campaigns</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.activeCampaigns}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-purple-100 p-3">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="rounded-full bg-purple-100 dark:bg-purple-900 p-3">
+                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Coupons Generated</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalCouponsGenerated.toLocaleString()}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupons Generated</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.totalCouponsGenerated.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-3">
-                <TrendingUp className="h-6 w-6 text-amber-600" />
+              <div className="rounded-full bg-amber-100 dark:bg-amber-900 p-3">
+                <TrendingUp className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Coupons Redeemed</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalRedeemed.toLocaleString()}</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupons Redeemed</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.totalRedeemed.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-cyan-100 p-3">
-                <TrendingUp className="h-6 w-6 text-cyan-600" />
+              <div className="rounded-full bg-cyan-100 dark:bg-cyan-900 p-3">
+                <TrendingUp className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Avg Conversion Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.avgConversionRate.toFixed(1)}%</p>
+                <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Avg Conversion Rate</p>
+                <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">{stats.avgConversionRate.toFixed(1)}%</p>
               </div>
             </div>
           </div>
@@ -431,12 +431,12 @@ function CampaignManagement() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-5">
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Search</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-navy-400 dark:text-deep-navy-500" />
               <Input
                 type="text"
                 placeholder="Search campaigns..."
@@ -448,11 +448,11 @@ function CampaignManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="planning">Planning</option>
@@ -463,11 +463,11 @@ function CampaignManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Type</label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="holiday">Holiday</option>
@@ -535,15 +535,15 @@ function CampaignManagement() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
           </div>
         ) : campaigns.length === 0 ? (
           <div className="p-12 text-center">
-            <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-gray-500">No campaigns found</p>
+            <Calendar className="mx-auto h-12 w-12 text-deep-navy-400 dark:text-deep-navy-500" />
+            <p className="mt-4 text-deep-navy-500 dark:text-deep-navy-300">No campaigns found</p>
             <Button
               variant="primary"
               className="mt-4"
@@ -557,10 +557,10 @@ function CampaignManagement() {
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50">
+                <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                   <tr>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:bg-deep-navy-800"
                       onClick={() => handleSort('name')}
                     >
                       <div className="flex items-center gap-1">
@@ -570,11 +570,11 @@ function CampaignManagement() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Status
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:bg-deep-navy-800"
                       onClick={() => handleSort('startDate')}
                     >
                       <div className="flex items-center gap-1">
@@ -584,14 +584,14 @@ function CampaignManagement() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       End Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Redemptions
                     </th>
                     <th
-                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-600 hover:bg-gray-100"
+                      className="cursor-pointer px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-100 dark:bg-deep-navy-800"
                       onClick={() => handleSort('conversionRate')}
                     >
                       <div className="flex items-center gap-1">
@@ -601,18 +601,18 @@ function CampaignManagement() {
                         )}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-600">
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                   {campaigns.map((campaign) => (
-                    <tr key={campaign.id} className="hover:bg-gray-50">
+                    <tr key={campaign.id} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
                       <td className="px-4 py-4">
                         <div>
-                          <p className="font-medium text-gray-900">{campaign.name}</p>
-                          <p className="text-sm text-gray-500 capitalize">{campaign.type}</p>
+                          <p className="font-medium text-deep-navy-800 dark:text-white">{campaign.name}</p>
+                          <p className="text-sm text-deep-navy-500 dark:text-deep-navy-300 capitalize">{campaign.type}</p>
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -625,21 +625,21 @@ function CampaignManagement() {
                           {campaign.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900">
+                      <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white">
                         {formatDate(campaign.starts_at)}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-900">
+                      <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white">
                         {formatDate(campaign.ends_at)}
                       </td>
-                      <td className="px-4 py-4 text-gray-900">
+                      <td className="px-4 py-4 text-deep-navy-800 dark:text-white">
                         {campaign.redemption_count?.toLocaleString() || 0}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-900">
+                          <span className="text-deep-navy-800 dark:text-white">
                             {campaign.conversion_rate ? `${campaign.conversion_rate.toFixed(1)}%` : '0%'}
                           </span>
-                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-deep-navy-200 dark:bg-deep-navy-700">
                             <div
                               className={cn(
                                 'h-full transition-all',
@@ -691,8 +691,8 @@ function CampaignManagement() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-                <div className="text-sm text-gray-600">
+              <div className="flex items-center justify-between border-t border-deep-navy-200 dark:border-deep-navy-700 px-4 py-3">
+                <div className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
                   Page {page} of {totalPages}
                 </div>
                 <div className="flex gap-2">
@@ -722,15 +722,15 @@ function CampaignManagement() {
       {/* Create Campaign Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Create New Campaign</h2>
+              <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Create New Campaign</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false);
                   resetForm();
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-deep-navy-500 dark:text-deep-navy-300 hover:text-deep-navy-700 dark:text-deep-navy-200"
               >
                 <XIcon className="h-6 w-6" />
               </button>
@@ -738,7 +738,7 @@ function CampaignManagement() {
 
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                   Campaign Name <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -750,11 +750,11 @@ function CampaignManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 dark:text-deep-navy-200">Type</label>
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value as CampaignType })}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                   >
                     <option value="holiday">Holiday</option>
                     <option value="marketing">Marketing</option>
@@ -764,7 +764,7 @@ function CampaignManagement() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                     Start Date <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -777,7 +777,7 @@ function CampaignManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                     End Date <span className="text-red-500">*</span>
                   </label>
                   <Input
@@ -788,7 +788,7 @@ function CampaignManagement() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                  <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                     Expected Revenue
                   </label>
                   <Input
@@ -801,7 +801,7 @@ function CampaignManagement() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                   Description
                 </label>
                 <textarea
@@ -809,7 +809,7 @@ function CampaignManagement() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Campaign description..."
                   rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 />
               </div>
             </div>
@@ -840,15 +840,15 @@ function CampaignManagement() {
       {/* Details Modal */}
       {selectedCampaign && showDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">{selectedCampaign.name}</h2>
+              <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">{selectedCampaign.name}</h2>
               <button
                 onClick={() => {
                   setShowDetailsModal(false);
                   setSelectedCampaign(null);
                 }}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-deep-navy-500 dark:text-deep-navy-300 hover:text-deep-navy-700 dark:text-deep-navy-200"
               >
                 <XIcon className="h-6 w-6" />
               </button>
@@ -857,11 +857,11 @@ function CampaignManagement() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Type</p>
-                  <p className="text-gray-900 capitalize">{selectedCampaign.type}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Type</p>
+                  <p className="text-deep-navy-800 dark:text-white capitalize">{selectedCampaign.type}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Status</p>
                   <span
                     className={cn(
                       'inline-flex rounded-full border px-2 py-1 text-xs font-medium',
@@ -872,42 +872,42 @@ function CampaignManagement() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Start Date</p>
-                  <p className="text-gray-900">{formatDate(selectedCampaign.starts_at, 'long')}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Start Date</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedCampaign.starts_at, 'long')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">End Date</p>
-                  <p className="text-gray-900">{formatDate(selectedCampaign.ends_at, 'long')}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">End Date</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedCampaign.ends_at, 'long')}</p>
                 </div>
               </div>
 
               {selectedCampaign.description && (
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Description</p>
-                  <p className="text-gray-900">{selectedCampaign.description}</p>
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Description</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedCampaign.description}</p>
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="grid grid-cols-3 gap-4 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900 p-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Redemptions</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Redemptions</p>
+                  <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
                     {selectedCampaign.redemption_count?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Conversion Rate</p>
+                  <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
                     {selectedCampaign.conversion_rate ? `${selectedCampaign.conversion_rate.toFixed(1)}%` : '0%'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Revenue</p>
+                  <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
                     {formatCurrency(selectedCampaign.actual_revenue)}
                   </p>
                   {selectedCampaign.expected_revenue && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
                       Target: {formatCurrency(selectedCampaign.expected_revenue)}
                     </p>
                   )}

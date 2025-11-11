@@ -34,7 +34,7 @@ function Testimonials() {
           <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Trusted by professionals worldwide
           </h2>
-          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-300">
+          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-200">
             From thought to polished—instantly.
           </p>
         </div>
@@ -56,7 +56,7 @@ function Testimonials() {
                     <div className="text-body-sm font-semibold text-deep-navy-800 dark:text-white">
                       {testimonial.author}
                     </div>
-                    <div className="text-caption text-deep-navy-700 dark:text-deep-navy-400">
+                    <div className="text-caption text-deep-navy-600 dark:text-deep-navy-200">
                       {testimonial.role}
                     </div>
                   </div>

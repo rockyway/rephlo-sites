@@ -44,12 +44,12 @@ const TierBadge: React.FC<TierBadgeProps> = ({ tier, size = 'md' }) => {
 
   // Tier color mapping (using custom classes)
   const tierColors: Record<SubscriptionTier, string> = {
-    free: 'bg-deep-navy-100 text-deep-navy-600',
-    pro: 'bg-blue-100 text-blue-800',
-    pro_max: 'bg-purple-100 text-purple-800',
-    enterprise_pro: 'bg-indigo-100 text-indigo-800',
-    enterprise_max: 'bg-pink-100 text-pink-800',
-    perpetual: 'bg-green-100 text-green-800',
+    free: 'bg-deep-navy-100 dark:bg-deep-navy-700 text-deep-navy-600 dark:text-deep-navy-200',
+    pro: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+    pro_max: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
+    enterprise_pro: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300',
+    enterprise_max: 'bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300',
+    perpetual: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
   };
 
   const sizeClasses = {
