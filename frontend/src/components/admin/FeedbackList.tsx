@@ -31,7 +31,7 @@ function FeedbackList({ entries }: FeedbackListProps) {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <MessageSquare className="h-12 w-12 text-deep-navy-300 mb-4" />
-          <p className="text-body text-deep-navy-500">No feedback entries yet</p>
+          <p className="text-body text-deep-navy-700">No feedback entries yet</p>
         </CardContent>
       </Card>
     );
@@ -57,7 +57,7 @@ function FeedbackList({ entries }: FeedbackListProps) {
                   {formatDate(entry.timestamp)}
                 </Badge>
               </div>
-              <div className="flex items-center gap-3 text-caption text-deep-navy-500">
+              <div className="flex items-center gap-3 text-caption text-deep-navy-700">
                 {entry.email && (
                   <span>Email: {entry.email}</span>
                 )}

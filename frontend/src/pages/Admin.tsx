@@ -5,7 +5,7 @@ import MetricsCard from '@/components/admin/MetricsCard';
 import FeedbackList from '@/components/admin/FeedbackList';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Button from '@/components/common/Button';
-import { Download, MessageSquare, HardDrive, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Download, MessageSquare, HardDrive, RefreshCw, ArrowLeft, Settings, DollarSign, TrendingUp, Bell, BarChart3 } from 'lucide-react';
 
 function Admin() {
   const { metrics, isLoading, error, refetch } = useMetrics();
@@ -75,7 +75,7 @@ function Admin() {
                 Back to Home
               </Link>
               <h1 className="text-h1 font-bold text-deep-navy-800">Rephlo Metrics Dashboard</h1>
-              <p className="text-body text-deep-navy-500 mt-1">
+              <p className="text-body text-deep-navy-700 mt-1">
                 Real-time insights into downloads, feedback, and diagnostics
               </p>
             </div>
@@ -89,6 +89,102 @@ function Admin() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Admin Actions */}
+        <div className="mb-8">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 mb-4">Administration</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link to="/admin/model-tiers">
+              <div className="bg-white border border-deep-navy-200 rounded-lg p-6 hover:shadow-md transition-all duration-fast cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-rephlo-blue/10 rounded-lg group-hover:bg-rephlo-blue/20 transition-colors">
+                    <Settings className="h-6 w-6 text-rephlo-blue" />
+                  </div>
+                  <div>
+                    <h3 className="text-h4 font-semibold text-deep-navy-800">
+                      Model Tier Management
+                    </h3>
+                    <p className="text-body-sm text-deep-navy-700">
+                      Configure subscription tiers for AI models
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/admin/pricing-configuration">
+              <div className="bg-white border border-deep-navy-200 rounded-lg p-6 hover:shadow-md transition-all duration-fast cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-h4 font-semibold text-deep-navy-800">
+                      Pricing Configuration
+                    </h3>
+                    <p className="text-body-sm text-deep-navy-700">
+                      Manage margin multipliers and pricing
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/admin/pricing-simulation">
+              <div className="bg-white border border-deep-navy-200 rounded-lg p-6 hover:shadow-md transition-all duration-fast cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
+                    <TrendingUp className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-h4 font-semibold text-deep-navy-800">
+                      Pricing Simulation
+                    </h3>
+                    <p className="text-body-sm text-deep-navy-700">
+                      What-if analysis for pricing changes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/admin/vendor-price-monitoring">
+              <div className="bg-white border border-deep-navy-200 rounded-lg p-6 hover:shadow-md transition-all duration-fast cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-amber-100 rounded-lg group-hover:bg-amber-200 transition-colors">
+                    <Bell className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-h4 font-semibold text-deep-navy-800">
+                      Vendor Price Monitoring
+                    </h3>
+                    <p className="text-body-sm text-deep-navy-700">
+                      Track and respond to vendor price changes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            <Link to="/admin/margin-tracking">
+              <div className="bg-white border border-deep-navy-200 rounded-lg p-6 hover:shadow-md transition-all duration-fast cursor-pointer group">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-electric-cyan/10 rounded-lg group-hover:bg-electric-cyan/20 transition-colors">
+                    <BarChart3 className="h-6 w-6 text-electric-cyan-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-h4 font-semibold text-deep-navy-800">
+                      Margin Tracking
+                    </h3>
+                    <p className="text-body-sm text-deep-navy-700">
+                      Real-time profitability monitoring
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
         {/* Loading State */}
         {isLoading && !metrics && (
           <div className="flex items-center justify-center py-20">
@@ -122,19 +218,19 @@ function Admin() {
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="text-deep-navy-500">Windows</span>
+                    <span className="text-deep-navy-700">Windows</span>
                     <span className="font-semibold text-deep-navy-800">
                       {metrics.downloads.windows.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="text-deep-navy-500">macOS</span>
+                    <span className="text-deep-navy-700">macOS</span>
                     <span className="font-semibold text-deep-navy-800">
                       {metrics.downloads.macos.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
-                    <span className="text-deep-navy-500">Linux</span>
+                    <span className="text-deep-navy-700">Linux</span>
                     <span className="font-semibold text-deep-navy-800">
                       {metrics.downloads.linux.toLocaleString()}
                     </span>

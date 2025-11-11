@@ -1,6 +1,7 @@
-// Prisma Schema for Rephlo Branding Website
+// Prisma Schema for Rephlo Backend
 // Database: PostgreSQL
 // Generated: November 2025
+// Updated: November 2025 - Added Dedicated API Backend schema
 
 generator client {
   provider = "prisma-client-js"
@@ -11,14 +12,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// =============================================================================
+// BRANDING WEBSITE MODELS (Legacy - Preserved)
+// =============================================================================
+
 // Download Tracking Model
 // Tracks each download event by OS platform
 model Download {
   id        String   @id @default(cuid())
-  os        String   // "windows", "macos", "linux"
+  os        String // "windows", "macos", "linux"
   timestamp DateTime @default(now())
-  userAgent String?  // Optional browser/client user agent
-  ipHash    String?  // Hashed IP for anonymity and privacy
+  userAgent String? // Optional browser/client user agent
+  ipHash    String? // Hashed IP for anonymity and privacy
 
   @@index([os])
   @@index([timestamp])
@@ -29,9 +34,9 @@ model Download {
 // Stores user feedback from website or desktop app
 model Feedback {
   id        String   @id @default(cuid())
-  userId    String?  // Optional user ID from desktop app
+  userId    String? // Optional user ID from desktop app
   message   String   @db.VarChar(1000) // Max 1000 characters per PRD
-  email     String?  // Optional email for follow-up
+  email     String? // Optional email for follow-up
   timestamp DateTime @default(now())
 
   @@index([timestamp])
@@ -44,9 +49,9 @@ model Feedback {
 // Note: Actual files stored in cloud storage (S3), only metadata here
 model Diagnostic {
   id        String   @id @default(cuid())
-  userId    String?  // Optional user ID from desktop app
-  filePath  String   // Path to file in cloud storage (e.g., S3 key)
-  fileSize  Int      // File size in bytes (max 5MB = 5242880 per PRD)
+  userId    String? // Optional user ID from desktop app
+  filePath  String // Path to file in cloud storage (e.g., S3 key)
+  fileSize  Int // File size in bytes (max 5MB = 5242880 per PRD)
   timestamp DateTime @default(now())
 
   @@index([timestamp])
@@ -60,11 +65,2061 @@ model AppVersion {
   id          String   @id @default(cuid())
   version     String   @unique // e.g., "1.0.0", "1.1.0-beta"
   releaseDate DateTime // When this version was released
-  downloadUrl String   // URL to binary file (e.g., S3, GitHub Releases)
+  downloadUrl String // URL to binary file (e.g., S3, GitHub Releases)
   changelog   String   @db.Text // Markdown-formatted release notes
   isLatest    Boolean  @default(true) // Flag for current production version
   createdAt   DateTime @default(now())
 
   @@index([isLatest])
   @@map("app_versions")
+}
+
+// =============================================================================
+// DEDICATED API BACKEND MODELS (New)
+// =============================================================================
+
+// Enums for subscription and usage tracking
+enum SubscriptionTier {
+  free
+  pro
+  pro_max
+  enterprise_pro
+  enterprise_max
+  perpetual
+
+  @@map("subscription_tier")
+}
+
+enum SubscriptionStatus {
+  trial
+  active
+  past_due
+  cancelled
+  expired
+  suspended
+  grace_period
+
+  @@map("subscription_status")
+}
+
+enum UsageOperation {
+  completion
+  chat
+  embedding
+  function_call
+
+  @@map("usage_operation")
+}
+
+enum ModelCapability {
+  text
+  vision
+  function_calling
+  code
+  long_context
+
+  @@map("model_capability")
+}
+
+// Plan 112 Token-to-Credit Conversion Enums
+enum VendorName {
+  openai
+  anthropic
+  google
+  meta
+  mistral
+  cohere
+
+  @@map("vendor_name")
+}
+
+enum MarginStrategy {
+  fixed_percentage
+  tiered
+  dynamic
+
+  @@map("margin_strategy")
+}
+
+enum DeductionType {
+  inference
+  embedding
+  fine_tuning
+  custom
+
+  @@map("deduction_type")
+}
+
+// Token-to-Credit Migration Enums (from 20251109000000_add_token_credit_conversion_system)
+enum PricingConfigScopeType {
+  tier
+  provider
+  model
+  combination
+
+  @@map("pricing_config_scope_type")
+}
+
+enum PricingConfigReason {
+  initial_setup
+  vendor_price_change
+  tier_optimization
+  margin_protection
+  manual_adjustment
+
+  @@map("pricing_config_reason")
+}
+
+enum PricingConfigApprovalStatus {
+  pending
+  approved
+  rejected
+
+  @@map("pricing_config_approval_status")
+}
+
+enum RequestType {
+  completion
+  streaming
+  batch
+
+  @@map("request_type")
+}
+
+enum RequestStatus {
+  success
+  failed
+  cancelled
+  rate_limited
+
+  @@map("request_status")
+}
+
+enum CreditDeductionReason {
+  api_completion
+  subscription_allocation
+  manual_adjustment
+  refund
+  overage
+  bonus
+  referral
+  coupon
+
+  @@map("credit_deduction_reason")
+}
+
+enum CreditDeductionStatus {
+  pending
+  completed
+  reversed
+
+  @@map("credit_deduction_status")
+}
+
+enum CreditSourceType {
+  monthly_allocation
+  referral_reward
+  coupon_promotion
+  bonus
+  refund
+  admin_grant
+
+  @@map("credit_source_type")
+}
+
+// Plan 129 Gap Closure - User Status Enum
+enum UserStatus {
+  active
+  suspended
+  banned
+  deleted
+
+  @@map("user_status")
+}
+
+// Users Table
+// Stores user account information for authentication and profile management
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique @db.VarChar(255)
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  username          String?   @db.VarChar(100)
+  passwordHash      String?   @map("password_hash") @db.VarChar(255)
+  firstName         String?   @map("first_name") @db.VarChar(100)
+  lastName          String?   @map("last_name") @db.VarChar(100)
+  profilePictureUrl String?   @map("profile_picture_url") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  lastLoginAt       DateTime? @map("last_login_at")
+  isActive          Boolean   @default(true) @map("is_active")
+  deletedAt         DateTime? @map("deleted_at")
+
+  // Email Verification Fields
+  emailVerificationToken       String?   @map("email_verification_token") @db.VarChar(255)
+  emailVerificationTokenExpiry DateTime? @map("email_verification_token_expiry")
+
+  // Password Reset Fields
+  passwordResetToken       String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetTokenExpiry DateTime? @map("password_reset_token_expiry")
+
+  // Account Management Fields
+  deactivatedAt DateTime? @map("deactivated_at")
+
+  // Plan 129 Gap Closure - Status & LTV Fields
+  status                    UserStatus @default(active)
+  suspendedUntil            DateTime?  @map("suspended_until")
+  bannedAt                  DateTime?  @map("banned_at")
+  lifetimeValue             Int        @default(0) @map("lifetime_value") // In cents
+
+  // Plan 110 - Perpetual License Flag
+  hasActivePerpetualLicense Boolean    @default(false) @map("has_active_perpetual_license")
+
+  // Social Auth Fields
+  googleId         String? @unique @map("google_id") @db.VarChar(255)
+  googleProfileUrl String? @map("google_profile_url") @db.Text
+  authProvider     String  @default("local") @map("auth_provider") @db.VarChar(50)
+
+  // Security/Audit Fields
+  lastPasswordChange DateTime? @map("last_password_change")
+  passwordResetCount Int       @default(0) @map("password_reset_count")
+
+  // Role-Based Access Control
+  role String @default("user") @map("role") @db.VarChar(20)
+  // Values: "user", "admin"
+
+  // Multi-Factor Authentication (MFA) Fields
+  mfaSecret      String?   @map("mfa_secret") @db.VarChar(255)
+  // TOTP secret (base32 encoded)
+  mfaEnabled     Boolean   @default(false) @map("mfa_enabled")
+  // Whether MFA is enabled for this user
+  mfaBackupCodes String?   @map("mfa_backup_codes") @db.Text
+  // JSON string of hashed backup codes for account recovery
+  mfaVerifiedAt  DateTime? @map("mfa_verified_at")
+  // Timestamp when MFA was last verified
+  mfaMethod      String?   @map("mfa_method") @db.VarChar(20)
+  // MFA method: "totp" (Time-based One-Time Password)
+
+  // Relations
+  subscriptions      Subscription[]
+  credits            Credit[]
+  usageHistory       UsageHistory[]
+  userPreferences    UserPreference?
+  webhookConfigs     WebhookConfig[]
+  modelTierAuditLogs ModelTierAuditLog[] @relation("ModelTierAuditLogs")
+
+  // Plan 109 Subscription Monetization Relations
+  subscriptionMonetization SubscriptionMonetization[] @relation("UserSubscriptionMonetization")
+  creditAllocations        CreditAllocation[]         @relation("UserCreditAllocation")
+  billingInvoices          BillingInvoice[]           @relation("UserBillingInvoice")
+  paymentTransactions      PaymentTransaction[]       @relation("UserPaymentTransaction")
+  dunningAttempts          DunningAttempt[]           @relation("UserDunningAttempt")
+
+  // Plan 110 Perpetual Licensing Relations
+  perpetualLicenses  PerpetualLicense[]  @relation("UserPerpetualLicense")
+  licenseActivations LicenseActivation[] @relation("UserLicenseActivation")
+  versionUpgrades    VersionUpgrade[]    @relation("UserVersionUpgrade")
+  prorationEvents    ProrationEvent[]    @relation("UserProrationEvent")
+
+  // Plan 112 Token-to-Credit Conversion Relations
+  credit_balance                UserCreditBalance?
+  token_usage                   TokenUsageLedger[]
+  credit_deductions             CreditDeductionLedger[]
+  credit_deductions_reversed_by CreditDeductionLedger[]  @relation("ReversedBy")
+  token_usage_summaries         TokenUsageDailySummary[]
+  credit_usage_summaries        CreditUsageDailySummary[]
+  margin_audit_logs             MarginAuditLog[]
+  pricing_configs_created       PricingConfig[]          @relation("PricingConfigCreatedBy")
+  pricing_configs_approved      PricingConfig[]          @relation("PricingConfigApprovedBy")
+
+  // Admin Audit Logging Relation (Phase 4 P0 Fixes)
+  admin_audit_logs AdminAuditLog[] @relation("AdminAuditLogs")
+
+  // Plan 119 RBAC System Relations
+  userRoleAssignments     UserRoleAssignment[]   @relation("UserRoleAssignments")
+  roleAssignedByUser      UserRoleAssignment[]   @relation("AssignedRolesByUser")
+  permissionOverrides     PermissionOverride[]   @relation("PermissionOverrides")
+  permissionGrantedByUser PermissionOverride[]   @relation("GrantedPermissionsByUser")
+  roleChangeLogs          RoleChangeLog[]        @relation("RoleChangeLogs_TargetUser")
+  roleChangedByUser       RoleChangeLog[]        @relation("RoleChangeLogs_ChangedBy")
+
+  // Plan 129 Gap Closure - RBAC Enhancement Relations
+  approvalRequests     ApprovalRequest[] @relation("ApprovalRequester")
+  approvalReviews      ApprovalRequest[] @relation("ApprovalReviewer")
+  ipWhitelists         IPWhitelist[]     @relation("UserIPWhitelist")
+  suspensions          UserSuspension[]  @relation("UserSuspensions")
+  suspendedUsers       UserSuspension[]  @relation("SuspenderActions")
+  liftedSuspensions    UserSuspension[]  @relation("LifterActions")
+
+  @@index([email])
+  @@index([createdAt])
+  @@index([googleId])
+  @@index([role])
+  @@index([mfaEnabled])
+  @@map("users")
+}
+
+// OAuth Clients Table
+// Stores OAuth 2.0 client configurations (e.g., desktop app, web app)
+// Uses JSON config field for extensibility without schema migrations
+model OAuthClient {
+  clientId         String   @id @map("client_id") @db.VarChar(255)
+  clientName       String   @map("client_name") @db.VarChar(255)
+  clientSecretHash String?  @map("client_secret_hash") @db.VarChar(255)
+  redirectUris     String[] @map("redirect_uris")
+  grantTypes       String[] @map("grant_types")
+  responseTypes    String[] @map("response_types")
+  scope            String?  @db.Text
+  isActive         Boolean  @default(true) @map("is_active")
+  config           Json     @default("{}") @map("config")
+  // Flexible JSON field for client-specific configuration:
+  // {
+  //   "skipConsentScreen": true,          // Skip consent & auto-approve after login
+  //   "allowedOrigins": ["https://..."],  // Additional CORS origins
+  //   "description": "...",                // Client description
+  //   "tags": ["tag1", "tag2"],            // For categorization
+  //   "...": "..."                         // Any future fields
+  // }
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("oauth_clients")
+}
+
+// Subscriptions Table
+// Manages user subscription tiers, billing, and status
+// Enhanced with Stripe integration and cancellation tracking
+model Subscription {
+  id              String             @id @default(uuid()) @db.Uuid
+  userId          String             @map("user_id") @db.Uuid
+  tier            SubscriptionTier
+  status          SubscriptionStatus @default(active)
+  creditsPerMonth Int                @map("credits_per_month")
+  creditsRollover Boolean            @default(false) @map("credits_rollover")
+  priceCents      Int                @map("price_cents")
+  billingInterval String             @map("billing_interval") @db.VarChar(20)
+
+  // Stripe Integration Fields (Enhanced)
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripePriceId        String? @map("stripe_price_id") @db.VarChar(255)
+
+  // Billing Period Fields
+  currentPeriodStart DateTime  @map("current_period_start")
+  currentPeriodEnd   DateTime  @map("current_period_end")
+  trialEnd           DateTime? @map("trial_end")
+
+  // Cancellation Tracking (Enhanced)
+  cancelAtPeriodEnd Boolean   @default(false) @map("cancel_at_period_end")
+  cancelledAt       DateTime? @map("cancelled_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credits           Credit[]
+  tokenUsageLedgers TokenUsageLedger[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+// Credits Table
+// Tracks credit allocation and usage per billing period
+// Enhanced with credit type tracking (free vs pro) and monthly allocation
+model Credit {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  subscriptionId     String?  @map("subscription_id") @db.Uuid
+  totalCredits       Int      @map("total_credits")
+  usedCredits        Int      @default(0) @map("used_credits")
+  billingPeriodStart DateTime @map("billing_period_start")
+  billingPeriodEnd   DateTime @map("billing_period_end")
+  isCurrent          Boolean  @default(true) @map("is_current")
+
+  // NEW FIELDS for Enhanced Credits Tracking
+  creditType        String @default("free") @map("credit_type") @db.VarChar(10)
+  // Values: 'free' | 'pro'
+  monthlyAllocation Int    @default(2000) @map("monthly_allocation")
+  // Free tier: 2000, Pro tier: configurable
+  resetDayOfMonth   Int    @default(1) @map("reset_day_of_month")
+  // Day of month when credits reset (1-31)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  usageHistory UsageHistory[]
+
+  @@index([userId])
+  @@index([userId, isCurrent])
+  @@index([userId, creditType, isCurrent], name: "idx_credits_user_type_current")
+  @@index([billingPeriodStart, billingPeriodEnd])
+  @@map("credits")
+}
+
+// Usage History Table
+// Records detailed usage logs for each API request
+model UsageHistory {
+  id                String         @id @default(uuid()) @db.Uuid
+  userId            String         @map("user_id") @db.Uuid
+  creditId          String?        @map("credit_id") @db.Uuid
+  modelId           String         @map("model_id") @db.VarChar(100)
+  operation         UsageOperation
+  creditsUsed       Int            @map("credits_used")
+  inputTokens       Int?           @map("input_tokens")
+  outputTokens      Int?           @map("output_tokens")
+  totalTokens       Int?           @map("total_tokens")
+  requestDurationMs Int?           @map("request_duration_ms")
+  requestMetadata   Json?          @map("request_metadata")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credit Credit? @relation(fields: [creditId], references: [id], onDelete: SetNull)
+  model  Model   @relation(fields: [modelId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([modelId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("usage_history")
+}
+
+// Models Table
+// Stores available LLM models with pricing and capability information
+model Model {
+  id                         String            @id @db.VarChar(100)
+  name                       String            @db.VarChar(255)
+  displayName                String            @map("display_name") @db.VarChar(255)
+  provider                   String            @db.VarChar(100)
+  description                String?           @db.Text
+  capabilities               ModelCapability[]
+  contextLength              Int               @map("context_length")
+  maxOutputTokens            Int?              @map("max_output_tokens")
+  inputCostPerMillionTokens  Int               @map("input_cost_per_million_tokens")
+  outputCostPerMillionTokens Int               @map("output_cost_per_million_tokens")
+  creditsPer1kTokens         Int               @map("credits_per_1k_tokens")
+  isAvailable                Boolean           @default(true) @map("is_available")
+  isDeprecated               Boolean           @default(false) @map("is_deprecated")
+  version                    String?           @db.VarChar(50)
+  createdAt                  DateTime          @default(now()) @map("created_at")
+  updatedAt                  DateTime          @updatedAt @map("updated_at")
+
+  // Tier Access Control Fields (Added: 2025-11-08)
+  requiredTier        SubscriptionTier   @default(free) @map("required_tier")
+  // Minimum tier required to access this model
+  tierRestrictionMode String             @default("minimum") @map("tier_restriction_mode") @db.VarChar(20)
+  // "minimum" = tier >= requiredTier, "exact" = tier == requiredTier, "whitelist" = use allowedTiers
+  allowedTiers        SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("allowed_tiers")
+  // Explicit whitelist of allowed tiers (used when mode = "whitelist")
+
+  // Relations
+  usageHistory    UsageHistory[]
+  userPreferences UserPreference[]
+  auditLogs       ModelTierAuditLog[]
+
+  @@index([isAvailable])
+  @@index([provider])
+  @@index([requiredTier])
+  @@index([isAvailable, requiredTier])
+  @@map("models")
+}
+
+// User Preferences Table
+// Stores user-specific preferences and default settings
+// Enhanced with notification and alert preferences
+model UserPreference {
+  userId          String  @id @map("user_id") @db.Uuid
+  defaultModelId  String? @map("default_model_id") @db.VarChar(100)
+  enableStreaming Boolean @default(true) @map("enable_streaming")
+  maxTokens       Int     @default(4096) @map("max_tokens")
+  temperature     Decimal @default(0.7) @db.Decimal(3, 2)
+
+  // NEW FIELDS for Enhanced User Profile
+  emailNotifications Boolean @default(true) @map("email_notifications")
+  // Whether user receives email notifications
+  usageAlerts        Boolean @default(true) @map("usage_alerts")
+  // Whether user receives usage threshold alerts
+
+  preferencesMetadata Json?    @map("preferences_metadata")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultModel Model? @relation(fields: [defaultModelId], references: [id])
+
+  @@map("user_preferences")
+}
+
+// Webhook Config Table
+// Stores user webhook endpoint configurations for event notifications
+model WebhookConfig {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  webhookUrl    String   @map("webhook_url") @db.VarChar(2048)
+  webhookSecret String   @map("webhook_secret") @db.VarChar(255)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs WebhookLog[]
+
+  @@unique([userId]) // One webhook config per user
+  @@index([userId])
+  @@index([isActive])
+  @@map("webhook_configs")
+}
+
+// Webhook Log Table
+// Tracks webhook delivery attempts, responses, and failures
+model WebhookLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  webhookConfigId String    @map("webhook_config_id") @db.Uuid
+  eventType       String    @map("event_type") @db.VarChar(100)
+  payload         Json
+  status          String    @db.VarChar(20) // "success", "failed", "pending"
+  statusCode      Int?      @map("status_code")
+  responseBody    String?   @map("response_body") @db.Text
+  errorMessage    String?   @map("error_message") @db.Text
+  attempts        Int       @default(1)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+
+  // Relations
+  webhookConfig WebhookConfig @relation(fields: [webhookConfigId], references: [id], onDelete: Cascade)
+
+  @@index([webhookConfigId])
+  @@index([eventType])
+  @@index([status])
+  @@index([createdAt])
+  @@map("webhook_logs")
+}
+
+// Model Tier Audit Log Table
+// Tracks all changes to model tier configurations for compliance and auditing
+model ModelTierAuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  modelId       String   @map("model_id") @db.VarChar(100)
+  adminUserId   String   @map("admin_user_id") @db.Uuid
+  changeType    String   @map("change_type") @db.VarChar(50)
+  // Values: "tier_update", "restriction_mode_update", "allowed_tiers_update"
+  previousValue Json?    @map("previous_value")
+  newValue      Json     @map("new_value")
+  reason        String?  @db.Text
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  model Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  admin User  @relation("ModelTierAuditLogs", fields: [adminUserId], references: [id])
+
+  @@index([modelId])
+  @@index([adminUserId])
+  @@index([createdAt])
+  @@map("model_tier_audit_logs")
+}
+
+// =============================================================================
+// SUBSCRIPTION MONETIZATION SYSTEM (Plan 109)
+// Integrated with Token-to-Credit Conversion (Plan 112)
+// =============================================================================
+
+// Subscription Table
+// Manages user subscription lifecycle with Stripe integration
+// Links to credit_allocation for monthly credit grants
+model SubscriptionMonetization {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // Subscription Details
+  tier         String @db.VarChar(50)
+  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
+  billingCycle String @map("billing_cycle") @db.VarChar(20)
+  // Values: 'monthly', 'annual', 'lifetime' (for perpetual)
+  status       String @db.VarChar(20)
+  // Values: 'trial', 'active', 'past_due', 'cancelled', 'expired'
+
+  // Pricing
+  basePriceUsd            Decimal @map("base_price_usd") @db.Decimal(10, 2)
+  monthlyCreditAllocation Int     @map("monthly_credit_allocation")
+
+  // Stripe Integration
+  stripeCustomerId     String? @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id") @db.VarChar(255)
+
+  // Billing Period
+  currentPeriodStart DateTime  @map("current_period_start")
+  currentPeriodEnd   DateTime  @map("current_period_end")
+  trialEndsAt        DateTime? @map("trial_ends_at")
+
+  // Cancellation Tracking
+  cancelledAt DateTime? @map("cancelled_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user                User                 @relation("UserSubscriptionMonetization", fields: [userId], references: [id], onDelete: Cascade)
+  creditAllocations   CreditAllocation[]
+  billingInvoices     BillingInvoice[]
+  paymentTransactions PaymentTransaction[]
+  dunningAttempts     DunningAttempt[]
+
+  // Plan 110 Perpetual Licensing Relations
+  prorationEvents ProrationEvent[]
+
+  // Plan 111 Coupon System Relations
+  couponRedemptions CouponRedemption[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([tier])
+  @@index([currentPeriodEnd])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@map("subscription_monetization")
+}
+
+// Subscription Tier Configuration Table
+// Defines tier pricing, credit allocations, and features
+// Managed via admin UI for dynamic pricing adjustments
+model SubscriptionTierConfig {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Tier Identification
+  tierName String @unique @map("tier_name") @db.VarChar(50)
+  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
+
+  // Pricing
+  monthlyPriceUsd Decimal @map("monthly_price_usd") @db.Decimal(10, 2)
+  annualPriceUsd  Decimal @map("annual_price_usd") @db.Decimal(10, 2)
+
+  // Credit Allocation
+  monthlyCreditAllocation Int @map("monthly_credit_allocation")
+  maxCreditRollover       Int @map("max_credit_rollover")
+  // Maximum credits that can roll over to next month
+
+  // Features (JSONB for flexibility)
+  features Json @default("{}")
+  // Example: {"apiAccess": true, "prioritySupport": true, "maxProjects": 10}
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("subscription_tier_config")
+}
+
+// Credit Allocation Table
+// Tracks monthly credit grants to users
+// Links to user_credit_balance from Plan 112 for actual balance tracking
+model CreditAllocation {
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Allocation Details
+  amount                Int
+  allocationPeriodStart DateTime @map("allocation_period_start")
+  allocationPeriodEnd   DateTime @map("allocation_period_end")
+
+  // Source Tracking
+  source String @db.VarChar(50)
+  // Values: 'subscription', 'bonus', 'admin_grant', 'referral', 'coupon'
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user         User                      @relation("UserCreditAllocation", fields: [userId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([allocationPeriodStart, allocationPeriodEnd])
+  @@index([source])
+  @@map("credit_allocation")
+}
+
+// Billing Invoice Table
+// Stores Stripe invoice records for subscription billing
+// Provides audit trail and reconciliation with Stripe
+model BillingInvoice {
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Stripe Integration
+  stripeInvoiceId String @unique @map("stripe_invoice_id") @db.VarChar(255)
+
+  // Invoice Details
+  amountDue  Decimal @map("amount_due") @db.Decimal(10, 2)
+  amountPaid Decimal @map("amount_paid") @db.Decimal(10, 2)
+  currency   String  @default("usd") @db.VarChar(3)
+  status     String  @db.VarChar(20)
+  // Values: 'draft', 'open', 'paid', 'void', 'uncollectible'
+
+  // Billing Period
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  // Stripe URLs
+  invoicePdf       String? @map("invoice_pdf") @db.Text
+  hostedInvoiceUrl String? @map("hosted_invoice_url") @db.Text
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at")
+  paidAt    DateTime? @map("paid_at")
+
+  // Relations
+  user                User                      @relation("UserBillingInvoice", fields: [userId], references: [id], onDelete: Cascade)
+  subscription        SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  paymentTransactions PaymentTransaction[]
+  dunningAttempts     DunningAttempt[]
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([stripeInvoiceId])
+  @@index([status])
+  @@index([periodStart, periodEnd])
+  @@map("billing_invoice")
+}
+
+// Payment Transaction Table
+// Records all payment attempts and completions
+// Links to billing_invoice for payment history
+model PaymentTransaction {
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  invoiceId      String? @map("invoice_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Stripe Integration
+  stripePaymentIntentId String @unique @map("stripe_payment_intent_id") @db.VarChar(255)
+
+  // Transaction Details
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("usd") @db.VarChar(3)
+  status   String  @db.VarChar(20)
+  // Values: 'pending', 'succeeded', 'failed', 'cancelled', 'refunded'
+
+  // Payment Method
+  paymentMethodType String? @map("payment_method_type") @db.VarChar(50)
+  // Values: 'card', 'bank_account', 'paypal', etc.
+
+  // Failure Tracking
+  failureReason String? @map("failure_reason") @db.Text
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Relations
+  user         User                      @relation("UserPaymentTransaction", fields: [userId], references: [id], onDelete: Cascade)
+  invoice      BillingInvoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([subscriptionId])
+  @@index([stripePaymentIntentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payment_transaction")
+}
+
+// Dunning Attempt Table
+// Tracks failed payment retry attempts (dunning management)
+// Implements automatic retry logic for failed payments
+model DunningAttempt {
+  id             String  @id @default(uuid()) @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  invoiceId      String  @map("invoice_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Retry Details
+  attemptNumber Int       @map("attempt_number")
+  scheduledAt   DateTime  @map("scheduled_at")
+  attemptedAt   DateTime? @map("attempted_at")
+
+  // Result Tracking
+  result        String? @db.VarChar(20)
+  // Values: 'success', 'failed', 'pending', 'skipped'
+  failureReason String? @map("failure_reason") @db.Text
+
+  // Next Retry
+  nextRetryAt DateTime? @map("next_retry_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user         User                      @relation("UserDunningAttempt", fields: [userId], references: [id], onDelete: Cascade)
+  invoice      BillingInvoice            @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([subscriptionId])
+  @@index([scheduledAt])
+  @@index([result])
+  @@map("dunning_attempt")
+}
+
+// =============================================================================
+// PERPETUAL LICENSING SYSTEM (Plan 110)
+// Integrated with Subscription Monetization (Plan 109) and Token-to-Credit (Plan 112)
+// =============================================================================
+
+// Enums for Perpetual Licensing
+enum LicenseStatus {
+  pending // License created but not yet activated
+  active // License active and in use
+  suspended // Temporarily suspended (payment issues, policy violations)
+  revoked // Permanently revoked (fraud, abuse)
+  expired // Version support ended (v1.x EOL)
+
+  @@map("license_status")
+}
+
+enum ActivationStatus {
+  active // Device is actively using the license
+  deactivated // User manually deactivated
+  replaced // Device replaced by new activation
+
+  @@map("activation_status")
+}
+
+enum UpgradeStatus {
+  pending // Upgrade payment initiated but not completed
+  completed // Upgrade payment completed and applied
+  failed // Payment failed
+  refunded // Upgrade refunded
+
+  @@map("upgrade_status")
+}
+
+enum ProrationEventType {
+  upgrade // User upgraded to higher tier
+  downgrade // User downgraded to lower tier
+  interval_change // Monthly to Annual or vice versa
+  migration // Perpetual to Subscription or vice versa
+  cancellation // User cancelled subscription
+
+  @@map("proration_event_type")
+}
+
+enum ProrationStatus {
+  pending // Proration calculated but not yet applied
+  applied // Proration applied to Stripe invoice
+  failed // Proration application failed
+  reversed // Proration reversed (refund/adjustment)
+
+  @@map("proration_status")
+}
+
+// Perpetual License Table
+// Manages one-time perpetual license purchases with version eligibility tracking
+// Links to User for ownership and subscription_monetization for migrations
+model PerpetualLicense {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  // License Key (Format: REPHLO-XXXX-XXXX-XXXX-XXXX)
+  licenseKey String @unique @map("license_key") @db.VarChar(50)
+
+  // Purchase Details
+  purchasePriceUsd Decimal @map("purchase_price_usd") @db.Decimal(10, 2)
+  purchasedVersion String  @map("purchased_version") @db.VarChar(50)
+  // SemVer format: "1.0.0", "2.0.0"
+
+  // Version Eligibility (SemVer)
+  eligibleUntilVersion String @map("eligible_until_version") @db.VarChar(50)
+  // Example: "1.99.99" means free updates to all v1.x releases
+
+  // Activation Limits
+  maxActivations     Int @default(3) @map("max_activations")
+  currentActivations Int @default(0) @map("current_activations")
+
+  // Status
+  status LicenseStatus @default(pending)
+
+  // Dates
+  purchasedAt DateTime  @default(now()) @map("purchased_at")
+  activatedAt DateTime? @map("activated_at")
+  expiresAt   DateTime? @map("expires_at")
+  // NULL for perpetual, set for EOL date (e.g., v1.x EOL after v2.0 launch + 12 months)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user            User                @relation("UserPerpetualLicense", fields: [userId], references: [id], onDelete: Cascade)
+  activations     LicenseActivation[]
+  versionUpgrades VersionUpgrade[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([licenseKey])
+  @@index([purchasedAt])
+  @@map("perpetual_license")
+}
+
+// License Activation Table
+// Tracks device activations with machine fingerprinting for fraud prevention
+// Implements 3-device limit per license with deactivation support
+model LicenseActivation {
+  id        String @id @default(uuid()) @db.Uuid
+  licenseId String @map("license_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  // Machine Fingerprinting (SHA-256 hash)
+  machineFingerprint String @map("machine_fingerprint") @db.VarChar(64)
+  // SHA-256 hash of: CPU ID + MAC address + disk serial + OS version
+
+  // Device Information
+  deviceName String? @map("device_name") @db.VarChar(255)
+  osType     String? @map("os_type") @db.VarChar(50)
+  // Values: "Windows", "macOS", "Linux"
+  osVersion  String? @map("os_version") @db.VarChar(100)
+  cpuInfo    String? @map("cpu_info") @db.VarChar(255)
+
+  // Activation Tracking
+  activatedAt   DateTime  @default(now()) @map("activated_at")
+  lastSeenAt    DateTime  @updatedAt @map("last_seen_at")
+  deactivatedAt DateTime? @map("deactivated_at")
+
+  // Status
+  status ActivationStatus @default(active)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  license PerpetualLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  user    User             @relation("UserLicenseActivation", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([licenseId, machineFingerprint], name: "unique_license_machine")
+  @@index([licenseId])
+  @@index([userId])
+  @@index([machineFingerprint])
+  @@index([status])
+  @@index([activatedAt])
+  @@map("license_activation")
+}
+
+// Version Upgrade Table
+// Tracks major version upgrade purchases (e.g., v1.x → v2.0 for $99)
+// Implements SemVer upgrade eligibility and payment tracking
+model VersionUpgrade {
+  id        String @id @default(uuid()) @db.Uuid
+  licenseId String @map("license_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+
+  // Version Details (SemVer)
+  fromVersion String @map("from_version") @db.VarChar(50)
+  // Example: "1.9.5"
+  toVersion   String @map("to_version") @db.VarChar(50)
+  // Example: "2.0.0"
+
+  // Pricing
+  upgradePriceUsd Decimal @map("upgrade_price_usd") @db.Decimal(10, 2)
+  // Standard: $99, Early bird: $79, Loyalty: $69
+
+  // Stripe Payment Integration
+  stripePaymentIntentId String? @unique @map("stripe_payment_intent_id") @db.VarChar(255)
+
+  // Status
+  status UpgradeStatus @default(pending)
+
+  // Timestamps
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  license PerpetualLicense @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  user    User             @relation("UserVersionUpgrade", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([licenseId])
+  @@index([userId])
+  @@index([fromVersion, toVersion])
+  @@index([status])
+  @@index([purchasedAt])
+  @@map("version_upgrade")
+}
+
+// Proration Event Table
+// Tracks mid-cycle tier changes with prorated credit calculations
+// Integrates with subscription_monetization for tier change billing
+model ProrationEvent {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @map("user_id") @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+
+  // Tier Change Details
+  fromTier String? @map("from_tier") @db.VarChar(50)
+  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
+  toTier   String? @map("to_tier") @db.VarChar(50)
+
+  // Change Type
+  changeType ProrationEventType @map("change_type")
+
+  // Billing Cycle Details
+  daysRemaining Int @map("days_remaining")
+  daysInCycle   Int @map("days_in_cycle")
+
+  // Proration Calculation (in USD)
+  unusedCreditValueUsd   Decimal @map("unused_credit_value_usd") @db.Decimal(10, 2)
+  // Credit from old tier: (days_remaining / days_in_cycle) × old_tier_price
+  newTierProratedCostUsd Decimal @map("new_tier_prorated_cost_usd") @db.Decimal(10, 2)
+  // Cost for new tier: (days_remaining / days_in_cycle) × new_tier_price
+  netChargeUsd           Decimal @map("net_charge_usd") @db.Decimal(10, 2)
+  // Net charge: new_tier_cost - unused_credit (positive = charge, negative = credit)
+
+  // Dates
+  effectiveDate DateTime @map("effective_date")
+
+  // Stripe Integration
+  stripeInvoiceId String? @unique @map("stripe_invoice_id") @db.VarChar(255)
+
+  // Status
+  status ProrationStatus @default(pending)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user         User                     @relation("UserProrationEvent", fields: [userId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([changeType])
+  @@index([effectiveDate])
+  @@index([status])
+  @@map("proration_event")
+}
+
+// =============================================================================
+// COUPON & DISCOUNT CODE SYSTEM (Plan 111)
+// Integrated with Subscription Monetization (Plan 109) and Perpetual Licensing (Plan 110)
+// =============================================================================
+
+// Enums for Coupon System
+enum CouponType {
+  percentage // Percentage off subscription price
+  fixed_amount // Fixed dollar amount off
+  tier_specific // Discount for specific tier upgrades
+  duration_bonus // Free additional months
+  perpetual_migration // Perpetual Plan migration discount
+
+  @@map("coupon_type")
+}
+
+enum DiscountType {
+  percentage // % discount (e.g., 25%)
+  fixed_amount // $ discount (e.g., $20)
+  credits // Credit allocation (e.g., 1000 credits)
+  months_free // Free months (e.g., 1 month)
+
+  @@map("discount_type")
+}
+
+enum CampaignType {
+  seasonal // Holiday campaigns (Black Friday, July 4)
+  win_back // Churned user re-engagement
+  referral // Referral program
+  promotional // Marketing campaigns
+  early_bird // New product launch
+
+  @@map("campaign_type")
+}
+
+enum RedemptionStatus {
+  success // Coupon successfully redeemed
+  failed // Redemption failed (validation error)
+  reversed // Redemption reversed (refund/chargeback)
+  pending // Redemption pending payment
+
+  @@map("redemption_status")
+}
+
+enum FraudDetectionType {
+  velocity_abuse // Multiple redemptions in short time
+  ip_switching // Same user, multiple IPs
+  bot_pattern // Automated bot-like behavior
+  device_fingerprint_mismatch // Device fingerprint inconsistency
+  stacking_abuse // Coupon stacking attempts
+
+  @@map("fraud_detection_type")
+}
+
+enum FraudSeverity {
+  low // Low risk, log only
+  medium // Medium risk, flag for review
+  high // High risk, block redemption
+  critical // Critical risk, ban user
+
+  @@map("fraud_severity")
+}
+
+enum ValidationRuleType {
+  first_time_user_only // Only for users who have never subscribed
+  specific_email_domain // Only for specific email domains
+  minimum_credit_balance // Requires minimum credit balance
+  exclude_refunded_users // Excludes users with refunds
+  require_payment_method // Requires valid payment method on file
+
+  @@map("validation_rule_type")
+}
+
+// Coupon Table
+// Core coupon configuration with pricing, limits, and tier eligibility
+// Links to campaigns for budget tracking and analytics
+model Coupon {
+  id   String @id @default(uuid()) @db.Uuid
+  code String @unique @map("code") @db.VarChar(50)
+  // Uppercase only: "JULY4LIBERTY", "BLACKFRIDAY50"
+  // Regex: ^[A-Z0-9]{4,50}$
+
+  // Coupon Type & Discount Configuration
+  couponType    CouponType   @map("coupon_type")
+  discountValue Decimal      @map("discount_value") @db.Decimal(10, 2)
+  // For percentage: 25.00 = 25%, For fixed_amount: 20.00 = $20
+  discountType  DiscountType @map("discount_type")
+  currency      String       @default("usd") @db.VarChar(3)
+
+  // Usage Limits
+  maxUses        Int? @map("max_uses")
+  // NULL = unlimited, otherwise max total redemptions
+  maxUsesPerUser Int  @default(1) @map("max_uses_per_user")
+  // Default: 1 use per user
+
+  // Eligibility Restrictions
+  minPurchaseAmount Decimal?           @map("min_purchase_amount") @db.Decimal(10, 2)
+  // Minimum cart value required
+  tierEligibility   SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("tier_eligibility")
+  // Tiers eligible to use this coupon
+  billingCycles     String[]           @default(["monthly", "annual"]) @map("billing_cycles")
+  // Applicable billing cycles
+
+  // Validity Period
+  validFrom  DateTime @map("valid_from")
+  validUntil DateTime @map("valid_until")
+  isActive   Boolean  @default(true) @map("is_active")
+
+  // Campaign Association
+  campaignId String? @map("campaign_id") @db.Uuid
+
+  // Description & Metadata
+  description   String? @db.Text
+  internalNotes String? @map("internal_notes") @db.Text
+
+  // Audit Fields
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  campaign           CouponCampaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  redemptions        CouponRedemption[]
+  usageLimits        CouponUsageLimit?
+  validationRules    CouponValidationRule[]
+  fraudDetections    CouponFraudDetection[]
+  analyticsSnapshots CouponAnalyticsSnapshot[]
+  campaignCoupons    CampaignCoupon[]
+
+  @@index([code, isActive])
+  @@index([validFrom, validUntil, isActive])
+  @@index([campaignId])
+  @@index([couponType])
+  @@map("coupon")
+}
+
+// Coupon Campaign Table
+// Manages promotional campaigns that group related coupons
+// Tracks budget limits and spending for ROI analysis
+model CouponCampaign {
+  id           String       @id @default(uuid()) @db.Uuid
+  campaignName String       @map("campaign_name") @db.VarChar(255)
+  campaignType CampaignType @map("campaign_type")
+
+  // Timing
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+
+  // Budget Management
+  budgetLimitUsd Decimal @map("budget_limit_usd") @db.Decimal(12, 2)
+  totalSpentUsd  Decimal @default(0) @map("total_spent_usd") @db.Decimal(12, 2)
+
+  // Targeting
+  targetTier SubscriptionTier? @map("target_tier")
+  // NULL = all tiers, otherwise specific tier
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Audit Fields
+  createdBy String   @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  coupons         Coupon[]
+  campaignCoupons CampaignCoupon[]
+
+  @@index([campaignType, isActive])
+  @@index([startDate, endDate])
+  @@index([targetTier])
+  @@map("coupon_campaign")
+}
+
+// Campaign Coupon Junction Table
+// Links campaigns to coupons (many-to-many relationship)
+// Allows coupons to be part of multiple campaigns
+model CampaignCoupon {
+  id         String @id @default(uuid()) @db.Uuid
+  campaignId String @map("campaign_id") @db.Uuid
+  couponId   String @map("coupon_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  campaign CouponCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  coupon   Coupon         @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, couponId], name: "unique_campaign_coupon")
+  @@index([campaignId])
+  @@index([couponId])
+  @@map("campaign_coupon")
+}
+
+// Coupon Redemption Table
+// Immutable ledger of all coupon usage with fraud detection metadata
+// Links to subscription_monetization for discount application
+model CouponRedemption {
+  id             String  @id @default(uuid()) @db.Uuid
+  couponId       String  @map("coupon_id") @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  subscriptionId String? @map("subscription_id") @db.Uuid
+
+  // Redemption Details
+  redemptionDate DateTime @default(now()) @map("redemption_date")
+
+  // Pricing Details
+  discountAppliedUsd Decimal @map("discount_applied_usd") @db.Decimal(10, 2)
+  originalAmountUsd  Decimal @map("original_amount_usd") @db.Decimal(10, 2)
+  finalAmountUsd     Decimal @map("final_amount_usd") @db.Decimal(10, 2)
+
+  // Redemption Status
+  redemptionStatus RedemptionStatus @map("redemption_status")
+  failureReason    String?          @map("failure_reason") @db.Text
+
+  // Fraud Detection Metadata
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent") @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  coupon       Coupon                    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  subscription SubscriptionMonetization? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([couponId, userId, redemptionDate])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([redemptionStatus])
+  @@index([redemptionDate])
+  @@map("coupon_redemption")
+}
+
+// Coupon Usage Limit Table
+// Tracks real-time usage counts per coupon for limit enforcement
+// Auto-incremented via triggers/transactions on redemption
+model CouponUsageLimit {
+  id       String @id @default(uuid()) @db.Uuid
+  couponId String @unique @map("coupon_id") @db.Uuid
+
+  // Usage Counters
+  totalUses               Int     @default(0) @map("total_uses")
+  uniqueUsers             Int     @default(0) @map("unique_users")
+  totalDiscountAppliedUsd Decimal @default(0) @map("total_discount_applied_usd") @db.Decimal(12, 2)
+
+  // Last Activity
+  lastUsedAt DateTime? @map("last_used_at")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([totalUses])
+  @@index([lastUsedAt])
+  @@map("coupon_usage_limit")
+}
+
+// Coupon Fraud Detection Table
+// Logs fraud detection events for security monitoring and pattern analysis
+// Integrates with CouponValidationService for real-time blocking
+model CouponFraudDetection {
+  id       String @id @default(uuid()) @db.Uuid
+  couponId String @map("coupon_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+
+  // Detection Details
+  detectionType FraudDetectionType @map("detection_type")
+  severity      FraudSeverity      @map("severity")
+  detectedAt    DateTime           @default(now()) @map("detected_at")
+
+  // Event Details (JSONB for flexibility)
+  details Json @db.Json
+  // Example: {"ip_addresses": ["1.2.3.4", "5.6.7.8"], "velocity": 5, "time_window": "1h"}
+
+  // Flag Status
+  isFlagged Boolean @default(false) @map("is_flagged")
+
+  // Review Status
+  reviewedBy String?   @map("reviewed_by") @db.Uuid
+  reviewedAt DateTime? @map("reviewed_at")
+  resolution String?   @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, severity, isFlagged])
+  @@index([userId])
+  @@index([detectionType])
+  @@index([detectedAt])
+  @@map("coupon_fraud_detection")
+}
+
+// Coupon Validation Rule Table
+// Custom validation rules per coupon for fine-grained eligibility control
+// Extensible via JSONB for rule_value configuration
+model CouponValidationRule {
+  id       String             @id @default(uuid()) @db.Uuid
+  couponId String             @map("coupon_id") @db.Uuid
+  ruleType ValidationRuleType @map("rule_type")
+
+  // Rule Configuration (JSONB for flexibility)
+  ruleValue Json @map("rule_value") @db.Json
+  // Examples:
+  // first_time_user_only: {}
+  // specific_email_domain: {"domains": ["company.com", "example.org"]}
+  // minimum_credit_balance: {"min_balance": 1000}
+  // exclude_refunded_users: {"days": 90}
+  // require_payment_method: {}
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, ruleType, isActive])
+  @@map("coupon_validation_rule")
+}
+
+// Coupon Analytics Snapshot Table
+// Daily aggregated metrics for campaign performance tracking
+// Generated via cron job for efficient dashboard queries
+model CouponAnalyticsSnapshot {
+  id           String   @id @default(uuid()) @db.Uuid
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+
+  // Aggregated Metrics
+  totalCouponsActive          Int     @map("total_coupons_active")
+  totalRedemptions            Int     @map("total_redemptions")
+  totalDiscountValueUsd       Decimal @map("total_discount_value_usd") @db.Decimal(12, 2)
+  avgDiscountPerRedemptionUsd Decimal @map("avg_discount_per_redemption_usd") @db.Decimal(10, 2)
+
+  // Top Performing Coupon
+  topCouponCode String? @map("top_coupon_code") @db.VarChar(50)
+
+  // Conversion Rate (%)
+  conversionRate Decimal @map("conversion_rate") @db.Decimal(5, 2)
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  coupon Coupon? @relation(fields: [topCouponCode], references: [code])
+
+  @@unique([snapshotDate])
+  @@index([snapshotDate])
+  @@map("coupon_analytics_snapshot")
+}
+
+// =============================================================================
+// TOKEN-TO-CREDIT CONVERSION SYSTEM (Plan 112)
+// Vendor pricing tracking, credit deduction, and margin management
+// =============================================================================
+
+// Provider Table
+// Registry of AI model vendors (OpenAI, Anthropic, Google, Azure)
+model Provider {
+  id         String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String                 @unique @db.VarChar(100)
+  apiType    String                 @map("api_type") @db.VarChar(50)
+  isEnabled  Boolean                @default(true) @map("is_enabled")
+  createdAt  DateTime               @default(now()) @map("created_at")
+  updatedAt  DateTime               @updatedAt @map("updated_at")
+
+  modelPricing       ModelProviderPricing[]
+  tokenUsageLedgers  TokenUsageLedger[]
+  pricingConfigs     PricingConfig[]
+
+  @@index([isEnabled])
+  @@map("providers")
+}
+
+// Pricing Config Table
+// Margin multiplier configuration with scope hierarchy and approval workflow
+model PricingConfig {
+  id                          String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Scope
+  scopeType                   PricingConfigScopeType      @map("scope_type")
+  subscriptionTier            SubscriptionTier?           @map("subscription_tier")
+  providerId                  String?                     @map("provider_id") @db.Uuid
+  modelId                     String?                     @map("model_id") @db.VarChar(255)
+
+  // Multiplier Value
+  marginMultiplier            Decimal                     @map("margin_multiplier") @db.Decimal(4, 2)
+  targetGrossMarginPercent    Decimal?                    @map("target_gross_margin_percent") @db.Decimal(5, 2)
+
+  // Effective Date Range
+  effectiveFrom               DateTime                    @map("effective_from")
+  effectiveUntil              DateTime?                   @map("effective_until")
+
+  // Reason for Change
+  reason                      PricingConfigReason
+  reasonDetails               String?                     @map("reason_details") @db.Text
+
+  // Change History
+  previousMultiplier          Decimal?                    @map("previous_multiplier") @db.Decimal(4, 2)
+  changePercent               Decimal?                    @map("change_percent") @db.Decimal(5, 2)
+
+  // Impact Prediction
+  expectedMarginChangeDollars Decimal?                    @map("expected_margin_change_dollars") @db.Decimal(12, 2)
+  expectedRevenueImpact       Decimal?                    @map("expected_revenue_impact") @db.Decimal(12, 2)
+
+  // Admin Metadata
+  createdBy                   String                      @map("created_by") @db.Uuid
+  approvedBy                  String?                     @map("approved_by") @db.Uuid
+  requiresApproval            Boolean                     @default(true) @map("requires_approval")
+  approvalStatus              PricingConfigApprovalStatus @default(pending) @map("approval_status")
+
+  // Monitoring
+  isActive                    Boolean                     @default(true) @map("is_active")
+  monitored                   Boolean                     @default(true)
+
+  createdAt                   DateTime                    @default(now()) @map("created_at")
+  updatedAt                   DateTime                    @updatedAt @map("updated_at")
+
+  // Relations
+  provider     Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  createdByUser User     @relation("PricingConfigCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  approvedByUser User?   @relation("PricingConfigApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([scopeType])
+  @@index([subscriptionTier, isActive])
+  @@index([providerId, isActive])
+  @@index([isActive, effectiveFrom])
+  @@index([approvalStatus])
+  @@map("pricing_configs")
+}
+
+// Model Provider Pricing Table
+// Tracks vendor token pricing with historical tracking and change detection
+model ModelProviderPricing {
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Identification
+  providerId              String    @map("provider_id") @db.Uuid
+  modelName               String    @map("model_name") @db.VarChar(255)
+  vendorModelId           String?   @unique @map("vendor_model_id") @db.VarChar(255)
+
+  // Pricing (per 1,000 tokens) - DECIMAL(10,8) for micro-dollar precision
+  inputPricePer1k         Decimal   @map("input_price_per_1k") @db.Decimal(10, 8)
+  outputPricePer1k        Decimal   @map("output_price_per_1k") @db.Decimal(10, 8)
+
+  // Optional: Cache pricing
+  cacheInputPricePer1k    Decimal?  @map("cache_input_price_per_1k") @db.Decimal(10, 8)
+  cacheHitPricePer1k      Decimal?  @map("cache_hit_price_per_1k") @db.Decimal(10, 8)
+
+  // Effective date tracking (for historical pricing)
+  effectiveFrom           DateTime  @map("effective_from")
+  effectiveUntil          DateTime? @map("effective_until")
+
+  // Rate change detection
+  previousPriceInput      Decimal?  @map("previous_price_input") @db.Decimal(10, 8)
+  previousPriceOutput     Decimal?  @map("previous_price_output") @db.Decimal(10, 8)
+  priceChangePercentInput Decimal?  @map("price_change_percent_input") @db.Decimal(5, 2)
+  priceChangePercentOutput Decimal? @map("price_change_percent_output") @db.Decimal(5, 2)
+  detectedAt              DateTime? @map("detected_at")
+
+  // Metadata
+  isActive                Boolean   @default(true) @map("is_active")
+  description             String?   @db.Text
+  lastVerified            DateTime  @default(now()) @map("last_verified")
+  verificationFrequencyDays Int     @default(7) @map("verification_frequency_days")
+
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, modelName, effectiveFrom])
+  @@index([providerId, modelName, isActive])
+  @@index([effectiveFrom, effectiveUntil])
+  @@index([isActive])
+  @@map("model_provider_pricing")
+}
+
+// Pricing Configuration Table
+// Tier-based margin multipliers with approval workflow
+model PricingConfiguration {
+  id                String           @id @default(uuid()) @db.Uuid
+  tier              SubscriptionTier
+  margin_strategy   MarginStrategy
+  margin_percentage Decimal          @db.Decimal(5, 2)
+  effective_date    DateTime
+  is_active         Boolean          @default(true)
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+
+  @@index([tier, is_active])
+  @@map("pricing_configuration")
+}
+
+// Token Usage Ledger Table
+// Immutable audit trail of every API request with token counts and costs
+model TokenUsageLedger {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId             String        @unique @map("request_id") @db.Uuid
+
+  // User & Subscription Context
+  userId                String        @map("user_id") @db.Uuid
+  subscriptionId        String?       @map("subscription_id") @db.Uuid
+
+  // Model & Provider
+  modelId               String        @map("model_id") @db.VarChar(255)
+  providerId            String        @map("provider_id") @db.Uuid
+
+  // Token Counts
+  inputTokens           Int           @map("input_tokens")
+  outputTokens          Int           @map("output_tokens")
+  cachedInputTokens     Int           @default(0) @map("cached_input_tokens")
+
+  // Costing
+  vendorCost            Decimal       @map("vendor_cost") @db.Decimal(10, 8)
+  marginMultiplier      Decimal       @map("margin_multiplier") @db.Decimal(4, 2)
+  creditValueUsd        Decimal       @map("credit_value_usd") @db.Decimal(10, 8)
+  creditsDeducted       Int           @map("credits_deducted")
+
+  // Request Type
+  requestType           RequestType   @map("request_type")
+  streamingSegments     Int?          @map("streaming_segments")
+
+  // Timing
+  requestStartedAt      DateTime      @map("request_started_at")
+  requestCompletedAt    DateTime      @map("request_completed_at")
+  processingTimeMs      Int?          @map("processing_time_ms")
+
+  // Status
+  status                RequestStatus @default(success)
+  errorMessage          String?       @map("error_message") @db.Text
+  isStreamingComplete   Boolean       @default(true) @map("is_streaming_complete")
+
+  // Metadata
+  userTierAtRequest     String?       @map("user_tier_at_request") @db.VarChar(50)
+  region                String?       @db.VarChar(50)
+
+  // Link to deduction
+  deductionRecordId     String?       @map("deduction_record_id") @db.Uuid
+
+  createdAt             DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  user                  User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription          Subscription?            @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  provider              Provider                 @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  deductionRecord       CreditDeductionLedger?   @relation("DeductionRecords", fields: [deductionRecordId], references: [id], onDelete: SetNull)
+  creditDeduction       CreditDeductionLedger?   @relation("TokenUsageLink")
+
+  @@index([userId, createdAt])
+  @@index([modelId, createdAt])
+  @@index([providerId, createdAt])
+  @@index([userId, vendorCost])
+  @@index([requestId])
+  @@index([status])
+  @@map("token_usage_ledger")
+}
+
+// User Credit Balance Table
+// Single source of truth for user credit balances (CRITICAL)
+model UserCreditBalance {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String    @unique @map("user_id") @db.Uuid
+  amount              Int       @default(0)
+  lastDeductionAt     DateTime? @map("last_deduction_at")
+  lastDeductionAmount Int?      @map("last_deduction_amount")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_credit_balance")
+}
+
+// Credit Deduction Ledger Table
+// Immutable audit trail of every credit deduction
+model CreditDeductionLedger {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String                 @map("user_id") @db.Uuid
+
+  // Deduction details
+  amount           Int
+  balanceBefore    Int                    @map("balance_before")
+  balanceAfter     Int                    @map("balance_after")
+
+  // Link to token usage
+  requestId        String?                @unique @map("request_id") @db.Uuid
+  tokenVendorCost  Decimal?               @map("token_vendor_cost") @db.Decimal(10, 8)
+  marginMultiplier Decimal?               @map("margin_multiplier") @db.Decimal(4, 2)
+  grossMargin      Decimal?               @map("gross_margin") @db.Decimal(10, 8)
+
+  // Reason and status
+  reason           CreditDeductionReason
+  status           CreditDeductionStatus  @default(pending)
+
+  // Reversal tracking
+  reversedAt       DateTime?              @map("reversed_at")
+  reversedBy       String?                @map("reversed_by") @db.Uuid
+  reversalReason   String?                @map("reversal_reason") @db.Text
+
+  // Timestamps
+  processedAt      DateTime               @default(now()) @map("processed_at")
+  createdAt        DateTime               @default(now()) @map("created_at")
+
+  // Relations
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reversedByUser         User?              @relation("ReversedBy", fields: [reversedBy], references: [id], onDelete: SetNull)
+  tokenUsageLedgers      TokenUsageLedger[] @relation("DeductionRecords")
+  tokenUsageByRequestId  TokenUsageLedger?  @relation("TokenUsageLink", fields: [requestId], references: [requestId])
+
+  @@index([userId, createdAt])
+  @@index([requestId])
+  @@index([status])
+  @@index([reason])
+  @@map("credit_deduction_ledger")
+}
+
+// Token Usage Daily Summary Table
+// Daily aggregated token usage for analytics
+model TokenUsageDailySummary {
+  id                  String   @id @default(uuid()) @db.Uuid
+  user_id             String   @map("user_id") @db.Uuid
+  date                DateTime @db.Date
+  model_name          String   @db.VarChar(200)
+  total_input_tokens  Int
+  total_output_tokens Int
+  total_cost_usd      Decimal  @db.Decimal(10, 2)
+  total_credits       Int
+  created_at          DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, date, model_name])
+  @@index([user_id, date])
+  @@index([date])
+  @@map("token_usage_daily_summary")
+}
+
+// Credit Usage Daily Summary Table
+// Daily aggregated credit usage for analytics
+model CreditUsageDailySummary {
+  id                  String   @id @default(uuid()) @db.Uuid
+  user_id             String   @map("user_id") @db.Uuid
+  date                DateTime @db.Date
+  credits_allocated   Int      @default(0)
+  credits_deducted    Int      @default(0)
+  credits_balance_eod Int      @map("credits_balance_eod")
+  created_at          DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, date])
+  @@index([user_id, date])
+  @@index([date])
+  @@map("credit_usage_daily_summary")
+}
+
+// Margin Audit Log Table
+// Tracks margin configuration changes for compliance
+model MarginAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  config_id  String   @db.Uuid
+  changed_by String   @map("changed_by") @db.Uuid
+  old_margin Decimal? @db.Decimal(5, 2)
+  new_margin Decimal  @db.Decimal(5, 2)
+  reason     String?  @db.Text
+  timestamp  DateTime @default(now())
+
+  changed_by_user User @relation(fields: [changed_by], references: [id])
+
+  @@index([config_id, timestamp])
+  @@index([timestamp])
+  @@map("margin_audit_log")
+}
+
+// =============================================================================
+// ADMIN AUDIT LOGGING (Phase 4 - P0 Critical Fixes)
+// For SOC 2 Type II and GDPR Article 30 Compliance
+// =============================================================================
+
+// Admin Audit Log Table
+// Comprehensive audit trail of all admin operations for compliance
+model AdminAuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  admin_user_id  String   @map("admin_user_id") @db.Uuid
+  action         String   @db.VarChar(100)
+  // "create", "update", "delete", "read"
+  resource_type  String   @map("resource_type") @db.VarChar(50)
+  // "subscription", "license", "coupon", "user", etc.
+  resource_id    String?  @map("resource_id") @db.Uuid
+  endpoint       String   @db.VarChar(255)
+  // "/admin/subscriptions/:id"
+  method         String   @db.VarChar(10)
+  // "POST", "PATCH", "DELETE", "GET"
+  ip_address     String?  @map("ip_address") @db.VarChar(45)
+  user_agent     String?  @map("user_agent") @db.Text
+  request_body   Json?    @map("request_body")
+  previous_value Json?    @map("previous_value")
+  // For updates/deletes
+  new_value      Json?    @map("new_value")
+  // For creates/updates
+  status_code    Int      @map("status_code")
+  error_message  String?  @map("error_message") @db.Text
+  timestamp      DateTime @default(now())
+
+  admin_user User @relation("AdminAuditLogs", fields: [admin_user_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_user_id, timestamp])
+  @@index([resource_type, resource_id])
+  @@index([timestamp])
+  @@map("admin_audit_log")
+}
+
+// =============================================================================
+// RBAC SYSTEM (Plan 119)
+// For comprehensive role-based access control and permission management
+// =============================================================================
+
+enum RoleName {
+  super_admin
+  admin
+  ops
+  support
+  analyst
+  auditor
+
+  @@map("role_name")
+}
+
+enum PermissionCategory {
+  subscriptions
+  licenses
+  coupons
+  campaigns
+  credits
+  users
+  roles
+  analytics
+
+  @@map("permission_category")
+}
+
+enum OverrideAction {
+  grant
+  revoke
+
+  @@map("override_action")
+}
+
+enum RoleChangeAction {
+  role_assigned
+  role_changed
+  role_revoked
+  permission_override_granted
+  permission_override_revoked
+  permission_override_expired
+
+  @@map("role_change_action")
+}
+
+// Role Definition Table
+// Defines 6 hierarchical roles with default permissions
+// Now supports custom roles with free-form name field
+model Role {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String   @unique @db.VarChar(50) // Changed from RoleName enum to String for custom roles
+  displayName          String   @map("display_name") @db.VarChar(100)
+  description          String?  @db.Text
+  isSystemRole         Boolean  @default(false) @map("is_system_role") // NEW: Distinguishes system vs custom roles
+  hierarchy            Int      @db.SmallInt // 1-6: 1=super_admin, 6=auditor
+  defaultPermissions   Json     @map("default_permissions") // Changed from String to Json for proper array storage
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  userRoleAssignments UserRoleAssignment[]
+  roleChangeLogs          RoleChangeLog[]        @relation("RoleChangeLog_NewRole")
+  roleChangeLogsAsOldRole RoleChangeLog[]        @relation("RoleChangeLog_OldRole")
+
+  @@index([hierarchy])
+  @@index([isActive])
+  @@index([isSystemRole]) // NEW: Index for system role filtering
+  @@map("role")
+}
+
+// Permission Definition Table
+// Catalogs all 40+ permissions for the system
+model Permission {
+  id           String               @id @default(uuid()) @db.Uuid
+  name         String               @unique @db.VarChar(100)
+  displayName  String               @map("display_name") @db.VarChar(150)
+  description  String?              @db.Text
+  category     PermissionCategory
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("permission")
+}
+
+// User Role Assignment Table
+// Assigns roles to users with optional expiration
+model UserRoleAssignment {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  roleId    String    @map("role_id") @db.Uuid
+  assignedBy String   @map("assigned_by") @db.Uuid
+  assignedAt DateTime @map("assigned_at")
+  expiresAt DateTime? @map("expires_at") // null = permanent
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user       User @relation("UserRoleAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  role       Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  assignedByUser User @relation("AssignedRolesByUser", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("user_role_assignment")
+}
+
+// Permission Override Table
+// Grants or revokes specific permissions temporarily or permanently
+model PermissionOverride {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  permission String        @db.VarChar(100)
+  action    OverrideAction
+  grantedBy String         @map("granted_by") @db.Uuid
+  grantedAt DateTime       @map("granted_at")
+  expiresAt DateTime?      @map("expires_at") // null = permanent
+  reason    String?        @db.Text
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user       User @relation("PermissionOverrides", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User @relation("GrantedPermissionsByUser", fields: [grantedBy], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([action])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("permission_override")
+}
+
+// Role Change Log Table
+// Immutable audit trail for all role and permission changes
+model RoleChangeLog {
+  id                        String          @id @default(uuid()) @db.Uuid
+  targetUserId              String          @map("target_user_id") @db.Uuid
+  changedBy                 String          @map("changed_by") @db.Uuid
+  action                    RoleChangeAction
+  oldRoleId                 String?         @map("old_role_id") @db.Uuid
+  newRoleId                 String?         @map("new_role_id") @db.Uuid
+  permissionOverride        String?         @map("permission_override") @db.Text // JSON
+  oldPermissions            String          @map("old_permissions") @db.Text // JSON array
+  newPermissions            String          @map("new_permissions") @db.Text // JSON array
+  reason                    String?         @db.Text
+  ipAddress                 String?         @map("ip_address") @db.VarChar(45)
+  userAgent                 String?         @map("user_agent") @db.Text
+  timestamp                 DateTime        @default(now())
+  metadata                  Json?           @db.JsonB
+
+  targetUser User @relation("RoleChangeLogs_TargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+  changedByUser User @relation("RoleChangeLogs_ChangedBy", fields: [changedBy], references: [id], onDelete: Restrict)
+  oldRole    Role? @relation("RoleChangeLog_OldRole", fields: [oldRoleId], references: [id], onDelete: SetNull)
+  newRole    Role? @relation("RoleChangeLog_NewRole", fields: [newRoleId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, timestamp])
+  @@index([changedBy])
+  @@index([action])
+  @@index([timestamp])
+  @@map("role_change_log")
+}
+
+// =============================================================================
+// RBAC ENHANCEMENT TABLES (Plan 129 Gap Closure - G-001)
+// Multi-tier approval workflows, IP whitelisting, and user suspension tracking
+// =============================================================================
+
+// Approval Request Table
+// Tracks admin approval requests for sensitive operations
+// Implements multi-tier approval workflow with expiration
+model ApprovalRequest {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestedBy    String    @map("requested_by") @db.Uuid
+  action         String    @db.VarChar(100) // "subscriptions.refund", "users.ban"
+  targetUserId   String?   @map("target_user_id") @db.Uuid
+  reason         String    @db.Text
+  status         String    @default("pending") @db.VarChar(20) // "pending", "approved", "denied"
+  reviewedBy     String?   @map("reviewed_by") @db.Uuid
+  reviewedAt     DateTime? @map("reviewed_at")
+  reviewNotes    String?   @map("review_notes") @db.Text
+  expiresAt      DateTime  @map("expires_at") // Auto-deny after 24h
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  requester User  @relation("ApprovalRequester", fields: [requestedBy], references: [id])
+  reviewer  User? @relation("ApprovalReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([status])
+  @@index([requestedBy])
+  @@index([expiresAt])
+  @@map("approval_requests")
+}
+
+// IP Whitelist Table
+// Tracks whitelisted IP addresses for Super Admin access
+// Implements IP-based access control with CIDR notation support
+model IPWhitelist {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid // Super Admin user ID
+  ipAddress   String   @map("ip_address") @db.VarChar(50) // CIDR notation
+  description String?  @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserIPWhitelist", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([ipAddress])
+  @@map("ip_whitelists")
+}
+
+// User Suspension Table
+// Tracks user suspension and ban events with reason and duration
+// Implements temporary suspension (with expiresAt) and permanent ban (expiresAt = null)
+model UserSuspension {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  suspendedBy String    @map("suspended_by") @db.Uuid
+  reason      String    @db.Text
+  suspendedAt DateTime  @default(now()) @map("suspended_at")
+  expiresAt   DateTime? @map("expires_at") // null = indefinite (ban)
+  liftedAt    DateTime? @map("lifted_at")
+  liftedBy    String?   @map("lifted_by") @db.Uuid
+
+  user      User  @relation("UserSuspensions", fields: [userId], references: [id], onDelete: Cascade)
+  suspender User  @relation("SuspenderActions", fields: [suspendedBy], references: [id])
+  lifter    User? @relation("LifterActions", fields: [liftedBy], references: [id])
+
+  @@index([userId])
+  @@index([suspendedBy])
+  @@index([expiresAt])
+  @@map("user_suspensions")
+}
+
+// =============================================================================
+// OIDC Provider Support
+// =============================================================================
+
+/// OIDC session and token storage (managed by identity-provider service)
+/// This model is defined here to prevent schema conflicts since both services
+/// share the same database. The identity-provider service owns this table.
+model OIDCModel {
+  id        String    @id @db.VarChar(255)
+  kind      String    @db.VarChar(100) // Session, AccessToken, AuthorizationCode, etc.
+  payload   Json      // OIDC payload data stored as JSONB
+  expiresAt DateTime? @map("expires_at")
+  grantId   String?   @map("grant_id") @db.VarChar(255)
+  userCode  String?   @map("user_code") @db.VarChar(100)
+  uid       String?   @map("uid") @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([id])
+  @@index([kind])
+  @@index([expiresAt])
+  @@index([grantId])
+  @@index([userCode])
+  @@map("oidc_models")
+}
+
+// =============================================================================
+// APPLICATION SETTINGS (Plan 131 Phase 2)
+// =============================================================================
+
+/// Application settings table for admin configuration
+/// Stores key-value pairs organized by category for system-wide settings
+model AppSetting {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category  String   @db.VarChar(50)  // general, email, security, integrations, feature_flags, system
+  key       String   @db.VarChar(100)
+  value     Json                      // Store any type of value (string, number, boolean, array, object)
+  isEncrypted Boolean @default(false) @map("is_encrypted") // Whether value is encrypted (for API keys, passwords)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([category, key])
+  @@index([category])
+  @@map("app_settings")
 }

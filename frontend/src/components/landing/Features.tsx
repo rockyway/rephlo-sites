@@ -168,7 +168,7 @@ function Features() {
           <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Write anywhere. Enhance everywhere.
           </h2>
-          <p className="text-body-lg text-deep-navy-500 dark:text-deep-navy-300">
+          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-300">
             System-wide AI writing assistance that adapts to your workflow
           </p>
         </div>

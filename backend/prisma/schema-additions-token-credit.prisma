@@ -1,0 +1,463 @@
+// =============================================================================
+// TOKEN-TO-CREDIT CONVERSION SYSTEM SCHEMA ADDITIONS
+// =============================================================================
+// This file contains the complete schema additions for Plan 112
+// To integrate: Copy these models into the main schema.prisma file
+// Also add the new relations to the existing User and Subscription models
+//
+// Created: 2025-11-09
+// Plan: docs/plan/112-token-to-credit-conversion-mechanism.md
+// Design: docs/reference/token-credit-schema-design.md
+// =============================================================================
+
+// =============================================================================
+// ENUMS FOR TOKEN-TO-CREDIT SYSTEM
+// =============================================================================
+
+enum PricingConfigScopeType {
+  tier
+  provider
+  model
+  combination
+
+  @@map("pricing_config_scope_type")
+}
+
+enum PricingConfigReason {
+  initial_setup
+  vendor_price_change
+  tier_optimization
+  margin_protection
+  manual_adjustment
+
+  @@map("pricing_config_reason")
+}
+
+enum PricingConfigApprovalStatus {
+  pending
+  approved
+  rejected
+
+  @@map("pricing_config_approval_status")
+}
+
+enum RequestType {
+  completion
+  streaming
+  batch
+
+  @@map("request_type")
+}
+
+enum RequestStatus {
+  success
+  failed
+  cancelled
+  rate_limited
+
+  @@map("request_status")
+}
+
+enum CreditDeductionReason {
+  api_completion
+  subscription_allocation
+  manual_adjustment
+  refund
+  overage
+  bonus
+  referral
+  coupon
+
+  @@map("credit_deduction_reason")
+}
+
+enum CreditDeductionStatus {
+  pending
+  completed
+  reversed
+
+  @@map("credit_deduction_status")
+}
+
+enum CreditSourceType {
+  monthly_allocation
+  referral_reward
+  coupon_promotion
+  bonus
+  refund
+  admin_grant
+
+  @@map("credit_source_type")
+}
+
+// =============================================================================
+// CORE TABLES
+// =============================================================================
+
+// Provider Table
+// Registry of AI model vendors (OpenAI, Anthropic, Google, Azure)
+model Provider {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @unique @db.VarChar(100)
+  apiType    String   @db.VarChar(50)
+  // Values: "openai", "anthropic", "google", "azure", "ollama"
+  isEnabled  Boolean  @default(true) @map("is_enabled")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  modelPricing    ModelProviderPricing[]
+  pricingConfigs  PricingConfig[]
+  tokenUsages     TokenUsageLedger[]
+
+  @@index([isEnabled])
+  @@map("providers")
+}
+
+// Model Provider Pricing Table
+// Tracks vendor token pricing with historical tracking and change detection
+model ModelProviderPricing {
+  id                         String    @id @default(uuid()) @db.Uuid
+
+  // Identification
+  providerId                 String    @map("provider_id") @db.Uuid
+  modelName                  String    @map("model_name") @db.VarChar(255)
+  vendorModelId              String?   @unique @map("vendor_model_id") @db.VarChar(255)
+
+  // Pricing (per 1,000 tokens) - DECIMAL(10,8) for micro-dollar precision
+  inputPricePer1k            Decimal   @map("input_price_per_1k") @db.Decimal(10, 8)
+  outputPricePer1k           Decimal   @map("output_price_per_1k") @db.Decimal(10, 8)
+
+  // Optional: Cache pricing (for Anthropic/Google cache features)
+  cacheInputPricePer1k       Decimal?  @map("cache_input_price_per_1k") @db.Decimal(10, 8)
+  cacheHitPricePer1k         Decimal?  @map("cache_hit_price_per_1k") @db.Decimal(10, 8)
+
+  // Effective date tracking (for historical pricing lookup)
+  effectiveFrom              DateTime  @map("effective_from")
+  effectiveUntil             DateTime? @map("effective_until")
+
+  // Rate change detection (for automatic margin adjustment alerts)
+  previousPriceInput         Decimal?  @map("previous_price_input") @db.Decimal(10, 8)
+  previousPriceOutput        Decimal?  @map("previous_price_output") @db.Decimal(10, 8)
+  priceChangePercentInput    Decimal?  @map("price_change_percent_input") @db.Decimal(5, 2)
+  priceChangePercentOutput   Decimal?  @map("price_change_percent_output") @db.Decimal(5, 2)
+  detectedAt                 DateTime? @map("detected_at")
+
+  // Metadata
+  isActive                   Boolean   @default(true) @map("is_active")
+  description                String?   @db.Text
+  lastVerified               DateTime  @default(now()) @map("last_verified")
+  verificationFrequencyDays  Int       @default(7) @map("verification_frequency_days")
+
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, modelName, effectiveFrom])
+  @@index([providerId, modelName, isActive])
+  @@index([effectiveFrom, effectiveUntil])
+  @@index([isActive])
+  @@map("model_provider_pricing")
+}
+
+// Pricing Config Table
+// Margin multiplier configuration with scope hierarchy and approval workflow
+model PricingConfig {
+  id                           String                         @id @default(uuid()) @db.Uuid
+
+  // Scope: What does this multiplier apply to?
+  scopeType                    PricingConfigScopeType
+
+  // Tier Scope (NULL = all tiers)
+  subscriptionTier             SubscriptionTier?              @map("subscription_tier")
+
+  // Provider Scope (NULL = all providers)
+  providerId                   String?                        @map("provider_id") @db.Uuid
+
+  // Model Scope (NULL = all models)
+  modelId                      String?                        @map("model_id") @db.VarChar(255)
+
+  // Multiplier Value
+  marginMultiplier             Decimal                        @map("margin_multiplier") @db.Decimal(4, 2)
+  // e.g., 1.50 = 1.5x = 33% margin
+  targetGrossMarginPercent     Decimal?                       @map("target_gross_margin_percent") @db.Decimal(5, 2)
+  // e.g., 33.33 = 33.33% margin
+
+  // Effective Date Range
+  effectiveFrom                DateTime                       @map("effective_from")
+  effectiveUntil               DateTime?                      @map("effective_until")
+
+  // Reason for Change
+  reason                       PricingConfigReason
+  reasonDetails                String?                        @map("reason_details") @db.Text
+
+  // Change History
+  previousMultiplier           Decimal?                       @map("previous_multiplier") @db.Decimal(4, 2)
+  changePercent                Decimal?                       @map("change_percent") @db.Decimal(5, 2)
+
+  // Impact Prediction (for simulation)
+  expectedMarginChangeDollars  Decimal?                       @map("expected_margin_change_dollars") @db.Decimal(12, 2)
+  expectedRevenueImpact        Decimal?                       @map("expected_revenue_impact") @db.Decimal(12, 2)
+
+  // Admin Metadata
+  createdBy                    String                         @map("created_by") @db.Uuid
+  approvedBy                   String?                        @map("approved_by") @db.Uuid
+  requiresApproval             Boolean                        @default(true) @map("requires_approval")
+  approvalStatus               PricingConfigApprovalStatus    @default(pending) @map("approval_status")
+
+  // Monitoring
+  isActive                     Boolean                        @default(true) @map("is_active")
+  monitored                    Boolean                        @default(true) @map("monitored")
+
+  createdAt                    DateTime                       @default(now()) @map("created_at")
+  updatedAt                    DateTime                       @updatedAt @map("updated_at")
+
+  // Relations
+  provider         Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  createdByUser    User      @relation("PricingConfigCreatedBy", fields: [createdBy], references: [id])
+  approvedByUser   User?     @relation("PricingConfigApprovedBy", fields: [approvedBy], references: [id])
+
+  @@index([scopeType])
+  @@index([subscriptionTier, isActive])
+  @@index([providerId, isActive])
+  @@index([isActive, effectiveFrom])
+  @@index([approvalStatus])
+  @@map("pricing_configs")
+}
+
+// Token Usage Ledger Table
+// Immutable audit trail of every API request with token counts and costs
+// NOTE: totalTokens and grossMarginUsd are GENERATED columns (defined in migration SQL)
+model TokenUsageLedger {
+  id                    String         @id @default(uuid()) @db.Uuid
+  requestId             String         @unique @map("request_id") @db.Uuid
+
+  // User & Subscription Context
+  userId                String         @map("user_id") @db.Uuid
+  subscriptionId        String?        @map("subscription_id") @db.Uuid
+
+  // Model & Provider
+  modelId               String         @map("model_id") @db.VarChar(255)
+  providerId            String         @map("provider_id") @db.Uuid
+
+  // Token Counts
+  inputTokens           Int            @map("input_tokens")
+  outputTokens          Int            @map("output_tokens")
+  cachedInputTokens     Int            @default(0) @map("cached_input_tokens")
+
+  // GENERATED COLUMN - defined in migration SQL
+  // totalTokens = inputTokens + outputTokens
+  totalTokens           Int?           @map("total_tokens")
+
+  // Costing
+  vendorCost            Decimal        @map("vendor_cost") @db.Decimal(10, 8)
+  marginMultiplier      Decimal        @map("margin_multiplier") @db.Decimal(4, 2)
+  creditValueUsd        Decimal        @map("credit_value_usd") @db.Decimal(10, 8)
+  creditsDeducted       Int            @map("credits_deducted")
+
+  // GENERATED COLUMN - defined in migration SQL
+  // grossMarginUsd = creditValueUsd - vendorCost
+  grossMarginUsd        Decimal?       @map("gross_margin_usd") @db.Decimal(10, 8)
+
+  // Request Type
+  requestType           RequestType
+  streamingSegments     Int?           @map("streaming_segments")
+
+  // Timing
+  requestStartedAt      DateTime       @map("request_started_at")
+  requestCompletedAt    DateTime       @map("request_completed_at")
+  processingTimeMs      Int?           @map("processing_time_ms")
+
+  // Status
+  status                RequestStatus  @default(success)
+  errorMessage          String?        @map("error_message") @db.Text
+  isStreamingComplete   Boolean        @default(true) @map("is_streaming_complete")
+
+  // Metadata (for auditing)
+  userTierAtRequest     String?        @map("user_tier_at_request") @db.VarChar(50)
+  region                String?        @map("region") @db.VarChar(50)
+
+  // Link to deduction record
+  deductionRecordId     String?        @map("deduction_record_id") @db.Uuid
+
+  createdAt             DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription     Subscription?          @relation(fields: [subscriptionId], references: [id])
+  provider         Provider               @relation(fields: [providerId], references: [id])
+  deduction        CreditDeductionLedger? @relation(fields: [deductionRecordId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([modelId, createdAt])
+  @@index([providerId, createdAt])
+  @@index([userId, vendorCost])
+  @@index([requestId])
+  @@index([status])
+  @@map("token_usage_ledger")
+}
+
+// User Credit Balance Table
+// Single source of truth for user credit balances
+model UserCreditBalance {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @unique @map("user_id") @db.Uuid
+
+  amount              Int       @default(0)
+  lastDeductionAt     DateTime? @map("last_deduction_at")
+  lastDeductionAmount Int?      @map("last_deduction_amount")
+
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_credit_balance")
+}
+
+// Credit Deduction Ledger Table
+// Immutable audit trail of every credit deduction
+model CreditDeductionLedger {
+  id                String                 @id @default(uuid()) @db.Uuid
+  userId            String                 @map("user_id") @db.Uuid
+
+  // Deduction details
+  amount            Int
+  balanceBefore     Int                    @map("balance_before")
+  balanceAfter      Int                    @map("balance_after")
+
+  // Link to token usage
+  requestId         String?                @unique @map("request_id") @db.Uuid
+  tokenVendorCost   Decimal?               @map("token_vendor_cost") @db.Decimal(10, 8)
+  marginMultiplier  Decimal?               @map("margin_multiplier") @db.Decimal(4, 2)
+  grossMargin       Decimal?               @map("gross_margin") @db.Decimal(10, 8)
+
+  // Reason and status
+  reason            CreditDeductionReason
+  status            CreditDeductionStatus  @default(pending)
+
+  // Reversal tracking
+  reversedAt        DateTime?              @map("reversed_at")
+  reversedBy        String?                @map("reversed_by") @db.Uuid
+  reversalReason    String?                @map("reversal_reason") @db.Text
+
+  // Timestamps
+  processedAt       DateTime               @default(now()) @map("processed_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+
+  // Relations
+  user              User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reversedByUser    User?                  @relation("CreditReversedBy", fields: [reversedBy], references: [id])
+  tokenUsage        TokenUsageLedger?      @relation()
+
+  @@index([userId, createdAt])
+  @@index([requestId])
+  @@index([status])
+  @@index([reason])
+  @@map("credit_deduction_ledger")
+}
+
+// User Credit Source Table
+// Track credit sources and expiration (monthly, bonus, referral, coupon)
+model UserCreditSource {
+  id         String            @id @default(uuid()) @db.Uuid
+  userId     String            @map("user_id") @db.Uuid
+
+  source     CreditSourceType
+  amount     Int
+
+  expiresAt  DateTime?         @map("expires_at")
+  // NULL = no expiration
+
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([source])
+  @@map("user_credit_source")
+}
+
+// =============================================================================
+// ANALYTICS TABLES
+// =============================================================================
+
+// Token Usage Daily Summary Table
+// Pre-aggregated daily statistics for performance optimization
+model TokenUsageDailySummary {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @map("user_id") @db.Uuid
+  summaryDate          DateTime @map("summary_date") @db.Date
+
+  totalRequests        Int      @default(0) @map("total_requests")
+  totalInputTokens     Int      @default(0) @map("total_input_tokens")
+  totalOutputTokens    Int      @default(0) @map("total_output_tokens")
+  totalVendorCost      Decimal  @default(0) @map("total_vendor_cost") @db.Decimal(12, 2)
+  totalCreditsDeducted Int      @default(0) @map("total_credits_deducted")
+  totalGrossMargin     Decimal  @default(0) @map("total_gross_margin") @db.Decimal(12, 2)
+
+  avgRequestLatencyMs  Int?     @map("avg_request_latency_ms")
+  successRate          Decimal? @map("success_rate") @db.Decimal(5, 2)
+  // e.g., 98.50 = 98.5% success rate
+
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, summaryDate])
+  @@index([userId, summaryDate])
+  @@index([summaryDate])
+  @@map("token_usage_daily_summary")
+}
+
+// Credit Usage Daily Summary Table
+// Pre-aggregated daily credit statistics
+model CreditUsageDailySummary {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String   @map("user_id") @db.Uuid
+  summaryDate         DateTime @map("summary_date") @db.Date
+
+  totalDeductions     Int      @default(0) @map("total_deductions")
+  totalRequests       Int      @default(0) @map("total_requests")
+  totalVendorCost     Decimal  @default(0) @map("total_vendor_cost") @db.Decimal(12, 2)
+  totalGrossMargin    Decimal  @default(0) @map("total_gross_margin") @db.Decimal(12, 2)
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, summaryDate])
+  @@index([userId, summaryDate])
+  @@map("credit_usage_daily_summary")
+}
+
+// =============================================================================
+// REQUIRED ADDITIONS TO EXISTING MODELS
+// =============================================================================
+
+/*
+Add these relations to the existing User model:
+
+  pricingConfigsCreated   PricingConfig[]          @relation("PricingConfigCreatedBy")
+  pricingConfigsApproved  PricingConfig[]          @relation("PricingConfigApprovedBy")
+  tokenUsageLedger        TokenUsageLedger[]
+  creditBalance           UserCreditBalance?
+  creditDeductions        CreditDeductionLedger[]
+  creditReversals         CreditDeductionLedger[]  @relation("CreditReversedBy")
+  creditSources           UserCreditSource[]
+  tokenUsageSummaries     TokenUsageDailySummary[]
+  creditUsageSummaries    CreditUsageDailySummary[]
+*/
+
+/*
+Add this relation to the existing Subscription model:
+
+  tokenUsageLedger TokenUsageLedger[]
+*/

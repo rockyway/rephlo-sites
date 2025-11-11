@@ -21,7 +21,7 @@ function ThemeToggle() {
             'p-sm rounded-sm transition-all duration-base',
             theme === value
               ? 'bg-white dark:bg-deep-navy-700 text-rephlo-blue dark:text-electric-cyan shadow-sm'
-              : 'text-deep-navy-500 dark:text-deep-navy-400 hover:text-deep-navy-700 dark:hover:text-deep-navy-200'
+              : 'text-deep-navy-700 dark:text-deep-navy-400 hover:text-deep-navy-700 dark:hover:text-deep-navy-200'
           )}
           aria-label={`${label} theme`}
           title={`${label} theme`}

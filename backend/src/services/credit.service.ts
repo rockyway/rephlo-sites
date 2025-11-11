@@ -1,0 +1,603 @@
+/**
+ * Credit Service
+ *
+ * Manages credit allocation, deduction, and balance tracking.
+ * Ensures atomic operations to prevent race conditions.
+ *
+ * Core Responsibilities:
+ * - Allocate credits when subscriptions are created/renewed
+ * - Deduct credits during LLM inference (atomic transactions)
+ * - Check credit availability before inference
+ * - Handle billing period rollovers
+ * - Get current user credit balance
+ *
+ * Integration Points:
+ * - Called by Subscription Service for credit allocation
+ * - Called by Model Service for credit deduction
+ * - Used by Credit Middleware for pre-flight checks
+ *
+ * Reference: docs/plan/073-dedicated-api-backend-specification.md
+ */
+
+import { injectable, inject } from 'tsyringe';
+import { PrismaClient, Credit, UsageOperation } from '@prisma/client';
+import logger from '../utils/logger';
+import {
+  AllocateCreditsInput,
+  DeductCreditsInput,
+} from '../types/credit-validation';
+import { IWebhookService } from '../interfaces';
+
+@injectable()
+export class CreditService {
+  constructor(
+    @inject('PrismaClient') private readonly prisma: PrismaClient,
+    @inject('IWebhookService') private readonly webhookService: IWebhookService
+  ) {
+    logger.debug('CreditService: Initialized');
+  }
+
+  /**
+   * Get current credit balance for a user
+   * Returns the active credit record for the current billing period
+   *
+   * @param userId - User ID
+   * @returns Current credit record or null if no active credits
+   */
+  async getCurrentCredits(userId: string): Promise<Credit | null> {
+    logger.debug('CreditService: Getting current credits', { userId });
+
+    const credit = await this.prisma.credit.findFirst({
+      where: {
+        userId,
+        isCurrent: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!credit) {
+      logger.warn('CreditService: No current credits found', { userId });
+      return null;
+    }
+
+    // Check if billing period has expired
+    const now = new Date();
+    if (now > credit.billingPeriodEnd) {
+      logger.info('CreditService: Billing period expired', {
+        userId,
+        creditId: credit.id,
+        billingPeriodEnd: credit.billingPeriodEnd,
+      });
+
+      // Mark as not current (rollover will be handled by subscription service)
+      await this.prisma.credit.update({
+        where: { id: credit.id },
+        data: { isCurrent: false },
+      });
+
+      return null;
+    }
+
+    logger.debug('CreditService: Current credits retrieved', {
+      userId,
+      creditId: credit.id,
+      remaining: credit.totalCredits - credit.usedCredits,
+    });
+
+    return credit;
+  }
+
+  /**
+   * Allocate credits to a user for a billing period
+   * Called by subscription service when subscription is created/renewed
+   *
+   * @param input - Credit allocation parameters
+   * @returns Created credit record
+   */
+  async allocateCredits(input: AllocateCreditsInput): Promise<Credit> {
+    logger.info('CreditService: Allocating credits', {
+      userId: input.userId,
+      totalCredits: input.totalCredits,
+      billingPeriodStart: input.billingPeriodStart,
+      billingPeriodEnd: input.billingPeriodEnd,
+    });
+
+    // Use transaction to ensure atomicity
+    const credit = await this.prisma.$transaction(async (tx) => {
+      // Mark all existing current credits as not current
+      await tx.credit.updateMany({
+        where: {
+          userId: input.userId,
+          isCurrent: true,
+        },
+        data: {
+          isCurrent: false,
+        },
+      });
+
+      // Create new credit record
+      const newCredit = await tx.credit.create({
+        data: {
+          userId: input.userId,
+          subscriptionId: input.subscriptionId,
+          totalCredits: input.totalCredits,
+          usedCredits: 0,
+          billingPeriodStart: input.billingPeriodStart,
+          billingPeriodEnd: input.billingPeriodEnd,
+          isCurrent: true,
+        },
+      });
+
+      logger.info('CreditService: Credits allocated successfully', {
+        userId: input.userId,
+        creditId: newCredit.id,
+        totalCredits: newCredit.totalCredits,
+      });
+
+      return newCredit;
+    });
+
+    return credit;
+  }
+
+  /**
+   * Check if user has sufficient credits
+   * Used for pre-flight checks before inference
+   *
+   * @param userId - User ID
+   * @param requiredCredits - Number of credits required
+   * @returns True if user has sufficient credits
+   */
+  async hasAvailableCredits(
+    userId: string,
+    requiredCredits: number
+  ): Promise<boolean> {
+    logger.debug('CreditService: Checking credit availability', {
+      userId,
+      requiredCredits,
+    });
+
+    const credit = await this.getCurrentCredits(userId);
+
+    if (!credit) {
+      logger.warn('CreditService: No active credits for availability check', {
+        userId,
+      });
+      return false;
+    }
+
+    const remainingCredits = credit.totalCredits - credit.usedCredits;
+    const hasCredits = remainingCredits >= requiredCredits;
+
+    logger.debug('CreditService: Credit availability checked', {
+      userId,
+      requiredCredits,
+      remainingCredits,
+      hasCredits,
+    });
+
+    return hasCredits;
+  }
+
+  /**
+   * Deduct credits from user's balance
+   * Called by model service after successful inference
+   * Uses atomic transaction to prevent race conditions
+   *
+   * @param input - Credit deduction parameters
+   * @returns Updated credit record
+   * @throws Error if insufficient credits or no active credit record
+   */
+  async deductCredits(input: DeductCreditsInput): Promise<Credit> {
+    logger.info('CreditService: Deducting credits', {
+      userId: input.userId,
+      creditsToDeduct: input.creditsToDeduct,
+      modelId: input.modelId,
+      operation: input.operation,
+    });
+
+    // Use transaction to ensure atomicity (prevent race conditions)
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Get current credit record with row-level lock
+      const credit = await tx.credit.findFirst({
+        where: {
+          userId: input.userId,
+          isCurrent: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (!credit) {
+        logger.error('CreditService: No active credit record found', {
+          userId: input.userId,
+        });
+        throw new Error('No active credit record found');
+      }
+
+      // Check if billing period has expired
+      const now = new Date();
+      if (now > credit.billingPeriodEnd) {
+        logger.error('CreditService: Billing period expired during deduction', {
+          userId: input.userId,
+          billingPeriodEnd: credit.billingPeriodEnd,
+        });
+        throw new Error('Billing period has expired');
+      }
+
+      // Check sufficient credits
+      const remainingCredits = credit.totalCredits - credit.usedCredits;
+      if (remainingCredits < input.creditsToDeduct) {
+        logger.error('CreditService: Insufficient credits', {
+          userId: input.userId,
+          required: input.creditsToDeduct,
+          remaining: remainingCredits,
+        });
+        throw new Error(
+          `Insufficient credits. Required: ${input.creditsToDeduct}, Available: ${remainingCredits}`
+        );
+      }
+
+      // Deduct credits atomically
+      const updatedCredit = await tx.credit.update({
+        where: { id: credit.id },
+        data: {
+          usedCredits: {
+            increment: input.creditsToDeduct,
+          },
+        },
+      });
+
+      // Record usage history
+      await tx.usageHistory.create({
+        data: {
+          userId: input.userId,
+          creditId: credit.id,
+          modelId: input.modelId,
+          operation: input.operation as UsageOperation,
+          creditsUsed: input.creditsToDeduct,
+          inputTokens: input.inputTokens,
+          outputTokens: input.outputTokens,
+          totalTokens: input.totalTokens,
+          requestDurationMs: input.requestDurationMs,
+          requestMetadata: input.requestMetadata,
+        },
+      });
+
+      logger.info('CreditService: Credits deducted successfully', {
+        userId: input.userId,
+        creditId: credit.id,
+        creditsDeducted: input.creditsToDeduct,
+        remainingCredits:
+          updatedCredit.totalCredits - updatedCredit.usedCredits,
+      });
+
+      return updatedCredit;
+    });
+
+    // Check if credits are depleted or low after deduction
+    const remainingCredits = result.totalCredits - result.usedCredits;
+    const thresholdPercentage = 10; // 10% threshold for low credits warning
+    const thresholdCredits = result.totalCredits * (thresholdPercentage / 100);
+
+    try {
+      // Trigger credits.depleted webhook if no credits remaining
+      if (remainingCredits === 0) {
+        await this.webhookService.queueWebhook(input.userId, 'credits.depleted', {
+          user_id: input.userId,
+          remaining_credits: 0,
+          total_credits: result.totalCredits,
+        });
+      }
+      // Trigger credits.low webhook if below threshold (but not depleted)
+      else if (remainingCredits > 0 && remainingCredits <= thresholdCredits) {
+        await this.webhookService.queueWebhook(input.userId, 'credits.low', {
+          user_id: input.userId,
+          remaining_credits: remainingCredits,
+          total_credits: result.totalCredits,
+          threshold_percentage: thresholdPercentage,
+        });
+      }
+    } catch (webhookError) {
+      // Don't fail credit deduction if webhook fails
+      logger.error('CreditService: Failed to queue credit webhook', {
+        userId: input.userId,
+        creditId: result.id,
+        remainingCredits,
+        error: webhookError,
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Get credit balance for a specific billing period
+   * Used for historical analysis and reporting
+   *
+   * @param userId - User ID
+   * @param billingPeriodStart - Start of billing period
+   * @param billingPeriodEnd - End of billing period
+   * @returns Credit record or null if not found
+   */
+  async getCreditsByBillingPeriod(
+    userId: string,
+    billingPeriodStart: Date,
+    billingPeriodEnd: Date
+  ): Promise<Credit | null> {
+    logger.debug('CreditService: Getting credits by billing period', {
+      userId,
+      billingPeriodStart,
+      billingPeriodEnd,
+    });
+
+    const credit = await this.prisma.credit.findFirst({
+      where: {
+        userId,
+        billingPeriodStart: {
+          gte: billingPeriodStart,
+        },
+        billingPeriodEnd: {
+          lte: billingPeriodEnd,
+        },
+      },
+    });
+
+    return credit;
+  }
+
+  /**
+   * Get all credit records for a user (historical)
+   * Useful for displaying billing history
+   *
+   * @param userId - User ID
+   * @param limit - Maximum number of records to return
+   * @returns Array of credit records
+   */
+  async getCreditHistory(userId: string, limit = 12): Promise<Credit[]> {
+    logger.debug('CreditService: Getting credit history', { userId, limit });
+
+    const credits = await this.prisma.credit.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return credits;
+  }
+
+  /**
+   * Calculate remaining credits
+   * Convenience method for credit balance calculation
+   *
+   * @param credit - Credit record
+   * @returns Remaining credits
+   */
+  calculateRemainingCredits(credit: Credit): number {
+    return credit.totalCredits - credit.usedCredits;
+  }
+
+  /**
+   * Calculate usage percentage
+   * Returns percentage of credits used (0-100)
+   *
+   * @param credit - Credit record
+   * @returns Usage percentage
+   */
+  calculateUsagePercentage(credit: Credit): number {
+    if (credit.totalCredits === 0) return 0;
+    return (credit.usedCredits / credit.totalCredits) * 100;
+  }
+
+  /**
+   * Check if credits are low (below threshold)
+   * Used for triggering low-credit alerts
+   *
+   * @param credit - Credit record
+   * @param thresholdPercentage - Threshold percentage (default: 10%)
+   * @returns True if credits are below threshold
+   */
+  isCreditsLow(credit: Credit, thresholdPercentage = 10): boolean {
+    const usagePercentage = this.calculateUsagePercentage(credit);
+    const remainingPercentage = 100 - usagePercentage;
+    return remainingPercentage <= thresholdPercentage;
+  }
+
+  // ===========================================================================
+  // Enhanced Credits API Methods (Phase 2)
+  // ===========================================================================
+
+  /**
+   * Get free credits breakdown for user
+   * Returns monthly allocation, usage, reset date, and days until reset
+   *
+   * @param userId - User ID
+   * @returns Free credits breakdown
+   */
+  async getFreeCreditsBreakdown(userId: string): Promise<any> {
+    logger.debug('CreditService: Getting free credits breakdown', { userId });
+
+    // Query for current free credits (creditType='free', isCurrent=true)
+    const freeCredit = await this.prisma.credit.findFirst({
+      where: {
+        userId,
+        creditType: 'free',
+        isCurrent: true,
+      },
+    });
+
+    if (!freeCredit) {
+      // No free credits exist - return default for free tier
+      const defaultResetDate = this.calculateNextMonthlyReset(1);
+
+      logger.debug('CreditService: No free credits found, returning defaults', {
+        userId,
+      });
+
+      return {
+        remaining: 0,
+        monthlyAllocation: 2000, // Default free tier allocation
+        used: 0,
+        resetDate: defaultResetDate,
+        daysUntilReset: this.calculateDaysUntilReset(defaultResetDate),
+      };
+    }
+
+    const remaining = freeCredit.totalCredits - freeCredit.usedCredits;
+    const resetDate = freeCredit.billingPeriodEnd;
+
+    logger.debug('CreditService: Free credits breakdown retrieved', {
+      userId,
+      remaining,
+      monthlyAllocation: freeCredit.monthlyAllocation,
+      daysUntilReset: this.calculateDaysUntilReset(resetDate),
+    });
+
+    return {
+      remaining,
+      monthlyAllocation: freeCredit.monthlyAllocation,
+      used: freeCredit.usedCredits,
+      resetDate,
+      daysUntilReset: this.calculateDaysUntilReset(resetDate),
+    };
+  }
+
+  /**
+   * Get pro/purchased credits breakdown for user
+   * Aggregates all pro credit records for lifetime statistics
+   *
+   * @param userId - User ID
+   * @returns Pro credits breakdown
+   */
+  async getProCreditsBreakdown(userId: string): Promise<any> {
+    logger.debug('CreditService: Getting pro credits breakdown', { userId });
+
+    // Query all pro credits (creditType='pro')
+    const proCredits = await this.prisma.credit.findMany({
+      where: {
+        userId,
+        creditType: 'pro',
+      },
+    });
+
+    if (proCredits.length === 0) {
+      logger.debug('CreditService: No pro credits found', { userId });
+
+      return {
+        remaining: 0,
+        purchasedTotal: 0,
+        lifetimeUsed: 0,
+      };
+    }
+
+    // Aggregate across all pro credit records
+    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.totalCredits, 0);
+    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.usedCredits, 0);
+    const remaining = purchasedTotal - lifetimeUsed;
+
+    logger.debug('CreditService: Pro credits breakdown retrieved', {
+      userId,
+      remaining,
+      purchasedTotal,
+      lifetimeUsed,
+      recordCount: proCredits.length,
+    });
+
+    return {
+      remaining,
+      purchasedTotal,
+      lifetimeUsed,
+    };
+  }
+
+  /**
+   * Get detailed credits combining free and pro
+   * Complete view of user's credit status for API response
+   *
+   * @param userId - User ID
+   * @returns Detailed credits information
+   */
+  async getDetailedCredits(userId: string): Promise<any> {
+    logger.debug('CreditService: Getting detailed credits', { userId });
+
+    // Fetch both in parallel for performance
+    const [freeCredits, proCredits] = await Promise.all([
+      this.getFreeCreditsBreakdown(userId),
+      this.getProCreditsBreakdown(userId),
+    ]);
+
+    const totalAvailable = freeCredits.remaining + proCredits.remaining;
+
+    logger.info('CreditService: Detailed credits retrieved', {
+      userId,
+      totalAvailable,
+      freeRemaining: freeCredits.remaining,
+      proRemaining: proCredits.remaining,
+    });
+
+    return {
+      freeCredits,
+      proCredits,
+      totalAvailable,
+      lastUpdated: new Date(),
+    };
+  }
+
+  /**
+   * Calculate reset date based on billing period end and reset day
+   * For monthly resets, the reset date is the billingPeriodEnd
+   *
+   * @param billingPeriodEnd - End of current billing period
+   * @param _resetDayOfMonth - Day of month for reset (1-31) - currently unused
+   * @returns Next reset date
+   */
+  calculateResetDate(billingPeriodEnd: Date, _resetDayOfMonth: number): Date {
+    // For monthly resets, the reset date is the billingPeriodEnd
+    // This is already set correctly by the subscription system
+    return billingPeriodEnd;
+  }
+
+  /**
+   * Calculate days until reset date
+   * Returns 0 if already past reset date
+   *
+   * @param resetDate - Reset date
+   * @returns Days until reset (minimum 0)
+   */
+  calculateDaysUntilReset(resetDate: Date): number {
+    const now = new Date();
+    const diffMs = resetDate.getTime() - now.getTime();
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    // Return 0 if already past reset date
+    return Math.max(0, days);
+  }
+
+  // ===========================================================================
+  // Helper Methods
+  // ===========================================================================
+
+  /**
+   * Calculate next monthly reset (first day of next month)
+   * Helper for calculating default reset dates
+   *
+   * @param dayOfMonth - Day of month for reset (1-31)
+   * @returns Next reset date
+   */
+  private calculateNextMonthlyReset(dayOfMonth: number): Date {
+    const now = new Date();
+    let year = now.getFullYear();
+    let month = now.getMonth() + 1; // Next month
+
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+
+    // Create date at midnight UTC
+    return new Date(Date.UTC(year, month, dayOfMonth, 0, 0, 0, 0));
+  }
+}

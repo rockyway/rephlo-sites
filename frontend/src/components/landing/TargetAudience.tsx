@@ -120,7 +120,7 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
 
           {/* App Icons */}
           <div className="mb-lg">
-            <div className="text-caption font-medium text-deep-navy-500 dark:text-deep-navy-400 mb-sm">
+            <div className="text-caption font-medium text-deep-navy-700 dark:text-deep-navy-400 mb-sm">
               Works with:
             </div>
             <AppIconGrid apps={audience.apps} />
@@ -150,7 +150,7 @@ function AudienceCard({ audience, delay }: { audience: typeof audiences[0]; dela
 
           {/* Workflow Visualization */}
           <div className="pt-sm border-t border-deep-navy-200 dark:border-deep-navy-700 mb-sm">
-            <div className="text-caption font-medium text-deep-navy-500 dark:text-deep-navy-400 mb-sm">
+            <div className="text-caption font-medium text-deep-navy-700 dark:text-deep-navy-400 mb-sm">
               Workflow:
             </div>
             <WorkflowVisual steps={audience.workflow} />
@@ -183,7 +183,7 @@ function TargetAudience() {
           <h2 className="text-h1 font-bold text-deep-navy-800 dark:text-white mb-lg">
             Built for how you work
           </h2>
-          <p className="text-body-lg text-deep-navy-500 dark:text-deep-navy-300">
+          <p className="text-body-lg text-deep-navy-700 dark:text-deep-navy-300">
             Tailored experiences for every workflow and writing style
           </p>
         </div>

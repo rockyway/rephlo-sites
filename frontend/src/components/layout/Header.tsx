@@ -21,7 +21,7 @@ function NavLink({ href, children, isActive }: NavLinkProps) {
         // Active state with indicator
         isActive
           ? 'text-rephlo-blue dark:text-electric-cyan border-b-2 border-b-rephlo-blue dark:border-b-electric-cyan shadow-sm'
-          : 'text-deep-navy-500 dark:text-deep-navy-300',
+          : 'text-deep-navy-700 dark:text-deep-navy-300',
         // Hover state
         'hover:text-rephlo-blue dark:hover:text-electric-cyan hover:shadow-sm'
       )}

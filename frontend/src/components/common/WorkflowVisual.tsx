@@ -56,7 +56,7 @@ function WorkflowVisual({ steps, variant = 'default', className }: WorkflowVisua
               <ArrowRight
                 className={cn(
                   'h-4 w-4 flex-shrink-0',
-                  'text-deep-navy-400 dark:text-deep-navy-500'
+                  'text-deep-navy-400 dark:text-deep-navy-700'
                 )}
               />
             )}

@@ -26,7 +26,7 @@ const buttonVariants = cva(
         secondary:
           'border-2 border-rephlo-blue bg-transparent text-rephlo-blue hover:bg-rephlo-blue/10 active:bg-rephlo-blue/20',
         ghost:
-          'bg-transparent text-deep-navy-500 hover:bg-deep-navy-100 active:bg-deep-navy-200',
+          'bg-transparent text-deep-navy-700 hover:bg-deep-navy-100 active:bg-deep-navy-200',
         destructive:
           'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
       },

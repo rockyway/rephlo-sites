@@ -1,0 +1,315 @@
+=== OAUTH CLIENTS ===
+[
+  {
+    "clientId": "desktop-app-test",
+    "clientName": "Rephlo Desktop App (Test)",
+    "clientSecretHash": "$2b$10$p5ERNptVog2QtS0DVQP3leEvQyv.MXaxVqFj.uPymbE6PEZ1sYCIK",
+    "redirectUris": [
+      "http://localhost:3000/callback",
+      "rephlo://callback"
+    ],
+    "grantTypes": [
+      "authorization_code",
+      "refresh_token"
+    ],
+    "responseTypes": [
+      "code"
+    ],
+    "scope": "openid email profile offline_access",
+    "isActive": true,
+    "config": {
+      "tags": [
+        "desktop",
+        "official",
+        "test"
+      ],
+      "description": "Official Rephlo Desktop Application",
+      "allowedOrigins": [
+        "http://localhost:3000",
+        "rephlo://"
+      ],
+      "skipConsentScreen": true
+    },
+    "createdAt": "2025-11-09T22:31:45.896Z",
+    "updatedAt": "2025-11-09T23:00:23.671Z"
+  },
+  {
+    "clientId": "poc-client-test",
+    "clientName": "POC Client (Test)",
+    "clientSecretHash": "$2b$10$SmYgvqqXKrxvdrvT2QEegOrK64dUa7ZL5uZVFg/vfoyCz8hunqTQu",
+    "redirectUris": [
+      "http://localhost:8080/callback",
+      "http://localhost:8080/oauth/callback"
+    ],
+    "grantTypes": [
+      "authorization_code",
+      "refresh_token"
+    ],
+    "responseTypes": [
+      "code"
+    ],
+    "scope": "openid email profile offline_access",
+    "isActive": true,
+    "config": {
+      "tags": [
+        "poc",
+        "test"
+      ],
+      "description": "Proof of Concept Client for Testing",
+      "allowedOrigins": [
+        "http://localhost:8080"
+      ],
+      "skipConsentScreen": true
+    },
+    "createdAt": "2025-11-09T22:31:45.948Z",
+    "updatedAt": "2025-11-09T23:00:23.713Z"
+  },
+  {
+    "clientId": "web-app-test",
+    "clientName": "Rephlo Web App (Test)",
+    "clientSecretHash": "$2b$10$8rWh1p0a0DKW3Iu.R653xeEsSMNS3h8YqzHPhpMOxlZJdrwgjxe8K",
+    "redirectUris": [
+      "http://localhost:5173/callback",
+      "http://localhost:5173/auth/callback"
+    ],
+    "grantTypes": [
+      "authorization_code",
+      "refresh_token"
+    ],
+    "responseTypes": [
+      "code"
+    ],
+    "scope": "openid email profile offline_access",
+    "isActive": true,
+    "config": {
+      "tags": [
+        "web",
+        "official",
+        "test"
+      ],
+      "description": "Official Rephlo Web Application",
+      "allowedOrigins": [
+        "http://localhost:5173"
+      ],
+      "skipConsentScreen": true
+    },
+    "createdAt": "2025-11-09T22:31:45.995Z",
+    "updatedAt": "2025-11-09T23:00:23.753Z"
+  }
+]
+
+=== USERS ===
+[
+  {
+    "id": "0236a915-21b6-404c-8057-0eeb13da8e9e",
+    "email": "free.user@example.com",
+    "role": "user",
+    "authProvider": "local",
+    "emailVerified": true,
+    "isActive": true,
+    "mfaEnabled": false,
+    "mfaMethod": "totp",
+    "mfaVerifiedAt": null,
+    "googleId": null
+  },
+  {
+    "id": "3ce22410-e63e-473e-ab05-073b0de2f725",
+    "email": "pro.user@example.com",
+    "role": "user",
+    "authProvider": "local",
+    "emailVerified": true,
+    "isActive": true,
+    "mfaEnabled": false,
+    "mfaMethod": "totp",
+    "mfaVerifiedAt": null,
+    "googleId": null
+  },
+  {
+    "id": "9e9f474c-688a-4262-be1b-662debee10cc",
+    "email": "admin.test@rephlo.ai",
+    "role": "admin",
+    "authProvider": "local",
+    "emailVerified": true,
+    "isActive": true,
+    "mfaEnabled": true,
+    "mfaMethod": "totp",
+    "mfaVerifiedAt": null,
+    "googleId": null
+  },
+  {
+    "id": "5458d95c-48d1-4cde-ba3c-058f69e6e450",
+    "email": "google.user@example.com",
+    "role": "user",
+    "authProvider": "google",
+    "emailVerified": true,
+    "isActive": true,
+    "mfaEnabled": false,
+    "mfaMethod": "totp",
+    "mfaVerifiedAt": null,
+    "googleId": "118094742123456789012"
+  }
+]
+
+=== SUBSCRIPTIONS ===
+[
+  {
+    "id": "e6e6c0a1-dd21-4f1d-ae5a-4184aefaa85f",
+    "userId": "0236a915-21b6-404c-8057-0eeb13da8e9e",
+    "tier": "free",
+    "status": "active",
+    "creditsPerMonth": 100,
+    "creditsRollover": false,
+    "priceCents": 0,
+    "billingInterval": "monthly",
+    "stripeSubscriptionId": null,
+    "stripeCustomerId": null,
+    "stripePriceId": null,
+    "currentPeriodStart": "2025-11-09T23:00:23.918Z",
+    "currentPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "trialEnd": null,
+    "cancelAtPeriodEnd": false,
+    "cancelledAt": null,
+    "createdAt": "2025-11-09T23:00:23.920Z",
+    "updatedAt": "2025-11-09T23:00:23.920Z",
+    "user": {
+      "email": "free.user@example.com"
+    }
+  },
+  {
+    "id": "19332b6a-a18a-48e3-932d-a8b74a05cbad",
+    "userId": "3ce22410-e63e-473e-ab05-073b0de2f725",
+    "tier": "pro",
+    "status": "active",
+    "creditsPerMonth": 10000,
+    "creditsRollover": false,
+    "priceCents": 9999,
+    "billingInterval": "monthly",
+    "stripeSubscriptionId": null,
+    "stripeCustomerId": null,
+    "stripePriceId": null,
+    "currentPeriodStart": "2025-11-09T23:00:23.923Z",
+    "currentPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "trialEnd": null,
+    "cancelAtPeriodEnd": false,
+    "cancelledAt": null,
+    "createdAt": "2025-11-09T23:00:23.924Z",
+    "updatedAt": "2025-11-09T23:00:23.924Z",
+    "user": {
+      "email": "pro.user@example.com"
+    }
+  },
+  {
+    "id": "da240ab6-b730-470e-a206-6cafe7b63d34",
+    "userId": "9e9f474c-688a-4262-be1b-662debee10cc",
+    "tier": "pro",
+    "status": "active",
+    "creditsPerMonth": 10000,
+    "creditsRollover": false,
+    "priceCents": 9999,
+    "billingInterval": "monthly",
+    "stripeSubscriptionId": null,
+    "stripeCustomerId": null,
+    "stripePriceId": null,
+    "currentPeriodStart": "2025-11-09T23:00:23.926Z",
+    "currentPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "trialEnd": null,
+    "cancelAtPeriodEnd": false,
+    "cancelledAt": null,
+    "createdAt": "2025-11-09T23:00:23.927Z",
+    "updatedAt": "2025-11-09T23:00:23.927Z",
+    "user": {
+      "email": "admin.test@rephlo.ai"
+    }
+  },
+  {
+    "id": "95eb6f08-f87f-4c1b-b7a3-9b87ad7d9406",
+    "userId": "5458d95c-48d1-4cde-ba3c-058f69e6e450",
+    "tier": "pro",
+    "status": "active",
+    "creditsPerMonth": 10000,
+    "creditsRollover": false,
+    "priceCents": 9999,
+    "billingInterval": "monthly",
+    "stripeSubscriptionId": null,
+    "stripeCustomerId": null,
+    "stripePriceId": null,
+    "currentPeriodStart": "2025-11-09T23:00:23.930Z",
+    "currentPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "trialEnd": null,
+    "cancelAtPeriodEnd": false,
+    "cancelledAt": null,
+    "createdAt": "2025-11-09T23:00:23.931Z",
+    "updatedAt": "2025-11-09T23:00:23.931Z",
+    "user": {
+      "email": "google.user@example.com"
+    }
+  }
+]
+
+=== CREDITS ===
+[
+  {
+    "id": "bc3ee4b0-cd20-4725-819c-9fcfaab6fa23",
+    "userId": "0236a915-21b6-404c-8057-0eeb13da8e9e",
+    "subscriptionId": null,
+    "totalCredits": 100,
+    "usedCredits": 0,
+    "billingPeriodStart": "2025-11-09T23:00:23.933Z",
+    "billingPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "isCurrent": true,
+    "creditType": "free",
+    "monthlyAllocation": 100,
+    "resetDayOfMonth": 1,
+    "createdAt": "2025-11-09T23:00:23.935Z",
+    "updatedAt": "2025-11-09T23:00:23.935Z",
+    "subscription": null
+  },
+  {
+    "id": "00ce9883-a801-4d52-b3d4-44a1caa9724c",
+    "userId": "3ce22410-e63e-473e-ab05-073b0de2f725",
+    "subscriptionId": null,
+    "totalCredits": 10000,
+    "usedCredits": 0,
+    "billingPeriodStart": "2025-11-09T23:00:23.937Z",
+    "billingPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "isCurrent": true,
+    "creditType": "pro",
+    "monthlyAllocation": 10000,
+    "resetDayOfMonth": 1,
+    "createdAt": "2025-11-09T23:00:23.938Z",
+    "updatedAt": "2025-11-09T23:00:23.938Z",
+    "subscription": null
+  },
+  {
+    "id": "0c22bd1e-663e-411e-ab89-0698c1934423",
+    "userId": "9e9f474c-688a-4262-be1b-662debee10cc",
+    "subscriptionId": null,
+    "totalCredits": 10000,
+    "usedCredits": 0,
+    "billingPeriodStart": "2025-11-09T23:00:23.940Z",
+    "billingPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "isCurrent": true,
+    "creditType": "pro",
+    "monthlyAllocation": 10000,
+    "resetDayOfMonth": 1,
+    "createdAt": "2025-11-09T23:00:23.941Z",
+    "updatedAt": "2025-11-09T23:00:23.941Z",
+    "subscription": null
+  },
+  {
+    "id": "a2df3e11-3506-4af8-87c4-4b6126fdfb85",
+    "userId": "5458d95c-48d1-4cde-ba3c-058f69e6e450",
+    "subscriptionId": null,
+    "totalCredits": 10000,
+    "usedCredits": 0,
+    "billingPeriodStart": "2025-11-09T23:00:23.944Z",
+    "billingPeriodEnd": "2025-11-30T06:00:00.000Z",
+    "isCurrent": true,
+    "creditType": "pro",
+    "monthlyAllocation": 10000,
+    "resetDayOfMonth": 1,
+    "createdAt": "2025-11-09T23:00:23.945Z",
+    "updatedAt": "2025-11-09T23:00:23.945Z",
+    "subscription": null
+  }
+]

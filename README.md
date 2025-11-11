@@ -104,6 +104,9 @@ rephlo-sites/
 └── README.md                    # This file
 ```
 
+## External Desktop App project
+Location: `D:\sources\demo\text-assistant`
+
 ---
 
 ## Setup Instructions
@@ -131,7 +134,8 @@ cd frontend
 cp .env.example .env
 
 # Edit .env file with your configuration
-# VITE_API_URL=http://localhost:3001
+# VITE_API_URL=http://localhost:7150
+# VITE_PORT=7152 (optional, default: 7152)
 
 # Install dependencies
 npm install
@@ -140,7 +144,7 @@ npm install
 npm run dev
 ```
 
-Frontend will be available at **http://localhost:5173**
+Frontend (Admin Dashboard) will be available at **http://localhost:7152**
 
 ### 3. Backend Setup
 
@@ -152,8 +156,8 @@ cp .env.example .env
 
 # Edit .env file with your database credentials
 # DATABASE_URL=postgresql://username:password@localhost:5432/rephlo
-# PORT=3001
-# CORS_ORIGIN=http://localhost:5173
+# PORT=7150
+# CORS_ORIGIN=http://localhost:7052
 
 # Install dependencies
 npm install
@@ -168,13 +172,45 @@ npm run prisma:migrate
 npm run dev
 ```
 
-Backend API will be available at **http://localhost:3001**
+Backend API will be available at **http://localhost:7150**
+
+---
+
+## Services Port Mapping
+
+All services run on separate ports for development. Here's the complete port configuration:
+
+| Service | Port | Purpose | OAuth Client ID |
+|---------|------|---------|-----------------|
+| **Frontend (Admin Dashboard)** | 7152 | React admin dashboard and web interface | `web-app-test` |
+| **Backend API** | 7150 | REST API server | N/A |
+| **Identity Provider (OIDC)** | 7151 | OAuth 2.0 / OpenID Connect provider | N/A |
+| **POC Client** | 8080 | Proof of concept OAuth client | `poc-client-test` |
+| **Desktop App (Instance 1)** | 8327 | Rephlo desktop application (test) | `desktop-app-test` |
+| **Desktop App (Instance 2)** | 8329 | Rephlo desktop application (test) | `desktop-app-test` |
 
 ---
 
 ## Development Workflow
 
-### Running in Development
+### Running All Services (Recommended)
+
+Run all three services (Frontend, Backend, Identity Provider) concurrently:
+
+```bash
+npm run dev:all
+```
+
+This will start:
+- Frontend (Admin Dashboard) on **http://localhost:7152**
+- Backend API on **http://localhost:7150**
+- Identity Provider on **http://localhost:7151**
+- POC Client on **http://localhost:8080**
+- Desktop App on **http://localhost:8327** or **http://localhost:8329**
+
+All services will hot-reload on file changes with color-coded output.
+
+### Running Services Individually
 
 **Terminal 1 - Frontend:**
 ```bash
@@ -188,7 +224,11 @@ cd backend
 npm run dev
 ```
 
-Both servers will hot-reload on file changes.
+**Terminal 3 - Identity Provider:**
+```bash
+cd identity-provider
+npm run dev
+```
 
 ### Building for Production
 
@@ -228,7 +268,8 @@ npm start
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | `http://localhost:3001` |
+| `VITE_API_URL` | Backend API URL | `http://localhost:7150` |
+| `VITE_PORT` | Frontend port (optional) | `7152` |
 | `VITE_APP_NAME` | Application name | `Rephlo` |
 | `VITE_APP_TAGLINE` | Application tagline | `Transform text. Keep your flow.` |
 | `VITE_NODE_ENV` | Environment mode | `development` |
@@ -237,10 +278,10 @@ npm start
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `PORT` | Server port | `3001` |
+| `PORT` | Server port | `7150` |
 | `NODE_ENV` | Environment mode | `development` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:password@localhost:5432/rephlo` |
-| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:5173` |
+| `CORS_ORIGIN` | Allowed frontend origin | `http://localhost:7152` |
 | `MAX_FILE_SIZE` | Max upload size (bytes) | `5242880` (5MB) |
 | `UPLOAD_DIR` | Upload directory path | `./uploads` |
 
@@ -300,16 +341,38 @@ Opens GUI at **http://localhost:5555**
 
 ---
 
-## API Endpoints (Coming in Phase 3)
+## API Features
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/track-download` | Track download by OS |
-| `POST` | `/api/feedback` | Submit user feedback |
-| `POST` | `/api/diagnostics` | Upload diagnostic files |
-| `GET` | `/api/version` | Get latest app version |
-| `GET` | `/admin/metrics` | Admin dashboard metrics |
+### Model Tier Access Control
+
+The API supports tier-based access control for LLM models:
+
+- **Free Tier**: Basic models for general use (2,000 credits/month)
+- **Pro Tier**: Advanced models for professional use (50,000 credits/month)
+- **Enterprise Tier**: Premium models with highest capabilities (250,000 credits/month)
+
+All API endpoints automatically enforce tier restrictions. Users receive clear upgrade prompts when attempting to access models above their subscription level.
+
+**Documentation**:
+- [API Reference](docs/reference/017-model-tier-access-api.md) - Complete API documentation
+- [Admin Guide](docs/guides/model-tier-management-admin-guide.md) - Tier management for administrators
+- [Integration Guide](docs/guides/tier-access-integration-guide.md) - Developer integration instructions
+- [Deployment Guide](docs/guides/tier-access-deployment-guide.md) - Production deployment steps
+
+### Core API Endpoints
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/health` | Health check | No |
+| `GET` | `/v1/models` | List models with tier metadata | Yes |
+| `GET` | `/v1/models/:id` | Get model details with access status | Yes |
+| `POST` | `/v1/chat/completions` | Chat completion (tier-validated) | Yes |
+| `POST` | `/v1/completions` | Text completion (tier-validated) | Yes |
+| `POST` | `/api/track-download` | Track download by OS | No |
+| `POST` | `/api/feedback` | Submit user feedback | No |
+| `POST` | `/api/diagnostics` | Upload diagnostic files | Yes |
+| `GET` | `/api/version` | Get latest app version | No |
+| `GET` | `/admin/metrics` | Admin dashboard metrics | Yes |
 
 ---
 
@@ -410,7 +473,7 @@ Detailed deployment instructions will be added in **Phase 6**.
 
 1. Check Node.js version: `node -v` (should be v18+)
 2. Clear node_modules: `rm -rf node_modules package-lock.json && npm install`
-3. Check port 5173 is available
+3. Check port 7152 is available (or configure `VITE_PORT` in `.env`)
 4. Verify `.env` file exists and is valid
 
 ### Backend won't start

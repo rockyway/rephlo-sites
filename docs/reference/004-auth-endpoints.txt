@@ -1,0 +1,211 @@
+AUTHENTICATION ENDPOINTS INVENTORY
+===================================
+
+Date: 2025-11-06
+Status: Complete Reference
+
+SUMMARY
+-------
+- 12 OIDC/OAuth endpoints: FULLY IMPLEMENTED
+- 6 REST API endpoints: FULLY IMPLEMENTED  
+- 8 common auth features: NOT IMPLEMENTED
+
+IMPLEMENTED ENDPOINTS (18 Total)
+===============================
+
+OIDC/OAuth Standard (6):
+1. GET  /.well-known/openid-configuration - OIDC discovery
+2. GET  /oauth/authorize - Authorization endpoint
+3. POST /oauth/token - Token endpoint
+4. POST /oauth/revoke - Token revocation
+5. GET  /oauth/userinfo - User info endpoint
+6. GET  /oauth/jwks - Public key set
+
+OIDC Interaction (5):
+7. GET  /interaction/:uid - Interaction entry point
+8. POST /interaction/:uid/login - Login submission (email+password)
+9. POST /interaction/:uid/consent - Consent submission (scopes)
+10. GET /interaction/:uid/abort - Abort interaction
+11. GET /interaction/:uid/data - Get interaction metadata
+
+Enhanced Endpoint (1):
+12. POST /oauth/token/enhance - Get user data + credits
+
+REST API (6):
+13. GET  /v1/users/me - Get current user profile
+14. PATCH /v1/users/me - Update user profile
+15. GET  /api/user/profile - Enhanced profile (with subscription)
+16. GET  /api/user/credits - Detailed credits
+
+PLUS: Token refresh via /oauth/token with refresh_token grant
+
+NOT IMPLEMENTED (8 Missing Features)
+====================================
+
+1. User Registration
+   - Expected: POST /auth/register
+   - Service exists: AuthService.createUser()
+   - Gap: No endpoint exposes it
+   - Impact: Users cannot self-register
+
+2. Password Reset
+   - Expected: POST /auth/forgot-password + POST /auth/reset-password
+   - Service exists: AuthService.updatePassword()
+   - Gap: No endpoint, no email service, no token generation
+   - Impact: Cannot recover forgotten passwords
+
+3. Email Verification
+   - Expected: POST /auth/verify-email
+   - Service exists: AuthService.verifyEmail()
+   - Gap: No endpoint, no email integration
+   - Impact: Cannot enforce email verification
+
+4. Logout Endpoint
+   - Partial: /oauth/revoke exists (not RESTful)
+   - Expected: POST /auth/logout
+   - Impact: Must manually revoke tokens
+
+5. Account Deactivation
+   - Expected: POST /auth/deactivate
+   - Service exists: AuthService.deactivateAccount()
+   - Gap: No endpoint
+   - Impact: Cannot self-service deactivate
+
+6. Account Deletion
+   - Expected: DELETE /auth/account
+   - Service exists: AuthService.deleteAccount()
+   - Gap: No endpoint
+   - Impact: Cannot self-service delete account
+
+7. Social Login
+   - Expected: POST /oauth/login/{provider}
+   - Status: No integration with Google, GitHub, etc.
+   - Impact: Only email/password auth
+
+8. MFA/2FA
+   - Expected: TOTP, SMS endpoints
+   - Status: Not implemented
+   - Impact: No enhanced security option
+
+OAUTH SCOPES (7 Supported)
+==========================
+
+✓ openid              - OpenID Connect basic
+✓ profile             - User profile
+✓ email               - Email address
+✓ user.info           - Profile + preferences
+✓ credits.read        - Credit information
+✓ models.read         - Model listing
+✓ llm.inference       - LLM inference permission
+
+AUTHENTICATION FLOW
+===================
+
+1. GET /oauth/authorize (with PKCE parameters)
+2. GET /interaction/:uid (renders login form)
+3. POST /interaction/:uid/login (email + password)
+   └─ AuthService.authenticate() verifies
+4. POST /interaction/:uid/consent (select scopes)
+5. Redirect to /oauth/token endpoint
+6. POST /oauth/token (exchange code for JWT)
+7. Optional: POST /oauth/token/enhance (get user data)
+8. Make API calls with Bearer token:
+   - GET /v1/users/me
+   - GET /api/user/profile
+   - GET /api/user/credits
+   - POST /v1/completions
+   - etc.
+
+TOKEN REFRESH:
+POST /oauth/token with refresh_token grant
+→ New access_token issued
+
+LOGOUT:
+POST /oauth/revoke with token
+→ Token invalidated
+
+KEY FILES
+=========
+
+Routes:
+- backend/src/routes/oauth.routes.ts
+- backend/src/routes/v1.routes.ts
+- backend/src/routes/api.routes.ts
+
+Controllers:
+- backend/src/controllers/auth.controller.ts
+- backend/src/controllers/oauth.controller.ts
+- backend/src/controllers/users.controller.ts
+
+Services:
+- backend/src/services/auth.service.ts
+
+Configuration:
+- backend/src/config/oidc.ts
+- backend/src/middleware/auth.middleware.ts
+
+Documentation:
+- backend/docs/openapi/enhanced-api.yaml
+
+SECURITY FEATURES
+=================
+
+✓ PKCE (RFC 7636) - Required for all clients
+✓ JWT Signing - RS256 algorithm  
+✓ Password Hashing - Bcrypt 12 rounds
+✓ Token Expiration - 1 hour access tokens
+✓ Scope Validation - Enforced during auth
+✓ Bearer Token Auth - All REST APIs require it
+
+SERVICES AVAILABLE (But No Endpoints)
+=====================================
+
+These AuthService methods exist but lack REST endpoints:
+
+1. createUser() - Create new user
+2. authenticate() - Verify email/password
+3. updatePassword() - Change password
+4. verifyEmail() - Mark email verified
+5. deactivateAccount() - Disable account
+6. deleteAccount() - Delete account
+7. findByEmail() - User lookup
+8. findById() - User lookup by ID
+
+RECOMMENDATIONS (Priority Order)
+================================
+
+HIGH PRIORITY:
+1. User Registration (POST /auth/register)
+2. Password Reset Flow (forgot-password + reset endpoints)
+3. Explicit Logout (POST /auth/logout)
+
+MEDIUM PRIORITY:
+4. Email Verification (POST /auth/verify-email)
+5. Account Management (deactivate, delete endpoints)
+
+LOW PRIORITY:
+6. Social Login (Google, GitHub integration)
+7. MFA/2FA (TOTP, SMS)
+
+CONCLUSION
+==========
+
+STRENGTHS:
+- Complete OAuth 2.0 / OpenID Connect implementation
+- PKCE protection (authorization code flow)
+- JWT bearer token authentication
+- Scope-based access control
+- Token refresh and revocation
+
+GAPS:
+- Missing user registration
+- No password recovery mechanism
+- No email verification enforcement
+- No account self-service management
+- No social login integration
+
+CURRENT STATE:
+- Ready for: Server-to-server auth, pre-created users
+- Missing: Self-service user onboarding, account recovery
+
+STATUS: 18 endpoints fully implemented, 8 features missing

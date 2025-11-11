@@ -1,0 +1,503 @@
+{
+  "info": {
+    "name": "Text Assistant Enhanced API",
+    "description": "Enhanced API endpoints for desktop application integration. Includes credit information, user profiles, and OAuth token enhancement.",
+    "version": "1.1.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.textassistant.com",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Credits",
+      "item": [
+        {
+          "name": "Get Detailed Credits",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('freeCredits');",
+                  "    pm.expect(jsonData).to.have.property('proCredits');",
+                  "    pm.expect(jsonData).to.have.property('totalAvailable');",
+                  "    pm.expect(jsonData).to.have.property('lastUpdated');",
+                  "});",
+                  "",
+                  "pm.test(\"Free credits have correct structure\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.freeCredits).to.have.property('remaining');",
+                  "    pm.expect(jsonData.freeCredits).to.have.property('monthlyAllocation');",
+                  "    pm.expect(jsonData.freeCredits).to.have.property('used');",
+                  "    pm.expect(jsonData.freeCredits).to.have.property('resetDate');",
+                  "    pm.expect(jsonData.freeCredits).to.have.property('daysUntilReset');",
+                  "});",
+                  "",
+                  "pm.test(\"Pro credits have correct structure\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.proCredits).to.have.property('remaining');",
+                  "    pm.expect(jsonData.proCredits).to.have.property('purchasedTotal');",
+                  "    pm.expect(jsonData.proCredits).to.have.property('lifetimeUsed');",
+                  "});",
+                  "",
+                  "pm.test(\"Total available matches sum of free and pro\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedTotal = jsonData.freeCredits.remaining + jsonData.proCredits.remaining;",
+                  "    pm.expect(jsonData.totalAvailable).to.eql(expectedTotal);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/credits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "credits"]
+            },
+            "description": "Get detailed credit usage information including free credits (monthly allocation with reset date) and pro credits (purchased credits with lifetime usage).\n\n**Rate Limit:** 60 requests/minute\n**Required Scope:** credits.read"
+          },
+          "response": [
+            {
+              "name": "Free Tier User",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/credits",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "credits"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"freeCredits\": {\n    \"remaining\": 1500,\n    \"monthlyAllocation\": 2000,\n    \"used\": 500,\n    \"resetDate\": \"2025-12-01T00:00:00Z\",\n    \"daysUntilReset\": 25\n  },\n  \"proCredits\": {\n    \"remaining\": 0,\n    \"purchasedTotal\": 0,\n    \"lifetimeUsed\": 0\n  },\n  \"totalAvailable\": 1500,\n  \"lastUpdated\": \"2025-11-06T14:30:00Z\"\n}"
+            },
+            {
+              "name": "Pro Tier User",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/credits",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "credits"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"freeCredits\": {\n    \"remaining\": 2000,\n    \"monthlyAllocation\": 2000,\n    \"used\": 0,\n    \"resetDate\": \"2025-12-01T00:00:00Z\",\n    \"daysUntilReset\": 25\n  },\n  \"proCredits\": {\n    \"remaining\": 5000,\n    \"purchasedTotal\": 10000,\n    \"lifetimeUsed\": 5000\n  },\n  \"totalAvailable\": 7000,\n  \"lastUpdated\": \"2025-11-06T14:30:00Z\"\n}"
+            },
+            {
+              "name": "Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/credits",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "credits"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"unauthorized\",\n  \"error_description\": \"Invalid or expired access token\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Endpoints for retrieving credit balance and usage information"
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('userId');",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "    pm.expect(jsonData).to.have.property('displayName');",
+                  "    pm.expect(jsonData).to.have.property('subscription');",
+                  "    pm.expect(jsonData).to.have.property('preferences');",
+                  "    pm.expect(jsonData).to.have.property('accountCreatedAt');",
+                  "});",
+                  "",
+                  "pm.test(\"Subscription has correct structure\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.subscription).to.have.property('tier');",
+                  "    pm.expect(jsonData.subscription).to.have.property('status');",
+                  "    pm.expect(jsonData.subscription).to.have.property('cancelAtPeriodEnd');",
+                  "});",
+                  "",
+                  "pm.test(\"Preferences have correct structure\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.preferences).to.have.property('emailNotifications');",
+                  "    pm.expect(jsonData.preferences).to.have.property('usageAlerts');",
+                  "});",
+                  "",
+                  "pm.test(\"Email is valid format\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.email).to.match(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "profile"]
+            },
+            "description": "Get authenticated user's complete profile including email, subscription tier/status, preferences, and account timestamps.\n\n**Rate Limit:** 30 requests/minute\n**Required Scope:** user.info"
+          },
+          "response": [
+            {
+              "name": "Pro User Profile",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/profile",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "profile"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"userId\": \"usr_abc123xyz\",\n  \"email\": \"user@example.com\",\n  \"displayName\": \"John Doe\",\n  \"subscription\": {\n    \"tier\": \"pro\",\n    \"status\": \"active\",\n    \"currentPeriodStart\": \"2025-11-01T00:00:00Z\",\n    \"currentPeriodEnd\": \"2025-12-01T00:00:00Z\",\n    \"cancelAtPeriodEnd\": false\n  },\n  \"preferences\": {\n    \"defaultModel\": \"gpt-5\",\n    \"emailNotifications\": true,\n    \"usageAlerts\": true\n  },\n  \"accountCreatedAt\": \"2024-01-15T10:30:00Z\",\n  \"lastLoginAt\": \"2025-11-06T08:00:00Z\"\n}"
+            },
+            {
+              "name": "Free User Profile",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/profile",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "profile"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"userId\": \"usr_def456uvw\",\n  \"email\": \"newuser@example.com\",\n  \"displayName\": \"Jane Smith\",\n  \"subscription\": {\n    \"tier\": \"free\",\n    \"status\": \"active\",\n    \"currentPeriodStart\": \"2025-11-01T00:00:00Z\",\n    \"currentPeriodEnd\": \"2025-12-01T00:00:00Z\",\n    \"cancelAtPeriodEnd\": false\n  },\n  \"preferences\": {\n    \"defaultModel\": \"gpt-4\",\n    \"emailNotifications\": true,\n    \"usageAlerts\": true\n  },\n  \"accountCreatedAt\": \"2025-10-15T14:20:00Z\",\n  \"lastLoginAt\": \"2025-11-06T09:15:00Z\"\n}"
+            },
+            {
+              "name": "Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/profile",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "profile"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"not_found\",\n  \"error_description\": \"User profile not found\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Endpoints for retrieving user profile and account information"
+    },
+    {
+      "name": "OAuth Enhancement",
+      "item": [
+        {
+          "name": "Enhance Token with User Data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user).to.have.property('userId');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.have.property('subscription');",
+                  "    pm.expect(jsonData.user).to.have.property('credits');",
+                  "});",
+                  "",
+                  "pm.test(\"Credits included in user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user.credits).to.have.property('freeCredits');",
+                  "    pm.expect(jsonData.user.credits).to.have.property('proCredits');",
+                  "    pm.expect(jsonData.user.credits).to.have.property('totalAvailable');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"access_token\": \"{{accessToken}}\",\n  \"include_user_data\": \"true\",\n  \"include_credits\": \"false\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token/enhance",
+              "host": ["{{baseUrl}}"],
+              "path": ["oauth", "token", "enhance"]
+            },
+            "description": "Enhance OAuth token response with full user profile and credit information. Use this immediately after obtaining an access token from /oauth/token to reduce round trips.\n\n**Rate Limit:** 30 requests/minute"
+          },
+          "response": [
+            {
+              "name": "Success with User Data",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"access_token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"include_user_data\": \"true\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/oauth/token/enhance",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["oauth", "token", "enhance"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"user\": {\n    \"userId\": \"usr_abc123xyz\",\n    \"email\": \"user@example.com\",\n    \"displayName\": \"John Doe\",\n    \"subscription\": {\n      \"tier\": \"pro\",\n      \"status\": \"active\"\n    },\n    \"credits\": {\n      \"freeCredits\": {\n        \"remaining\": 2000,\n        \"monthlyAllocation\": 2000,\n        \"resetDate\": \"2025-12-01T00:00:00Z\"\n      },\n      \"proCredits\": {\n        \"remaining\": 5000,\n        \"purchasedTotal\": 10000\n      },\n      \"totalAvailable\": 7000\n    }\n  }\n}"
+            },
+            {
+              "name": "Invalid Token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"access_token\": \"invalid_token\",\n  \"include_user_data\": \"true\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/oauth/token/enhance",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["oauth", "token", "enhance"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"invalid_token\",\n  \"error_description\": \"Invalid or malformed access token\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Enhance Token with Credits Only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has credits data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('credits');",
+                  "    pm.expect(jsonData.credits).to.have.property('freeCredits');",
+                  "    pm.expect(jsonData.credits).to.have.property('proCredits');",
+                  "    pm.expect(jsonData.credits).to.have.property('totalAvailable');",
+                  "});",
+                  "",
+                  "pm.test(\"User data not included\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.not.have.property('user');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"access_token\": \"{{accessToken}}\",\n  \"include_user_data\": \"false\",\n  \"include_credits\": \"true\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token/enhance",
+              "host": ["{{baseUrl}}"],
+              "path": ["oauth", "token", "enhance"]
+            },
+            "description": "Enhance OAuth token response with only credit information (without full user profile). Useful for token refresh scenarios.\n\n**Rate Limit:** 30 requests/minute"
+          },
+          "response": [
+            {
+              "name": "Success with Credits Only",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"access_token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"include_credits\": \"true\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/oauth/token/enhance",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["oauth", "token", "enhance"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"credits\": {\n    \"freeCredits\": {\n      \"remaining\": 1450,\n      \"monthlyAllocation\": 2000,\n      \"resetDate\": \"2025-12-01T00:00:00Z\"\n    },\n    \"proCredits\": {\n      \"remaining\": 4800,\n      \"purchasedTotal\": 10000\n    },\n    \"totalAvailable\": 6250\n  }\n}"
+            }
+          ]
+        }
+      ],
+      "description": "OAuth token enhancement endpoint for efficient initial data retrieval"
+    }
+  ]
+}

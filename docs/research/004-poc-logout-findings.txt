@@ -1,0 +1,201 @@
+POC CLIENT: LOGOUT, SESSION MANAGEMENT & TOKEN STORAGE ANALYSIS
+================================================================
+
+LOCATION: D:/sources/work/rephlo-sites/poc-client
+
+== 1. LOGOUT IMPLEMENTATION ==
+
+FRONTEND LOGOUT (Client-Side Only)
+File: D:/sources/work/rephlo-sites/poc-client/public/index.html
+Lines: 450-472
+
+Current Implementation:
+- localStorage.removeItem('poc_token')  [clears frontend token only]
+- Updates UI to show login button
+- Cleans URL with window.history.replaceState()
+- Does NOT call server endpoint
+- Does NOT invalidate backend session
+
+ISSUES:
+- Backend session remains active
+- Token stored on server is NOT cleared
+- User could reuse old token after logout
+- No session invalidation on Identity Provider
+
+== 2. SESSION MANAGEMENT ==
+
+Backend Session Store
+File: D:/sources/work/rephlo-sites/poc-client/src/server.ts
+Lines: 25-30
+
+Structure:
+  sessions = new Map<string, {
+    codeVerifier: string;
+    token?: string;
+    tokenPayload?: any;
+  }>
+
+Session Creation (Login)
+File: D:/sources/work/rephlo-sites/poc-client/src/server.ts
+Lines: 77-96 (GET /oauth/login)
+
+Process:
+1. Generate random sessionId (32-char hex)
+2. Store in sessions Map
+3. Send sessionId in HTTP-only cookie
+4. Cookie name: poc_session_id
+5. Cookie TTL: 1 hour (3600000 ms)
+
+Session Retrieval
+File: D:/sources/work/rephlo-sites/poc-client/src/server.ts
+Lines: 165-177 (GET /api/session/:sessionId)
+
+Issues:
+- SessionId passed via URL, not read from cookie
+- No authentication required
+- Vulnerable to enumeration
+
+== 3. TOKEN STORAGE ==
+
+Token Exchange
+File: D:/sources/work/rephlo-sites/poc-client/src/server.ts
+Lines: 102-159 (GET /callback)
+
+Process:
+1. Exchange auth code for JWT token
+2. Decode JWT payload
+3. Store token in session: session.token = token
+4. Redirect to /?token={token}&session={sessionId}
+
+Token Storage Locations:
+
+1. BACKEND: sessions.get(sessionId).token
+   - In-memory Map
+   - Lost on server restart
+   - NOT cleared on logout (CRITICAL)
+   - Lives indefinitely
+
+2. FRONTEND: localStorage.get('poc_token')
+   - Set at page load if in URL
+   - Persists across sessions
+   - Cleared on logout
+   - Stored via: localStorage.setItem('poc_token', token)
+
+3. URL PARAMETER: /?token=...&session=...
+   - Visible in browser history
+   - Security risk
+   - Cleaned with replaceState()
+
+Token Usage for API Calls
+File: D:/sources/work/rephlo-sites/poc-client/src/server.ts
+Lines: 183-241
+
+Endpoints affected:
+- GET /api/test/users/me
+- GET /api/test/models
+- GET /api/test/credits
+- GET /api/test/health
+
+Pattern:
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  // Forward to Resource API
+  axios.get(RESOURCE_API_URL + endpoint, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+Issues:
+- No server-side session validation
+- No check if user is logged in
+- No validation that token matches session
+- Accepts any token from any client
+
+== 4. CRITICAL ISSUES ==
+
+SEVERITY: CRITICAL
+- No Server-Side Logout: Backend session never invalidated
+- Token Reuse Possible: Old tokens work after logout
+
+SEVERITY: HIGH
+- Token Exposed in URL: Browser history, logs, referer headers
+- In-Memory Storage: Lost on restart, no persistence
+- No Session Validation: API endpoints accept any token
+- No Token Revocation: Identity Provider not informed
+
+SEVERITY: MEDIUM
+- SessionId in URL: Session fixation/enumeration risks
+- No Expiration Cleanup: Expired tokens stay in memory
+- No Logout to IdP: Provider doesn't know about logout
+
+== 5. FILE STRUCTURE ==
+
+D:/sources/work/rephlo-sites/poc-client/
+  src/
+    server.ts               [Backend implementation]
+  public/
+    index.html             [Frontend UI & JS]
+  package.json             [Dependencies]
+  tsconfig.json            [TypeScript config]
+
+== 6. KEY CODE SECTIONS ==
+
+Backend Session Store:
+  src/server.ts:25-30      [sessions Map]
+
+Login:
+  src/server.ts:77-96      [GET /oauth/login]
+
+OAuth Callback:
+  src/server.ts:102-159    [GET /callback]
+
+Session Info:
+  src/server.ts:165-177    [GET /api/session/:sessionId]
+
+API Test Endpoints:
+  src/server.ts:183-241    [All test endpoints]
+
+Frontend Token Storage:
+  public/index.html:410-427  [updateUI() function]
+
+Frontend Logout:
+  public/index.html:450-472  [logout() function]
+
+== 7. CONFIGURATION ==
+
+Client ID: textassistant-desktop
+Redirect URI: http://localhost:8080/callback
+IdP URL: http://localhost:7151
+Resource API: http://localhost:7150
+Session TTL: 1 hour
+PKCE Method: S256 (SHA-256)
+Scopes: openid email profile llm.inference models.read user.info credits.read
+
+== 8. ENDPOINTS ==
+
+Working:
+  GET /oauth/login              [Initiate OAuth]
+  GET /callback                 [OAuth callback]
+  GET /api/session/:sessionId   [Get session info]
+  GET /api/test/users/me        [User endpoint]
+  GET /api/test/models          [Models endpoint]
+  GET /api/test/credits         [Credits endpoint]
+  GET /api/test/health          [Health endpoint]
+
+Missing:
+  POST/GET /api/logout          [Server-side logout]
+  POST/GET /oauth/logout        [OIDC logout]
+  POST /oauth/revoke            [Token revocation]
+
+== 9. WHAT NEEDS TO BE FIXED ==
+
+1. Add /api/logout endpoint to invalidate session
+2. Update frontend logout() to call /api/logout
+3. Implement session cleanup on logout
+4. Clear token from sessions Map on logout
+5. Remove token from URL after redirect
+6. Add session validation to API endpoints
+7. Implement token revocation at IdP
+8. Add proper error handling for logout failures
+9. Implement OIDC logout endpoint
+10. Store tokens server-side only (not in URL/localStorage)
+
+== END OF ANALYSIS ==

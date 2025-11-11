@@ -1,0 +1,497 @@
+{
+  "info": {
+    "name": "Rephlo API - Dedicated LLM Service",
+    "description": "Complete API collection for Rephlo's Dedicated LLM Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "OIDC Discovery",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/.well-known/openid-configuration",
+              "host": ["{{base_url}}"],
+              "path": [".well-known", "openid-configuration"]
+            }
+          }
+        },
+        {
+          "name": "Token Exchange (Password Grant)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const jsonData = pm.response.json();",
+                  "pm.environment.set('access_token', jsonData.access_token);",
+                  "pm.environment.set('refresh_token', jsonData.refresh_token);",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has access_token', function () {",
+                  "    pm.expect(jsonData.access_token).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "username",
+                  "value": "user@example.com"
+                },
+                {
+                  "key": "password",
+                  "value": "password123"
+                },
+                {
+                  "key": "client_id",
+                  "value": "textassistant-desktop"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid email profile llm.inference models.read user.info credits.read"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/oauth/token",
+              "host": ["{{base_url}}"],
+              "path": ["oauth", "token"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const jsonData = pm.response.json();",
+                  "pm.environment.set('access_token', jsonData.access_token);",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "refresh_token"
+                },
+                {
+                  "key": "refresh_token",
+                  "value": "{{refresh_token}}"
+                },
+                {
+                  "key": "client_id",
+                  "value": "textassistant-desktop"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/oauth/token",
+              "host": ["{{base_url}}"],
+              "path": ["oauth", "token"]
+            }
+          }
+        },
+        {
+          "name": "Get User Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/oauth/userinfo",
+              "host": ["{{base_url}}"],
+              "path": ["oauth", "userinfo"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Models",
+      "item": [
+        {
+          "name": "List Models",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/models",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "models"]
+            }
+          }
+        },
+        {
+          "name": "List Models (Filter by Provider)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/models?provider=openai",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "models"],
+              "query": [
+                {
+                  "key": "provider",
+                  "value": "openai"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Model Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/models/gpt-5",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "models", "gpt-5"]
+            }
+          }
+        },
+        {
+          "name": "Text Completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"gpt-5\",\n  \"prompt\": \"Explain quantum computing in simple terms\",\n  \"maxTokens\": 500,\n  \"temperature\": 0.7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/completions",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "completions"]
+            }
+          }
+        },
+        {
+          "name": "Chat Completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"gpt-5\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"What is the capital of France?\"\n    }\n  ],\n  \"maxTokens\": 100,\n  \"temperature\": 0.7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/chat/completions",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "chat", "completions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/users/me/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "me", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enableStreaming\": true,\n  \"maxTokens\": 2048,\n  \"temperature\": 0.5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/users/me/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "me", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Set Default Model",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modelId\": \"gpt-5\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/users/me/preferences/model",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "users", "me", "preferences", "model"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "List Plans",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/subscription-plans",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "subscription-plans"]
+            }
+          }
+        },
+        {
+          "name": "Get Current Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/subscriptions/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "subscriptions", "me"]
+            }
+          }
+        },
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"pro\",\n  \"billingInterval\": \"monthly\",\n  \"paymentMethodId\": \"pm_1234abcd\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/subscriptions",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "subscriptions"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"No longer needed\",\n  \"cancelAtPeriodEnd\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/subscriptions/me/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "subscriptions", "me", "cancel"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credits & Usage",
+      "item": [
+        {
+          "name": "Get Current Credits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/credits/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "credits", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get Usage History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/usage?limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "usage"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Usage Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/usage/stats?group_by=day",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "usage", "stats"],
+              "query": [
+                {
+                  "key": "group_by",
+                  "value": "day"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Rate Limit Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/rate-limit",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "rate-limit"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

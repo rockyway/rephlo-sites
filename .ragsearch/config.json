@@ -2,8 +2,9 @@
   "name": "rephlo_sites",
   "id": "rephlo_sites-hnue",
   "collection_name": "rs_rephlo_sites_hnue",
+  "description": "Search node-oidc-provider codebase for JWT token configuration",
   "created_at": "2025-11-03T22:45:54.642Z",
-  "updated_at": "2025-11-03T22:46:08.535Z",
+  "updated_at": "2025-11-09T19:19:34.995Z",
   "version": "2.0.0",
   "vector_db": "milvus",
   "milvus_config": {
@@ -159,6 +160,19 @@
       "max_size_mb": 5,
       "warning_threshold": 0.8,
       "auto_redirect_cli": true
+    }
+  },
+  "web_search": {
+    "enabled": false,
+    "provider": "gemini-cli",
+    "timeout_minutes": 3,
+    "server_mode": {
+      "enabled": false,
+      "server_url": "http://127.0.0.1:3001",
+      "auto_start": false,
+      "connection_timeout": 5000,
+      "retries": 3,
+      "retry_delay": 1000
     }
   },
   "embedding_model": "nomic-embed-text",
