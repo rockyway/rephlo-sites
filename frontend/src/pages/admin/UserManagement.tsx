@@ -95,8 +95,8 @@ function UserManagement() {
         limit,
       });
 
-      setUsers(response.data || []);
-      setTotalPages(response.totalPages);
+      setUsers(response.users || []);
+      setTotalPages(response.pagination?.totalPages || 1);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load users');
     } finally {

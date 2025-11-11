@@ -233,7 +233,11 @@ const AdminSidebar: React.FC = () => {
 
   // Navigation link renderer (for single items)
   const renderNavLink = (item: NavItem, collapsed: boolean = false, isChild: boolean = false) => {
-    const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+    // For Dashboard (/admin), use exact match to prevent it from always being active
+    // For other routes, use startsWith to match nested routes
+    const isActive = item.href === '/admin'
+      ? location.pathname === '/admin'
+      : (location.pathname === item.href || location.pathname.startsWith(item.href + '/'));
     const Icon = item.icon;
 
     return (
@@ -324,7 +328,7 @@ const AdminSidebar: React.FC = () => {
         hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col
         bg-white border-r border-deep-navy-200 shadow-sm
         transition-all duration-300 ease-in-out
-        ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}
+        ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[296px]'}
       `}
     >
       {/* Logo & Collapse Toggle */}

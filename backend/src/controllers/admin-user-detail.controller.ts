@@ -69,6 +69,19 @@ export class AdminUserDetailController {
         return;
       }
 
+      // Reject non-UUID values (like 'new', 'create', etc.)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        res.status(400).json({
+          error: {
+            code: 'invalid_parameter',
+            message: 'Invalid user ID format. Expected UUID.',
+            details: 'User ID must be a valid UUID (e.g., 123e4567-e89b-12d3-a456-426614174000)',
+          },
+        });
+        return;
+      }
+
       const overview = await this.userDetailService.getUserOverview(userId);
 
       logger.info('AdminUserDetailController.getUserOverview: Retrieved', {
