@@ -388,7 +388,7 @@ function DeviceActivationManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-green-100 p-3">
                 <Shield className="h-6 w-6 text-green-600" />
@@ -400,7 +400,7 @@ function DeviceActivationManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-amber-100 p-3">
                 <AlertTriangle className="h-6 w-6 text-amber-600" />
@@ -412,7 +412,7 @@ function DeviceActivationManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-blue-100 p-3">
                 <Clock className="h-6 w-6 text-blue-600" />
@@ -424,7 +424,7 @@ function DeviceActivationManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-red-100 p-3">
                 <Ban className="h-6 w-6 text-red-600" />
@@ -439,7 +439,7 @@ function DeviceActivationManagement() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-6">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700">Search</label>
@@ -597,7 +597,7 @@ function DeviceActivationManagement() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
@@ -834,7 +834,7 @@ function DeviceActivationManagement() {
 
       {selectedDevice && showRevokeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <h2 className="mb-4 text-xl font-bold text-gray-900">Revoke Device</h2>
             <p className="mb-4 text-sm text-gray-600">
               Revoking this device is permanent. The user will not be able to reactivate this device.
@@ -877,7 +877,7 @@ function DeviceActivationManagement() {
 
       {selectedDevice && showDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">Device Details</h2>
               <button
@@ -968,7 +968,7 @@ function DeviceActivationManagement() {
 
       {showBulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <h2 className="mb-4 text-xl font-bold text-gray-900">
               Bulk {bulkAction === 'deactivate' ? 'Deactivate' : 'Revoke'}
             </h2>

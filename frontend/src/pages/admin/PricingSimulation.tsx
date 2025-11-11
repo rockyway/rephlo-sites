@@ -187,12 +187,12 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
     : 0;
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
 {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -203,10 +203,10 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Admin
               </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">
+              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Pricing Simulation
               </h1>
-              <p className="text-body text-deep-navy-700 mt-1">
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 What-if analysis for margin multiplier changes
               </p>
             </div>
@@ -230,22 +230,22 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Simulation Setup */}
-          <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
-            <h2 className="text-h3 font-semibold text-deep-navy-800 mb-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-6">
               Simulation Setup
             </h2>
 
             <div className="space-y-6">
               {/* Scope Selection */}
               <div>
-                <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+                <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                   Apply To
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   <select
                     value={scenario.tier || ''}
                     onChange={(e) => setScenario({ ...scenario, tier: e.target.value })}
-                    className="flex h-10 rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                   >
                     <option value="">All Tiers</option>
                     <option value="free">Free</option>
@@ -257,7 +257,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   <select
                     value={scenario.providerId || ''}
                     onChange={(e) => setScenario({ ...scenario, providerId: e.target.value })}
-                    className="flex h-10 rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                   >
                     <option value="">All Providers</option>
                     <option value="openai">OpenAI</option>
@@ -268,7 +268,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   <select
                     value={scenario.modelId || ''}
                     onChange={(e) => setScenario({ ...scenario, modelId: e.target.value })}
-                    className="flex h-10 rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                    className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                   >
                     <option value="">All Models</option>
                     <option value="gpt-4o">GPT-4o</option>
@@ -280,7 +280,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
               {/* Current Multiplier */}
               <div>
-                <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+                <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                   Current Multiplier
                 </label>
                 <MultiplierInput
@@ -292,7 +292,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
               {/* Proposed Multiplier */}
               <div>
-                <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+                <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                   Proposed Multiplier
                   {multiplierChange !== 0 && (
                     <span className={cn(
@@ -312,13 +312,13 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
               {/* Date Range */}
               <div>
-                <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+                <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                   Historical Data Range
                 </label>
                 <select
                   value={selectedDateRange}
                   onChange={(e) => handleDateRangeChange(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                  className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
                 >
                   {dateRangeOptions.map((option) => (
                     <option key={option.label} value={option.label}>
@@ -332,13 +332,13 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                       type="date"
                       value={scenario.dateRangeStart}
                       onChange={(e) => setScenario({ ...scenario, dateRangeStart: e.target.value })}
-                      className="flex h-10 rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body-sm"
+                      className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm"
                     />
                     <input
                       type="date"
                       value={scenario.dateRangeEnd}
                       onChange={(e) => setScenario({ ...scenario, dateRangeEnd: e.target.value })}
-                      className="flex h-10 rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body-sm"
+                      className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body-sm"
                     />
                   </div>
                 )}
@@ -370,33 +370,33 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
             {result ? (
               <>
                 {/* Revenue Impact */}
-                <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
-                  <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4 flex items-center">
+                <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+                  <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4 flex items-center">
                     <DollarSign className="h-5 w-5 mr-2 text-green-600" />
                     Revenue Impact
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-caption text-deep-navy-700">Additional Margin</p>
+                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Additional Margin</p>
                       <p className="text-h3 font-bold text-green-600">
                         ${result.revenueImpact.additionalMargin.toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-deep-navy-700">Margin Change</p>
+                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Margin Change</p>
                       <p className="text-h3 font-bold text-rephlo-blue">
                         +{result.revenueImpact.marginPercentChange.toFixed(1)}%
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-deep-navy-700">Current Margin</p>
-                      <p className="text-body font-semibold text-deep-navy-700">
+                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Current Margin</p>
+                      <p className="text-body font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         ${result.revenueImpact.currentMargin.toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-caption text-deep-navy-700">New Projected</p>
-                      <p className="text-body font-semibold text-deep-navy-700">
+                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">New Projected</p>
+                      <p className="text-body font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                         ${result.revenueImpact.newProjectedMargin.toLocaleString()}
                       </p>
                     </div>
@@ -404,32 +404,32 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                 </div>
 
                 {/* User Impact */}
-                <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
-                  <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4 flex items-center">
+                <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+                  <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4 flex items-center">
                     <Users className="h-5 w-5 mr-2 text-rephlo-blue" />
                     User Impact
                   </h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-body-sm text-deep-navy-600">Affected Users</span>
-                      <span className="text-body font-semibold text-deep-navy-800">
+                      <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Affected Users</span>
+                      <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
                         {result.userImpact.affectedUsers.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-body-sm text-deep-navy-600">Avg Credit Cost Increase</span>
+                      <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Avg Credit Cost Increase</span>
                       <span className="text-body font-semibold text-amber-600">
                         +{result.userImpact.avgCreditCostIncrease.toFixed(1)}%
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-body-sm text-deep-navy-600">Est. Usage Reduction</span>
+                      <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Est. Usage Reduction</span>
                       <span className="text-body font-semibold text-amber-600">
                         -{result.userImpact.estimatedUsageReduction.min}% to -{result.userImpact.estimatedUsageReduction.max}%
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-body-sm text-deep-navy-600">Est. Churn Impact</span>
+                      <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Est. Churn Impact</span>
                       <span className="text-body font-semibold text-red-600">
                         {result.userImpact.estimatedChurnImpact.min}-{result.userImpact.estimatedChurnImpact.max} users
                       </span>
@@ -439,14 +439,14 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
                 {/* Model Mix Impact */}
                 {result.modelMixImpact.length > 0 && (
-                  <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
-                    <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">
+                  <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+                    <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
                       Model Mix Impact
                     </h3>
                     <div className="space-y-2">
                       {result.modelMixImpact.map((model) => (
                         <div key={model.modelName} className="flex justify-between items-center">
-                          <span className="text-body-sm text-deep-navy-600">{model.modelName}</span>
+                          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">{model.modelName}</span>
                           <div className="flex items-center gap-2">
                             {model.requestChangePercent > 0 ? (
                               <TrendingUp className="h-4 w-4 text-green-600" />
@@ -522,9 +522,9 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-lg border border-deep-navy-200 p-12 text-center">
+              <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
                 <AlertTriangle className="h-12 w-12 text-deep-navy-300 mx-auto mb-4" />
-                <p className="text-body text-deep-navy-700">
+                <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                   Configure simulation parameters and click "Run Simulation" to see impact preview
                 </p>
               </div>

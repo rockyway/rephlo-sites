@@ -229,14 +229,14 @@ function ModelTierManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
       {/* Breadcrumbs */}
-      <div className="bg-white px-4 sm:px-6 lg:px-8 pt-6">
+      <div className="bg-white dark:bg-deep-navy-800 px-4 sm:px-6 lg:px-8 pt-6">
         <Breadcrumbs />
       </div>
 
       {/* Header */}
-      <header className="bg-white border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -247,10 +247,10 @@ function ModelTierManagement() {
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back to Admin
               </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800">
+              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Model Tier Management
               </h1>
-              <p className="text-body text-deep-navy-700 mt-1">
+              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 Configure subscription tier requirements for AI models
               </p>
             </div>
@@ -288,15 +288,15 @@ function ModelTierManagement() {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-6">
-          <h2 className="text-h4 font-semibold text-deep-navy-800 mb-4">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <h2 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
             Search & Filters
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="md:col-span-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
                 <Input
                   placeholder="Search by model name..."
                   value={searchTerm}
@@ -312,7 +312,7 @@ function ModelTierManagement() {
               <select
                 value={filterProvider}
                 onChange={(e) => setFilterProvider(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-lg py-md text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue transition-all duration-fast"
+                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-lg py-md text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue transition-all duration-fast"
               >
                 <option value="">All Providers</option>
                 {providers.map((provider) => (
@@ -367,10 +367,10 @@ function ModelTierManagement() {
         )}
 
         {/* Models Table */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden mb-8">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                 <tr>
                   <th className="px-4 py-3 text-left">
                     <input
@@ -380,33 +380,33 @@ function ModelTierManagement() {
                         selectedModels.size === models.length
                       }
                       onChange={toggleSelectAll}
-                      className="h-4 w-4 rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+                      className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Model Name
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Provider
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Required Tier
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Mode
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Allowed Tiers
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-deep-navy-100">
+              <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                 {isLoading && filteredModels.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
@@ -416,7 +416,7 @@ function ModelTierManagement() {
                 ) : filteredModels.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
-                      <p className="text-body text-deep-navy-700">
+                      <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                         No models found
                       </p>
                     </td>
@@ -425,33 +425,33 @@ function ModelTierManagement() {
                   filteredModels.map((model) => (
                     <tr
                       key={model.id}
-                      className="hover:bg-deep-navy-50 transition-colors"
+                      className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors"
                     >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
                           checked={selectedModels.has(model.id)}
                           onChange={() => toggleModelSelection(model.id)}
-                          className="h-4 w-4 rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+                          className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
                         />
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <p className="font-medium text-deep-navy-800">
+                          <p className="font-medium text-deep-navy-800 dark:text-white">
                             {model.displayName}
                           </p>
-                          <p className="text-caption text-deep-navy-700">
+                          <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
                             {model.name}
                           </p>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-body-sm text-deep-navy-600">
+                      <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                         {model.provider}
                       </td>
                       <td className="px-4 py-3">
                         <TierBadge tier={model.requiredTier} />
                       </td>
-                      <td className="px-4 py-3 text-body-sm text-deep-navy-600">
+                      <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                         {model.tierRestrictionMode}
                       </td>
                       <td className="px-4 py-3">
@@ -467,7 +467,7 @@ function ModelTierManagement() {
                             Available
                           </span>
                         ) : (
-                          <span className="text-body-sm text-deep-navy-400">
+                          <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">
                             Unavailable
                           </span>
                         )}
@@ -490,8 +490,8 @@ function ModelTierManagement() {
         </div>
 
         {/* Audit Log Section */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
-          <h2 className="text-h3 font-semibold text-deep-navy-800 mb-4">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4">
             Recent Changes
           </h2>
           <TierAuditLog

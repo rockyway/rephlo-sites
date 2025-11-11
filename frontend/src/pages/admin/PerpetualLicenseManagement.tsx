@@ -263,8 +263,8 @@ function PerpetualLicenseManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 font-bold text-deep-navy-800">Perpetual License Management</h1>
-          <p className="text-body text-deep-navy-700 mt-1">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Perpetual License Management</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             View and manage perpetual licenses, device activations, and version upgrades
           </p>
         </div>
@@ -290,33 +290,33 @@ function PerpetualLicenseManagement() {
         {/* Quick Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total Active Licenses</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Active Licenses</h3>
                 <Users className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatNumber(stats.totalActive)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalActive)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total Perpetual Revenue</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Perpetual Revenue</h3>
                 <DollarSign className="h-5 w-5 text-green-600" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(stats.totalRevenue, 0)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.totalRevenue, 0)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Average Devices per License</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Average Devices per License</h3>
                 <HardDrive className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{(stats.avgDevicesPerLicense ?? 0).toFixed(1)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{(stats.avgDevicesPerLicense ?? 0).toFixed(1)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Licenses at Max Capacity</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Licenses at Max Capacity</h3>
                 <AlertCircle
                   className={cn(
                     'h-5 w-5',
@@ -337,19 +337,19 @@ function PerpetualLicenseManagement() {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-6">
-          <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Filters</h3>
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">Status</label>
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => {
                   setFilterStatus(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
               >
                 <option value="">All Status</option>
                 <option value={LicenseStatus.PENDING}>Pending</option>
@@ -362,7 +362,7 @@ function PerpetualLicenseManagement() {
 
             {/* Search */}
             <div className="md:col-span-2">
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">Search</label>
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">Search</label>
               <div className="relative">
                 <Input
                   type="text"
@@ -374,7 +374,7 @@ function PerpetualLicenseManagement() {
                   placeholder="Search by license key, user email, or user ID..."
                   className="pl-10"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
               </div>
             </div>
           </div>
@@ -382,9 +382,9 @@ function PerpetualLicenseManagement() {
           {/* Active Filters Display */}
           {(filterStatus || searchQuery) && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-body-sm text-deep-navy-600">Active filters:</span>
+              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Active filters:</span>
               {filterStatus && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Status: {filterStatus}
                   <button onClick={() => setFilterStatus('')}>
                     <XIcon className="h-3 w-3" />
@@ -392,7 +392,7 @@ function PerpetualLicenseManagement() {
                 </span>
               )}
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Search: {searchQuery}
                   <button onClick={() => setSearchQuery('')}>
                     <XIcon className="h-3 w-3" />
@@ -413,7 +413,7 @@ function PerpetualLicenseManagement() {
         </div>
 
         {/* Licenses Table */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -421,20 +421,20 @@ function PerpetualLicenseManagement() {
               </div>
             ) : sortedLicenses.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-700">No licenses found</p>
+                <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">No licenses found</p>
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 w-8"></th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200 w-8"></th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       License Key
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       User Email
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('status')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -448,7 +448,7 @@ function PerpetualLicenseManagement() {
                           ))}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('price')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -462,13 +462,13 @@ function PerpetualLicenseManagement() {
                           ))}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Version
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Devices
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('purchaseDate')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -482,12 +482,12 @@ function PerpetualLicenseManagement() {
                           ))}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-deep-navy-100">
+                <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {sortedLicenses.map((license) => {
                     const isExpanded = expandedLicenseId === license.id;
                     const activations = deviceActivations[license.licenseKey] || [];
@@ -498,7 +498,7 @@ function PerpetualLicenseManagement() {
                         {/* Main Row */}
                         <tr
                           key={license.id}
-                          className="hover:bg-deep-navy-50 transition-colors cursor-pointer"
+                          className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors cursor-pointer"
                           onClick={() => toggleLicenseExpansion(license)}
                         >
                           <td className="px-6 py-4">
@@ -510,18 +510,18 @@ function PerpetualLicenseManagement() {
                             />
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-body font-mono text-deep-navy-800">
+                            <span className="text-body font-mono text-deep-navy-800 dark:text-white">
                               {formatLicenseKey(license.licenseKey)}
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-800">{license.user?.email || 'N/A'}</span>
+                            <span className="text-body text-deep-navy-800 dark:text-white">{license.user?.email || 'N/A'}</span>
                           </td>
                           <td className="px-6 py-4">
                             <LicenseStatusBadge status={license.status} />
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-body font-medium text-deep-navy-800">
+                            <span className="text-body font-medium text-deep-navy-800 dark:text-white">
                               {formatCurrency(license.purchasePrice)}
                             </span>
                           </td>
@@ -541,7 +541,7 @@ function PerpetualLicenseManagement() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-body-sm text-deep-navy-600">
+                            <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                               {formatDate(license.purchaseDate)}
                             </span>
                           </td>
@@ -587,11 +587,11 @@ function PerpetualLicenseManagement() {
                               <div className="space-y-6">
                                 {/* Device Activations */}
                                 <div>
-                                  <h4 className="text-h4 font-semibold text-deep-navy-800 mb-3">
+                                  <h4 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-3">
                                     Device Activations ({activations.length}/{license.maxActivations})
                                   </h4>
                                   {activations.length === 0 ? (
-                                    <p className="text-body-sm text-deep-navy-700">No active devices</p>
+                                    <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">No active devices</p>
                                   ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       {activations.map((activation) => (
@@ -607,37 +607,37 @@ function PerpetualLicenseManagement() {
 
                                 {/* Version Upgrade History */}
                                 <div>
-                                  <h4 className="text-h4 font-semibold text-deep-navy-800 mb-3">
+                                  <h4 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-3">
                                     Version Upgrade History
                                   </h4>
                                   {upgrades.length === 0 ? (
-                                    <p className="text-body-sm text-deep-navy-700">No upgrades purchased</p>
+                                    <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">No upgrades purchased</p>
                                   ) : (
-                                    <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+                                    <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
                                       <table className="w-full">
-                                        <thead className="bg-deep-navy-50">
+                                        <thead className="bg-deep-navy-50 dark:bg-deep-navy-900">
                                           <tr>
-                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700">
+                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                                               From Version
                                             </th>
-                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700">
+                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                                               To Version
                                             </th>
-                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700">
+                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                                               Upgrade Price
                                             </th>
-                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700">
+                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                                               Discount
                                             </th>
-                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700">
+                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                                               Purchase Date
                                             </th>
-                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700">
+                                            <th className="px-4 py-2 text-left text-caption font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                                               Status
                                             </th>
                                           </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-deep-navy-100">
+                                        <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                                           {upgrades.map((upgrade) => (
                                             <tr key={upgrade.id}>
                                               <td className="px-4 py-2">
@@ -648,11 +648,11 @@ function PerpetualLicenseManagement() {
                                               </td>
                                               <td className="px-4 py-2">
                                                 <div>
-                                                  <span className="text-body-sm font-medium text-deep-navy-800">
+                                                  <span className="text-body-sm font-medium text-deep-navy-800 dark:text-white">
                                                     {formatCurrency(upgrade.finalPrice)}
                                                   </span>
                                                   {upgrade.discountApplied && upgrade.discountApplied > 0 && (
-                                                    <div className="text-caption text-deep-navy-700 line-through">
+                                                    <div className="text-caption text-deep-navy-700 dark:text-deep-navy-200 line-through">
                                                       {formatCurrency(upgrade.upgradePrice)}
                                                     </div>
                                                   )}
@@ -665,11 +665,11 @@ function PerpetualLicenseManagement() {
                                                     percentage={upgrade.discountApplied}
                                                   />
                                                 ) : (
-                                                  <span className="text-caption text-deep-navy-700">None</span>
+                                                  <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">None</span>
                                                 )}
                                               </td>
                                               <td className="px-4 py-2">
-                                                <span className="text-body-sm text-deep-navy-600">
+                                                <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                                                   {formatDate(upgrade.purchaseDate)}
                                                 </span>
                                               </td>
@@ -709,7 +709,7 @@ function PerpetualLicenseManagement() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-deep-navy-200 flex items-center justify-between">
-              <p className="text-body-sm text-deep-navy-600">
+              <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">

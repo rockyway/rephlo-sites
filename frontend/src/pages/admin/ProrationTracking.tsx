@@ -176,8 +176,8 @@ function ProrationTracking() {
 {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-h1 font-bold text-deep-navy-800">Proration Tracking</h1>
-          <p className="text-body text-deep-navy-700 mt-1">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Proration Tracking</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Monitor mid-cycle tier changes, proration calculations, and financial impact
           </p>
         </div>
@@ -203,17 +203,17 @@ function ProrationTracking() {
         {/* Quick Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Total Prorations This Month</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Prorations This Month</h3>
                 <Calculator className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatNumber(stats.totalProrations)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalProrations)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Net Proration Revenue</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Net Proration Revenue</h3>
                 <DollarSign
                   className={cn('h-5 w-5', stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600')}
                 />
@@ -227,22 +227,22 @@ function ProrationTracking() {
                 {stats.netRevenue >= 0 ? '+' : ''}
                 {formatCurrency(stats.netRevenue, 0)}
               </p>
-              <p className="text-caption text-deep-navy-700 mt-1">
+              <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 {stats.netRevenue >= 0 ? 'Collected' : 'Refunded'}
               </p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Average Net Charge</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Average Net Charge</h3>
                 <TrendingUp className="h-5 w-5 text-rephlo-blue" />
               </div>
-              <p className="text-h2 font-bold text-deep-navy-800">{formatCurrency(stats.avgNetCharge)}</p>
+              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.avgNetCharge)}</p>
             </div>
 
-            <div className="bg-white rounded-lg border border-deep-navy-200 p-6">
+            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 font-medium">Pending Prorations</h3>
+                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Pending Prorations</h3>
                 <Clock
                   className={cn('h-5 w-5', stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-400')}
                 />
@@ -260,19 +260,19 @@ function ProrationTracking() {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 p-6 mb-6">
-          <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Filters</h3>
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Change Type Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">Change Type</label>
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">Change Type</label>
               <select
                 value={filterChangeType}
                 onChange={(e) => {
                   setFilterChangeType(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
               >
                 <option value="">All Types</option>
                 <option value={ProrationChangeType.UPGRADE}>Upgrade</option>
@@ -285,14 +285,14 @@ function ProrationTracking() {
 
             {/* Status Filter */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">Status</label>
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => {
                   setFilterStatus(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+                className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
               >
                 <option value="">All Status</option>
                 <option value={ProrationStatus.PENDING}>Pending</option>
@@ -304,7 +304,7 @@ function ProrationTracking() {
 
             {/* Search */}
             <div className="md:col-span-2">
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">Search</label>
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">Search</label>
               <div className="relative">
                 <Input
                   type="text"
@@ -316,7 +316,7 @@ function ProrationTracking() {
                   placeholder="Search by user email or subscription ID..."
                   className="pl-10"
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
               </div>
             </div>
           </div>
@@ -324,9 +324,9 @@ function ProrationTracking() {
           {/* Active Filters Display */}
           {(filterChangeType || filterStatus || searchQuery) && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-body-sm text-deep-navy-600">Active filters:</span>
+              <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">Active filters:</span>
               {filterChangeType && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Type: {filterChangeType}
                   <button onClick={() => setFilterChangeType('')}>
                     <XIcon className="h-3 w-3" />
@@ -334,7 +334,7 @@ function ProrationTracking() {
                 </span>
               )}
               {filterStatus && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Status: {filterStatus}
                   <button onClick={() => setFilterStatus('')}>
                     <XIcon className="h-3 w-3" />
@@ -342,7 +342,7 @@ function ProrationTracking() {
                 </span>
               )}
               {searchQuery && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 rounded text-caption">
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-deep-navy-100 text-deep-navy-700 dark:text-deep-navy-200 rounded text-caption">
                   Search: {searchQuery}
                   <button onClick={() => setSearchQuery('')}>
                     <XIcon className="h-3 w-3" />
@@ -364,7 +364,7 @@ function ProrationTracking() {
         </div>
 
         {/* Prorations Table */}
-        <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -372,22 +372,22 @@ function ProrationTracking() {
               </div>
             ) : sortedProrations.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-body text-deep-navy-700">No proration events found</p>
+                <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">No proration events found</p>
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-deep-navy-50 border-b border-deep-navy-200">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       User Email
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       From Tier
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       To Tier
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('changeType')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -401,16 +401,16 @@ function ProrationTracking() {
                           ))}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Days Remaining
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Unused Credit
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       New Tier Cost
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('netCharge')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -424,7 +424,7 @@ function ProrationTracking() {
                           ))}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       <button
                         onClick={() => handleSort('changeDate')}
                         className="flex items-center gap-1 hover:text-rephlo-blue"
@@ -438,22 +438,22 @@ function ProrationTracking() {
                           ))}
                       </button>
                     </th>
-                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700">
+                    <th className="px-6 py-3 text-right text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-deep-navy-100">
+                <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {sortedProrations.map((proration) => {
                     const netChargeData = formatNetCharge(proration.netCharge);
 
                     return (
-                      <tr key={proration.id} className="hover:bg-deep-navy-50 transition-colors">
+                      <tr key={proration.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-800">
+                          <span className="text-body text-deep-navy-800 dark:text-white">
                             {proration.user?.email || 'N/A'}
                           </span>
                         </td>
@@ -461,21 +461,21 @@ function ProrationTracking() {
                           {proration.fromTier ? (
                             <TierBadge tier={proration.fromTier} />
                           ) : (
-                            <span className="text-body-sm text-deep-navy-400">-</span>
+                            <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           {proration.toTier ? (
                             <TierBadge tier={proration.toTier} />
                           ) : (
-                            <span className="text-body-sm text-deep-navy-400">-</span>
+                            <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           <ProrationChangeTypeBadge type={proration.eventType} />
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700">{proration.daysRemaining} days</span>
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">{proration.daysRemaining} days</span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-green-600 font-medium">
@@ -494,7 +494,7 @@ function ProrationTracking() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-body-sm text-deep-navy-600">
+                          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                             {formatDate(proration.changeDate)}
                           </span>
                         </td>
@@ -560,7 +560,7 @@ function ProrationTracking() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-6 py-4 border-t border-deep-navy-200 flex items-center justify-between">
-              <p className="text-body-sm text-deep-navy-600">
+              <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                 Page {page} of {totalPages}
               </p>
               <div className="flex gap-2">

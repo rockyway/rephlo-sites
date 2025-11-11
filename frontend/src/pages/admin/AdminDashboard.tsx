@@ -131,14 +131,14 @@ const AdminDashboard: React.FC = () => {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-deep-navy-800">Dashboard</h1>
-          <p className="text-deep-navy-600 mt-1">
+          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Dashboard</h1>
+          <p className="text-deep-navy-600 dark:text-deep-navy-200 mt-1">
             Overview of platform metrics and recent activity
           </p>
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-2 bg-white rounded-lg shadow-sm border border-deep-navy-200 p-1">
+        <div className="flex items-center gap-2 bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-1">
           {(['7d', '30d', '90d', '1y'] as const).map((p) => (
             <button
               key={p}
@@ -146,7 +146,7 @@ const AdminDashboard: React.FC = () => {
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 period === p
                   ? 'bg-rephlo-blue text-white'
-                  : 'text-deep-navy-600 hover:bg-deep-navy-50'
+                  : 'text-deep-navy-600 dark:text-deep-navy-200 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700'
               }`}
             >
               {p === '1y' ? '1 Year' : p.toUpperCase()}
@@ -241,8 +241,8 @@ const RevenueMixChart: React.FC<RevenueMixChartProps> = ({ data }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
-      <h3 className="text-lg font-semibold text-deep-navy-800 mb-4">
+    <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+      <h3 className="text-lg font-semibold text-deep-navy-800 dark:text-white mb-4">
         Revenue Mix
       </h3>
       <ResponsiveContainer width="100%" height={300}>
@@ -274,7 +274,7 @@ const RevenueMixChart: React.FC<RevenueMixChartProps> = ({ data }) => {
             height={36}
             iconType="circle"
             formatter={(value) => (
-              <span className="text-sm text-deep-navy-700">{value}</span>
+              <span className="text-sm text-deep-navy-700 dark:text-deep-navy-200">{value}</span>
             )}
           />
         </PieChart>
@@ -289,17 +289,17 @@ const RevenueMixChart: React.FC<RevenueMixChartProps> = ({ data }) => {
 
 const UserGrowthChart: React.FC = () => {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
-      <h3 className="text-lg font-semibold text-deep-navy-800 mb-4">
+    <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+      <h3 className="text-lg font-semibold text-deep-navy-800 dark:text-white mb-4">
         User Growth
       </h3>
-      <div className="h-[300px] flex items-center justify-center bg-deep-navy-50 rounded-lg border border-dashed border-deep-navy-300">
+      <div className="h-[300px] flex items-center justify-center bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg border border-dashed border-deep-navy-300 dark:border-deep-navy-600">
         <div className="text-center">
-          <FileText className="h-12 w-12 text-deep-navy-400 mx-auto mb-2" />
-          <p className="text-deep-navy-600 font-medium">
+          <FileText className="h-12 w-12 text-deep-navy-400 dark:text-deep-navy-500 mx-auto mb-2" />
+          <p className="text-deep-navy-600 dark:text-deep-navy-200 font-medium">
             Chart placeholder - Historical data endpoint needed
           </p>
-          <p className="text-sm text-deep-navy-700 mt-1">
+          <p className="text-sm text-deep-navy-700 dark:text-deep-navy-300 mt-1">
             This chart will display user growth trends over time
           </p>
         </div>
@@ -325,9 +325,9 @@ const RecentActivityFeed: React.FC<RecentActivityFeedProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200">
-        <div className="p-6 border-b border-deep-navy-200">
-          <h3 className="text-lg font-semibold text-deep-navy-800">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+        <div className="p-6 border-b border-deep-navy-200 dark:border-deep-navy-700">
+          <h3 className="text-lg font-semibold text-deep-navy-800 dark:text-white">
             Recent Activity
           </h3>
         </div>
@@ -340,7 +340,7 @@ const RecentActivityFeed: React.FC<RecentActivityFeedProps> = ({
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
         <EmptyState
           icon={<AlertCircle className="h-8 w-8 text-red-500" />}
           title="Failed to load activity"
@@ -352,9 +352,9 @@ const RecentActivityFeed: React.FC<RecentActivityFeedProps> = ({
 
   if (activities.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
         <EmptyState
-          icon={<Circle className="h-8 w-8 text-deep-navy-400" />}
+          icon={<Circle className="h-8 w-8 text-deep-navy-400 dark:text-deep-navy-500" />}
           title="No recent activity"
           description="There are no recent events to display."
         />
@@ -363,25 +363,25 @@ const RecentActivityFeed: React.FC<RecentActivityFeedProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200">
-      <div className="p-6 border-b border-deep-navy-200">
-        <h3 className="text-lg font-semibold text-deep-navy-800">
+    <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
+      <div className="p-6 border-b border-deep-navy-200 dark:border-deep-navy-700">
+        <h3 className="text-lg font-semibold text-deep-navy-800 dark:text-white">
           Recent Activity
         </h3>
       </div>
-      <div className="divide-y divide-deep-navy-200 max-h-[600px] overflow-y-auto">
+      <div className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700 max-h-[600px] overflow-y-auto">
         {activities.map((activity) => (
           <div
             key={activity.id}
-            className="p-4 hover:bg-deep-navy-50 transition-colors"
+            className="p-4 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 transition-colors"
           >
             <div className="flex items-start gap-3">
               <ActivityIcon type={activity.type} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-deep-navy-800 font-medium">
+                <p className="text-sm text-deep-navy-800 dark:text-white font-medium">
                   {activity.description}
                 </p>
-                <p className="text-xs text-deep-navy-600 mt-1">
+                <p className="text-xs text-deep-navy-600 dark:text-deep-navy-300 mt-1">
                   {activity.user.email} •{' '}
                   {formatRelativeTime(activity.timestamp)}
                 </p>
@@ -405,7 +405,7 @@ const ActivityIcon: React.FC<{ type: string }> = ({ type }) => {
     device: <Smartphone className={`${iconClass} text-indigo-500`} />,
   };
   return (
-    <div className="p-2 bg-deep-navy-50 rounded-lg shrink-0">
+    <div className="p-2 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg shrink-0">
       {icons[type] || <Circle className={`${iconClass} text-gray-500`} />}
     </div>
   );
@@ -448,8 +448,8 @@ const QuickActionsPanel: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6">
-      <h3 className="text-lg font-semibold text-deep-navy-800 mb-4">
+    <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+      <h3 className="text-lg font-semibold text-deep-navy-800 dark:text-white mb-4">
         Quick Actions
       </h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -457,17 +457,17 @@ const QuickActionsPanel: React.FC = () => {
           <Link
             key={index}
             to={action.to}
-            className="flex flex-col items-center justify-center p-6 rounded-lg border-2 border-deep-navy-200 hover:border-rephlo-blue hover:shadow-md transition-all group"
+            className="flex flex-col items-center justify-center p-6 rounded-lg border-2 border-deep-navy-200 dark:border-deep-navy-700 hover:border-rephlo-blue hover:shadow-md transition-all group"
           >
             <div
               className={`${action.bgColor} p-3 rounded-lg mb-3 group-hover:scale-110 transition-transform`}
             >
               <div className={action.color}>{action.icon}</div>
             </div>
-            <span className="text-sm font-medium text-deep-navy-700 text-center">
+            <span className="text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 text-center">
               {action.label}
             </span>
-            <ArrowRight className="h-4 w-4 text-deep-navy-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowRight className="h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" />
           </Link>
         ))}
       </div>

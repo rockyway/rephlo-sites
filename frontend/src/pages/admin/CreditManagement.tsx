@@ -418,7 +418,7 @@ function CreditManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-blue-100 p-3">
                 <DollarSign className="h-6 w-6 text-blue-600" />
@@ -432,7 +432,7 @@ function CreditManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-green-100 p-3">
                 <TrendingUp className="h-6 w-6 text-green-600" />
@@ -449,7 +449,7 @@ function CreditManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-purple-100 p-3">
                 <Users className="h-6 w-6 text-purple-600" />
@@ -463,7 +463,7 @@ function CreditManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-red-100 p-3">
                 <AlertCircle className="h-6 w-6 text-red-600" />
@@ -479,7 +479,7 @@ function CreditManagement() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-5">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700">Search</label>
@@ -639,7 +639,7 @@ function CreditManagement() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
@@ -855,7 +855,7 @@ function CreditManagement() {
 
       {selectedUser && showHistoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Credit Usage History</h2>
@@ -931,7 +931,7 @@ function CreditManagement() {
 
       {showBulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <h2 className="mb-4 text-xl font-bold text-gray-900">
               Bulk Credit Adjustment
             </h2>

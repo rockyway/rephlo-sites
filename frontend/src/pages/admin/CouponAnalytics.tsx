@@ -187,7 +187,7 @@ function CouponAnalytics() {
           </div>
         ) : metrics ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="text-sm font-medium text-gray-600">
                 Total Redemptions
               </div>
@@ -215,7 +215,7 @@ function CouponAnalytics() {
                 </div>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="text-sm font-medium text-gray-600">
                 Total Discount Value
               </div>
@@ -244,7 +244,7 @@ function CouponAnalytics() {
                 </div>
               )}
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="text-sm font-medium text-gray-600">
                 Avg Discount/Redemption
               </div>
@@ -252,7 +252,7 @@ function CouponAnalytics() {
                 {formatCurrency(metrics.average_discount_per_redemption)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="text-sm font-medium text-gray-600">
                 Conversion Rate
               </div>
@@ -267,7 +267,7 @@ function CouponAnalytics() {
                 {formatPercentage(metrics.conversion_rate)}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="text-sm font-medium text-gray-600">
                 Fraud Detection Rate
               </div>
@@ -286,7 +286,7 @@ function CouponAnalytics() {
         ) : null}
 
         {/* Top Performing Coupons */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">
               Top Performing Coupons
@@ -322,7 +322,7 @@ function CouponAnalytics() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-gray-200">
                   {topCoupons.map((coupon, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -349,7 +349,7 @@ function CouponAnalytics() {
         </div>
 
         {/* Fraud Detection Dashboard */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -423,7 +423,7 @@ function CouponAnalytics() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-gray-200">
                   {fraudEvents.map((event) => (
                     <tr key={event.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

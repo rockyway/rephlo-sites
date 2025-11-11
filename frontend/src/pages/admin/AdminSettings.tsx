@@ -246,8 +246,8 @@ function AdminSettings() {
 
 {/* Header */}
       <div>
-        <h1 className="text-h1 font-bold text-deep-navy-800">Settings</h1>
-        <p className="text-body text-deep-navy-700 mt-1">
+        <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Settings</h1>
+        <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
           Configure platform settings and preferences
         </p>
       </div>
@@ -267,7 +267,7 @@ function AdminSettings() {
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg border border-deep-navy-200 overflow-hidden">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
         {/* Tab Headers */}
         <div className="border-b border-deep-navy-200 overflow-x-auto">
           <div className="flex">
@@ -294,10 +294,10 @@ function AdminSettings() {
         </div>
 
         {/* Save/Cancel Buttons */}
-        <div className="px-6 py-4 bg-deep-navy-50 border-t border-deep-navy-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-deep-navy-50 dark:bg-deep-navy-900 border-t border-deep-navy-200 flex items-center justify-between">
           <div>
             {hasChanges && (
-              <p className="text-body-sm text-deep-navy-600">
+              <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
                 You have unsaved changes
               </p>
             )}
@@ -351,7 +351,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Platform Name
           </label>
           <Input
@@ -363,13 +363,13 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Timezone
           </label>
           <select
             value={formData.timezone || 'America/New_York'}
             onChange={(e) => onChange('timezone', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
           >
             <option value="America/New_York">America/New_York (EST/EDT)</option>
             <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
@@ -382,13 +382,13 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Date Format
           </label>
           <select
             value={formData.date_format || 'MM/DD/YYYY'}
             onChange={(e) => onChange('date_format', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
           >
             <option value="MM/DD/YYYY">MM/DD/YYYY</option>
             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
@@ -397,13 +397,13 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Time Format
           </label>
           <select
             value={formData.time_format || '12h'}
             onChange={(e) => onChange('time_format', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
           >
             <option value="12h">12-hour (1:30 PM)</option>
             <option value="24h">24-hour (13:30)</option>
@@ -411,13 +411,13 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Default Currency
           </label>
           <select
             value={formData.default_currency || 'USD'}
             onChange={(e) => onChange('default_currency', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
           >
             <option value="USD">USD ($)</option>
             <option value="EUR">EUR (€)</option>
@@ -426,13 +426,13 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Default Language
           </label>
           <select
             value={formData.default_language || 'en'}
             onChange={(e) => onChange('default_language', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
           >
             <option value="en">English</option>
             <option value="es">Spanish</option>
@@ -442,7 +442,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div>
-        <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+        <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
           Platform Description
         </label>
         <textarea
@@ -450,7 +450,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           onChange={(e) => onChange('platform_description', e.target.value)}
           placeholder="Transform text. Keep your flow."
           rows={3}
-          className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+          className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
         />
       </div>
     </div>
@@ -465,7 +465,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             SMTP Host
           </label>
           <Input
@@ -477,7 +477,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             SMTP Port
           </label>
           <Input
@@ -489,7 +489,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             SMTP Username
           </label>
           <Input
@@ -501,7 +501,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             SMTP Password
           </label>
           <Input
@@ -513,7 +513,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             From Email
           </label>
           <Input
@@ -525,7 +525,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
         </div>
 
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             From Name
           </label>
           <Input
@@ -543,9 +543,9 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
           id="smtp_secure"
           checked={formData.smtp_secure || false}
           onChange={(e) => onChange('smtp_secure', e.target.checked)}
-          className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+          className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
         />
-        <label htmlFor="smtp_secure" className="text-body-sm text-deep-navy-700">
+        <label htmlFor="smtp_secure" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
           Use TLS/SSL (Secure Connection)
         </label>
       </div>
@@ -568,7 +568,7 @@ function EmailSettings({ formData, onChange, onTestEmail, isTestingEmail }: Sett
             </>
           )}
         </Button>
-        <p className="text-body-sm text-deep-navy-700 mt-2">
+        <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-2">
           Send a test email to verify SMTP configuration
         </p>
       </div>
@@ -583,10 +583,10 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Session Configuration</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Session Configuration</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Session Timeout (minutes)
             </label>
             <Input
@@ -595,7 +595,7 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
               onChange={(e) => onChange('session_timeout_minutes', parseInt(e.target.value) || 1440)}
               placeholder="1440"
             />
-            <p className="text-body-sm text-deep-navy-700 mt-1">
+            <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
               Default: 1440 minutes (24 hours)
             </p>
           </div>
@@ -603,10 +603,10 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Password Policy</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Password Policy</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Minimum Length
             </label>
             <Input
@@ -625,9 +625,9 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
               id="password_require_uppercase"
               checked={formData.password_require_uppercase !== false}
               onChange={(e) => onChange('password_require_uppercase', e.target.checked)}
-              className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+              className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
             />
-            <label htmlFor="password_require_uppercase" className="text-body-sm text-deep-navy-700">
+            <label htmlFor="password_require_uppercase" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
               Require uppercase letters
             </label>
           </div>
@@ -638,9 +638,9 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
               id="password_require_lowercase"
               checked={formData.password_require_lowercase !== false}
               onChange={(e) => onChange('password_require_lowercase', e.target.checked)}
-              className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+              className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
             />
-            <label htmlFor="password_require_lowercase" className="text-body-sm text-deep-navy-700">
+            <label htmlFor="password_require_lowercase" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
               Require lowercase letters
             </label>
           </div>
@@ -651,9 +651,9 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
               id="password_require_numbers"
               checked={formData.password_require_numbers !== false}
               onChange={(e) => onChange('password_require_numbers', e.target.checked)}
-              className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+              className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
             />
-            <label htmlFor="password_require_numbers" className="text-body-sm text-deep-navy-700">
+            <label htmlFor="password_require_numbers" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
               Require numbers
             </label>
           </div>
@@ -664,9 +664,9 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
               id="password_require_symbols"
               checked={formData.password_require_symbols !== false}
               onChange={(e) => onChange('password_require_symbols', e.target.checked)}
-              className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+              className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
             />
-            <label htmlFor="password_require_symbols" className="text-body-sm text-deep-navy-700">
+            <label htmlFor="password_require_symbols" className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
               Require special characters
             </label>
           </div>
@@ -674,16 +674,16 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Multi-Factor Authentication</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Multi-Factor Authentication</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               MFA Enforcement
             </label>
             <select
               value={formData.mfa_enforcement || 'optional'}
               onChange={(e) => onChange('mfa_enforcement', e.target.value)}
-              className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
             >
               <option value="optional">Optional</option>
               <option value="required">Required</option>
@@ -694,10 +694,10 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Account Lockout</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Account Lockout</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Failed Login Attempts Before Lockout
             </label>
             <Input
@@ -709,7 +709,7 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
           </div>
 
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Lockout Duration (minutes)
             </label>
             <Input
@@ -732,10 +732,10 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Stripe Integration</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Stripe Integration</h3>
         <div className="grid grid-cols-1 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Stripe API Key
             </label>
             <Input
@@ -747,7 +747,7 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
           </div>
 
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Stripe Webhook Secret
             </label>
             <Input
@@ -761,9 +761,9 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">SendGrid Integration</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">SendGrid Integration</h3>
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             SendGrid API Key
           </label>
           <Input
@@ -776,10 +776,10 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">LLM Provider API Keys</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">LLM Provider API Keys</h3>
         <div className="grid grid-cols-1 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               OpenAI API Key
             </label>
             <Input
@@ -791,7 +791,7 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
           </div>
 
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Anthropic API Key
             </label>
             <Input
@@ -803,7 +803,7 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
           </div>
 
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Google AI API Key
             </label>
             <Input
@@ -817,9 +817,9 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Webhooks</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Webhooks</h3>
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Webhook URL
           </label>
           <Input
@@ -828,7 +828,7 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
             onChange={(e) => onChange('webhook_url', e.target.value)}
             placeholder="https://api.example.com/webhooks"
           />
-          <p className="text-body-sm text-deep-navy-700 mt-1">
+          <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             External webhook URL for platform events
           </p>
         </div>
@@ -843,15 +843,15 @@ function IntegrationSettings({ formData, onChange }: SettingsProps) {
 function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
   return (
     <div className="space-y-4">
-      <p className="text-body text-deep-navy-600 mb-6">
+      <p className="text-body text-deep-navy-600 dark:text-deep-navy-200 mb-6">
         Enable or disable platform features. Changes take effect immediately.
       </p>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 bg-deep-navy-50 rounded-md">
+        <div className="flex items-center justify-between p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md">
           <div>
-            <h4 className="text-body font-semibold text-deep-navy-800">Perpetual Licenses</h4>
-            <p className="text-body-sm text-deep-navy-600">
+            <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white">Perpetual Licenses</h4>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
               Allow users to purchase perpetual licenses
             </p>
           </div>
@@ -859,14 +859,14 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
             type="checkbox"
             checked={formData.enable_perpetual_licenses !== false}
             onChange={(e) => onChange('enable_perpetual_licenses', e.target.checked)}
-            className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
+            className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
           />
         </div>
 
-        <div className="flex items-center justify-between p-4 bg-deep-navy-50 rounded-md">
+        <div className="flex items-center justify-between p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md">
           <div>
-            <h4 className="text-body font-semibold text-deep-navy-800">Coupons</h4>
-            <p className="text-body-sm text-deep-navy-600">
+            <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white">Coupons</h4>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
               Enable coupon and discount code system
             </p>
           </div>
@@ -874,14 +874,14 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
             type="checkbox"
             checked={formData.enable_coupons !== false}
             onChange={(e) => onChange('enable_coupons', e.target.checked)}
-            className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
+            className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
           />
         </div>
 
-        <div className="flex items-center justify-between p-4 bg-deep-navy-50 rounded-md">
+        <div className="flex items-center justify-between p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md">
           <div>
-            <h4 className="text-body font-semibold text-deep-navy-800">Multi-Factor Authentication</h4>
-            <p className="text-body-sm text-deep-navy-600">
+            <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white">Multi-Factor Authentication</h4>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
               Enable MFA feature for user accounts
             </p>
           </div>
@@ -889,14 +889,14 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
             type="checkbox"
             checked={formData.enable_mfa !== false}
             onChange={(e) => onChange('enable_mfa', e.target.checked)}
-            className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
+            className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
           />
         </div>
 
-        <div className="flex items-center justify-between p-4 bg-deep-navy-50 rounded-md">
+        <div className="flex items-center justify-between p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md">
           <div>
-            <h4 className="text-body font-semibold text-deep-navy-800">Webhooks</h4>
-            <p className="text-body-sm text-deep-navy-600">
+            <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white">Webhooks</h4>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
               Enable webhook delivery for platform events
             </p>
           </div>
@@ -904,14 +904,14 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
             type="checkbox"
             checked={formData.enable_webhooks !== false}
             onChange={(e) => onChange('enable_webhooks', e.target.checked)}
-            className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
+            className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
           />
         </div>
 
-        <div className="flex items-center justify-between p-4 bg-deep-navy-50 rounded-md">
+        <div className="flex items-center justify-between p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md">
           <div>
-            <h4 className="text-body font-semibold text-deep-navy-800">Beta Features</h4>
-            <p className="text-body-sm text-deep-navy-600">
+            <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white">Beta Features</h4>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
               Enable experimental beta features
             </p>
           </div>
@@ -919,7 +919,7 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
             type="checkbox"
             checked={formData.enable_beta_features || false}
             onChange={(e) => onChange('enable_beta_features', e.target.checked)}
-            className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
+            className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
           />
         </div>
 
@@ -938,10 +938,10 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
           />
         </div>
 
-        <div className="flex items-center justify-between p-4 bg-deep-navy-50 rounded-md">
+        <div className="flex items-center justify-between p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md">
           <div>
-            <h4 className="text-body font-semibold text-deep-navy-800">Debug Mode</h4>
-            <p className="text-body-sm text-deep-navy-600">
+            <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white">Debug Mode</h4>
+            <p className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
               Enable verbose logging and debugging features
             </p>
           </div>
@@ -949,7 +949,7 @@ function FeatureFlagSettings({ formData, onChange }: SettingsProps) {
             type="checkbox"
             checked={formData.debug_mode || false}
             onChange={(e) => onChange('debug_mode', e.target.checked)}
-            className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
+            className="rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue h-5 w-5"
           />
         </div>
       </div>
@@ -964,16 +964,16 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Logging Configuration</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Logging Configuration</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Log Level
             </label>
             <select
               value={formData.log_level || 'info'}
               onChange={(e) => onChange('log_level', e.target.value)}
-              className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
             >
               <option value="debug">Debug</option>
               <option value="info">Info</option>
@@ -983,7 +983,7 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
           </div>
 
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Log Retention (days)
             </label>
             <Input
@@ -997,16 +997,16 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Backup Configuration</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Backup Configuration</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Backup Frequency
             </label>
             <select
               value={formData.backup_frequency || 'daily'}
               onChange={(e) => onChange('backup_frequency', e.target.value)}
-              className="w-full px-3 py-2 border border-deep-navy-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -1015,10 +1015,10 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
           </div>
 
           <div>
-            <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+            <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
               Last Backup
             </label>
-            <div className="px-3 py-2 bg-deep-navy-50 border border-deep-navy-200 rounded-md text-body-sm text-deep-navy-700">
+            <div className="px-3 py-2 bg-deep-navy-50 dark:bg-deep-navy-900 border border-deep-navy-200 dark:border-deep-navy-700 rounded-md text-body-sm text-deep-navy-700 dark:text-deep-navy-200">
               {formData.last_backup ? new Date(formData.last_backup).toLocaleString() : 'Never'}
             </div>
           </div>
@@ -1042,14 +1042,14 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
               </>
             )}
           </Button>
-          <p className="text-body-sm text-deep-navy-700 mt-2">
+          <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-2">
             Create a full database backup now
           </p>
         </div>
       </div>
 
       <div className="pt-4 border-t border-deep-navy-200">
-        <h3 className="text-h4 font-semibold text-deep-navy-800 mb-4">Cache Management</h3>
+        <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Cache Management</h3>
         <div>
           <Button
             variant="ghost"
@@ -1068,7 +1068,7 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
               </>
             )}
           </Button>
-          <p className="text-body-sm text-deep-navy-700 mt-2">
+          <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-2">
             Clear all cached data (Redis, in-memory caches)
           </p>
         </div>
