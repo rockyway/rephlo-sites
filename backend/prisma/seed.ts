@@ -738,7 +738,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     const monetizationSub = await prisma.subscriptionMonetization.create({
       data: {
         userId: user.userId,
-        tier: persona.subscriptionTier as SubscriptionTier, // Prisma accepts the string value directly
+        tier: persona.subscriptionTier, // Plain string - schema defines tier as String, not enum
         billingCycle: 'monthly',
         status: 'active',
         basePriceUsd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
