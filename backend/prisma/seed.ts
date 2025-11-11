@@ -708,6 +708,166 @@ async function seedModels() {
   return createdModels;
 }
 
+/**
+ * Seed Proration Events
+ * Creates sample mid-cycle tier change events with proration calculations
+ */
+async function seedProrations(users: any[], subscriptions: any[]) {
+  console.log('Creating proration events...');
+
+  if (!users.length || !subscriptions.length) {
+    console.log('⚠️  No users or subscriptions available - skipping prorations\n');
+    return [];
+  }
+
+  const prorationsData = [
+    // Upgrade from free to pro
+    {
+      userId: users[0]?.id,
+      subscriptionId: subscriptions[0]?.id,
+      fromTier: 'free',
+      toTier: 'pro',
+      changeType: 'upgrade',
+      daysRemaining: 20,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 0, // Free tier has no value
+      newTierProratedCostUsd: 13.33, // (20/30) × $20
+      netChargeUsd: 13.33,
+      effectiveDate: new Date('2025-11-05'),
+      status: 'applied',
+      stripeInvoiceId: 'in_test_upgrade_free_pro_001',
+    },
+    // Upgrade from pro to pro_max
+    {
+      userId: users[1]?.id,
+      subscriptionId: subscriptions[1]?.id,
+      fromTier: 'pro',
+      toTier: 'pro_max',
+      changeType: 'upgrade',
+      daysRemaining: 15,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 10.00, // (15/30) × $20
+      newTierProratedCostUsd: 25.00, // (15/30) × $50
+      netChargeUsd: 15.00,
+      effectiveDate: new Date('2025-11-08'),
+      status: 'applied',
+      stripeInvoiceId: 'in_test_upgrade_pro_promax_001',
+    },
+    // Downgrade from pro to free
+    {
+      userId: users[2]?.id,
+      subscriptionId: subscriptions[2]?.id,
+      fromTier: 'pro',
+      toTier: 'free',
+      changeType: 'downgrade',
+      daysRemaining: 10,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 6.67, // (10/30) × $20
+      newTierProratedCostUsd: 0, // Free tier
+      netChargeUsd: -6.67, // Credit back to user
+      effectiveDate: new Date('2025-11-10'),
+      status: 'applied',
+      stripeInvoiceId: 'in_test_downgrade_pro_free_001',
+    },
+    // Interval change - monthly to annual
+    {
+      userId: users[0]?.id,
+      subscriptionId: subscriptions[0]?.id,
+      fromTier: 'pro',
+      toTier: 'pro',
+      changeType: 'interval_change',
+      daysRemaining: 25,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 16.67, // (25/30) × $20
+      newTierProratedCostUsd: 183.33, // (25/30) × $220 (annual)
+      netChargeUsd: 166.66,
+      effectiveDate: new Date('2025-11-03'),
+      status: 'applied',
+      stripeInvoiceId: 'in_test_interval_monthly_annual_001',
+    },
+    // Pending upgrade
+    {
+      userId: users[1]?.id,
+      subscriptionId: subscriptions[1]?.id,
+      fromTier: 'free',
+      toTier: 'pro',
+      changeType: 'upgrade',
+      daysRemaining: 18,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 0,
+      newTierProratedCostUsd: 12.00,
+      netChargeUsd: 12.00,
+      effectiveDate: new Date('2025-11-12'),
+      status: 'pending',
+    },
+    // Failed proration
+    {
+      userId: users[2]?.id,
+      subscriptionId: subscriptions[2]?.id,
+      fromTier: 'pro',
+      toTier: 'pro_max',
+      changeType: 'upgrade',
+      daysRemaining: 12,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 8.00,
+      newTierProratedCostUsd: 20.00,
+      netChargeUsd: 12.00,
+      effectiveDate: new Date('2025-11-09'),
+      status: 'failed',
+    },
+    // Reversed proration (refund)
+    {
+      userId: users[0]?.id,
+      subscriptionId: subscriptions[0]?.id,
+      fromTier: 'pro_max',
+      toTier: 'pro',
+      changeType: 'downgrade',
+      daysRemaining: 22,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 36.67, // (22/30) × $50
+      newTierProratedCostUsd: 14.67, // (22/30) × $20
+      netChargeUsd: -22.00, // Credit back
+      effectiveDate: new Date('2025-11-01'),
+      status: 'reversed',
+      stripeInvoiceId: 'in_test_reversed_promax_pro_001',
+    },
+    // Enterprise upgrade
+    {
+      userId: users[1]?.id,
+      subscriptionId: subscriptions[1]?.id,
+      fromTier: 'pro_max',
+      toTier: 'enterprise_pro',
+      changeType: 'upgrade',
+      daysRemaining: 28,
+      daysInCycle: 30,
+      unusedCreditValueUsd: 46.67, // (28/30) × $50
+      newTierProratedCostUsd: 93.33, // (28/30) × $100
+      netChargeUsd: 46.66,
+      effectiveDate: new Date('2025-11-02'),
+      status: 'applied',
+      stripeInvoiceId: 'in_test_upgrade_promax_ent_001',
+    },
+  ];
+
+  const createdProrations = [];
+
+  for (const proration of prorationsData) {
+    if (!proration.userId || !proration.subscriptionId) continue;
+
+    try {
+      const created = await prisma.prorationEvent.create({
+        data: proration,
+      });
+      createdProrations.push(created);
+    } catch (err) {
+      console.log(`⚠️  Skipped proration: ${err}`);
+    }
+  }
+
+  console.log(`✓ Created/Updated ${createdProrations.length} proration events\n`);
+  return createdProrations;
+}
+
 async function main() {
   console.log('🌱 Starting comprehensive database seed...\n');
 
@@ -721,13 +881,15 @@ async function main() {
   let subscriptions: any[] = [];
   let credits: any[] = [];
   let models: any[] = [];
+  let prorations: any[] = [];
 
   try {
     subscriptions = await seedSubscriptions(users);
     credits = await seedCredits(users);
     models = await seedModels();
+    prorations = await seedProrations(users, subscriptions);
   } catch (err: any) {
-    console.log('⚠️  Subscriptions, credits, or models tables not available - skipping\n');
+    console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping\n');
   }
 
   // ========================================================================

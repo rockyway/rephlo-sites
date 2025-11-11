@@ -81,7 +81,9 @@ function ModelTierManagement() {
         0,
         100
       );
-      setModels(response.models);
+      // Backend wraps response in { status: "success", data: { models, total } }
+      const data = (response as any).data || response;
+      setModels(data.models || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load models');
     } finally {
