@@ -615,6 +615,78 @@ async function seedModels() {
       creditsPer1kTokens: 6,
       requiredTier: SubscriptionTier.pro,
     },
+
+    // xAI Models (2025)
+    {
+      id: 'grok-4',
+      name: 'grok-4-0709',
+      displayName: 'Grok 4',
+      provider: 'xai',
+      description: 'The most intelligent model in the world with native tool use and real-time search (August 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 256000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 3000,
+      outputCostPerMillionTokens: 15000,
+      creditsPer1kTokens: 40,
+      requiredTier: SubscriptionTier.pro_max,
+    },
+    {
+      id: 'grok-4-fast',
+      name: 'grok-4-fast-reasoning',
+      displayName: 'Grok 4 Fast',
+      provider: 'xai',
+      description: 'Fast reasoning model with 2M context window, ideal for complex tasks (September 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 2000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 500,
+      creditsPer1kTokens: 2,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'grok-code-fast-1',
+      name: 'grok-code-fast-1',
+      displayName: 'Grok Code Fast 1',
+      provider: 'xai',
+      description: 'Speedy and economical reasoning model excelling at agentic coding (September 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 1500,
+      creditsPer1kTokens: 5,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'grok-3',
+      name: 'grok-3',
+      displayName: 'Grok 3',
+      provider: 'xai',
+      description: 'Advanced model with 1M context window, November 2024 knowledge cutoff (April 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 1000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 3000,
+      outputCostPerMillionTokens: 15000,
+      creditsPer1kTokens: 40,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'grok-2',
+      name: 'grok-2',
+      displayName: 'Grok 2',
+      provider: 'xai',
+      description: 'Cost-efficient xAI model for standard tasks with strong reasoning',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 2000,
+      outputCostPerMillionTokens: 10000,
+      creditsPer1kTokens: 25,
+      requiredTier: SubscriptionTier.free,
+    },
   ];
 
   const createdModels = [];
@@ -659,7 +731,7 @@ async function seedModels() {
   }
 
   console.log(`✓ Created/Updated ${createdModels.length} LLM models`);
-  console.log(`  Providers: OpenAI, Anthropic, Google, Mistral, Meta\n`);
+  console.log(`  Providers: OpenAI, Anthropic, Google, Mistral, Meta, xAI\n`);
 
   return createdModels;
 }
