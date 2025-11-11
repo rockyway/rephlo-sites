@@ -881,13 +881,12 @@ async function main() {
   let subscriptions: any[] = [];
   let credits: any[] = [];
   let models: any[] = [];
-  let prorations: any[] = [];
 
   try {
     subscriptions = await seedSubscriptions(users);
     credits = await seedCredits(users);
     models = await seedModels();
-    prorations = await seedProrations(users, subscriptions);
+    await seedProrations(users, subscriptions);
   } catch (err: any) {
     console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping\n');
   }
