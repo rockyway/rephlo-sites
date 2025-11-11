@@ -197,19 +197,24 @@ const AdminSidebar: React.FC = () => {
     }
   }, [expandedGroups]);
 
-  // Restore scroll position on mount
+  // Restore scroll position on mount and after navigation
   useEffect(() => {
     if (navRef.current) {
       try {
         const savedScrollPos = localStorage.getItem('admin-sidebar-scroll-position');
         if (savedScrollPos) {
-          navRef.current.scrollTop = parseInt(savedScrollPos, 10);
+          // Use requestAnimationFrame to ensure DOM is updated
+          requestAnimationFrame(() => {
+            if (navRef.current) {
+              navRef.current.scrollTop = parseInt(savedScrollPos, 10);
+            }
+          });
         }
       } catch (error) {
         console.error('Failed to restore scroll position:', error);
       }
     }
-  }, []);
+  }, [location.pathname]);
 
   // Save scroll position on scroll
   useEffect(() => {
@@ -305,6 +310,7 @@ const AdminSidebar: React.FC = () => {
         key={item.href}
         to={item.href}
         onClick={() => setMobileOpen(false)}
+        preventScrollReset={true}
         className={`
           flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
           ${isChild ? 'pl-12 text-sm' : ''}

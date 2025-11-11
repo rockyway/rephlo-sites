@@ -428,6 +428,7 @@ function PricingConfiguration() {
             </div>
             <div className="p-6">
               <PricingConfigForm
+                key={editingConfig?.id || 'new'}
                 initialValues={editingConfig || undefined}
                 onSubmit={handleCreateConfig}
                 onCancel={() => {
