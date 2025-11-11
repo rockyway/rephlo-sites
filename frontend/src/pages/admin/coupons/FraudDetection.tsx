@@ -418,10 +418,10 @@ function FraudDetection() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-yellow-100 p-3">
-                <AlertTriangle className="h-6 w-6 text-yellow-600" />
+              <div className="rounded-full bg-yellow-100 dark:bg-yellow-900 p-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Suspicious (Today)</p>
@@ -430,10 +430,10 @@ function FraudDetection() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-red-100 p-3">
-                <Ban className="h-6 w-6 text-red-600" />
+              <div className="rounded-full bg-red-100 dark:bg-red-900 p-3">
+                <Ban className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Blocked Attempts</p>
@@ -442,10 +442,10 @@ function FraudDetection() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3">
-                <Shield className="h-6 w-6 text-blue-600" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
+                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">False Positive Rate</p>
@@ -454,10 +454,10 @@ function FraudDetection() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-orange-100 p-3">
-                <Flag className="h-6 w-6 text-orange-600" />
+              <div className="rounded-full bg-orange-100 dark:bg-orange-900 p-3">
+                <Flag className="h-6 w-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">High Severity</p>
@@ -469,7 +469,7 @@ function FraudDetection() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-5">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Search</label>
@@ -576,7 +576,7 @@ function FraudDetection() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
@@ -771,7 +771,7 @@ function FraudDetection() {
       {/* Details Modal */}
       {selectedEvent && showDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection Details</h2>
               <button
@@ -855,7 +855,7 @@ function FraudDetection() {
       {/* Review Modal */}
       {selectedEvent && showReviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <h2 className="mb-4 text-xl font-bold text-deep-navy-800 dark:text-white">Review Fraud Event</h2>
 
             <div className="space-y-4">
@@ -926,7 +926,7 @@ function FraudDetection() {
       {/* Blacklist Modal */}
       {showBlacklistModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-3xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Blacklist Management</h2>
               <button
@@ -1047,7 +1047,7 @@ function FraudDetection() {
       {/* Rules Modal (Placeholder) */}
       {showRulesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection Rules</h2>
               <button
