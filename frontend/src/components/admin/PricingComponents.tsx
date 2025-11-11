@@ -274,6 +274,19 @@ export function PricingConfigForm({
     reasonDetails: initialValues.reasonDetails || '',
   });
 
+  // Sync form data when initialValues change (for edit mode)
+  React.useEffect(() => {
+    setFormData({
+      scopeType: initialValues.scopeType || 'tier',
+      subscriptionTier: initialValues.subscriptionTier || '',
+      providerId: initialValues.providerId || '',
+      modelId: initialValues.modelId || '',
+      marginMultiplier: initialValues.marginMultiplier || 1.5,
+      reason: initialValues.reason || 'tier_optimization',
+      reasonDetails: initialValues.reasonDetails || '',
+    });
+  }, [initialValues]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);

@@ -170,6 +170,7 @@ const AdminSidebar: React.FC = () => {
   const { sidebarCollapsed, toggleSidebar } = useAdminUIStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navRef = React.useRef<HTMLDivElement>(null);
+  const isRestoringScroll = React.useRef(false);
 
   // Expanded groups state (persisted in localStorage)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
@@ -203,18 +204,36 @@ const AdminSidebar: React.FC = () => {
       try {
         const savedScrollPos = localStorage.getItem('admin-sidebar-scroll-position');
         if (savedScrollPos) {
-          // Use requestAnimationFrame to ensure DOM is updated
+          isRestoringScroll.current = true;
+          const scrollPos = parseInt(savedScrollPos, 10);
+
+          // Use multiple timing strategies to ensure scroll is restored
+          // Immediate attempt
+          if (navRef.current) {
+            navRef.current.scrollTop = scrollPos;
+          }
+
+          // Delayed attempt with requestAnimationFrame
           requestAnimationFrame(() => {
             if (navRef.current) {
-              navRef.current.scrollTop = parseInt(savedScrollPos, 10);
+              navRef.current.scrollTop = scrollPos;
             }
           });
+
+          // Final attempt with setTimeout to catch late renders
+          setTimeout(() => {
+            if (navRef.current) {
+              navRef.current.scrollTop = scrollPos;
+            }
+            isRestoringScroll.current = false;
+          }, 50);
         }
       } catch (error) {
         console.error('Failed to restore scroll position:', error);
+        isRestoringScroll.current = false;
       }
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
   // Save scroll position on scroll
   useEffect(() => {
@@ -222,6 +241,9 @@ const AdminSidebar: React.FC = () => {
     if (!navElement) return;
 
     const handleScroll = () => {
+      // Don't save scroll position while restoring to avoid conflicts
+      if (isRestoringScroll.current) return;
+
       try {
         localStorage.setItem('admin-sidebar-scroll-position', navElement.scrollTop.toString());
       } catch (error) {
@@ -423,9 +445,14 @@ const AdminSidebar: React.FC = () => {
       {/* Footer */}
       {!sidebarCollapsed && (
         <div className="p-4 border-t border-deep-navy-200 dark:border-deep-navy-700">
-          <p className="text-xs text-deep-navy-700 dark:text-deep-navy-300 text-center">
-            Rephlo Admin v2.1.0
-          </p>
+          <div className="text-xs text-deep-navy-700 dark:text-deep-navy-300 text-center space-y-1">
+            <p>Rephlo Admin v2.1.0</p>
+            {import.meta.env.MODE !== 'production' && (
+              <p className="font-mono text-[10px] text-deep-navy-600 dark:text-deep-navy-400">
+                {__GIT_BRANCH__} • {__GIT_COMMIT__}
+              </p>
+            )}
+          </div>
         </div>
       )}
     </aside>
@@ -498,9 +525,14 @@ const AdminSidebar: React.FC = () => {
 
                 {/* Footer */}
                 <div className="border-t border-deep-navy-200 dark:border-deep-navy-700 pt-4">
-                  <p className="text-xs text-deep-navy-700 dark:text-deep-navy-300 text-center">
-                    Rephlo Admin v2.1.0
-                  </p>
+                  <div className="text-xs text-deep-navy-700 dark:text-deep-navy-300 text-center space-y-1">
+                    <p>Rephlo Admin v2.1.0</p>
+                    {import.meta.env.MODE !== 'production' && (
+                      <p className="font-mono text-[10px] text-deep-navy-600 dark:text-deep-navy-400">
+                        {__GIT_BRANCH__} • {__GIT_COMMIT__}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </Dialog.Panel>
