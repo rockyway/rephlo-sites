@@ -18,7 +18,7 @@ const AdminLayout: React.FC = () => {
   const sidebarCollapsed = useAdminUIStore((state) => state.sidebarCollapsed);
 
   return (
-    <div className="min-h-screen bg-deep-navy-50">
+    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-950">
       {/* Sidebar - conditionally rendered based on screen size */}
       <AdminSidebar />
 

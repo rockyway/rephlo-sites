@@ -14,8 +14,8 @@ function FeatureBadge({ icon: Icon, label, variant = 'default', className }: Fea
       className={cn(
         'inline-flex items-center gap-xs px-md py-xs rounded-full text-caption font-medium',
         'transition-all duration-base ease-out',
-        variant === 'default' && 'bg-rephlo-blue/10 dark:bg-electric-cyan/10 text-rephlo-blue dark:text-electric-cyan',
-        variant === 'accent' && 'bg-electric-cyan/10 dark:bg-rephlo-blue/10 text-electric-cyan-600 dark:text-rephlo-blue-400',
+        variant === 'default' && 'bg-blue-100 dark:bg-cyan-900/30 text-blue-700 dark:text-cyan-300 border border-blue-200 dark:border-cyan-800/50',
+        variant === 'accent' && 'bg-cyan-100 dark:bg-blue-900/30 text-cyan-700 dark:text-blue-300 border border-cyan-200 dark:border-blue-800/50',
         className
       )}
     >

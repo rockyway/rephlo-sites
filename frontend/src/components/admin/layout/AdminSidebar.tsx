@@ -253,10 +253,10 @@ const AdminSidebar: React.FC = () => {
           ${isChild ? 'pl-12 text-sm' : ''}
           ${
             isActive
-              ? 'bg-rephlo-blue text-white shadow-md'
-              : 'text-deep-navy-600 hover:bg-deep-navy-100 hover:text-deep-navy-800'
+              ? 'bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 shadow-md'
+              : 'text-deep-navy-600 dark:text-deep-navy-300 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800 hover:text-deep-navy-800 dark:hover:text-deep-navy-100'
           }
-          ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          ${item.disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
           ${collapsed && !isChild ? 'justify-center' : ''}
         `}
         aria-disabled={item.disabled}
@@ -283,8 +283,8 @@ const AdminSidebar: React.FC = () => {
             w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
             ${
               isActive && !isExpanded
-                ? 'bg-rephlo-blue/10 text-rephlo-blue'
-                : 'text-deep-navy-600 hover:bg-deep-navy-100 hover:text-deep-navy-800'
+                ? 'bg-rephlo-blue/10 dark:bg-electric-cyan/10 text-rephlo-blue dark:text-electric-cyan'
+                : 'text-deep-navy-600 dark:text-deep-navy-300 hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800 hover:text-deep-navy-800 dark:hover:text-deep-navy-100'
             }
             ${collapsed ? 'justify-center' : 'justify-between'}
           `}
@@ -329,25 +329,25 @@ const AdminSidebar: React.FC = () => {
     <aside
       className={`
         hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col
-        bg-white border-r border-deep-navy-200 shadow-sm
+        bg-white dark:bg-deep-navy-900 border-r border-deep-navy-200 dark:border-deep-navy-700 shadow-sm
         transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[306px]'}
       `}
     >
       {/* Logo & Collapse Toggle */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-deep-navy-200">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-deep-navy-200 dark:border-deep-navy-700">
         {!sidebarCollapsed && (
-          <h1 className="text-xl font-bold text-rephlo-blue">Rephlo Admin</h1>
+          <h1 className="text-xl font-bold text-rephlo-blue dark:text-electric-cyan">Rephlo Admin</h1>
         )}
         <button
           onClick={toggleSidebar}
-          className="p-2 rounded-lg hover:bg-deep-navy-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-deep-navy-100 dark:hover:bg-deep-navy-800 transition-colors"
           aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {sidebarCollapsed ? (
-            <ChevronRight className="w-5 h-5 text-deep-navy-600" />
+            <ChevronRight className="w-5 h-5 text-deep-navy-600 dark:text-deep-navy-300" />
           ) : (
-            <ChevronLeft className="w-5 h-5 text-deep-navy-600" />
+            <ChevronLeft className="w-5 h-5 text-deep-navy-600 dark:text-deep-navy-300" />
           )}
         </button>
       </div>
@@ -359,8 +359,8 @@ const AdminSidebar: React.FC = () => {
 
       {/* Footer */}
       {!sidebarCollapsed && (
-        <div className="p-4 border-t border-deep-navy-200">
-          <p className="text-xs text-deep-navy-700 text-center">
+        <div className="p-4 border-t border-deep-navy-200 dark:border-deep-navy-700">
+          <p className="text-xs text-deep-navy-700 dark:text-deep-navy-300 text-center">
             Rephlo Admin v2.1.0
           </p>
         </div>
@@ -382,7 +382,7 @@ const AdminSidebar: React.FC = () => {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-deep-navy-900/80" />
+          <div className="fixed inset-0 bg-deep-navy-900/80 dark:bg-deep-navy-950/90" />
         </Transition.Child>
 
         {/* Drawer */}
@@ -414,16 +414,16 @@ const AdminSidebar: React.FC = () => {
                     onClick={() => setMobileOpen(false)}
                   >
                     <span className="sr-only">Close sidebar</span>
-                    <X className="h-6 w-6 text-white" aria-hidden="true" />
+                    <X className="h-6 w-6 text-white dark:text-deep-navy-200" aria-hidden="true" />
                   </button>
                 </div>
               </Transition.Child>
 
               {/* Sidebar Content */}
-              <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4">
+              <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-deep-navy-900 px-6 pb-4">
                 {/* Logo */}
-                <div className="flex h-16 shrink-0 items-center border-b border-deep-navy-200">
-                  <h1 className="text-xl font-bold text-rephlo-blue">Rephlo Admin</h1>
+                <div className="flex h-16 shrink-0 items-center border-b border-deep-navy-200 dark:border-deep-navy-700">
+                  <h1 className="text-xl font-bold text-rephlo-blue dark:text-electric-cyan">Rephlo Admin</h1>
                 </div>
 
                 {/* Navigation */}
@@ -434,8 +434,8 @@ const AdminSidebar: React.FC = () => {
                 </nav>
 
                 {/* Footer */}
-                <div className="border-t border-deep-navy-200 pt-4">
-                  <p className="text-xs text-deep-navy-700 text-center">
+                <div className="border-t border-deep-navy-200 dark:border-deep-navy-700 pt-4">
+                  <p className="text-xs text-deep-navy-700 dark:text-deep-navy-300 text-center">
                     Rephlo Admin v2.1.0
                   </p>
                 </div>

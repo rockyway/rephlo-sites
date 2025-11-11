@@ -39,21 +39,21 @@ const AdminStatsGrid: React.FC<AdminStatsGridProps> = ({ stats, columns = 4 }) =
       {stats.map((stat, index) => (
         <div
           key={index}
-          className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-6 hover:shadow-md transition-shadow duration-200"
+          className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-6 hover:shadow-md transition-shadow duration-200"
         >
           {/* Header: Icon + Label */}
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-deep-navy-600">{stat.label}</p>
+            <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">{stat.label}</p>
             {stat.icon && (
-              <div className="p-2 bg-rephlo-blue/10 rounded-lg">
-                <div className="text-rephlo-blue w-5 h-5">{stat.icon}</div>
+              <div className="p-2 bg-blue-100 dark:bg-cyan-900/30 rounded-lg border border-blue-200 dark:border-cyan-800/50">
+                <div className="text-blue-700 dark:text-cyan-300 w-5 h-5">{stat.icon}</div>
               </div>
             )}
           </div>
 
           {/* Value */}
           <div className="mb-2">
-            <p className="text-3xl font-bold text-deep-navy-800">{stat.value}</p>
+            <p className="text-3xl font-bold text-deep-navy-800 dark:text-white">{stat.value}</p>
           </div>
 
           {/* Change Indicator */}
@@ -61,10 +61,10 @@ const AdminStatsGrid: React.FC<AdminStatsGridProps> = ({ stats, columns = 4 }) =
             <div
               className={`flex items-center gap-1 text-sm font-medium ${
                 stat.change.trend === 'up'
-                  ? 'text-green-600'
+                  ? 'text-green-600 dark:text-green-400'
                   : stat.change.trend === 'down'
-                  ? 'text-red-600'
-                  : 'text-deep-navy-600'
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-deep-navy-600 dark:text-deep-navy-200'
               }`}
             >
               {stat.change.trend === 'up' ? (

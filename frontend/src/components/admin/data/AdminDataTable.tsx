@@ -120,8 +120,8 @@ function AdminDataTable<T extends { id?: any }>({
   // Error state
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-8">
-        <div className="text-center text-red-600">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-8">
+        <div className="text-center text-red-600 dark:text-red-400">
           <p className="font-medium">Error loading data</p>
           <p className="text-sm mt-1">{error}</p>
         </div>
@@ -132,25 +132,25 @@ function AdminDataTable<T extends { id?: any }>({
   // Empty state
   if (!loading && data.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 p-8">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 p-8">
         <EmptyState title="No data available" description="There are no records to display." />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-deep-navy-200 overflow-hidden">
+    <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
       {/* Loading overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-white/80 dark:bg-deep-navy-900/80 flex items-center justify-center z-10">
           <LoadingState message="Loading data..." />
         </div>
       )}
 
       {/* Table wrapper for horizontal scroll on mobile */}
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-deep-navy-200">
-          <thead className="bg-deep-navy-50">
+        <table className="min-w-full divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
+          <thead className="bg-deep-navy-50 dark:bg-deep-navy-900">
             <tr>
               {/* Selection checkbox column */}
               {selectable && (
@@ -159,7 +159,7 @@ function AdminDataTable<T extends { id?: any }>({
                     type="checkbox"
                     checked={selectedRows.size === data.length && data.length > 0}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 text-rephlo-blue border-deep-navy-300 rounded focus:ring-rephlo-blue focus:ring-2"
+                    className="w-4 h-4 text-rephlo-blue dark:text-electric-cyan border-deep-navy-300 dark:border-deep-navy-600 rounded focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:ring-2"
                     aria-label="Select all rows"
                   />
                 </th>
@@ -169,12 +169,12 @@ function AdminDataTable<T extends { id?: any }>({
               {columns.map((column) => (
                 <th
                   key={String(column.key)}
-                  className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-medium text-deep-navy-600 dark:text-deep-navy-200 uppercase tracking-wider"
                 >
                   {column.sortable ? (
                     <button
                       onClick={() => handleSort(column)}
-                      className="flex items-center gap-2 hover:text-rephlo-blue transition-colors focus:outline-none focus:text-rephlo-blue"
+                      className="flex items-center gap-2 hover:text-rephlo-blue dark:hover:text-electric-cyan transition-colors focus:outline-none focus:text-rephlo-blue dark:focus:text-electric-cyan"
                       aria-label={`Sort by ${column.label}`}
                     >
                       <span>{column.label}</span>
@@ -195,7 +195,7 @@ function AdminDataTable<T extends { id?: any }>({
               ))}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-deep-navy-100">
+          <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
             {sortedData.map((row, rowIndex) => {
               const rowId = row.id || JSON.stringify(row);
               const isSelected = selectedRows.has(rowId);
@@ -206,8 +206,8 @@ function AdminDataTable<T extends { id?: any }>({
                   onClick={() => onRowClick?.(row)}
                   className={`
                     transition-colors
-                    ${onRowClick ? 'cursor-pointer hover:bg-deep-navy-50' : ''}
-                    ${isSelected ? 'bg-rephlo-blue/5' : ''}
+                    ${onRowClick ? 'cursor-pointer hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700' : ''}
+                    ${isSelected ? 'bg-rephlo-blue/5 dark:bg-electric-cyan/10' : ''}
                   `}
                   tabIndex={onRowClick ? 0 : undefined}
                   onKeyDown={(e) => {
@@ -224,7 +224,7 @@ function AdminDataTable<T extends { id?: any }>({
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleSelectRow(row)}
-                        className="w-4 h-4 text-rephlo-blue border-deep-navy-300 rounded focus:ring-rephlo-blue focus:ring-2"
+                        className="w-4 h-4 text-rephlo-blue dark:text-electric-cyan border-deep-navy-300 dark:border-deep-navy-600 rounded focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:ring-2"
                         aria-label={`Select row ${rowIndex + 1}`}
                       />
                     </td>
@@ -236,7 +236,7 @@ function AdminDataTable<T extends { id?: any }>({
                     return (
                       <td
                         key={String(column.key)}
-                        className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-700"
+                        className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-700 dark:text-deep-navy-200"
                       >
                         {column.render ? column.render(value, row) : String(value ?? '')}
                       </td>
