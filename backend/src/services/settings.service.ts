@@ -21,7 +21,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { injectable } from 'tsyringe';
+import { injectable, inject } from 'tsyringe';
 import crypto from 'crypto';
 
 /**
@@ -131,7 +131,7 @@ export class SettingsService {
   private encryptionKey: Buffer;
   private algorithm = 'aes-256-gcm';
 
-  constructor(private prisma: PrismaClient) {
+  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
     // Use environment variable or generate a key (in production, always use env var)
     const key = process.env.SETTINGS_ENCRYPTION_KEY || 'default-key-change-in-production-32b';
     this.encryptionKey = Buffer.from(key.padEnd(32, '0').slice(0, 32));
