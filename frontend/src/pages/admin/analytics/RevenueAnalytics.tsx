@@ -54,6 +54,7 @@ import {
   type CouponROIRow,
 } from '@/api/admin';
 import { formatCurrency, formatNumber, formatPercentage } from '@/utils/format';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 // ============================================================================
 // Constants
@@ -370,6 +371,9 @@ const RevenueAnalytics: React.FC = () => {
                   index > 0 ? ((stage.count / funnelData.stages[index - 1].count) * 100).toFixed(1) : null;
                 return (
                   <div key={stage.name} className="flex justify-between text-deep-navy-700">
+                    {/* Breadcrumbs */}
+                    <Breadcrumbs />
+
                     <span>{stage.name}</span>
                     <span className="font-medium">
                       {formatNumber(stage.count)} ({formatPercentage(stage.percentage / 100)})

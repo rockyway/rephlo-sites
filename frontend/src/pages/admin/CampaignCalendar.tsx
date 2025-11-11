@@ -30,6 +30,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import CampaignTypeBadge from '@/components/plan111/CampaignTypeBadge';
 import { plan111API } from '@/api/plan111';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 import {
   formatDate,
   formatCurrency,
@@ -175,6 +176,9 @@ function CampaignCalendar() {
   return (
     <div className="min-h-screen bg-deep-navy-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Breadcrumbs */}
+        <Breadcrumbs />
+
         {/* Header */}
         <div className="mb-6">
           <Link

@@ -36,6 +36,7 @@ import {
   getTierDisplayName,
 } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 export default function PlatformAnalytics() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -151,7 +152,10 @@ export default function PlatformAnalytics() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
+{/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800">Platform Analytics</h1>

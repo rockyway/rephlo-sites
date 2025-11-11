@@ -18,6 +18,7 @@ import ModelTierEditDialog from '@/components/admin/ModelTierEditDialog';
 import TierAuditLog from '@/components/admin/TierAuditLog';
 import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 import type {
   ModelTierInfo,
   SubscriptionTier,
@@ -229,6 +230,11 @@ function ModelTierManagement() {
 
   return (
     <div className="min-h-screen bg-deep-navy-50">
+      {/* Breadcrumbs */}
+      <div className="bg-white px-4 sm:px-6 lg:px-8 pt-6">
+        <Breadcrumbs />
+      </div>
+
       {/* Header */}
       <header className="bg-white border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">

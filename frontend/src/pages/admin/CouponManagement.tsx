@@ -43,6 +43,7 @@ import type {
   CouponFilters,
   CouponUpdateRequest,
 } from '@/types/plan111.types';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 function CouponManagement() {
   // Data state
@@ -204,6 +205,9 @@ function CouponManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

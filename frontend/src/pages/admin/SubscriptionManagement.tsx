@@ -36,6 +36,7 @@ import {
 } from '@/types/plan109.types';
 import { formatCurrency, formatDate, formatNumber, calculateDaysBetween } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 function SubscriptionManagement() {
   // State
@@ -168,6 +169,9 @@ function SubscriptionManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

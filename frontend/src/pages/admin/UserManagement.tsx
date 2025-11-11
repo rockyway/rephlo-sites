@@ -47,6 +47,7 @@ import {
   downloadCSV,
 } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 function UserManagement() {
   // State
@@ -253,6 +254,9 @@ function UserManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

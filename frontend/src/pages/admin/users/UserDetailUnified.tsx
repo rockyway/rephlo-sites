@@ -56,6 +56,7 @@ import { LoadingState, EmptyState } from '@/components/admin/utility';
 import ConfirmationModal from '@/components/admin/forms/ConfirmationModal';
 import FormModal from '@/components/admin/forms/FormModal';
 import { formatCurrency, formatDate, formatRelativeTime, formatNumber } from '@/utils/format';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 // ============================================================================
 // Main Component
@@ -596,6 +597,9 @@ const LicensesTab: React.FC<LicensesTabProps> = ({ userId }) => {
 
   return (
     <div className="space-y-4">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
       <h3 className="text-lg font-semibold text-deep-navy-800">Licenses</h3>
 
       {data.licenses.map((license) => (

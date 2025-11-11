@@ -30,7 +30,7 @@ export class SettingsController {
    * GET /admin/settings
    * Get all settings from all categories
    */
-  async getAllSettings(req: Request, res: Response): Promise<void> {
+  async getAllSettings(_req: Request, res: Response): Promise<void> {
     try {
       const settings = await this.settingsService.getAllSettings();
 
@@ -198,7 +198,7 @@ export class SettingsController {
    * POST /admin/settings/clear-cache
    * Clear application cache
    */
-  async clearCache(req: Request, res: Response): Promise<void> {
+  async clearCache(_req: Request, res: Response): Promise<void> {
     try {
       const result = await this.settingsService.clearCache();
 
@@ -222,7 +222,7 @@ export class SettingsController {
    * POST /admin/settings/run-backup
    * Create database backup
    */
-  async runBackup(req: Request, res: Response): Promise<void> {
+  async runBackup(_req: Request, res: Response): Promise<void> {
     try {
       const result = await this.settingsService.createBackup();
 

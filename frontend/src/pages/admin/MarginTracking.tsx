@@ -18,6 +18,7 @@ import MetricsCard from '@/components/admin/MetricsCard';
 import { MarginBadge } from '@/components/admin/PricingComponents';
 import { pricingApi, type MarginMetrics, type MarginByTier, type MarginByProvider, type TopModel } from '@/api/pricing';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 /**
  * MarginTracking Page
@@ -110,7 +111,10 @@ function MarginTracking() {
 
   return (
     <div className="min-h-screen bg-deep-navy-50">
-      {/* Header */}
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
+{/* Header */}
       <header className="bg-white border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">

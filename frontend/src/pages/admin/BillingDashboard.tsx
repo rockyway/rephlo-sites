@@ -39,6 +39,7 @@ import {
 } from '@/types/plan109.types';
 import { formatCurrency, formatDate, formatPercentage, getTierDisplayName, getTierColor } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 function BillingDashboard() {
   // State
@@ -121,6 +122,11 @@ function BillingDashboard() {
 
   return (
     <div className="min-h-screen bg-deep-navy-50">
+      {/* Breadcrumbs */}
+      <div className="bg-white px-4 sm:px-6 lg:px-8 pt-6">
+        <Breadcrumbs />
+      </div>
+
       {/* Header */}
       <header className="bg-white border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">

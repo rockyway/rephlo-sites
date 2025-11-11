@@ -16,6 +16,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { MultiplierInput } from '@/components/admin/PricingComponents';
 import { pricingApi, type SimulationScenario, type SimulationResult } from '@/api/pricing';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 /**
  * PricingSimulation Page
@@ -156,7 +157,10 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
 
   return (
     <div className="min-h-screen bg-deep-navy-50">
-      {/* Header */}
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
+{/* Header */}
       <header className="bg-white border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">

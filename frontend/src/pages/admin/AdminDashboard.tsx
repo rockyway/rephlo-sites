@@ -44,6 +44,7 @@ import { LoadingState, EmptyState } from '@/components/admin/utility';
 import { adminAPI, ActivityEvent } from '@/api/admin';
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/utils/format';
 import { Link } from 'react-router-dom';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 // ============================================================================
 // Main Dashboard Component
@@ -124,6 +125,9 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>

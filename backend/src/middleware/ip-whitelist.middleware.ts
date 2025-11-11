@@ -76,12 +76,13 @@ export class IPWhitelistMiddleware {
           method: req.method,
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             code: 'ip_determination_failed',
             message: 'Unable to determine your IP address for security verification',
           },
         });
+        return;
       }
 
       // Check if IP is whitelisted
@@ -97,7 +98,7 @@ export class IPWhitelistMiddleware {
           method: req.method,
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           error: {
             code: 'ip_not_whitelisted',
             message:
@@ -108,6 +109,7 @@ export class IPWhitelistMiddleware {
             },
           },
         });
+        return;
       }
 
       // IP is whitelisted - allow through

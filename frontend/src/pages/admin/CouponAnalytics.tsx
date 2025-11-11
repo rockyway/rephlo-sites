@@ -27,6 +27,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import FraudSeverityBadge from '@/components/plan111/FraudSeverityBadge';
 import { plan111API } from '@/api/plan111';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 import {
   formatCurrency,
   formatPercentage,
@@ -137,6 +138,9 @@ function CouponAnalytics() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Breadcrumbs */}
+        <Breadcrumbs />
+
         {/* Header */}
         <div className="mb-6">
           <Link

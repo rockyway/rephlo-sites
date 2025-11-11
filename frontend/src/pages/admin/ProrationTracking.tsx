@@ -41,6 +41,7 @@ import {
 import { formatCurrency, formatNumber } from '@/lib/plan109.utils';
 import { formatDate, formatNetCharge } from '@/lib/plan110.utils';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 function ProrationTracking() {
   // State
@@ -169,7 +170,10 @@ function ProrationTracking() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
+{/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800">Proration Tracking</h1>

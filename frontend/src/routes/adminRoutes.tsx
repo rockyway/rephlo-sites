@@ -10,17 +10,17 @@ const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
 const SubscriptionManagement = lazy(() => import('../pages/admin/SubscriptionManagement'));
 const UserManagement = lazy(() => import('../pages/admin/UserManagement'));
 const PlatformAnalytics = lazy(() => import('../pages/admin/PlatformAnalytics'));
-// const CreditManagement = lazy(() => import('../pages/admin/CreditManagement'));
+const CreditManagement = lazy(() => import('../pages/admin/CreditManagement'));
 
 // Plan 110 pages (already exist)
 const PerpetualLicenseManagement = lazy(() => import('../pages/admin/PerpetualLicenseManagement'));
 const ProrationTracking = lazy(() => import('../pages/admin/ProrationTracking'));
-// const DeviceActivationManagement = lazy(() => import('../pages/admin/DeviceActivationManagement'));
+const DeviceActivationManagement = lazy(() => import('../pages/admin/DeviceActivationManagement'));
 
 // Plan 111 pages (already exist)
 const CouponManagement = lazy(() => import('../pages/admin/CouponManagement'));
-// const CampaignManagement = lazy(() => import('../pages/admin/CampaignManagement'));
-// const FraudDetection = lazy(() => import('../pages/admin/FraudDetection'));
+const CampaignManagement = lazy(() => import('../pages/admin/coupons/CampaignManagement'));
+const FraudDetection = lazy(() => import('../pages/admin/coupons/FraudDetection'));
 
 // Phase 4: New unified views
 const UserDetailUnified = lazy(() => import('../pages/admin/users/UserDetailUnified'));
@@ -70,10 +70,10 @@ export const adminRoutes: RouteObject[] = [
         path: 'subscriptions',
         element: <SubscriptionManagement />,
       },
-      // {
-      //   path: 'credits',
-      //   element: <CreditManagement />,
-      // },
+      {
+        path: 'credits',
+        element: <CreditManagement />,
+      },
 
       // License management (Plan 110)
       {
@@ -84,10 +84,10 @@ export const adminRoutes: RouteObject[] = [
         path: 'licenses/prorations',
         element: <ProrationTracking />,
       },
-      // {
-      //   path: 'licenses/devices',
-      //   element: <DeviceActivationManagement />,
-      // },
+      {
+        path: 'licenses/devices',
+        element: <DeviceActivationManagement />,
+      },
 
       // Coupon management (Plan 111)
       {
@@ -102,14 +102,14 @@ export const adminRoutes: RouteObject[] = [
         path: 'coupons/calendar',
         element: <CampaignCalendar />,
       },
-      // {
-      //   path: 'coupons/campaigns',
-      //   element: <CampaignManagement />,
-      // },
-      // {
-      //   path: 'coupons/fraud',
-      //   element: <FraudDetection />,
-      // },
+      {
+        path: 'coupons/campaigns',
+        element: <CampaignManagement />,
+      },
+      {
+        path: 'coupons/fraud',
+        element: <FraudDetection />,
+      },
 
       // Analytics
       {

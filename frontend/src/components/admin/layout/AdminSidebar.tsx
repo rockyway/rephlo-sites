@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Dialog, Transition } from '@headlessui/react';
 import {
@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
   Cpu,
   DollarSign,
@@ -20,54 +21,219 @@ import {
   LineChart,
   Calendar,
   Tag,
+  Shield,
+  AlertTriangle,
+  Smartphone,
+  Zap,
 } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
 
 interface NavItem {
   name: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
-const navigationItems: NavItem[] = [
+interface NavGroup {
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: NavItem[];
+  defaultExpanded?: boolean;
+}
+
+type NavigationItem = NavItem | NavGroup;
+
+// Check if item is a group
+function isNavGroup(item: NavigationItem): item is NavGroup {
+  return 'children' in item;
+}
+
+// Navigation structure with nested groups
+const navigationItems: NavigationItem[] = [
+  // Dashboard (single item)
   { name: 'Dashboard', href: '/admin', icon: Home },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
-  { name: 'Billing', href: '/admin/billing', icon: Receipt },
-  { name: 'Licenses', href: '/admin/licenses', icon: Key },
-  { name: 'Coupons', href: '/admin/coupons', icon: Ticket },
-  { name: 'Coupon Analytics', href: '/admin/coupons/analytics', icon: Tag },
-  { name: 'Campaign Calendar', href: '/admin/coupons/calendar', icon: Calendar },
-  { name: 'Models', href: '/admin/models', icon: Cpu },
-  { name: 'Margin Tracking', href: '/admin/profitability/margins', icon: TrendingUp },
-  { name: 'Pricing Config', href: '/admin/profitability/pricing', icon: DollarSign },
-  { name: 'Price Simulator', href: '/admin/profitability/simulator', icon: Calculator },
-  { name: 'Vendor Prices', href: '/admin/profitability/vendor-prices', icon: LineChart },
-  { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+
+  // Users group
+  {
+    name: 'Users',
+    icon: Users,
+    defaultExpanded: false,
+    children: [
+      { name: 'User List', href: '/admin/users' },
+    ],
+  },
+
+  // Subscriptions group
+  {
+    name: 'Subscriptions',
+    icon: CreditCard,
+    defaultExpanded: false,
+    children: [
+      { name: 'Subscription Management', href: '/admin/subscriptions' },
+      { name: 'Billing Dashboard', href: '/admin/billing' },
+      { name: 'Credit Management', href: '/admin/credits' },
+    ],
+  },
+
+  // Licenses group
+  {
+    name: 'Licenses',
+    icon: Key,
+    defaultExpanded: false,
+    children: [
+      { name: 'License Management', href: '/admin/licenses' },
+      { name: 'Device Activations', href: '/admin/licenses/devices' },
+      { name: 'Proration Tracking', href: '/admin/licenses/prorations' },
+    ],
+  },
+
+  // Coupons & Campaigns group
+  {
+    name: 'Coupons & Campaigns',
+    icon: Ticket,
+    defaultExpanded: false,
+    children: [
+      { name: 'Coupon Management', href: '/admin/coupons' },
+      { name: 'Campaign Management', href: '/admin/coupons/campaigns' },
+      { name: 'Campaign Calendar', href: '/admin/coupons/calendar' },
+      { name: 'Coupon Analytics', href: '/admin/coupons/analytics' },
+      { name: 'Fraud Detection', href: '/admin/coupons/fraud' },
+    ],
+  },
+
+  // Profitability group
+  {
+    name: 'Profitability',
+    icon: DollarSign,
+    defaultExpanded: false,
+    children: [
+      { name: 'Margin Tracking', href: '/admin/profitability/margins' },
+      { name: 'Pricing Configuration', href: '/admin/profitability/pricing' },
+      { name: 'Pricing Simulator', href: '/admin/profitability/simulator' },
+      { name: 'Vendor Price Monitoring', href: '/admin/profitability/vendor-prices' },
+    ],
+  },
+
+  // Models group
+  {
+    name: 'Models',
+    icon: Cpu,
+    defaultExpanded: false,
+    children: [
+      { name: 'Model Tier Management', href: '/admin/models' },
+    ],
+  },
+
+  // Analytics group
+  {
+    name: 'Analytics',
+    icon: BarChart3,
+    defaultExpanded: false,
+    children: [
+      { name: 'Platform Analytics', href: '/admin/analytics' },
+      { name: 'Revenue Analytics', href: '/admin/analytics/revenue' },
+    ],
+  },
+
+  // Settings group
+  {
+    name: 'Settings',
+    icon: Settings,
+    defaultExpanded: false,
+    children: [
+      { name: 'General', href: '/admin/settings#general' },
+      { name: 'Email & Notifications', href: '/admin/settings#email' },
+      { name: 'Security', href: '/admin/settings#security' },
+      { name: 'Integrations', href: '/admin/settings#integrations' },
+      { name: 'Feature Flags', href: '/admin/settings#features' },
+      { name: 'System', href: '/admin/settings#system' },
+    ],
+  },
 ];
 
 /**
  * AdminSidebar Component
  *
- * Collapsible sidebar with navigation menu.
+ * Collapsible sidebar with nested navigation menu.
  * Features:
  * - Desktop: Fixed position, persistent, collapsible
  * - Mobile: Headless UI Dialog (drawer) overlay
  * - Active route highlighting using useLocation
- * - Zustand integration for collapse state
+ * - Nested groups with expand/collapse state (persisted in localStorage)
+ * - Zustand integration for sidebar collapse state
  * - Keyboard accessible (Tab navigation, Escape closes)
  * - Deep Navy theme
  */
 const AdminSidebar: React.FC = () => {
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useAdminUIStore();
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Navigation link renderer
-  const renderNavLink = (item: NavItem, collapsed: boolean = false) => {
-    const isActive = location.pathname === item.href;
+  // Expanded groups state (persisted in localStorage)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('admin-sidebar-expanded-groups');
+      if (stored) {
+        return new Set(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Failed to load expanded groups from localStorage:', error);
+    }
+    // Default: Dashboard expanded
+    return new Set(['Dashboard']);
+  });
+
+  // Persist expanded groups to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'admin-sidebar-expanded-groups',
+        JSON.stringify(Array.from(expandedGroups))
+      );
+    } catch (error) {
+      console.error('Failed to save expanded groups to localStorage:', error);
+    }
+  }, [expandedGroups]);
+
+  // Auto-expand group if child is active
+  useEffect(() => {
+    navigationItems.forEach((item) => {
+      if (isNavGroup(item)) {
+        const hasActiveChild = item.children.some(
+          (child) => location.pathname === child.href || location.pathname.startsWith(child.href + '/')
+        );
+        if (hasActiveChild && !expandedGroups.has(item.name)) {
+          setExpandedGroups((prev) => new Set(prev).add(item.name));
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  // Toggle group expansion
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupName)) {
+        next.delete(groupName);
+      } else {
+        next.add(groupName);
+      }
+      return next;
+    });
+  };
+
+  // Check if any child in group is active
+  const isGroupActive = (group: NavGroup): boolean => {
+    return group.children.some(
+      (child) => location.pathname === child.href || location.pathname.startsWith(child.href + '/')
+    );
+  };
+
+  // Navigation link renderer (for single items)
+  const renderNavLink = (item: NavItem, collapsed: boolean = false, isChild: boolean = false) => {
+    const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
     const Icon = item.icon;
 
     return (
@@ -77,21 +243,78 @@ const AdminSidebar: React.FC = () => {
         onClick={() => setMobileOpen(false)}
         className={`
           flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+          ${isChild ? 'pl-12 text-sm' : ''}
           ${
             isActive
               ? 'bg-rephlo-blue text-white shadow-md'
               : 'text-deep-navy-600 hover:bg-deep-navy-100 hover:text-deep-navy-800'
           }
           ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          ${collapsed ? 'justify-center' : ''}
+          ${collapsed && !isChild ? 'justify-center' : ''}
         `}
         aria-disabled={item.disabled}
         tabIndex={item.disabled ? -1 : 0}
       >
-        <Icon className={`flex-shrink-0 ${collapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
+        {Icon && <Icon className={`flex-shrink-0 ${collapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />}
         {!collapsed && <span className="font-medium">{item.name}</span>}
       </NavLink>
     );
+  };
+
+  // Navigation group renderer
+  const renderNavGroup = (group: NavGroup, collapsed: boolean = false) => {
+    const isExpanded = expandedGroups.has(group.name);
+    const isActive = isGroupActive(group);
+    const Icon = group.icon;
+
+    return (
+      <div key={group.name}>
+        {/* Group Header */}
+        <button
+          onClick={() => toggleGroup(group.name)}
+          className={`
+            w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+            ${
+              isActive && !isExpanded
+                ? 'bg-rephlo-blue/10 text-rephlo-blue'
+                : 'text-deep-navy-600 hover:bg-deep-navy-100 hover:text-deep-navy-800'
+            }
+            ${collapsed ? 'justify-center' : 'justify-between'}
+          `}
+          aria-expanded={isExpanded}
+        >
+          <div className={`flex items-center gap-3 ${collapsed ? '' : 'flex-1'}`}>
+            <Icon className={`flex-shrink-0 ${collapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            {!collapsed && <span className="font-medium">{group.name}</span>}
+          </div>
+          {!collapsed && (
+            <ChevronDown
+              className={`w-4 h-4 transition-transform duration-200 ${
+                isExpanded ? 'rotate-180' : ''
+              }`}
+            />
+          )}
+        </button>
+
+        {/* Group Children */}
+        {isExpanded && !collapsed && (
+          <div className="mt-1 space-y-1">
+            {group.children.map((child) => renderNavLink(child, false, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Main navigation renderer
+  const renderNavigation = (collapsed: boolean = false) => {
+    return navigationItems.map((item) => {
+      if (isNavGroup(item)) {
+        return renderNavGroup(item, collapsed);
+      } else {
+        return renderNavLink(item, collapsed, false);
+      }
+    });
   };
 
   // Desktop Sidebar
@@ -124,7 +347,7 @@ const AdminSidebar: React.FC = () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-        {navigationItems.map((item) => renderNavLink(item, sidebarCollapsed))}
+        {renderNavigation(sidebarCollapsed)}
       </nav>
 
       {/* Footer */}
@@ -198,11 +421,9 @@ const AdminSidebar: React.FC = () => {
 
                 {/* Navigation */}
                 <nav className="flex flex-1 flex-col">
-                  <ul className="flex flex-1 flex-col gap-y-2">
-                    {navigationItems.map((item) => (
-                      <li key={item.href}>{renderNavLink(item)}</li>
-                    ))}
-                  </ul>
+                  <div className="flex flex-1 flex-col gap-y-2">
+                    {renderNavigation(false)}
+                  </div>
                 </nav>
 
                 {/* Footer */}

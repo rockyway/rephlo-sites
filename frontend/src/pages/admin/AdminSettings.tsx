@@ -25,6 +25,7 @@ import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { settingsApi, type CategorySettings, type SettingCategory } from '@/api/settings.api';
 import { cn } from '@/lib/utils';
+import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
 type TabId = 'general' | 'email' | 'security' | 'integrations' | 'feature_flags' | 'system';
 
@@ -240,7 +241,10 @@ function AdminSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
+{/* Header */}
       <div>
         <h1 className="text-h1 font-bold text-deep-navy-800">Settings</h1>
         <p className="text-body text-deep-navy-500 mt-1">
