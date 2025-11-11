@@ -14,7 +14,7 @@
  * Uses upsert logic to ensure no duplicates and allows data restoration.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ModelCapability, SubscriptionTier, ProrationEventType, ProrationStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -402,6 +402,509 @@ async function seedCredits(users: any[]) {
   return createdCredits;
 }
 
+/**
+ * Seed LLM Models
+ * Seeds top-tier models from major providers with current pricing
+ */
+async function seedModels() {
+  console.log('Creating LLM models...');
+
+  const models = [
+    // OpenAI Models (August 2025 - GPT-5 Release)
+    {
+      id: 'gpt-5',
+      name: 'gpt-5',
+      displayName: 'GPT-5',
+      provider: 'openai',
+      description: 'OpenAI\'s best AI system with 272K input, 128K output, 94.6% AIME math, 74.9% SWE-bench coding, 45% fewer hallucinations',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 272000,
+      maxOutputTokens: 128000,
+      inputCostPerMillionTokens: 1250,
+      outputCostPerMillionTokens: 10000,
+      creditsPer1kTokens: 28,
+      requiredTier: SubscriptionTier.pro_max,
+    },
+    {
+      id: 'gpt-5-mini',
+      name: 'gpt-5-mini',
+      displayName: 'GPT-5 Mini',
+      provider: 'openai',
+      description: 'Cost-efficient GPT-5 with 87.5% cost reduction, 272K input context with smart routing',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 272000,
+      maxOutputTokens: 128000,
+      inputCostPerMillionTokens: 250,
+      outputCostPerMillionTokens: 2000,
+      creditsPer1kTokens: 6,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'gpt-5-nano',
+      name: 'gpt-5-nano',
+      displayName: 'GPT-5 Nano',
+      provider: 'openai',
+      description: 'Ultra cost-efficient GPT-5 variant with 272K context, ideal for high-volume tasks',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 272000,
+      maxOutputTokens: 128000,
+      inputCostPerMillionTokens: 50,
+      outputCostPerMillionTokens: 400,
+      creditsPer1kTokens: 1,
+      requiredTier: SubscriptionTier.free,
+    },
+
+    // Anthropic Models (2025 - Claude 4 Generation)
+    {
+      id: 'claude-opus-4-1',
+      name: 'claude-opus-4.1',
+      displayName: 'Claude Opus 4.1',
+      provider: 'anthropic',
+      description: 'Most powerful Claude model for highly complex tasks, 200K context (August 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 200000,
+      maxOutputTokens: 16384,
+      inputCostPerMillionTokens: 15000,
+      outputCostPerMillionTokens: 75000,
+      creditsPer1kTokens: 180,
+      requiredTier: SubscriptionTier.pro_max,
+    },
+    {
+      id: 'claude-sonnet-4-5',
+      name: 'claude-sonnet-4.5',
+      displayName: 'Claude Sonnet 4.5',
+      provider: 'anthropic',
+      description: 'Most intelligent for agents, coding, and computer use with 200K context (September 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 200000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 3000,
+      outputCostPerMillionTokens: 15000,
+      creditsPer1kTokens: 40,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'claude-haiku-4-5',
+      name: 'claude-haiku-4.5',
+      displayName: 'Claude Haiku 4.5',
+      provider: 'anthropic',
+      description: 'Fastest and most cost-efficient Claude with 200K context (October 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
+      contextLength: 200000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 1000,
+      outputCostPerMillionTokens: 5000,
+      creditsPer1kTokens: 15,
+      requiredTier: SubscriptionTier.free,
+    },
+
+    // Google Models (2025)
+    {
+      id: 'gemini-2-5-pro',
+      name: 'gemini-2.5-pro',
+      displayName: 'Gemini 2.5 Pro',
+      provider: 'google',
+      description: 'Most advanced Gemini model with 1M context (2M coming soon), exceptional reasoning',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 1000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 1250,
+      outputCostPerMillionTokens: 5000,
+      creditsPer1kTokens: 20,
+      requiredTier: SubscriptionTier.pro_max,
+    },
+    {
+      id: 'gemini-2-0-flash',
+      name: 'gemini-2.0-flash',
+      displayName: 'Gemini 2.0 Flash',
+      provider: 'google',
+      description: 'Generally available model with 1M context, multimodal input, and native tool use',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
+      contextLength: 1000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 100,
+      outputCostPerMillionTokens: 400,
+      creditsPer1kTokens: 3,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'gemini-2-0-flash-lite',
+      name: 'gemini-2.0-flash-lite',
+      displayName: 'Gemini 2.0 Flash-Lite',
+      provider: 'google',
+      description: 'Most cost-efficient Gemini model with 1M context and multimodal capabilities',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
+      contextLength: 1000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 38,
+      outputCostPerMillionTokens: 150,
+      creditsPer1kTokens: 1,
+      requiredTier: SubscriptionTier.free,
+    },
+
+    // Mistral Models (2025)
+    {
+      id: 'mistral-medium-3',
+      name: 'mistral-medium-3',
+      displayName: 'Mistral Medium 3',
+      provider: 'mistral',
+      description: 'Latest Mistral model excelling in coding and STEM tasks, 90% of Claude 3.7 at lower cost',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 400,
+      outputCostPerMillionTokens: 2000,
+      creditsPer1kTokens: 8,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'mistral-small-3-1',
+      name: 'mistral-small-3.1',
+      displayName: 'Mistral Small 3.1',
+      provider: 'mistral',
+      description: 'Cost-efficient model for standard tasks with strong multilingual support',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 600,
+      creditsPer1kTokens: 3,
+      requiredTier: SubscriptionTier.free,
+    },
+
+    // Meta Models (2025)
+    {
+      id: 'llama-4-scout',
+      name: 'llama-4-scout',
+      displayName: 'Llama 4 Scout',
+      provider: 'meta',
+      description: 'Industry-leading 10M context window with superior text and visual intelligence',
+      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
+      contextLength: 10000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 800,
+      creditsPer1kTokens: 5,
+      requiredTier: SubscriptionTier.pro_max,
+    },
+    {
+      id: 'llama-3-3-70b',
+      name: 'llama-3.3-70b',
+      displayName: 'Llama 3.3 70B',
+      provider: 'meta',
+      description: 'Excellent performance at 10-15x lower cost than GPT-4o with 128K context',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code, ModelCapability.long_context],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 100,
+      outputCostPerMillionTokens: 400,
+      creditsPer1kTokens: 2,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'llama-3-1-405b',
+      name: 'llama-3.1-405b',
+      displayName: 'Llama 3.1 405B',
+      provider: 'meta',
+      description: 'Largest Llama model with exceptional capabilities and 128K context',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code, ModelCapability.long_context],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 300,
+      outputCostPerMillionTokens: 1200,
+      creditsPer1kTokens: 6,
+      requiredTier: SubscriptionTier.pro,
+    },
+
+    // xAI Models (2025)
+    {
+      id: 'grok-4',
+      name: 'grok-4-0709',
+      displayName: 'Grok 4',
+      provider: 'xai',
+      description: 'The most intelligent model in the world with native tool use and real-time search (August 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 256000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 3000,
+      outputCostPerMillionTokens: 15000,
+      creditsPer1kTokens: 40,
+      requiredTier: SubscriptionTier.pro_max,
+    },
+    {
+      id: 'grok-4-fast',
+      name: 'grok-4-fast-reasoning',
+      displayName: 'Grok 4 Fast',
+      provider: 'xai',
+      description: 'Fast reasoning model with 2M context window, ideal for complex tasks (September 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
+      contextLength: 2000000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 500,
+      creditsPer1kTokens: 2,
+      requiredTier: SubscriptionTier.pro,
+    },
+    {
+      id: 'grok-code-fast-1',
+      name: 'grok-code-fast-1',
+      displayName: 'Grok Code Fast 1',
+      provider: 'xai',
+      description: 'Speedy and economical reasoning model excelling at agentic coding (September 2025)',
+      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code],
+      contextLength: 128000,
+      maxOutputTokens: 8192,
+      inputCostPerMillionTokens: 200,
+      outputCostPerMillionTokens: 1500,
+      creditsPer1kTokens: 5,
+      requiredTier: SubscriptionTier.pro,
+    },
+  ];
+
+  const createdModels = [];
+
+  for (const model of models) {
+    const created = await prisma.model.upsert({
+      where: { id: model.id },
+      update: {
+        name: model.name,
+        displayName: model.displayName,
+        provider: model.provider,
+        description: model.description,
+        capabilities: model.capabilities,
+        contextLength: model.contextLength,
+        maxOutputTokens: model.maxOutputTokens,
+        inputCostPerMillionTokens: model.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: model.outputCostPerMillionTokens,
+        creditsPer1kTokens: model.creditsPer1kTokens,
+        requiredTier: model.requiredTier,
+        isAvailable: true,
+        isDeprecated: false,
+      },
+      create: {
+        id: model.id,
+        name: model.name,
+        displayName: model.displayName,
+        provider: model.provider,
+        description: model.description,
+        capabilities: model.capabilities,
+        contextLength: model.contextLength,
+        maxOutputTokens: model.maxOutputTokens,
+        inputCostPerMillionTokens: model.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: model.outputCostPerMillionTokens,
+        creditsPer1kTokens: model.creditsPer1kTokens,
+        requiredTier: model.requiredTier,
+        isAvailable: true,
+        isDeprecated: false,
+      },
+    });
+
+    createdModels.push(created);
+  }
+
+  console.log(`✓ Created/Updated ${createdModels.length} LLM models`);
+  console.log(`  Providers: OpenAI, Anthropic, Google, Mistral, Meta, xAI\n`);
+
+  return createdModels;
+}
+
+/**
+ * Seed Proration Events
+ * Creates sample mid-cycle tier change events with proration calculations
+ */
+async function seedProrations(users: any[], subscriptions: any[]) {
+  console.log('Creating proration events...');
+
+  if (!users.length || !subscriptions.length) {
+    console.log('⚠️  No users or subscriptions available - skipping prorations\n');
+    return [];
+  }
+
+  // First, create SubscriptionMonetization records for prorations to reference
+  // ProrationEvent foreign key points to SubscriptionMonetization, not Subscription
+  const monetizationSubscriptions = [];
+  const now = new Date();
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  for (let i = 0; i < Math.min(users.length, 3); i++) {
+    const user = users[i];
+    const persona = USER_PERSONAS[i];
+
+    // Delete existing monetization subscription
+    await prisma.subscriptionMonetization.deleteMany({
+      where: { userId: user.userId },
+    });
+
+    const monetizationSub = await prisma.subscriptionMonetization.create({
+      data: {
+        userId: user.userId,
+        tier: persona.subscriptionTier, // Plain string - schema defines tier as String, not enum
+        billingCycle: 'monthly',
+        status: 'active',
+        basePriceUsd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
+        monthlyCreditAllocation: persona.subscriptionTier === 'free' ? 100 : 10000,
+        currentPeriodStart: now,
+        currentPeriodEnd: endOfMonth,
+      },
+    });
+
+    monetizationSubscriptions.push({
+      subscriptionId: monetizationSub.id,
+      userId: monetizationSub.userId,
+      tier: monetizationSub.tier,
+    });
+  }
+
+  console.log(`✓ Created ${monetizationSubscriptions.length} SubscriptionMonetization records for prorations`);
+
+  const prorationsData = [
+    // Upgrade from free to pro
+    {
+      userId: users[0]?.userId,
+      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
+      fromTier: 'free',
+      toTier: 'pro',
+      changeType: ProrationEventType.upgrade,
+      daysRemaining: 20,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '0.00', // Free tier has no value
+      newTierProratedCostUsd: '13.33', // (20/30) × $20
+      netChargeUsd: '13.33',
+      effectiveDate: new Date('2025-11-05'),
+      status: ProrationStatus.applied,
+      stripeInvoiceId: 'in_test_upgrade_free_pro_001',
+    },
+    // Upgrade from pro to pro_max
+    {
+      userId: users[1]?.userId,
+      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
+      fromTier: 'pro',
+      toTier: 'pro_max',
+      changeType: ProrationEventType.upgrade,
+      daysRemaining: 15,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '10.00', // (15/30) × $20
+      newTierProratedCostUsd: '25.00', // (15/30) × $50
+      netChargeUsd: '15.00',
+      effectiveDate: new Date('2025-11-08'),
+      status: ProrationStatus.applied,
+      stripeInvoiceId: 'in_test_upgrade_pro_promax_001',
+    },
+    // Downgrade from pro to free
+    {
+      userId: users[2]?.userId,
+      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
+      fromTier: 'pro',
+      toTier: 'free',
+      changeType: ProrationEventType.downgrade,
+      daysRemaining: 10,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '6.67', // (10/30) × $20
+      newTierProratedCostUsd: '0.00', // Free tier
+      netChargeUsd: '-6.67', // Credit back to user
+      effectiveDate: new Date('2025-11-10'),
+      status: ProrationStatus.applied,
+      stripeInvoiceId: 'in_test_downgrade_pro_free_001',
+    },
+    // Interval change - monthly to annual
+    {
+      userId: users[0]?.userId,
+      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
+      fromTier: 'pro',
+      toTier: 'pro',
+      changeType: ProrationEventType.interval_change,
+      daysRemaining: 25,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '16.67', // (25/30) × $20
+      newTierProratedCostUsd: '183.33', // (25/30) × $220 (annual)
+      netChargeUsd: '166.66',
+      effectiveDate: new Date('2025-11-03'),
+      status: ProrationStatus.applied,
+      stripeInvoiceId: 'in_test_interval_monthly_annual_001',
+    },
+    // Pending upgrade
+    {
+      userId: users[1]?.userId,
+      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
+      fromTier: 'free',
+      toTier: 'pro',
+      changeType: ProrationEventType.upgrade,
+      daysRemaining: 18,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '0.00',
+      newTierProratedCostUsd: '12.00',
+      netChargeUsd: '12.00',
+      effectiveDate: new Date('2025-11-12'),
+      status: ProrationStatus.pending,
+    },
+    // Failed proration
+    {
+      userId: users[2]?.userId,
+      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
+      fromTier: 'pro',
+      toTier: 'pro_max',
+      changeType: ProrationEventType.upgrade,
+      daysRemaining: 12,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '8.00',
+      newTierProratedCostUsd: '20.00',
+      netChargeUsd: '12.00',
+      effectiveDate: new Date('2025-11-09'),
+      status: ProrationStatus.failed,
+    },
+    // Reversed proration (refund)
+    {
+      userId: users[0]?.userId,
+      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
+      fromTier: 'pro_max',
+      toTier: 'pro',
+      changeType: ProrationEventType.downgrade,
+      daysRemaining: 22,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '36.67', // (22/30) × $50
+      newTierProratedCostUsd: '14.67', // (22/30) × $20
+      netChargeUsd: '-22.00', // Credit back
+      effectiveDate: new Date('2025-11-01'),
+      status: ProrationStatus.reversed,
+      stripeInvoiceId: 'in_test_reversed_promax_pro_001',
+    },
+    // Enterprise upgrade
+    {
+      userId: users[1]?.userId,
+      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
+      fromTier: 'pro_max',
+      toTier: 'enterprise_pro',
+      changeType: ProrationEventType.upgrade,
+      daysRemaining: 28,
+      daysInCycle: 30,
+      unusedCreditValueUsd: '46.67', // (28/30) × $50
+      newTierProratedCostUsd: '93.33', // (28/30) × $100
+      netChargeUsd: '46.66',
+      effectiveDate: new Date('2025-11-02'),
+      status: ProrationStatus.applied,
+      stripeInvoiceId: 'in_test_upgrade_promax_ent_001',
+    },
+  ];
+
+  const createdProrations = [];
+
+  for (const proration of prorationsData) {
+    if (!proration.userId || !proration.subscriptionId) continue;
+
+    try {
+      const created = await prisma.prorationEvent.create({
+        data: proration,
+      });
+      createdProrations.push(created);
+    } catch (err) {
+      console.log(`⚠️  Skipped proration: ${err}`);
+    }
+  }
+
+  console.log(`✓ Created/Updated ${createdProrations.length} proration events\n`);
+  return createdProrations;
+}
+
 async function main() {
   console.log('🌱 Starting comprehensive database seed...\n');
 
@@ -414,12 +917,17 @@ async function main() {
 
   let subscriptions: any[] = [];
   let credits: any[] = [];
+  let models: any[] = [];
 
   try {
     subscriptions = await seedSubscriptions(users);
     credits = await seedCredits(users);
+    models = await seedModels();
+    await seedProrations(users, subscriptions);
   } catch (err: any) {
-    console.log('⚠️  Subscriptions or credits tables not available - skipping\n');
+    console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping');
+    console.log('Error details:', err.message);
+    console.log('');
   }
 
   // ========================================================================
@@ -889,6 +1397,10 @@ Download and run the installer for your platform.`,
   console.log('\n💳 Subscriptions & Billing:');
   console.log(`   Subscriptions: ${subscriptions.length}`);
   console.log(`   Credit Pools:  ${credits.length}`);
+
+  console.log('\n🤖 LLM Models:');
+  console.log(`   Models:        ${models.length}`);
+  console.log('   Providers:     OpenAI, Anthropic, Google, Mistral, Meta');
 
   console.log('\n📈 Legacy Branding:');
   console.log(`   Downloads:     ${downloads.length}`);

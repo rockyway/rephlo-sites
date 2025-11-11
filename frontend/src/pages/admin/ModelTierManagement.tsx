@@ -81,7 +81,9 @@ function ModelTierManagement() {
         0,
         100
       );
-      setModels(response.models);
+      // Backend wraps response in { status: "success", data: { models, total } }
+      const data = (response as any).data || response;
+      setModels(data.models || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load models');
     } finally {
@@ -216,7 +218,7 @@ function ModelTierManagement() {
     }
   };
 
-  const filteredModels = models.filter((model) => {
+  const filteredModels = (models || []).filter((model) => {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
@@ -376,8 +378,8 @@ function ModelTierManagement() {
                     <input
                       type="checkbox"
                       checked={
-                        models.length > 0 &&
-                        selectedModels.size === models.length
+                        !!(models && models.length > 0 &&
+                        selectedModels.size === models.length)
                       }
                       onChange={toggleSelectAll}
                       className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"

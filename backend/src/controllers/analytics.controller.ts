@@ -304,6 +304,47 @@ export class AnalyticsController {
   }
 
   // ===========================================================================
+  // Combined Revenue Metrics Endpoint
+  // ===========================================================================
+
+  /**
+   * GET /admin/analytics/revenue
+   * Get combined revenue metrics
+   *
+   * Requires: Admin authentication
+   *
+   * Returns: { totalMRR, totalARR, avgRevenuePerUser, totalRevenueThisMonth, mrrGrowth }
+   */
+  async getRevenueMetrics(_req: Request, res: Response): Promise<void> {
+    logger.info('AnalyticsController.getRevenueMetrics');
+
+    try {
+      const [mrr, arr, arpu] = await Promise.all([
+        this.analyticsService.calculateMRR(),
+        this.analyticsService.calculateARR(),
+        this.analyticsService.getAverageRevenuePerUser(),
+      ]);
+
+      // Calculate total revenue this month (same as MRR for now)
+      const totalRevenueThisMonth = mrr;
+
+      // Calculate MRR growth as percentage (placeholder - can be enhanced later)
+      const mrrGrowth = 0; // TODO: Calculate month-over-month growth
+
+      res.status(200).json({
+        totalMRR: mrr,
+        totalARR: arr,
+        avgRevenuePerUser: arpu,
+        totalRevenueThisMonth: totalRevenueThisMonth,
+        mrrGrowth: mrrGrowth,
+      });
+    } catch (error) {
+      logger.error('AnalyticsController.getRevenueMetrics: Error', { error });
+      throw error;
+    }
+  }
+
+  // ===========================================================================
   // Dashboard Summary Endpoint
   // ===========================================================================
 

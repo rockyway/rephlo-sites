@@ -215,7 +215,7 @@ function BillingDashboard() {
         )}
 
         {/* Revenue by Tier */}
-        {revenueByTier.length > 0 && (
+        {revenueByTier && revenueByTier.length > 0 && (
           <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-8">
             <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4">Revenue by Tier</h2>
             <div className="space-y-4">

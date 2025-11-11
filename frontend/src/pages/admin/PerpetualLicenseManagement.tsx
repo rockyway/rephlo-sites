@@ -97,9 +97,13 @@ function PerpetualLicenseManagement() {
         licenseApi.getStats(),
       ]);
 
-      setLicenses(licensesResponse.data || []);
-      setTotalPages(licensesResponse.totalPages);
-      setStats(statsData);
+      // Backend wraps responses in { success, data }
+      const unwrappedLicenses = (licensesResponse as any).data || licensesResponse;
+      const unwrappedStats = (statsData as any).data || statsData;
+
+      setLicenses(unwrappedLicenses.data || unwrappedLicenses || []);
+      setTotalPages(unwrappedLicenses.totalPages || 1);
+      setStats(unwrappedStats);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load licenses');
     } finally {
@@ -111,9 +115,11 @@ function PerpetualLicenseManagement() {
   const loadDeviceActivations = async (licenseKey: string) => {
     try {
       const response = await activationApi.getActiveDevices(licenseKey);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
       setDeviceActivations((prev) => ({
         ...prev,
-        [licenseKey]: response.activations,
+        [licenseKey]: unwrapped.activations || unwrapped || [],
       }));
     } catch (err: any) {
       console.error('Failed to load device activations:', err);
@@ -124,9 +130,11 @@ function PerpetualLicenseManagement() {
   const loadUpgradeHistory = async (licenseKey: string) => {
     try {
       const response = await upgradeApi.getUpgradeHistory(licenseKey);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
       setUpgradeHistory((prev) => ({
         ...prev,
-        [licenseKey]: response.history,
+        [licenseKey]: unwrapped.history || unwrapped || [],
       }));
     } catch (err: any) {
       console.error('Failed to load upgrade history:', err);

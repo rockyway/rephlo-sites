@@ -68,10 +68,19 @@ function MarginTracking() {
         pricingApi.getTopModelsByUsage(10, range),
       ]);
 
-      setMetrics(metricsData);
-      setTierMargins(tiersData.tiers);
-      setProviderMargins(providersData.providers);
-      setTopModels(modelsData.models);
+      // Backend wraps responses in { success: true, data: {...} }
+      // Unwrap data if wrapped
+      const unwrap = (response: any) => response?.data || response;
+
+      const metricsUnwrapped = unwrap(metricsData);
+      const tiersUnwrapped = unwrap(tiersData);
+      const providersUnwrapped = unwrap(providersData);
+      const modelsUnwrapped = unwrap(modelsData);
+
+      setMetrics(metricsUnwrapped);
+      setTierMargins(tiersUnwrapped.tiers || tiersUnwrapped || []);
+      setProviderMargins(providersUnwrapped.providers || providersUnwrapped || []);
+      setTopModels(modelsUnwrapped.models || modelsUnwrapped || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load margin data');
     } finally {
@@ -198,12 +207,12 @@ function MarginTracking() {
 
               <MetricsCard
                 title="This Month Vendor Cost"
-                value={`$${metrics?.thisMonthVendorCost.toLocaleString() || 0}`}
+                value={`$${(metrics?.thisMonthVendorCost ?? 0).toLocaleString()}`}
                 subtitle="Tokens consumed"
                 icon={DollarSign}
                 color="amber"
               >
-                {metrics && (
+                {metrics && metrics.creditValue !== undefined && (
                   <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
                     <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credit Value:</span>
                     <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
@@ -215,7 +224,7 @@ function MarginTracking() {
 
               <MetricsCard
                 title="Gross Margin"
-                value={`$${metrics?.grossMarginDollars.toLocaleString() || 0}`}
+                value={`$${(metrics?.grossMarginDollars ?? 0).toLocaleString()}`}
                 subtitle="Net contribution"
                 icon={TrendingUp}
                 color="green"
@@ -273,7 +282,7 @@ function MarginTracking() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
-                    {tierMargins.map((tier) => (
+                    {tierMargins && tierMargins.map((tier) => (
                       <tr key={tier.tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
                           <span className="font-medium text-deep-navy-800 dark:text-white capitalize">

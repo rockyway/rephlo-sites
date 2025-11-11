@@ -216,7 +216,7 @@ export class CouponAnalyticsService {
           COALESCE(AVG(cr.discount_applied_usd), 0) as average_discount,
           (COUNT(CASE WHEN cr.redemption_status = 'success' THEN 1 END)::float / COUNT(*)::float * 100) as conversion_rate
         FROM coupon_redemption cr
-        JOIN coupons c ON cr.coupon_id = c.id
+        JOIN coupon c ON cr.coupon_id = c.id
         WHERE cr.redemption_status = 'success'
         GROUP BY c.code
         ORDER BY redemptions DESC
@@ -252,7 +252,7 @@ export class CouponAnalyticsService {
           COUNT(*) as count,
           COALESCE(SUM(cr.discount_applied_usd), 0) as discount_value
         FROM coupon_redemption cr
-        JOIN coupons c ON cr.coupon_id = c.id
+        JOIN coupon c ON cr.coupon_id = c.id
         WHERE cr.redemption_status = 'success'
         GROUP BY c.coupon_type
         ORDER BY count DESC

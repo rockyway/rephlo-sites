@@ -73,7 +73,11 @@ const AdminDashboard: React.FC = () => {
     error: activityError,
   } = useQuery({
     queryKey: ['recent-activity'],
-    queryFn: () => adminAPI.getRecentActivity({ limit: 20 }),
+    queryFn: async () => {
+      const response = await adminAPI.getRecentActivity({ limit: 20 });
+      // Backend wraps responses in { success, data }
+      return (response as any).data || response;
+    },
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });

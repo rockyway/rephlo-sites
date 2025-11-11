@@ -72,12 +72,20 @@ export default function PlatformAnalytics() {
         analyticsApi.getTierTransitions(),
       ]);
 
-      setMetrics(metricsData);
-      setUserDistribution(distributionData.distribution || []); // Ensure array fallback
-      setRevenueTrend(trendData.timeSeries || []); // Ensure array fallback
-      setCreditsByModel(creditsData.models || []); // Ensure array fallback
-      setConversionFunnel(funnelData.funnel || []); // Ensure array fallback
-      setTierTransitions(transitionsData.transitions || []); // Ensure array fallback
+      // Backend wraps responses in { success, data }
+      const unwrapMetrics = (metricsData as any).data || metricsData;
+      const unwrapDistribution = (distributionData as any).data || distributionData;
+      const unwrapTrend = (trendData as any).data || trendData;
+      const unwrapCredits = (creditsData as any).data || creditsData;
+      const unwrapFunnel = (funnelData as any).data || funnelData;
+      const unwrapTransitions = (transitionsData as any).data || transitionsData;
+
+      setMetrics(unwrapMetrics);
+      setUserDistribution(unwrapDistribution.distribution || unwrapDistribution || []); // Ensure array fallback
+      setRevenueTrend(unwrapTrend.timeSeries || unwrapTrend || []); // Ensure array fallback
+      setCreditsByModel(unwrapCredits.models || unwrapCredits || []); // Ensure array fallback
+      setConversionFunnel(unwrapFunnel.funnel || unwrapFunnel || []); // Ensure array fallback
+      setTierTransitions(unwrapTransitions.transitions || unwrapTransitions || []); // Ensure array fallback
     } catch (err: any) {
       console.error('Failed to load analytics:', err);
 

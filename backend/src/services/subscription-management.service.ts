@@ -137,7 +137,7 @@ export class SubscriptionManagementService {
       const subscription = await this.prisma.subscriptionMonetization.create({
         data: {
           userId: input.userId,
-          tier: input.tier,
+          tier: input.tier as any, // Cast to enum type
           billingCycle: input.billingCycle,
           status: initialStatus,
           basePriceUsd,
@@ -218,7 +218,7 @@ export class SubscriptionManagementService {
       const updatedSubscription = await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
-          tier: newTier,
+          tier: newTier as any, // Cast to enum type
           basePriceUsd,
           monthlyCreditAllocation: newTierConfig.monthlyCreditAllocation,
           updatedAt: new Date(),
@@ -291,7 +291,7 @@ export class SubscriptionManagementService {
       const updatedSubscription = await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
-          tier: newTier,
+          tier: newTier as any, // Cast to enum type
           basePriceUsd,
           monthlyCreditAllocation: newTierConfig.monthlyCreditAllocation,
           updatedAt: new Date(),

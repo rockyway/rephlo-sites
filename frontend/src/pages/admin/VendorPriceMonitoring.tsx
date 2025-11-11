@@ -52,7 +52,9 @@ function VendorPriceMonitoring() {
       const response = await pricingApi.getVendorPriceAlerts({
         status: filterStatus || undefined,
       });
-      setAlerts(response.alerts);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
+      setAlerts(unwrapped.alerts || unwrapped || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load price alerts');
     } finally {
@@ -63,7 +65,9 @@ function VendorPriceMonitoring() {
   const loadPricing = async () => {
     try {
       const response = await pricingApi.listVendorPricing({ isActive: true });
-      setPricing(response.pricing);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
+      setPricing(unwrapped.pricing || unwrapped || []);
     } catch (err: any) {
       console.error('Failed to load vendor pricing:', err);
     }
@@ -262,7 +266,7 @@ function VendorPriceMonitoring() {
               )}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
-              {status === 'new' && alerts.filter((a) => a.status === 'new').length > 0 && (
+              {status === 'new' && alerts && alerts.filter((a) => a.status === 'new').length > 0 && (
                 <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-white dark:bg-deep-navy-800 text-rephlo-blue rounded-full">
                   {alerts.filter((a) => a.status === 'new').length}
                 </span>
@@ -277,7 +281,7 @@ function VendorPriceMonitoring() {
             <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
               <LoadingSpinner size="lg" />
             </div>
-          ) : alerts.length === 0 ? (
+          ) : !alerts || alerts.length === 0 ? (
             <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
               <Bell className="h-12 w-12 text-deep-navy-300 mx-auto mb-4" />
               <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">No alerts found</p>

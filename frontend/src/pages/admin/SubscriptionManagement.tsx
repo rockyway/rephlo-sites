@@ -86,9 +86,13 @@ function SubscriptionManagement() {
         subscriptionApi.getStats(),
       ]);
 
-      setSubscriptions(subsResponse.data || []);
-      setTotalPages(subsResponse.totalPages);
-      setStats(statsData);
+      // Backend wraps responses in { success, data }
+      const unwrappedSubs = (subsResponse as any).data || subsResponse;
+      const unwrappedStats = (statsData as any).data || statsData;
+
+      setSubscriptions(unwrappedSubs.data || unwrappedSubs || []);
+      setTotalPages(unwrappedSubs.totalPages || 1);
+      setStats(unwrappedStats);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load subscriptions');
     } finally {
