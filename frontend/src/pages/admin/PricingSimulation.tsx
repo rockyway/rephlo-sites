@@ -100,7 +100,9 @@ function PricingSimulation() {
       }
 
       const simulationResult = await pricingApi.simulateMultiplierChange(backendPayload as SimulationScenario);
-      setResult(simulationResult);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (simulationResult as any).data || simulationResult;
+      setResult(unwrapped);
       setSuccessMessage('Simulation completed successfully');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {

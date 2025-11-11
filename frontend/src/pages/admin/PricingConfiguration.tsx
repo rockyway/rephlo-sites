@@ -55,7 +55,9 @@ function PricingConfiguration() {
         subscriptionTier: filterTier || undefined,
         isActive: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
       });
-      setConfigs(response.configs);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
+      setConfigs(unwrapped.configs || unwrapped || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load pricing configurations');
     } finally {

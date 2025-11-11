@@ -52,7 +52,9 @@ function VendorPriceMonitoring() {
       const response = await pricingApi.getVendorPriceAlerts({
         status: filterStatus || undefined,
       });
-      setAlerts(response.alerts);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
+      setAlerts(unwrapped.alerts || unwrapped || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load price alerts');
     } finally {
@@ -63,7 +65,9 @@ function VendorPriceMonitoring() {
   const loadPricing = async () => {
     try {
       const response = await pricingApi.listVendorPricing({ isActive: true });
-      setPricing(response.pricing);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
+      setPricing(unwrapped.pricing || unwrapped || []);
     } catch (err: any) {
       console.error('Failed to load vendor pricing:', err);
     }
