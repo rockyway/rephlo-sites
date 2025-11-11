@@ -36,9 +36,15 @@ export function formatNumber(num: number): string {
  * @param date - Date to format (Date object or ISO string)
  * @returns Relative time string
  */
-export function formatRelativeTime(date: Date | string): string {
+export function formatRelativeTime(date: Date | string | null | undefined): string {
+  if (!date) {
+    return 'Never';
+  }
   const now = new Date();
   const then = new Date(date);
+  if (isNaN(then.getTime())) {
+    return 'Invalid Date';
+  }
   const diffMs = now.getTime() - then.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
@@ -63,8 +69,15 @@ export function formatRelativeTime(date: Date | string): string {
  * @param date - Date to format
  * @returns Formatted date string (e.g., "Nov 9, 2025")
  */
-export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString('en-US', {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) {
+    return 'N/A';
+  }
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

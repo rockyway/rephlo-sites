@@ -55,8 +55,18 @@ export function formatNumber(num: number | undefined | null): string {
 /**
  * Format ISO date to readable format
  */
-export function formatDate(date: string | Date, format: 'short' | 'long' = 'short'): string {
+export function formatDate(date: string | Date | null | undefined, format: 'short' | 'long' = 'short'): string {
+  // Handle null/undefined dates
+  if (!date) {
+    return 'N/A';
+  }
+
   const d = typeof date === 'string' ? new Date(date) : date;
+
+  // Check for invalid date
+  if (isNaN(d.getTime())) {
+    return 'Invalid Date';
+  }
 
   if (format === 'long') {
     return d.toLocaleDateString('en-US', {
@@ -78,8 +88,19 @@ export function formatDate(date: string | Date, format: 'short' | 'long' = 'shor
 /**
  * Format date to relative time (e.g., "2 days ago")
  */
-export function formatRelativeTime(date: string | Date): string {
+export function formatRelativeTime(date: string | Date | null | undefined): string {
+  // Handle null/undefined dates
+  if (!date) {
+    return 'Never';
+  }
+
   const d = typeof date === 'string' ? new Date(date) : date;
+
+  // Check for invalid date
+  if (isNaN(d.getTime())) {
+    return 'Invalid Date';
+  }
+
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffSec = Math.floor(diffMs / 1000);

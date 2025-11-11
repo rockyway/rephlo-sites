@@ -254,8 +254,14 @@ export function getTierLabel(tier: SubscriptionTier): string {
  * @param dateString - ISO date string
  * @returns Formatted date
  */
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'N/A';
+  }
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -268,8 +274,14 @@ export function formatDate(dateString: string): string {
  * @param dateString - ISO date string
  * @returns Formatted date with time
  */
-export function formatDateTime(dateString: string): string {
+export function formatDateTime(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'N/A';
+  }
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
   return date.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',

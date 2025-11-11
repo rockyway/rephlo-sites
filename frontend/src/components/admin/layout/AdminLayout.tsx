@@ -25,7 +25,7 @@ const AdminLayout: React.FC = () => {
       {/* Main content area with offset for desktop sidebar */}
       <div
         className={`transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+          sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-[306px]'
         }`}
       >
         {/* Header */}

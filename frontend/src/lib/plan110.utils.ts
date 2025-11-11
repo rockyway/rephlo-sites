@@ -419,8 +419,14 @@ export function calculateDaysBetween(start: Date | string, end: Date | string): 
 /**
  * Format date for display
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) {
+    return 'N/A';
+  }
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
   return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -431,8 +437,14 @@ export function formatDate(date: Date | string): string {
 /**
  * Format date with time
  */
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) {
+    return 'N/A';
+  }
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
   return dateObj.toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',

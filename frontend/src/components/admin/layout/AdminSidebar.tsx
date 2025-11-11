@@ -328,7 +328,7 @@ const AdminSidebar: React.FC = () => {
         hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col
         bg-white border-r border-deep-navy-200 shadow-sm
         transition-all duration-300 ease-in-out
-        ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[296px]'}
+        ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[306px]'}
       `}
     >
       {/* Logo & Collapse Toggle */}
