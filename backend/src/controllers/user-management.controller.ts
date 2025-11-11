@@ -219,10 +219,23 @@ export class UserManagementController {
     try {
       const userDetails = await this.userManagementService.viewUserDetails(userId);
 
-      res.status(200).json({
-        success: true,
-        data: userDetails,
-      });
+      // Map backend fields to frontend expectations for the modal
+      const mappedResponse = {
+        ...userDetails,
+        name: userDetails.firstName && userDetails.lastName
+          ? `${userDetails.firstName} ${userDetails.lastName}`
+          : userDetails.firstName || userDetails.lastName || null,
+        currentTier: userDetails.subscriptionTier,
+        status: userDetails.isActive ? 'active' : 'inactive',
+        creditsBalance: userDetails.creditsRemaining || 0,
+        usageStats: {
+          totalApiCalls: userDetails.totalApiCalls || 0,
+          creditsUsed: 0, // TODO: Get from credit tracking
+          averageCallsPerDay: 0, // TODO: Calculate from usage history
+        },
+      };
+
+      res.status(200).json(mappedResponse);
     } catch (error) {
       logger.error('UserManagementController.viewUserDetails: Error', { error });
       throw error;

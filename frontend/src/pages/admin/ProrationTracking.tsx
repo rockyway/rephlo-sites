@@ -94,9 +94,13 @@ function ProrationTracking() {
         prorationApi.getStats(),
       ]);
 
-      setProrations(prorationsResponse.data);
-      setTotalPages(prorationsResponse.totalPages);
-      setStats(statsData);
+      // Backend wraps responses in { status: "success", data: {...} }
+      const unwrappedProrations = (prorationsResponse as any).data || prorationsResponse;
+      const unwrappedStats = (statsData as any).data || statsData;
+
+      setProrations(unwrappedProrations.data || unwrappedProrations || []);
+      setTotalPages(unwrappedProrations.totalPages || 1);
+      setStats(unwrappedStats);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load proration events');
     } finally {
@@ -150,7 +154,7 @@ function ProrationTracking() {
   };
 
   // Sort prorations
-  const sortedProrations = [...prorations].sort((a, b) => {
+  const sortedProrations = prorations && Array.isArray(prorations) ? [...prorations].sort((a, b) => {
     let compareValue = 0;
 
     switch (sortBy) {
@@ -166,7 +170,7 @@ function ProrationTracking() {
     }
 
     return sortOrder === 'asc' ? compareValue : -compareValue;
-  });
+  }) : [];
 
   return (
     <div className="space-y-6">

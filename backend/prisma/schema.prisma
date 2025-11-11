@@ -640,9 +640,8 @@ model SubscriptionMonetization {
   userId String @map("user_id") @db.Uuid
 
   // Subscription Details
-  tier         String @db.VarChar(50)
-  // Values: 'free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max', 'perpetual'
-  billingCycle String @map("billing_cycle") @db.VarChar(20)
+  tier         SubscriptionTier // PostgreSQL ENUM type (matches database)
+  billingCycle String           @map("billing_cycle") @db.VarChar(20)
   // Values: 'monthly', 'annual', 'lifetime' (for perpetual)
   status       String @db.VarChar(20)
   // Values: 'trial', 'active', 'past_due', 'cancelled', 'expired'

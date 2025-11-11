@@ -55,7 +55,9 @@ function PricingConfiguration() {
         subscriptionTier: filterTier || undefined,
         isActive: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
       });
-      setConfigs(response.configs);
+      // Backend wraps responses in { success, data }
+      const unwrapped = (response as any).data || response;
+      setConfigs(unwrapped.configs || unwrapped || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load pricing configurations');
     } finally {
@@ -367,7 +369,7 @@ function PricingConfiguration() {
         </div>
 
         {/* Pending Approvals */}
-        {configs.filter((c) => c.approvalStatus === 'pending').length > 0 && (
+        {configs && configs.filter((c) => c.approvalStatus === 'pending').length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-8">
             <h3 className="text-h4 font-semibold text-amber-900 mb-4">
               Pending Approvals ({configs.filter((c) => c.approvalStatus === 'pending').length})
