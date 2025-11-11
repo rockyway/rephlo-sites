@@ -368,10 +368,10 @@ function CampaignManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-5">
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3">
-                <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
+                <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Total Campaigns</p>
@@ -380,10 +380,10 @@ function CampaignManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-green-100 p-3">
-                <Play className="h-6 w-6 text-green-600" />
+              <div className="rounded-full bg-green-100 dark:bg-green-900 p-3">
+                <Play className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Active Campaigns</p>
@@ -392,10 +392,10 @@ function CampaignManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-purple-100 p-3">
-                <Users className="h-6 w-6 text-purple-600" />
+              <div className="rounded-full bg-purple-100 dark:bg-purple-900 p-3">
+                <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupons Generated</p>
@@ -404,10 +404,10 @@ function CampaignManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-100 p-3">
-                <TrendingUp className="h-6 w-6 text-amber-600" />
+              <div className="rounded-full bg-amber-100 dark:bg-amber-900 p-3">
+                <TrendingUp className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupons Redeemed</p>
@@ -416,10 +416,10 @@ function CampaignManagement() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-6 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-cyan-100 p-3">
-                <TrendingUp className="h-6 w-6 text-cyan-600" />
+              <div className="rounded-full bg-cyan-100 dark:bg-cyan-900 p-3">
+                <TrendingUp className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
               </div>
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Avg Conversion Rate</p>
@@ -431,7 +431,7 @@ function CampaignManagement() {
       )}
 
       {/* Filters */}
-      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
         <div className="grid gap-4 md:grid-cols-5">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">Search</label>
@@ -535,7 +535,7 @@ function CampaignManagement() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white shadow-sm">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
             <LoadingSpinner size="lg" />
@@ -722,7 +722,7 @@ function CampaignManagement() {
       {/* Create Campaign Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">Create New Campaign</h2>
               <button
@@ -840,7 +840,7 @@ function CampaignManagement() {
       {/* Details Modal */}
       {selectedCampaign && showDetailsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
+          <div className="w-full max-w-4xl rounded-lg bg-white dark:bg-deep-navy-800 p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-deep-navy-800 dark:text-white">{selectedCampaign.name}</h2>
               <button

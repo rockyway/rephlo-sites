@@ -361,7 +361,7 @@ function CouponAnalytics() {
                   onChange={(e) =>
                     setFilterSeverity(e.target.value as FraudSeverity | '')
                   }
-                  className="text-sm rounded-md border-deep-navy-300 dark:border-deep-navy-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue dark:focus:border-electric-cyan focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 >
                   <option value="">All Severity</option>
                   <option value="low">Low</option>
@@ -374,7 +374,7 @@ function CouponAnalytics() {
                   onChange={(e) =>
                     setFilterStatus(e.target.value as FraudResolution | '')
                   }
-                  className="text-sm rounded-md border-deep-navy-300 dark:border-deep-navy-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue dark:focus:border-electric-cyan focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 >
                   <option value="">All Status</option>
                   <option value="pending">Pending</option>

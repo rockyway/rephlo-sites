@@ -221,7 +221,7 @@ function VendorPriceMonitoring() {
                 value={autoApplyThreshold}
                 onChange={(e) => setAutoApplyThreshold(Number(e.target.value))}
                 disabled={!autoApplyEnabled}
-                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan disabled:opacity-50"
               >
                 <option value={3}>3%</option>
                 <option value={5}>5%</option>
@@ -237,7 +237,7 @@ function VendorPriceMonitoring() {
               <select
                 value={approvalThreshold}
                 onChange={(e) => setApprovalThreshold(Number(e.target.value))}
-                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20"
+                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan"
               >
                 <option value={10}>10%</option>
                 <option value={15}>15%</option>

@@ -314,7 +314,7 @@ function CouponManagement() {
               onChange={(e) =>
                 setFilterStatus(e.target.value as typeof filterStatus)
               }
-              className="w-full rounded-md border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-900 text-deep-navy-800 dark:text-white shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue"
+              className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue dark:focus:border-electric-cyan dark:focus:ring-electric-cyan"
             >
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -329,7 +329,7 @@ function CouponManagement() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as CouponType | '')}
-              className="w-full rounded-md border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-900 text-deep-navy-800 dark:text-white shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue"
+              className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue dark:focus:border-electric-cyan dark:focus:ring-electric-cyan"
             >
                 <option value="">All Types</option>
                 <option value="percentage">Percentage</option>

@@ -224,29 +224,29 @@ function CampaignCalendar() {
 
         {/* Quick Stats Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200">
+          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
             <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
               Total Active Campaigns
             </div>
-            <div className="mt-2 text-3xl font-bold text-deep-navy-900">
+            <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
               {stats.totalActive}
             </div>
           </div>
-          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200">
+          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
             <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
               Total Campaign Budget
             </div>
-            <div className="mt-2 text-3xl font-bold text-deep-navy-900">
+            <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
               {formatCurrency(stats.totalBudget)}
             </div>
           </div>
-          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200">
+          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
             <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
               Budget Utilized This Month
             </div>
-            <div className="mt-2 text-3xl font-bold text-deep-navy-900">
+            <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
               {formatCurrency(stats.budgetUtilized)}
-              <span className="text-sm font-normal text-deep-navy-700 dark:text-deep-navy-200 ml-2">
+              <span className="text-sm font-normal text-deep-navy-600 dark:text-deep-navy-200 ml-2">
                 (
                 {formatPercentage(
                   calculateBudgetUtilization(
@@ -258,11 +258,11 @@ function CampaignCalendar() {
               </span>
             </div>
           </div>
-          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200">
+          <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
             <div className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">
               Top Performing Campaign
             </div>
-            <div className="mt-2 text-lg font-bold text-deep-navy-900 truncate">
+            <div className="mt-2 text-lg font-bold text-deep-navy-800 dark:text-white truncate">
               {stats.topCampaign}
             </div>
           </div>
@@ -280,7 +280,7 @@ function CampaignCalendar() {
                 onChange={(e) =>
                   setFilterType(e.target.value as CampaignType | '')
                 }
-                className="w-full rounded-md border-deep-navy-300 dark:border-deep-navy-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue dark:focus:border-electric-cyan focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
               >
                 <option value="">All Types</option>
                 <option value="holiday">Holiday</option>
@@ -298,7 +298,7 @@ function CampaignCalendar() {
                 onChange={(e) =>
                   setFilterStatus(e.target.value as CampaignStatus | '')
                 }
-                className="w-full rounded-md border-deep-navy-300 dark:border-deep-navy-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue dark:focus:border-electric-cyan focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
               >
                 <option value="">All Status</option>
                 <option value="planning">Planning</option>
