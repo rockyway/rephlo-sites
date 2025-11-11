@@ -720,11 +720,48 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     return [];
   }
 
+  // First, create SubscriptionMonetization records for prorations to reference
+  // ProrationEvent foreign key points to SubscriptionMonetization, not Subscription
+  const monetizationSubscriptions = [];
+  const now = new Date();
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  for (let i = 0; i < Math.min(users.length, 3); i++) {
+    const user = users[i];
+    const persona = USER_PERSONAS[i];
+
+    // Delete existing monetization subscription
+    await prisma.subscriptionMonetization.deleteMany({
+      where: { userId: user.userId },
+    });
+
+    const monetizationSub = await prisma.subscriptionMonetization.create({
+      data: {
+        userId: user.userId,
+        tier: persona.subscriptionTier,
+        billingCycle: 'monthly',
+        status: 'active',
+        basePriceUsd: persona.subscriptionTier === 'free' ? 0 : 20.00,
+        monthlyCreditAllocation: persona.subscriptionTier === 'free' ? 100 : 10000,
+        currentPeriodStart: now,
+        currentPeriodEnd: endOfMonth,
+      },
+    });
+
+    monetizationSubscriptions.push({
+      subscriptionId: monetizationSub.id,
+      userId: monetizationSub.userId,
+      tier: monetizationSub.tier,
+    });
+  }
+
+  console.log(`✓ Created ${monetizationSubscriptions.length} SubscriptionMonetization records for prorations`);
+
   const prorationsData = [
     // Upgrade from free to pro
     {
       userId: users[0]?.userId,
-      subscriptionId: subscriptions[0]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
       fromTier: 'free',
       toTier: 'pro',
       changeType: ProrationEventType.upgrade,
@@ -740,7 +777,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Upgrade from pro to pro_max
     {
       userId: users[1]?.userId,
-      subscriptionId: subscriptions[1]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
       fromTier: 'pro',
       toTier: 'pro_max',
       changeType: ProrationEventType.upgrade,
@@ -756,7 +793,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Downgrade from pro to free
     {
       userId: users[2]?.userId,
-      subscriptionId: subscriptions[2]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
       fromTier: 'pro',
       toTier: 'free',
       changeType: ProrationEventType.downgrade,
@@ -772,7 +809,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Interval change - monthly to annual
     {
       userId: users[0]?.userId,
-      subscriptionId: subscriptions[0]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
       fromTier: 'pro',
       toTier: 'pro',
       changeType: ProrationEventType.interval_change,
@@ -788,7 +825,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Pending upgrade
     {
       userId: users[1]?.userId,
-      subscriptionId: subscriptions[1]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
       fromTier: 'free',
       toTier: 'pro',
       changeType: ProrationEventType.upgrade,
@@ -803,7 +840,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Failed proration
     {
       userId: users[2]?.userId,
-      subscriptionId: subscriptions[2]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
       fromTier: 'pro',
       toTier: 'pro_max',
       changeType: ProrationEventType.upgrade,
@@ -818,7 +855,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Reversed proration (refund)
     {
       userId: users[0]?.userId,
-      subscriptionId: subscriptions[0]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
       fromTier: 'pro_max',
       toTier: 'pro',
       changeType: ProrationEventType.downgrade,
@@ -834,7 +871,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     // Enterprise upgrade
     {
       userId: users[1]?.userId,
-      subscriptionId: subscriptions[1]?.subscriptionId,
+      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
       fromTier: 'pro_max',
       toTier: 'enterprise_pro',
       changeType: ProrationEventType.upgrade,
