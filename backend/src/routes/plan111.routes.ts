@@ -33,6 +33,7 @@ import { container } from '../container';
 import { CouponController } from '../controllers/coupon.controller';
 import { CampaignController } from '../controllers/campaign.controller';
 import { FraudDetectionController } from '../controllers/fraud-detection.controller';
+import { CouponAnalyticsController } from '../controllers/coupon-analytics.controller';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -44,6 +45,7 @@ export function createPlan111Router(): Router {
   const couponController = container.resolve(CouponController);
   const campaignController = container.resolve(CampaignController);
   const fraudController = container.resolve(FraudDetectionController);
+  const analyticsController = container.resolve(CouponAnalyticsController);
 
   // ===== Public Coupon Routes (/api/coupons) =====
 
@@ -254,6 +256,67 @@ export function createPlan111Router(): Router {
     authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => fraudController.getPendingReviews(req, res))
+  );
+
+  // ===== Admin Analytics Routes (/admin/analytics/coupons) =====
+
+  /**
+   * GET /admin/analytics/coupons
+   * Get overall coupon analytics metrics (admin only)
+   *
+   * Query parameters:
+   * - startDate: ISO date string (optional)
+   * - endDate: ISO date string (optional)
+   */
+  router.get(
+    '/admin/analytics/coupons',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'read', resourceType: 'analytics' }),
+    asyncHandler(async (req, res) => analyticsController.getAnalyticsMetrics(req, res))
+  );
+
+  /**
+   * GET /admin/analytics/coupons/trend
+   * Get redemption trend over time (admin only)
+   *
+   * Query parameters:
+   * - startDate: ISO date string (required)
+   * - endDate: ISO date string (required)
+   */
+  router.get(
+    '/admin/analytics/coupons/trend',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'read', resourceType: 'analytics' }),
+    asyncHandler(async (req, res) => analyticsController.getRedemptionTrend(req, res))
+  );
+
+  /**
+   * GET /admin/analytics/coupons/top
+   * Get top performing coupons (admin only)
+   *
+   * Query parameters:
+   * - limit: number (optional, default 10)
+   */
+  router.get(
+    '/admin/analytics/coupons/top',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'read', resourceType: 'analytics' }),
+    asyncHandler(async (req, res) => analyticsController.getTopPerformingCoupons(req, res))
+  );
+
+  /**
+   * GET /admin/analytics/coupons/by-type
+   * Get redemptions grouped by coupon type (admin only)
+   */
+  router.get(
+    '/admin/analytics/coupons/by-type',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'read', resourceType: 'analytics' }),
+    asyncHandler(async (req, res) => analyticsController.getRedemptionsByType(req, res))
   );
 
   return router;

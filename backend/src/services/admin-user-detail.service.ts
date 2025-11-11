@@ -152,8 +152,8 @@ export class AdminUserDetailService {
             user.firstName && user.lastName
               ? `${user.firstName} ${user.lastName}`
               : user.firstName || user.lastName || null,
-          created_at: user.createdAt,
-          last_login_at: user.lastLoginAt,
+          createdAt: user.createdAt,
+          lastLogin: user.lastLoginAt,
           status: user.isActive ? 'active' : 'suspended',
         },
         currentSubscription: currentSubscription
@@ -161,31 +161,28 @@ export class AdminUserDetailService {
               id: currentSubscription.id,
               tier: currentSubscription.tier,
               status: currentSubscription.status,
-              billing_cycle: currentSubscription.billingCycle as 'monthly' | 'annual',
-              monthly_credit_allocation: currentSubscription.monthlyCreditAllocation,
-              next_billing_date: currentSubscription.currentPeriodEnd,
-              started_at: currentSubscription.createdAt,
+              billingCycle: currentSubscription.billingCycle as 'monthly' | 'annual',
+              creditAllocation: currentSubscription.monthlyCreditAllocation,
+              nextBillingDate: currentSubscription.currentPeriodEnd,
+              startedAt: currentSubscription.createdAt,
             }
           : null,
         currentLicense: currentLicense
           ? {
               id: currentLicense.id,
-              license_key: currentLicense.licenseKey,
+              licenseKey: currentLicense.licenseKey,
               status: currentLicense.status as 'active' | 'pending' | 'revoked',
-              activated_at: currentLicense.activatedAt,
-              device_count: currentLicense.currentActivations,
-              max_devices: currentLicense.maxActivations,
+              activatedAt: currentLicense.activatedAt,
+              deviceCount: currentLicense.currentActivations,
+              maxDevices: currentLicense.maxActivations,
             }
           : null,
-        creditBalance: {
-          amount: creditBalance?.amount || 0,
-          last_updated: creditBalance?.updatedAt || new Date(),
-        },
-        quickStats: {
-          total_subscriptions: totalSubscriptions,
-          total_licenses: totalLicenses,
-          total_credits_consumed: totalCreditsConsumed._sum?.creditsDeducted || 0,
-          total_coupons_redeemed: totalCouponsRedeemed,
+        creditBalance: creditBalance?.amount || 0,
+        stats: {
+          totalSubscriptions: totalSubscriptions,
+          totalLicenses: totalLicenses,
+          creditsConsumed: Number(totalCreditsConsumed._sum?.creditsDeducted || 0),
+          couponsRedeemed: totalCouponsRedeemed,
         },
       };
     } catch (error) {

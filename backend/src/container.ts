@@ -222,6 +222,9 @@ import { SettingsService } from './services/settings.service';
 // Plan 131 Phase 6: Admin Profitability Service
 import { AdminProfitabilityService } from './services/admin-profitability.service';
 
+// Plan 111: Coupon Analytics Service
+import { CouponAnalyticsService } from './services/coupon-analytics.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -267,6 +270,9 @@ container.registerSingleton(SettingsService);
 
 // Register Admin Profitability service (Plan 131 Phase 6)
 container.register('AdminProfitabilityService', { useClass: AdminProfitabilityService });
+
+// Register Coupon Analytics service (Plan 111)
+container.registerSingleton(CouponAnalyticsService);
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);

@@ -19,8 +19,8 @@ export interface UserOverviewUser {
   id: string;
   email: string;
   name: string | null;
-  created_at: Date;
-  last_login_at: Date | null;
+  createdAt: Date;
+  lastLogin: Date | null;
   status: 'active' | 'suspended' | 'banned';
 }
 
@@ -28,39 +28,32 @@ export interface CurrentSubscription {
   id: string;
   tier: string;
   status: string;
-  billing_cycle: 'monthly' | 'annual';
-  monthly_credit_allocation: number;
-  next_billing_date: Date | null;
-  started_at: Date;
+  billingCycle: 'monthly' | 'annual';
+  creditAllocation: number;
+  nextBillingDate: Date | null;
+  startedAt: Date;
 }
 
 export interface CurrentLicense {
   id: string;
-  license_key: string;
+  licenseKey: string;
   status: 'active' | 'pending' | 'revoked';
-  activated_at: Date | null;
-  device_count: number;
-  max_devices: number;
-}
-
-export interface CreditBalance {
-  amount: number;
-  last_updated: Date;
-}
-
-export interface QuickStats {
-  total_subscriptions: number;
-  total_licenses: number;
-  total_credits_consumed: number;
-  total_coupons_redeemed: number;
+  activatedAt: Date | null;
+  deviceCount: number;
+  maxDevices: number;
 }
 
 export interface UserOverviewResponse {
   user: UserOverviewUser;
   currentSubscription: CurrentSubscription | null;
   currentLicense: CurrentLicense | null;
-  creditBalance: CreditBalance;
-  quickStats: QuickStats;
+  creditBalance: number;
+  stats: {
+    totalSubscriptions: number;
+    totalLicenses: number;
+    creditsConsumed: number;
+    couponsRedeemed: number;
+  };
 }
 
 // =============================================================================
@@ -179,7 +172,10 @@ export interface CreditDeductionItem {
 }
 
 export interface UserCreditsResponse {
-  balance: CreditBalance;
+  balance: {
+    amount: number;
+    last_updated: Date;
+  };
   allocations: CreditAllocationItem[];
   usage: CreditUsageByModel[];
   deductions: CreditDeductionItem[];
