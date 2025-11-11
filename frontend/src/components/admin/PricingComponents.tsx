@@ -282,13 +282,13 @@ export function PricingConfigForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+        <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
           Scope
         </label>
         <select
           value={formData.scopeType}
           onChange={(e) => setFormData({ ...formData, scopeType: e.target.value as any })}
-          className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
+          className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-800 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
         >
           <option value="tier">Tier</option>
           <option value="provider">Provider</option>
@@ -299,13 +299,13 @@ export function PricingConfigForm({
 
       {(formData.scopeType === 'tier' || formData.scopeType === 'combination') && (
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Subscription Tier
           </label>
           <select
             value={formData.subscriptionTier}
             onChange={(e) => setFormData({ ...formData, subscriptionTier: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
+            className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-800 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
           >
             <option value="">Select tier...</option>
             {tiers.map((tier) => (
@@ -319,13 +319,13 @@ export function PricingConfigForm({
 
       {(formData.scopeType === 'provider' || formData.scopeType === 'combination') && (
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Provider
           </label>
           <select
             value={formData.providerId}
             onChange={(e) => setFormData({ ...formData, providerId: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
+            className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-800 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
           >
             <option value="">Select provider...</option>
             {providers.map((provider) => (
@@ -339,13 +339,13 @@ export function PricingConfigForm({
 
       {(formData.scopeType === 'model' || formData.scopeType === 'combination') && (
         <div>
-          <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+          <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
             Model
           </label>
           <select
             value={formData.modelId}
             onChange={(e) => setFormData({ ...formData, modelId: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
+            className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-800 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
           >
             <option value="">Select model...</option>
             {models.map((model) => (
@@ -358,7 +358,7 @@ export function PricingConfigForm({
       )}
 
       <div>
-        <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+        <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
           Margin Multiplier
         </label>
         <MultiplierInput
@@ -368,13 +368,13 @@ export function PricingConfigForm({
       </div>
 
       <div>
-        <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+        <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
           Reason
         </label>
         <select
           value={formData.reason}
           onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-          className="flex h-10 w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
+          className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-800 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue"
         >
           <option value="initial_setup">Initial Setup</option>
           <option value="vendor_price_change">Vendor Price Change</option>
@@ -385,7 +385,7 @@ export function PricingConfigForm({
       </div>
 
       <div>
-        <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+        <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
           Details (Optional)
         </label>
         <textarea
@@ -393,7 +393,7 @@ export function PricingConfigForm({
           onChange={(e) => setFormData({ ...formData, reasonDetails: e.target.value })}
           rows={3}
           placeholder="Provide additional context for this change..."
-          className="flex w-full rounded-md border border-deep-navy-300 bg-white px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue resize-none"
+          className="flex w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-800 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 focus-visible:border-rephlo-blue resize-none placeholder:text-deep-navy-400 dark:placeholder:text-deep-navy-500"
         />
       </div>
 

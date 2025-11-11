@@ -169,6 +169,7 @@ const AdminSidebar: React.FC = () => {
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useAdminUIStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navRef = React.useRef<HTMLDivElement>(null);
 
   // Expanded groups state (persisted in localStorage)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
@@ -195,6 +196,39 @@ const AdminSidebar: React.FC = () => {
       console.error('Failed to save expanded groups to localStorage:', error);
     }
   }, [expandedGroups]);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    if (navRef.current) {
+      try {
+        const savedScrollPos = localStorage.getItem('admin-sidebar-scroll-position');
+        if (savedScrollPos) {
+          navRef.current.scrollTop = parseInt(savedScrollPos, 10);
+        }
+      } catch (error) {
+        console.error('Failed to restore scroll position:', error);
+      }
+    }
+  }, []);
+
+  // Save scroll position on scroll
+  useEffect(() => {
+    const navElement = navRef.current;
+    if (!navElement) return;
+
+    const handleScroll = () => {
+      try {
+        localStorage.setItem('admin-sidebar-scroll-position', navElement.scrollTop.toString());
+      } catch (error) {
+        console.error('Failed to save scroll position:', error);
+      }
+    };
+
+    navElement.addEventListener('scroll', handleScroll);
+    return () => {
+      navElement.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   // Auto-expand group if child is active
   useEffect(() => {
@@ -226,9 +260,18 @@ const AdminSidebar: React.FC = () => {
 
   // Check if any child in group is active
   const isGroupActive = (group: NavGroup): boolean => {
-    return group.children.some(
-      (child) => location.pathname === child.href || location.pathname.startsWith(child.href + '/')
-    );
+    return group.children.some((child) => {
+      const [pathPart, hashPart] = child.href.split('#');
+      const currentHash = location.hash.replace('#', '');
+
+      if (hashPart) {
+        // Hash-based route: match both path and hash
+        return location.pathname === pathPart && currentHash === hashPart;
+      } else {
+        // Regular route: match path or startsWith
+        return location.pathname === child.href || location.pathname.startsWith(child.href + '/');
+      }
+    });
   };
 
   // Navigation link renderer (for single items)
@@ -236,11 +279,25 @@ const AdminSidebar: React.FC = () => {
     // For Dashboard (/admin), use exact match to prevent it from always being active
     // For child items in a group, use exact match only (no startsWith)
     // This prevents sibling routes from both showing as active
-    const isActive = item.href === '/admin'
-      ? location.pathname === '/admin'
-      : isChild
-        ? location.pathname === item.href  // Exact match for children
-        : (location.pathname === item.href || location.pathname.startsWith(item.href + '/'));
+    // For hash-based routes (e.g., /admin/settings#general), check both pathname and hash
+    const [pathPart, hashPart] = item.href.split('#');
+    const currentHash = location.hash.replace('#', '');
+
+    let isActive = false;
+    if (hashPart) {
+      // Hash-based route: match both path and hash
+      isActive = location.pathname === pathPart && currentHash === hashPart;
+    } else if (item.href === '/admin') {
+      // Dashboard: exact match only
+      isActive = location.pathname === '/admin';
+    } else if (isChild) {
+      // Child items: exact match only (no startsWith)
+      isActive = location.pathname === item.href;
+    } else {
+      // Other routes: match path or startsWith
+      isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+    }
+
     const Icon = item.icon;
 
     return (
@@ -353,7 +410,7 @@ const AdminSidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-4 space-y-2">
         {renderNavigation(sidebarCollapsed)}
       </nav>
 

@@ -68,16 +68,27 @@ function PricingConfiguration() {
   const handleCreateConfig = async (formData: any) => {
     setIsSaving(true);
     try {
-      const newConfig = await pricingApi.createPricingConfig({
-        ...formData,
-        effectiveFrom: new Date().toISOString(),
-      });
-      setConfigs([newConfig, ...configs]);
-      setSuccessMessage('Pricing configuration created successfully');
+      if (editingConfig) {
+        // Update existing config
+        const updated = await pricingApi.updatePricingConfig(editingConfig.id, {
+          ...formData,
+        });
+        setConfigs(configs.map((c) => (c.id === editingConfig.id ? updated : c)));
+        setSuccessMessage('Pricing configuration updated successfully');
+        setEditingConfig(null);
+      } else {
+        // Create new config
+        const newConfig = await pricingApi.createPricingConfig({
+          ...formData,
+          effectiveFrom: new Date().toISOString(),
+        });
+        setConfigs([newConfig, ...configs]);
+        setSuccessMessage('Pricing configuration created successfully');
+        setIsCreateDialogOpen(false);
+      }
       setTimeout(() => setSuccessMessage(null), 3000);
-      setIsCreateDialogOpen(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create configuration');
+      setError(err.response?.data?.message || `Failed to ${editingConfig ? 'update' : 'create'} configuration`);
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsSaving(false);
