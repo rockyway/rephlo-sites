@@ -344,7 +344,7 @@ const RevenueAnalytics: React.FC = () => {
           <h2 className="text-lg font-semibold text-deep-navy-900 mb-4">Conversion Funnel</h2>
           {funnelLoading ? (
             <LoadingState message="Loading chart..." />
-          ) : funnelError || !funnelData?.stages.length ? (
+          ) : funnelError || !funnelData?.stages || !funnelData.stages.length ? (
             <EmptyState title="No data available" description="No funnel data for this period." />
           ) : (
             <ResponsiveContainer width="100%" height={300}>

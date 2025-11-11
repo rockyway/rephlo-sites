@@ -73,7 +73,7 @@ function TierAuditLog({
     }
   };
 
-  if (logs.length === 0 && !isLoading) {
+  if (!logs || (logs.length === 0 && !isLoading)) {
     return (
       <div className="text-center py-12 bg-deep-navy-50 rounded-lg">
         <AlertCircle className="h-12 w-12 text-deep-navy-300 mx-auto mb-3" />

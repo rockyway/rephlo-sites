@@ -215,7 +215,7 @@ function MarginTracking() {
 
               <MetricsCard
                 title="Gross Margin"
-                value={`$${metrics?.grossMarginDollars.toLocaleString() || 0}`}
+                value={`$${(metrics?.grossMarginDollars ?? 0).toLocaleString()}`}
                 subtitle="Net contribution"
                 icon={TrendingUp}
                 color="green"
