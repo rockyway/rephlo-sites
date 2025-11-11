@@ -741,7 +741,7 @@ async function seedProrations(users: any[], subscriptions: any[]) {
         tier: persona.subscriptionTier,
         billingCycle: 'monthly',
         status: 'active',
-        basePriceUsd: persona.subscriptionTier === 'free' ? 0 : 20.00,
+        basePriceUsd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
         monthlyCreditAllocation: persona.subscriptionTier === 'free' ? 100 : 10000,
         currentPeriodStart: now,
         currentPeriodEnd: endOfMonth,
@@ -767,9 +767,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.upgrade,
       daysRemaining: 20,
       daysInCycle: 30,
-      unusedCreditValueUsd: 0, // Free tier has no value
-      newTierProratedCostUsd: 13.33, // (20/30) × $20
-      netChargeUsd: 13.33,
+      unusedCreditValueUsd: '0.00', // Free tier has no value
+      newTierProratedCostUsd: '13.33', // (20/30) × $20
+      netChargeUsd: '13.33',
       effectiveDate: new Date('2025-11-05'),
       status: ProrationStatus.applied,
       stripeInvoiceId: 'in_test_upgrade_free_pro_001',
@@ -783,9 +783,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.upgrade,
       daysRemaining: 15,
       daysInCycle: 30,
-      unusedCreditValueUsd: 10.00, // (15/30) × $20
-      newTierProratedCostUsd: 25.00, // (15/30) × $50
-      netChargeUsd: 15.00,
+      unusedCreditValueUsd: '10.00', // (15/30) × $20
+      newTierProratedCostUsd: '25.00', // (15/30) × $50
+      netChargeUsd: '15.00',
       effectiveDate: new Date('2025-11-08'),
       status: ProrationStatus.applied,
       stripeInvoiceId: 'in_test_upgrade_pro_promax_001',
@@ -799,9 +799,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.downgrade,
       daysRemaining: 10,
       daysInCycle: 30,
-      unusedCreditValueUsd: 6.67, // (10/30) × $20
-      newTierProratedCostUsd: 0, // Free tier
-      netChargeUsd: -6.67, // Credit back to user
+      unusedCreditValueUsd: '6.67', // (10/30) × $20
+      newTierProratedCostUsd: '0.00', // Free tier
+      netChargeUsd: '-6.67', // Credit back to user
       effectiveDate: new Date('2025-11-10'),
       status: ProrationStatus.applied,
       stripeInvoiceId: 'in_test_downgrade_pro_free_001',
@@ -815,9 +815,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.interval_change,
       daysRemaining: 25,
       daysInCycle: 30,
-      unusedCreditValueUsd: 16.67, // (25/30) × $20
-      newTierProratedCostUsd: 183.33, // (25/30) × $220 (annual)
-      netChargeUsd: 166.66,
+      unusedCreditValueUsd: '16.67', // (25/30) × $20
+      newTierProratedCostUsd: '183.33', // (25/30) × $220 (annual)
+      netChargeUsd: '166.66',
       effectiveDate: new Date('2025-11-03'),
       status: ProrationStatus.applied,
       stripeInvoiceId: 'in_test_interval_monthly_annual_001',
@@ -831,9 +831,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.upgrade,
       daysRemaining: 18,
       daysInCycle: 30,
-      unusedCreditValueUsd: 0,
-      newTierProratedCostUsd: 12.00,
-      netChargeUsd: 12.00,
+      unusedCreditValueUsd: '0.00',
+      newTierProratedCostUsd: '12.00',
+      netChargeUsd: '12.00',
       effectiveDate: new Date('2025-11-12'),
       status: ProrationStatus.pending,
     },
@@ -846,9 +846,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.upgrade,
       daysRemaining: 12,
       daysInCycle: 30,
-      unusedCreditValueUsd: 8.00,
-      newTierProratedCostUsd: 20.00,
-      netChargeUsd: 12.00,
+      unusedCreditValueUsd: '8.00',
+      newTierProratedCostUsd: '20.00',
+      netChargeUsd: '12.00',
       effectiveDate: new Date('2025-11-09'),
       status: ProrationStatus.failed,
     },
@@ -861,9 +861,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.downgrade,
       daysRemaining: 22,
       daysInCycle: 30,
-      unusedCreditValueUsd: 36.67, // (22/30) × $50
-      newTierProratedCostUsd: 14.67, // (22/30) × $20
-      netChargeUsd: -22.00, // Credit back
+      unusedCreditValueUsd: '36.67', // (22/30) × $50
+      newTierProratedCostUsd: '14.67', // (22/30) × $20
+      netChargeUsd: '-22.00', // Credit back
       effectiveDate: new Date('2025-11-01'),
       status: ProrationStatus.reversed,
       stripeInvoiceId: 'in_test_reversed_promax_pro_001',
@@ -877,9 +877,9 @@ async function seedProrations(users: any[], subscriptions: any[]) {
       changeType: ProrationEventType.upgrade,
       daysRemaining: 28,
       daysInCycle: 30,
-      unusedCreditValueUsd: 46.67, // (28/30) × $50
-      newTierProratedCostUsd: 93.33, // (28/30) × $100
-      netChargeUsd: 46.66,
+      unusedCreditValueUsd: '46.67', // (28/30) × $50
+      newTierProratedCostUsd: '93.33', // (28/30) × $100
+      netChargeUsd: '46.66',
       effectiveDate: new Date('2025-11-02'),
       status: ProrationStatus.applied,
       stripeInvoiceId: 'in_test_upgrade_promax_ent_001',
