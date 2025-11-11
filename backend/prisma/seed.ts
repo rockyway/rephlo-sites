@@ -925,7 +925,9 @@ async function main() {
     models = await seedModels();
     await seedProrations(users, subscriptions);
   } catch (err: any) {
-    console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping\n');
+    console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping');
+    console.log('Error details:', err.message);
+    console.log('');
   }
 
   // ========================================================================
