@@ -496,11 +496,11 @@ function CreditManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Tier</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-deep-navy-200">Tier</label>
             <select
               value={filterTier}
               onChange={(e) => setFilterTier(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All Tiers</option>
               <option value={SubscriptionTier.FREE}>Free</option>
@@ -513,11 +513,11 @@ function CreditManagement() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Balance Status</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-deep-navy-200">Balance Status</label>
             <select
               value={filterBalanceStatus}
               onChange={(e) => setFilterBalanceStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All</option>
               <option value="low">Low (&lt; 100)</option>
@@ -967,7 +967,7 @@ function CreditManagement() {
                   onChange={(e) => setBulkReason(e.target.value)}
                   placeholder="Enter reason for adjustment"
                   rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                 />
               </div>
 

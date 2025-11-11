@@ -278,8 +278,8 @@ function AdminSettings() {
                 className={cn(
                   'px-6 py-4 text-body-sm font-medium whitespace-nowrap transition-colors',
                   activeTab === tab.id
-                    ? 'bg-rephlo-blue text-white border-b-2 border-rephlo-blue'
-                    : 'text-deep-navy-600 hover:bg-deep-navy-50 hover:text-deep-navy-800'
+                    ? 'bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 border-b-2 border-rephlo-blue dark:border-electric-cyan'
+                    : 'text-deep-navy-600 dark:text-deep-navy-300 hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 hover:text-deep-navy-800 dark:hover:text-deep-navy-100'
                 )}
               >
                 {tab.label}
@@ -369,7 +369,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           <select
             value={formData.timezone || 'America/New_York'}
             onChange={(e) => onChange('timezone', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
           >
             <option value="America/New_York">America/New_York (EST/EDT)</option>
             <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
@@ -388,7 +388,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           <select
             value={formData.date_format || 'MM/DD/YYYY'}
             onChange={(e) => onChange('date_format', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
           >
             <option value="MM/DD/YYYY">MM/DD/YYYY</option>
             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
@@ -403,7 +403,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           <select
             value={formData.time_format || '12h'}
             onChange={(e) => onChange('time_format', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
           >
             <option value="12h">12-hour (1:30 PM)</option>
             <option value="24h">24-hour (13:30)</option>
@@ -417,7 +417,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           <select
             value={formData.default_currency || 'USD'}
             onChange={(e) => onChange('default_currency', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
           >
             <option value="USD">USD ($)</option>
             <option value="EUR">EUR (€)</option>
@@ -432,7 +432,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           <select
             value={formData.default_language || 'en'}
             onChange={(e) => onChange('default_language', e.target.value)}
-            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+            className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
           >
             <option value="en">English</option>
             <option value="es">Spanish</option>
@@ -450,7 +450,7 @@ function GeneralSettings({ formData, onChange }: SettingsProps) {
           onChange={(e) => onChange('platform_description', e.target.value)}
           placeholder="Transform text. Keep your flow."
           rows={3}
-          className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+          className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
         />
       </div>
     </div>
@@ -683,7 +683,7 @@ function SecuritySettings({ formData, onChange }: SettingsProps) {
             <select
               value={formData.mfa_enforcement || 'optional'}
               onChange={(e) => onChange('mfa_enforcement', e.target.value)}
-              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
             >
               <option value="optional">Optional</option>
               <option value="required">Required</option>
@@ -973,7 +973,7 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
             <select
               value={formData.log_level || 'info'}
               onChange={(e) => onChange('log_level', e.target.value)}
-              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
             >
               <option value="debug">Debug</option>
               <option value="info">Info</option>
@@ -1006,7 +1006,7 @@ function SystemSettings({ formData, onChange, onClearCache, onRunBackup, isClear
             <select
               value={formData.backup_frequency || 'daily'}
               onChange={(e) => onChange('backup_frequency', e.target.value)}
-              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue focus:border-rephlo-blue"
+              className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>

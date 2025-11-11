@@ -22,14 +22,14 @@ const LoadingState: React.FC<LoadingStateProps> = ({
 }) => {
   const content = (
     <div className="flex flex-col items-center justify-center gap-3">
-      <Loader2 className="w-8 h-8 text-rephlo-blue animate-spin" />
-      <p className="text-sm text-deep-navy-600">{message}</p>
+      <Loader2 className="w-8 h-8 text-rephlo-blue dark:text-electric-cyan animate-spin" />
+      <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">{message}</p>
     </div>
   );
 
   if (fullPage) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-deep-navy-50 z-50">
+      <div className="fixed inset-0 flex items-center justify-center bg-deep-navy-50 dark:bg-deep-navy-900 z-50">
         {content}
       </div>
     );
