@@ -1768,3 +1768,24 @@ Completed comprehensive restoration and enhancement of test data documentation w
 
 **Outcome**: All billing integration points now correctly handle annual subscriptions with proper pricing
 
+
+---
+
+## 2025-01-11 - Fixed Billing-Cycle-Aware Pricing and Schema Field Errors
+
+**Changes:**
+- Fixed CheckoutIntegrationService schema field usage (couponRedemptions, redemptionStatus, discountValue)
+- Implemented billing-cycle-aware pricing for annual subscription validation ($588 annual vs $49 monthly)
+- Fixed all TypeScript errors in checkout-integration-coupon.service.test.ts
+- Annual billing validation test now passes ✅
+
+**Technical Details:**
+- Added getTierPriceForBillingCycle() method to query correct pricing based on billing cycle
+- Updated getActiveDiscountForSubscription() to use correct Prisma schema fields
+- Generated valid UUIDs for test users and proper foreign key references
+
+**Verification:**
+- TypeScript compilation: ✅ No errors
+- Test execution: ✅ "should use billing-cycle-aware pricing for annual subscription validation" passes (210ms)
+
+**Commit:** 1104abc - fix(coupon): Fix billing-cycle-aware pricing and schema field errors
