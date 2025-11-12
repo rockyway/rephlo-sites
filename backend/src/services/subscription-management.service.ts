@@ -30,7 +30,10 @@ export interface Subscription {
   billingCycle: 'monthly' | 'annual' | 'lifetime';
   status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
   basePriceUsd: number;
+  finalPriceUsd: number; // PHASE 1 FIX: Frontend expects this field name
   monthlyCreditAllocation: number;
+  monthlyCreditsAllocated: number; // PHASE 1 FIX: Frontend expects this field name
+  nextBillingDate: Date | null; // PHASE 1 FIX: Frontend expects next billing date
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   currentPeriodStart: Date;
@@ -696,54 +699,76 @@ export class SubscriptionManagementService {
 
   /**
    * Get subscription statistics for dashboard
-   * @returns Subscription stats (total, by status, by tier)
+   * PHASE 1 FIX: Updated to match frontend expectations
+   * Frontend expects: { totalActive, mrr, pastDueCount, trialConversionsThisMonth }
+   * @returns Subscription stats matching frontend SubscriptionStats interface
    */
   async getSubscriptionStats(): Promise<{
-    total: number;
-    active: number;
-    trial: number;
-    cancelled: number;
-    expired: number;
-    byTier: Record<string, number>;
+    totalActive: number;
+    mrr: number;
+    pastDueCount: number;
+    trialConversionsThisMonth: number;
   }> {
     logger.debug('SubscriptionManagementService.getSubscriptionStats');
 
     try {
-      const [total, byStatus, byTier] = await Promise.all([
-        this.prisma.subscriptionMonetization.count(),
-        this.prisma.subscriptionMonetization.groupBy({
-          by: ['status'],
-          _count: { id: true },
+      // Calculate date range for current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const [activeCount, pastDueCount, mrrData, trialConversions] = await Promise.all([
+        // Count active subscriptions
+        this.prisma.subscriptionMonetization.count({
+          where: { status: 'active' },
         }),
-        this.prisma.subscriptionMonetization.groupBy({
-          by: ['tier'],
-          _count: { id: true },
+
+        // Count past due subscriptions
+        this.prisma.subscriptionMonetization.count({
+          where: { status: 'past_due' },
+        }),
+
+        // Calculate MRR (Monthly Recurring Revenue)
+        this.prisma.subscriptionMonetization.aggregate({
+          where: {
+            status: 'active',
+            billingCycle: 'monthly',
+          },
+          _sum: { basePriceUsd: true },
+        }),
+
+        // Count trial conversions this month (trials that became active)
+        this.prisma.subscriptionMonetization.count({
+          where: {
+            status: 'active',
+            updatedAt: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+            // Look for subscriptions that were trials before
+            // Note: This is an approximation - ideally we'd have a status history table
+          },
         }),
       ]);
 
-      const statusCounts = byStatus.reduce(
-        (acc, item) => {
-          acc[item.status] = item._count.id;
-          return acc;
+      // Calculate MRR including annual subscriptions (converted to monthly)
+      const annualMrrData = await this.prisma.subscriptionMonetization.aggregate({
+        where: {
+          status: 'active',
+          billingCycle: 'annual',
         },
-        {} as Record<string, number>
-      );
+        _sum: { basePriceUsd: true },
+      });
 
-      const tierCounts = byTier.reduce(
-        (acc, item) => {
-          acc[item.tier] = item._count.id;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
+      const monthlyMrr = Number(mrrData._sum.basePriceUsd) || 0;
+      const annualMrr = (Number(annualMrrData._sum.basePriceUsd) || 0) / 12; // Convert annual to monthly
+      const totalMrr = monthlyMrr + annualMrr;
 
       return {
-        total,
-        active: statusCounts.active || 0,
-        trial: statusCounts.trial || 0,
-        cancelled: statusCounts.cancelled || 0,
-        expired: statusCounts.expired || 0,
-        byTier: tierCounts,
+        totalActive: activeCount,
+        mrr: Math.round(totalMrr * 100) / 100, // Round to 2 decimal places
+        pastDueCount: pastDueCount,
+        trialConversionsThisMonth: trialConversions,
       };
     } catch (error) {
       logger.error('SubscriptionManagementService.getSubscriptionStats: Error', { error });
@@ -765,8 +790,16 @@ export class SubscriptionManagementService {
       tier: subscription.tier,
       billingCycle: subscription.billingCycle as 'monthly' | 'annual' | 'lifetime',
       status: subscription.status as 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired',
+      // PHASE 1 FIX: Keep basePriceUsd for backward compatibility, add finalPriceUsd alias
       basePriceUsd: Number(subscription.basePriceUsd),
+      finalPriceUsd: Number(subscription.basePriceUsd), // Frontend expects this field
+      // PHASE 1 FIX: Keep monthlyCreditAllocation, add monthlyCreditsAllocated alias
       monthlyCreditAllocation: subscription.monthlyCreditAllocation,
+      monthlyCreditsAllocated: subscription.monthlyCreditAllocation, // Frontend expects this field
+      // PHASE 1 FIX: Add nextBillingDate calculated from currentPeriodEnd
+      nextBillingDate: subscription.status === 'active' || subscription.status === 'trial'
+        ? subscription.currentPeriodEnd
+        : null,
       stripeCustomerId: subscription.stripeCustomerId,
       stripeSubscriptionId: subscription.stripeSubscriptionId,
       currentPeriodStart: subscription.currentPeriodStart,

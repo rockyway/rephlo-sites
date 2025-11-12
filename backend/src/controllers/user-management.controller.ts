@@ -226,7 +226,8 @@ export class UserManagementController {
           ? `${userDetails.firstName} ${userDetails.lastName}`
           : userDetails.firstName || userDetails.lastName || null,
         currentTier: userDetails.subscriptionTier,
-        status: userDetails.isActive ? 'active' : 'inactive',
+        // PHASE 1 FIX: Use status enum from database instead of mapping from isActive
+        status: userDetails.status,
         creditsBalance: userDetails.creditsRemaining || 0,
         usageStats: {
           totalApiCalls: userDetails.totalApiCalls || 0,

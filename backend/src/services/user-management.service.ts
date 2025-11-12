@@ -67,6 +67,7 @@ export interface User {
 
 export interface UserDetails extends User {
   emailVerified: boolean;
+  status: string; // PHASE 1 FIX: Add status field
   subscriptionTier?: string;
   creditsRemaining?: number;
   totalApiCalls?: number;
@@ -191,17 +192,42 @@ export class UserManagementService {
             lastName: true,
             profilePictureUrl: true,
             isActive: true,
+            status: true, // PHASE 1 FIX: Include status enum from database
             role: true,
             createdAt: true,
             lastLoginAt: true,
             deactivatedAt: true,
             deletedAt: true,
+            // PHASE 1 FIX: Include credit balance relation
+            credit_balance: {
+              select: {
+                amount: true,
+              },
+            },
+            // PHASE 1 FIX: Include active subscription for tier information
+            subscriptionMonetization: {
+              where: { status: { in: ['trial', 'active'] } },
+              select: {
+                tier: true,
+              },
+              take: 1,
+            },
           },
         }),
         this.prisma.user.count({ where }),
       ]);
 
       const totalPages = Math.ceil(total / pagination.limit);
+
+      // PHASE 1 FIX: Map users to include flattened credit balance and tier
+      const mappedUsers = users.map((user) => ({
+        ...user,
+        creditsBalance: user.credit_balance?.amount || 0,
+        currentTier: user.subscriptionMonetization[0]?.tier || 'free',
+        // Keep original relations for potential frontend use
+        userCreditBalance: user.credit_balance,
+        subscription: user.subscriptionMonetization[0] || null,
+      }));
 
       logger.info('UserManagementService: Users listed', {
         count: users.length,
@@ -210,7 +236,7 @@ export class UserManagementService {
       });
 
       return {
-        users,
+        users: mappedUsers,
         total,
         page: pagination.page,
         limit: pagination.limit,
@@ -315,6 +341,7 @@ export class UserManagementService {
         lastName: user.lastName,
         profilePictureUrl: user.profilePictureUrl,
         isActive: user.isActive,
+        status: user.status, // PHASE 1 FIX: Include status enum from database
         role: user.role,
         createdAt: user.createdAt,
         lastLoginAt: user.lastLoginAt,
