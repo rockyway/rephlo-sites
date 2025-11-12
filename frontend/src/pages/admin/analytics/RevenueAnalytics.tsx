@@ -222,6 +222,9 @@ const RevenueAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <Breadcrumbs />
+
       {/* Header with Period Selector */}
       <div className="flex items-center justify-between">
         <div>
@@ -370,14 +373,11 @@ const RevenueAnalytics: React.FC = () => {
                 const conversionRate =
                   index > 0 ? ((stage.count / funnelData.stages[index - 1].count) * 100).toFixed(1) : null;
                 return (
-                  <div key={stage.name} className="flex justify-between text-deep-navy-700">
-                    {/* Breadcrumbs */}
-                    <Breadcrumbs />
-
+                  <div key={stage.name} className="flex justify-between text-deep-navy-700 dark:text-deep-navy-200">
                     <span>{stage.name}</span>
                     <span className="font-medium">
                       {formatNumber(stage.count)} ({formatPercentage(stage.percentage / 100)})
-                      {conversionRate && <span className="text-deep-navy-700"> → {conversionRate}%</span>}
+                      {conversionRate && <span className="text-deep-navy-700 dark:text-deep-navy-200"> → {conversionRate}%</span>}
                     </span>
                   </div>
                 );

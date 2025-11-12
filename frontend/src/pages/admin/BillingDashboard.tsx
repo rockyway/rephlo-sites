@@ -120,32 +120,26 @@ function BillingDashboard() {
   const activeDunning = dunningAttempts.filter(d => d.status === 'scheduled' || d.status === 'failed');
 
   return (
-    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
-      <div className="bg-white dark:bg-deep-navy-800 px-4 sm:px-6 lg:px-8 pt-6">
-        <Breadcrumbs />
-      </div>
+      <Breadcrumbs />
 
       {/* Header */}
-      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>             
-              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Billing Dashboard</h1>
-              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                Revenue tracking, invoice management, and payment monitoring
-              </p>
-            </div>
-            <Button onClick={loadData} disabled={isLoading} variant="ghost">
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Refresh
-            </Button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Billing Dashboard</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Revenue tracking, invoice management, and payment monitoring
+          </p>
         </div>
-      </header>
+        <Button onClick={loadData} disabled={isLoading} variant="ghost">
+          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+          Refresh
+        </Button>
+      </div>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {/* Success/Error Messages */}
         {successMessage && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
@@ -561,7 +555,7 @@ function BillingDashboard() {
             )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
