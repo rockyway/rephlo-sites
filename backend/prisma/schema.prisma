@@ -1334,6 +1334,14 @@ model CouponRedemption {
   ipAddress String? @map("ip_address") @db.VarChar(45)
   userAgent String? @map("user_agent") @db.Text
 
+  // Proration Fields (Plan 111 + Plan 110 Integration)
+  isProrationInvolved Boolean  @default(false) @map("is_proration_involved")
+  prorationAmount     Decimal? @map("proration_amount") @db.Decimal(10, 2)
+  userTierBefore      String?  @map("user_tier_before") @db.VarChar(50)
+  userTierAfter       String?  @map("user_tier_after") @db.VarChar(50)
+  billingCycleBefore  String?  @map("billing_cycle_before") @db.VarChar(50)
+  billingCycleAfter   String?  @map("billing_cycle_after") @db.VarChar(50)
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
 

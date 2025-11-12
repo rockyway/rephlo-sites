@@ -63,7 +63,7 @@ export class CouponRedemptionService {
 
         const discount = validation.discount!;
 
-        // Step 2: Record redemption in immutable ledger
+        // Step 2: Record redemption in immutable ledger (GAP FIX #4)
         const redemption = await tx.couponRedemption.create({
           data: {
             couponId: couponId,
@@ -76,6 +76,13 @@ export class CouponRedemptionService {
             redemptionStatus: 'success',
             ipAddress: context.ipAddress || null,
             userAgent: context.userAgent || null,
+            // Proration fields
+            isProrationInvolved: context.isProrationInvolved || false,
+            prorationAmount: context.prorationAmount ? new Prisma.Decimal(context.prorationAmount) : null,
+            userTierBefore: context.tierBefore || null,
+            userTierAfter: context.tierAfter || null,
+            billingCycleBefore: context.billingCycleBefore || null,
+            billingCycleAfter: context.billingCycleAfter || null,
           },
         });
 

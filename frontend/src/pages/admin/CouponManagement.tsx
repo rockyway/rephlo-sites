@@ -44,6 +44,9 @@ import type {
   CouponUpdateRequest,
 } from '@/types/plan111.types';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import CreateCouponModal from '@/components/admin/coupons/CreateCouponModal';
+import EditCouponModal from '@/components/admin/coupons/EditCouponModal';
+import ViewRedemptionsModal from '@/components/admin/coupons/ViewRedemptionsModal';
 
 function CouponManagement() {
   // Data state
@@ -70,12 +73,12 @@ function CouponManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(50);
 
-  // Modal state - TODO: Implement modals
-  // const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  // const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  // const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
-  // const [isRedemptionsModalOpen, setIsRedemptionsModalOpen] = useState(false);
-  // const [selectedCouponForRedemptions, setSelectedCouponForRedemptions] = useState<string | null>(null);
+  // Modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [isRedemptionsModalOpen, setIsRedemptionsModalOpen] = useState(false);
+  const [selectedCouponForRedemptions, setSelectedCouponForRedemptions] = useState<{ id: string; code: string } | null>(null);
 
   // Load data
   useEffect(() => {
@@ -147,13 +150,12 @@ function CouponManagement() {
   };
 
   const handleCreateCoupon = () => {
-    // TODO: Implement create modal
-    alert('Create coupon modal not yet implemented');
+    setIsCreateModalOpen(true);
   };
 
-  const handleEditCoupon = (_coupon: Coupon) => {
-    // TODO: Implement edit modal
-    alert('Edit coupon modal not yet implemented');
+  const handleEditCoupon = (coupon: Coupon) => {
+    setEditingCoupon(coupon);
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteCoupon = async (couponId: string) => {
@@ -196,9 +198,9 @@ function CouponManagement() {
     }
   };
 
-  const handleViewRedemptions = (_couponId: string) => {
-    // TODO: Implement redemptions modal
-    alert('View redemptions modal not yet implemented');
+  const handleViewRedemptions = (couponId: string, couponCode: string) => {
+    setSelectedCouponForRedemptions({ id: couponId, code: couponCode });
+    setIsRedemptionsModalOpen(true);
   };
 
   const totalPages = Math.ceil(totalCoupons / pageSize);
@@ -438,7 +440,7 @@ function CouponManagement() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleViewRedemptions(coupon.id)}
+                            onClick={() => handleViewRedemptions(coupon.id, coupon.code)}
                             className="text-rephlo-blue hover:text-rephlo-blue-600"
                             title="View Redemptions"
                           >
@@ -548,8 +550,42 @@ function CouponManagement() {
         )}
       </div>
 
-      {/* Modals would go here - Create/Edit/Redemptions */}
-      {/* For brevity, modal implementations are omitted but would follow similar patterns */}
+      {/* Modals */}
+      <CreateCouponModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          loadCoupons();
+          loadStats();
+        }}
+      />
+
+      {editingCoupon && (
+        <EditCouponModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingCoupon(null);
+          }}
+          onSuccess={() => {
+            loadCoupons();
+            loadStats();
+          }}
+          coupon={editingCoupon}
+        />
+      )}
+
+      {selectedCouponForRedemptions && (
+        <ViewRedemptionsModal
+          isOpen={isRedemptionsModalOpen}
+          onClose={() => {
+            setIsRedemptionsModalOpen(false);
+            setSelectedCouponForRedemptions(null);
+          }}
+          couponCode={selectedCouponForRedemptions.code}
+          couponId={selectedCouponForRedemptions.id}
+        />
+      )}
     </div>
   );
 }

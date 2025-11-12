@@ -24,6 +24,7 @@ export interface ProrationCalculation {
   daysInCycle: number;
   unusedCreditValueUsd: number;
   newTierProratedCostUsd: number;
+  couponDiscountAmount: number;
   netChargeUsd: number;
 }
 
@@ -55,6 +56,26 @@ export class ProrationService {
     logger.debug('ProrationService: Initialized');
   }
 
+  /**
+   * Get tier price based on billing cycle
+   * @param tier - Subscription tier
+   * @param billingCycle - Billing cycle (monthly, annual, or lifetime)
+   * @returns Price in USD for the billing cycle
+   */
+  private getTierPrice(tier: string, billingCycle: string): number {
+    const monthlyPrice = this.TIER_PRICING[tier] || 0;
+
+    // Handle annual billing cycle
+    if (billingCycle === 'annual') {
+      // Annual price is monthly price × 12
+      return monthlyPrice * 12;
+    }
+
+    // For monthly, lifetime, or any other value, return monthly price
+    // Note: lifetime (perpetual) plans have a $0 monthly equivalent
+    return monthlyPrice;
+  }
+
   // ===========================================================================
   // Proration Calculations
   // ===========================================================================
@@ -63,11 +84,20 @@ export class ProrationService {
    * Calculate proration for a tier change
    * @param subscriptionId - Subscription ID
    * @param newTier - Target tier
+   * @param options - Optional coupon and pricing parameters
    * @returns Proration calculation result
    */
   async calculateProration(
     subscriptionId: string,
-    newTier: string
+    newTier: string,
+    options?: {
+      newTierCoupon?: {
+        code: string;
+        discountType: 'percentage' | 'fixed_amount';
+        discountValue: number;
+      };
+      currentTierEffectivePrice?: number;
+    }
   ): Promise<ProrationCalculation> {
     logger.debug('ProrationService: Calculating proration', { subscriptionId, newTier });
 
@@ -87,9 +117,24 @@ export class ProrationService {
     const totalDays = this.daysBetween(periodStart, periodEnd);
     const daysRemaining = Math.max(0, this.daysBetween(now, periodEnd));
 
-    // Get tier prices
-    const oldTierPrice = this.TIER_PRICING[subscription.tier] || 0;
-    const newTierPrice = this.TIER_PRICING[newTier] || 0;
+    // Get tier prices based on billing cycle
+    // For old tier: use effective price if provided (for active discounts), otherwise calculate based on billing cycle
+    const oldTierPrice =
+      options?.currentTierEffectivePrice ||
+      this.getTierPrice(subscription.tier, subscription.billingCycle);
+
+    // For new tier: calculate based on current subscription's billing cycle
+    // Assumption: tier upgrades/downgrades maintain the same billing cycle
+    const newTierPrice = this.getTierPrice(newTier, subscription.billingCycle);
+
+    logger.debug('ProrationService: Billing cycle pricing', {
+      billingCycle: subscription.billingCycle,
+      oldTier: subscription.tier,
+      oldTierPrice,
+      newTier,
+      newTierPrice,
+      currentTierEffectivePrice: options?.currentTierEffectivePrice,
+    });
 
     // Calculate unused credit from current tier
     const unusedCreditValueUsd = (daysRemaining / totalDays) * oldTierPrice;
@@ -97,8 +142,24 @@ export class ProrationService {
     // Calculate prorated cost for new tier
     const newTierProratedCostUsd = (daysRemaining / totalDays) * newTierPrice;
 
+    // Apply coupon discount if provided
+    let couponDiscountAmount = 0;
+    if (options?.newTierCoupon) {
+      if (options.newTierCoupon.discountType === 'percentage') {
+        // Percentage discount on prorated amount
+        couponDiscountAmount = newTierProratedCostUsd * (options.newTierCoupon.discountValue / 100);
+      } else {
+        // Fixed amount discount, capped at prorated amount
+        couponDiscountAmount = Math.min(
+          options.newTierCoupon.discountValue,
+          newTierProratedCostUsd
+        );
+      }
+    }
+
     // Net charge (positive = charge user, negative = credit user)
-    const netChargeUsd = newTierProratedCostUsd - unusedCreditValueUsd;
+    // Formula: new_tier_cost - unused_credit - coupon_discount
+    const netChargeUsd = Math.max(0, newTierProratedCostUsd - unusedCreditValueUsd - couponDiscountAmount);
 
     const result: ProrationCalculation = {
       fromTier: subscription.tier,
@@ -107,6 +168,7 @@ export class ProrationService {
       daysInCycle: totalDays,
       unusedCreditValueUsd: this.roundToTwoDecimals(unusedCreditValueUsd),
       newTierProratedCostUsd: this.roundToTwoDecimals(newTierProratedCostUsd),
+      couponDiscountAmount: this.roundToTwoDecimals(couponDiscountAmount),
       netChargeUsd: this.roundToTwoDecimals(netChargeUsd),
     };
 

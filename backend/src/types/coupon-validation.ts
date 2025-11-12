@@ -152,6 +152,13 @@ export const redemptionContextSchema = z.object({
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
   deviceInfo: z.any().optional(),
+  // Proration fields (GAP FIX #4)
+  prorationAmount: z.number().optional(),
+  isProrationInvolved: z.boolean().optional(),
+  tierBefore: z.string().optional(),
+  tierAfter: z.string().optional(),
+  billingCycleBefore: z.string().optional(),
+  billingCycleAfter: z.string().optional(),
 });
 
 export type RedemptionContext = z.infer<typeof redemptionContextSchema>;
