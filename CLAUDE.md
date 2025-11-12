@@ -244,109 +244,80 @@ Three independent services sharing a single PostgreSQL database:
 - Prisma error helpers (P2002, P2003, P2025)
 - Strategic indexes on foreign keys and common queries
 
-### Naming Convention Standards
+### API Development Standards
 
-**IMPORTANT: Consistent naming conventions across the stack**
+**IMPORTANT: All API development must follow consistent naming and response format standards**
 
-The project follows industry-standard REST API naming patterns with automatic transformation between layers:
+This project enforces strict API standards to ensure consistency across frontend and backend:
+
+**Quick Reference:**
+- **Database fields (Prisma):** `snake_case` (PostgreSQL standard)
+- **API response fields (JSON):** `camelCase` (REST API standard)
+- **TypeScript interfaces:** `camelCase` (JavaScript standard)
+- **URL endpoints:** `kebab-case` (e.g., `/user-management`, `/usage-history`)
+- **Query parameters:** `snake_case` (e.g., `?start_date=&end_date=`)
+- **Error codes:** `SCREAMING_SNAKE_CASE` (e.g., `USER_NOT_FOUND`)
+
+**Transformation Layer:**
+
+The project uses a centralized transformation layer to convert between database and API conventions:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Database Layer (Prisma)        → snake_case (SQL standard)  │
-│   tier_eligibility, billing_cycles, max_uses                │
-├─────────────────────────────────────────────────────────────┤
-│ Type Mappers (Backend)         → Transform layer            │
-│   backend/src/utils/typeMappers.ts                          │
-│   Converts: snake_case → camelCase                          │
-├─────────────────────────────────────────────────────────────┤
-│ API Responses (REST JSON)      → camelCase                  │
-│   tierEligibility, billingCycles, maxUses                   │
-├─────────────────────────────────────────────────────────────┤
-│ Shared Types (@rephlo/shared-types) → camelCase             │
-│   Single source of truth for TypeScript interfaces          │
-├─────────────────────────────────────────────────────────────┤
-│ Frontend (React/TypeScript)    → camelCase                  │
-│   Components consume camelCase directly                     │
-└─────────────────────────────────────────────────────────────┘
+Database (snake_case) → Type Mappers → API Response (camelCase)
 ```
 
-**Key Principles:**
+**Type Mappers:** `backend/src/utils/typeMappers.ts`
+- `mapCouponToApiType()`, `mapUserToApiType()`, `mapSubscriptionToApiType()`
+- Handles ALL database → API conversions
+- Never manually transform in controllers or services
 
-1. **Database Fields:** Always use `snake_case` in Prisma schema
-   - Example: `max_uses`, `tier_eligibility`, `created_at`
-   - Follows PostgreSQL and SQL conventions
-
-2. **API Responses:** Always use `camelCase` in JSON
-   - Example: `maxUses`, `tierEligibility`, `createdAt`
-   - Follows REST API standards (Google, Stripe, Twilio, Firebase)
-
-3. **Type Mappers:** Centralized transformation in `backend/src/utils/typeMappers.ts`
-   - `mapCouponToApiType()`, `mapUserToApiType()`, `mapSubscriptionToApiType()`
-   - Handles ALL database → API conversions
-   - Never manually transform in controllers or services
-
-4. **Shared Types:** TypeScript interfaces always use `camelCase`
-   - Located in `shared-types/src/*.types.ts`
-   - Shared between frontend and backend
-   - Single source of truth for type definitions
-
-5. **Frontend:** Consume `camelCase` directly
-   - No transformations needed in React components
-   - Type-safe with shared-types package
-
-**Example Transformation:**
+**Example Pattern:**
 
 ```typescript
-// Database (Prisma schema) - snake_case
-model Coupon {
-  max_uses             Int?
-  tier_eligibility     String[]
-  billing_cycles       String[]
-  created_at           DateTime
-}
+// Database query (snake_case OK)
+const dbUser = await prisma.user.findUnique({
+  select: { credit_balance: true, created_at: true }
+});
 
-// Type Mapper (backend/src/utils/typeMappers.ts)
-export function mapCouponToApiType(dbCoupon: PrismaCoupon): Coupon {
-  return {
-    maxUses: dbCoupon.max_uses,              // Transform
-    tierEligibility: dbCoupon.tier_eligibility,
-    billingCycles: dbCoupon.billing_cycles,
-    createdAt: dbCoupon.created_at.toISOString(),
-  };
-}
-
-// API Response (JSON) - camelCase
-{
-  "maxUses": 100,
-  "tierEligibility": ["pro", "enterprise"],
-  "billingCycles": ["monthly", "annual"],
-  "createdAt": "2025-01-15T10:30:00.000Z"
-}
-
-// Frontend (TypeScript) - camelCase
-interface Coupon {
-  maxUses?: number | null;
-  tierEligibility: SubscriptionTier[];
-  billingCycles: string[];
-  createdAt: string;
-}
+// Transform to API response (camelCase required)
+return mapUserToApiType(dbUser);
+// → { creditBalance: 10000, createdAt: "2025-01-15T10:30:00.000Z" }
 ```
 
-**TypeScript Enum Imports:**
+**DTO Pattern (Alternative/Advanced):**
 
-Enums are BOTH types AND runtime values, requiring special import handling:
+For complex transformations with business logic, use the DTO (Data Transfer Object) pattern:
 
 ```typescript
-// ❌ WRONG - Causes "cannot be used as a value" errors
-import type { User, SubscriptionTier } from '@rephlo/shared-types';
-
-// ✅ CORRECT - Separate type-only and value imports
-import type { User } from '@rephlo/shared-types';
-import { SubscriptionTier } from '@rephlo/shared-types';
+class UserDTO {
+  static fromPrisma(dbUser: PrismaUser): UserDTO {
+    return {
+      creditBalance: dbUser.credit_balance,
+      remainingCredits: calculateRemaining(dbUser),  // Computed field
+      createdAt: dbUser.created_at.toISOString(),
+    };
+  }
+}
 ```
 
-**References:**
-- Implementation: `docs/progress/161-camelcase-standardization-completion-report.md`
+**Complete Standards Documentation:**
+
+For comprehensive guidelines including response formats, error handling, testing requirements, and code review checklists, see:
+
+📖 **[API Development Standards (docs/reference/156-api-standards.md)](docs/reference/156-api-standards.md)**
+
+This document includes:
+- Detailed naming conventions for all contexts
+- Standard response format templates
+- Error handling patterns and HTTP status codes
+- Code review checklist (15 mandatory checks)
+- Testing requirements and examples
+- Quick reference tables
+
+**Additional References:**
+- DTO Pattern Guide: `docs/reference/155-dto-pattern-guide.md`
+- ESLint Prevention: `docs/guides/017-eslint-snake-case-prevention.md`
+- Implementation Report: `docs/progress/161-camelcase-standardization-completion-report.md`
 - Type mappers: `backend/src/utils/typeMappers.ts`
 - Shared types: `shared-types/src/*.types.ts`
 
@@ -631,16 +602,32 @@ class UserService {
 ### Adding a New API Endpoint
 
 1. Create controller method
-2. Create service method
+2. Create service method (with database → API transformation)
 3. Create route in api module
 4. Add Zod validation schema
 5. Add auth middleware (`@Requires(['scope', 'role'])`)
 6. Register route in server.ts
 7. Write integration test
 
+**IMPORTANT:** Always transform database results to API format using type mappers or DTOs. See `docs/reference/156-api-standards.md` for complete guidelines.
+
 **Authentication Decorator Pattern:**
 ```typescript
 app.post('/admin/users', authenticate(), requireScopes(['admin']), userController.createUser);
+```
+
+**Response Transformation Pattern:**
+```typescript
+// ✅ CORRECT - Transform database results
+async getUser(id: string) {
+  const dbUser = await this.prisma.user.findUnique({ where: { id } });
+  return mapUserToApiType(dbUser);  // camelCase response
+}
+
+// ❌ WRONG - Direct Prisma return exposes snake_case
+async getUser(id: string) {
+  return await this.prisma.user.findUnique({ where: { id } });
+}
 ```
 
 ---
