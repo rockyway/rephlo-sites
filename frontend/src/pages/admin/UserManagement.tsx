@@ -96,7 +96,7 @@ function UserManagement() {
       });
 
       // Map API response to frontend User type
-      const mappedUsers = (response.users || []).map((apiUser: any) => ({
+      const mappedUsers = (response.data || []).map((apiUser: any) => ({
         id: apiUser.id,
         email: apiUser.email,
         name: apiUser.firstName && apiUser.lastName
@@ -111,7 +111,7 @@ function UserManagement() {
       }));
 
       setUsers(mappedUsers);
-      setTotalPages(response.pagination?.totalPages || 1);
+      setTotalPages(response.totalPages || 1);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load users');
     } finally {

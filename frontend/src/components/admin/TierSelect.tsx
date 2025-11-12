@@ -39,7 +39,7 @@ const TierSelect = forwardRef<HTMLSelectElement, TierSelectProps>(
           onChange={handleChange}
           className={cn(
             // Base styles
-            'flex h-10 w-full rounded-md border px-lg py-md text-body',
+            'flex h-11 w-full rounded-md border px-3 py-2.5 text-body',
             'bg-white dark:bg-deep-navy-800',
             'text-deep-navy-900 dark:text-deep-navy-100',
             'placeholder:text-deep-navy-400 dark:placeholder:text-deep-navy-500',

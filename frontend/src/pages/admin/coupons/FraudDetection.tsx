@@ -28,14 +28,11 @@ import {
   ChevronLeft,
   Flag,
   Download,
-  Upload,
   Settings,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { ConfirmationModal } from '@/components/plan109';
-import { plan111API } from '@/api/plan111';
 import { FraudSeverity, FraudResolution, type FraudDetectionEvent } from '@/types/plan111.types';
 import { formatDate, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
@@ -105,7 +102,7 @@ function FraudDetection() {
   const [blacklistReason, setBlacklistReason] = useState('');
 
   // Auto-refresh interval
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<number>();
 
   // Load data
   useEffect(() => {
@@ -305,7 +302,7 @@ function FraudDetection() {
     }
   };
 
-  const handleRemoveFromBlacklist = async (id: string) => {
+  const handleRemoveFromBlacklist = async (_id: string) => {
     setIsProcessing(true);
     setError(null);
 
@@ -388,25 +385,25 @@ function FraudDetection() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => setShowRulesModal(true)}
           >
             <Settings className="mr-2 h-4 w-4" />
             Rules
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => setShowBlacklistModal(true)}
           >
             <Ban className="mr-2 h-4 w-4" />
             Blacklist
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={events.length === 0}>
+          <Button variant="ghost" onClick={handleExport} disabled={events.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
           <Button
-            variant={autoRefresh ? 'primary' : 'outline'}
+            variant={autoRefresh ? 'primary' : 'ghost'}
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
             <RefreshCw className={cn('mr-2 h-4 w-4', autoRefresh && 'animate-spin')} />
@@ -518,7 +515,7 @@ function FraudDetection() {
           </div>
 
           <div className="flex items-end">
-            <Button variant="outline" onClick={clearFilters} className="w-full">
+            <Button variant="ghost" onClick={clearFilters} className="w-full">
               <XIcon className="mr-2 h-4 w-4" />
               Clear
             </Button>
@@ -709,7 +706,7 @@ function FraudDetection() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedEvent(event);
@@ -746,7 +743,7 @@ function FraudDetection() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
@@ -754,7 +751,7 @@ function FraudDetection() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
@@ -901,7 +898,7 @@ function FraudDetection() {
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowReviewModal(false);
                   setSelectedEvent(null);

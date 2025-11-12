@@ -15,16 +15,6 @@ import {
   X,
   Cpu,
   DollarSign,
-  Receipt,
-  TrendingUp,
-  Calculator,
-  LineChart,
-  Calendar,
-  Tag,
-  Shield,
-  AlertTriangle,
-  Smartphone,
-  Zap,
 } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
 

@@ -36,7 +36,6 @@ import type {
   ConversionFunnel,
   RevenueTimeSeries,
   CreditsByModel,
-  TierTransition,
   PaginatedResponse,
   TierChangeRequest,
   CancelSubscriptionRequest,
@@ -526,17 +525,17 @@ export const analyticsApi = {
       const funnel: ConversionFunnel[] = [
         {
           stage: 'Free Tier',
-          users: data.freeTier.count,
+          count: data.freeTier.count,
           conversionRate: 100, // Starting point
         },
         {
           stage: 'Paid Subscription',
-          users: data.paidSubscription.count,
+          count: data.paidSubscription.count,
           conversionRate: data.paidSubscription.conversionRate,
         },
         {
           stage: 'Perpetual License',
-          users: data.perpetualLicense.count,
+          count: data.perpetualLicense.count,
           conversionRate: data.perpetualLicense.conversionRate,
         },
       ];

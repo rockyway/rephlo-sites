@@ -137,10 +137,17 @@ export default function OAuthCallback() {
 
         // Decode user information from id_token
         // Using id_token avoids audience mismatch with resource-specific access token
+        if (!tokenResponse.id_token) {
+          console.error('No id_token in response');
+          setStatus('error');
+          setErrorDetails(errorMessages.userinfo_failed);
+          return;
+        }
+
         let idTokenClaims;
         try {
           idTokenClaims = decodeJWT<{
-            sub: string;
+            sub?: string;
             email: string;
             email_verified?: boolean;
             name?: string;
@@ -159,11 +166,11 @@ export default function OAuthCallback() {
 
         // Transform id_token claims to User object
         const userData: User = {
-          id: idTokenClaims.sub,
+          id: idTokenClaims.sub || '',
           email: idTokenClaims.email,
           name: idTokenClaims.name || `${idTokenClaims.given_name || ''} ${idTokenClaims.family_name || ''}`.trim() || undefined,
-          role: idTokenClaims.role || 'user',
-          emailVerified: idTokenClaims.email_verified,
+          role: (idTokenClaims.role === 'admin' || idTokenClaims.role === 'user') ? idTokenClaims.role : 'user',
+          emailVerified: idTokenClaims.email_verified ?? false,
           createdAt: idTokenClaims.created_at || new Date().toISOString(),
           permissions: idTokenClaims.permissions
         };

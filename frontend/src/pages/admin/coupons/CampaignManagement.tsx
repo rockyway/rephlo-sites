@@ -27,19 +27,15 @@ import {
   X as XIcon,
   ChevronRight,
   ChevronLeft,
-  Mail,
   Copy,
   Download,
-  Edit,
   Trash2,
   Play,
-  Pause,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { ConfirmationModal } from '@/components/plan109';
-import { plan111API } from '@/api/plan111';
 import { CampaignStatus, CampaignType, type CouponCampaign, SubscriptionTier } from '@/types/plan111.types';
 import { formatDate, formatCurrency, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
@@ -350,11 +346,11 @@ function CampaignManagement() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport} disabled={campaigns.length === 0}>
+          <Button variant="ghost" onClick={handleExport} disabled={campaigns.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button variant="outline" onClick={loadData} disabled={isLoading}>
+          <Button variant="ghost" onClick={loadData} disabled={isLoading}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
             Refresh
           </Button>
@@ -478,7 +474,7 @@ function CampaignManagement() {
           </div>
 
           <div className="flex items-end">
-            <Button variant="outline" onClick={clearFilters} className="w-full">
+            <Button variant="ghost" onClick={clearFilters} className="w-full">
               <XIcon className="mr-2 h-4 w-4" />
               Clear
             </Button>
@@ -655,7 +651,7 @@ function CampaignManagement() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedCampaign(campaign);
@@ -665,7 +661,7 @@ function CampaignManagement() {
                             View Details
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleDuplicateCampaign(campaign)}
                           >
@@ -697,7 +693,7 @@ function CampaignManagement() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
@@ -705,7 +701,7 @@ function CampaignManagement() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
@@ -816,7 +812,7 @@ function CampaignManagement() {
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowCreateModal(false);
                   resetForm();
@@ -927,7 +923,7 @@ function CampaignManagement() {
         }}
         onConfirm={handleDeleteCampaign}
         title="Delete Campaign"
-        message={`Are you sure you want to delete "${selectedCampaign?.name}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${selectedCampaign?.name}"? This action cannot be undone.`}
         confirmText="Delete"
         isProcessing={isProcessing}
       />
