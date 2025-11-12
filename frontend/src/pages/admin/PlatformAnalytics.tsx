@@ -21,12 +21,14 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { TierBadge } from '@/components/plan109';
 import { analyticsApi } from '@/api/plan109';
 import {
+  SubscriptionTier,
+} from '@rephlo/shared-types';
+import {
   DashboardMetrics,
   UserDistribution,
   RevenueTimeSeries,
   ConversionFunnel,
   TierTransition,
-  SubscriptionTier,
   CreditsByModel,
 } from '@/types/plan109.types';
 import {

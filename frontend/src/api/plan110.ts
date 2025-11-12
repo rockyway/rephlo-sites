@@ -12,10 +12,14 @@
 
 import { apiClient } from '@/services/api';
 import type {
+  // Import shared types
+  ProrationEvent,
+} from '@rephlo/shared-types';
+import type {
+  // Keep plan110-specific types
   PerpetualLicense,
   LicenseActivation,
   VersionUpgrade,
-  ProrationEvent,
   LicenseStats,
   ProrationStats,
   ProrationPreview,

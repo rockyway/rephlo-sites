@@ -33,7 +33,7 @@ import {
   SubscriptionStatus,
   type Subscription,
   type SubscriptionStats,
-} from '@/types/plan109.types';
+} from '@rephlo/shared-types';
 import { formatCurrency, formatDate, formatNumber, calculateDaysBetween } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
@@ -77,8 +77,8 @@ function SubscriptionManagement() {
       // Load subscriptions and stats in parallel
       const [subsResponse, statsData] = await Promise.all([
         subscriptionApi.getAllSubscriptions({
-          tier: filterTier as SubscriptionTier || undefined,
-          status: filterStatus as SubscriptionStatus || undefined,
+          tier: (filterTier || undefined) as SubscriptionTier | undefined,
+          status: (filterStatus || undefined) as SubscriptionStatus | undefined,
           search: searchQuery || undefined,
           page,
           limit,

@@ -38,8 +38,8 @@ import {
   UserStatus,
   SubscriptionTier,
   type User,
-  type UserDetails,
-} from '@/types/plan109.types';
+} from '@rephlo/shared-types';
+import type { AdminUserDetails } from '@/types/plan109.types';
 import {
   formatDate,
   formatNumber,
@@ -69,7 +69,7 @@ function UserManagement() {
 
   // Modals
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+  const [userDetails, setUserDetails] = useState<AdminUserDetails | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);

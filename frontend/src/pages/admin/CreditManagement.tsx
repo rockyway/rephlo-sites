@@ -38,7 +38,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { TierBadge, CreditAdjustmentModal } from '@/components/plan109';
 import {
   SubscriptionTier,
-} from '@/types/plan109.types';
+} from '@rephlo/shared-types';
 import { formatNumber, formatDate, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';

@@ -26,12 +26,14 @@ import { plan111API } from '@/api/plan111';
 import { cn } from '@/lib/utils';
 import type {
   Coupon,
-  CouponUpdateRequest,
+  UpdateCouponRequest,
+  CouponCampaign,
+} from '@rephlo/shared-types';
+import {
   CouponType,
   SubscriptionTier,
   BillingCycle,
-  CouponCampaign,
-} from '@/types/plan111.types';
+} from '@rephlo/shared-types';
 
 interface EditCouponModalProps {
   isOpen: boolean;
@@ -46,44 +48,44 @@ interface FormErrors {
 
 const COUPON_TYPES: { value: CouponType; label: string; description: string }[] = [
   {
-    value: 'percentage',
+    value: CouponType.PERCENTAGE,
     label: 'Percentage Discount',
     description: '% off subscription price',
   },
   {
-    value: 'fixed_amount',
+    value: CouponType.FIXED_AMOUNT,
     label: 'Fixed Amount Discount',
     description: '$ off subscription price',
   },
   {
-    value: 'tier_specific',
+    value: CouponType.TIER_SPECIFIC,
     label: 'Tier Specific',
     description: 'Discount for specific tier upgrades',
   },
   {
-    value: 'duration_bonus',
+    value: CouponType.DURATION_BONUS,
     label: 'Duration Bonus',
     description: 'Free additional months',
   },
   {
-    value: 'perpetual_migration',
+    value: CouponType.PERPETUAL_MIGRATION,
     label: 'BYOK Migration',
     description: 'Perpetual license migration discount',
   },
 ];
 
 const TIERS: { value: SubscriptionTier; label: string }[] = [
-  { value: 'free', label: 'Free' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'pro_max', label: 'Pro Max' },
-  { value: 'enterprise_pro', label: 'Enterprise Pro' },
-  { value: 'enterprise_max', label: 'Enterprise Max' },
-  { value: 'perpetual', label: 'Perpetual' },
+  { value: SubscriptionTier.FREE, label: 'Free' },
+  { value: SubscriptionTier.PRO, label: 'Pro' },
+  { value: SubscriptionTier.PRO_MAX, label: 'Pro Max' },
+  { value: SubscriptionTier.ENTERPRISE_PRO, label: 'Enterprise Pro' },
+  { value: SubscriptionTier.ENTERPRISE_MAX, label: 'Enterprise Max' },
+  { value: SubscriptionTier.PERPETUAL, label: 'Perpetual' },
 ];
 
 const BILLING_CYCLES: { value: BillingCycle; label: string }[] = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: 'Annual' },
+  { value: BillingCycle.MONTHLY, label: 'Monthly' },
+  { value: BillingCycle.ANNUAL, label: 'Annual' },
 ];
 
 export default function EditCouponModal({
@@ -93,7 +95,7 @@ export default function EditCouponModal({
   coupon,
 }: EditCouponModalProps) {
   // Form state - Initialize with coupon data (includes local discount_value field)
-  const [formData, setFormData] = useState<Partial<CouponUpdateRequest> & { discount_value?: number }>({});
+  const [formData, setFormData] = useState<Partial<UpdateCouponRequest> & { discount_value?: number }>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -142,7 +144,7 @@ export default function EditCouponModal({
     }
   };
 
-  const handleChange = (field: keyof CouponUpdateRequest | 'discount_value', value: any) => {
+  const handleChange = (field: keyof UpdateCouponRequest | 'discount_value', value: any) => {
     setFormData({ ...formData, [field]: value });
     // Clear error for this field when user makes changes
     if (errors[field]) {
@@ -179,7 +181,7 @@ export default function EditCouponModal({
 
       // Percentage discount validation (max 100%)
       if (
-        coupon.type === 'percentage' &&
+        coupon.type === CouponType.PERCENTAGE &&
         formData.discount_value > 100
       ) {
         newErrors.discount_value = 'Percentage discount cannot exceed 100%';
@@ -241,15 +243,15 @@ export default function EditCouponModal({
 
     try {
       // Only include changed fields in update request
-      const updateData: CouponUpdateRequest = {};
+      const updateData: UpdateCouponRequest = {};
 
       // Map discount_value to the appropriate API field based on coupon type
       if (formData.discount_value !== undefined) {
-        if (coupon.type === 'percentage') {
+        if (coupon.type === CouponType.PERCENTAGE) {
           updateData.discount_percentage = formData.discount_value;
-        } else if (coupon.type === 'fixed_amount') {
+        } else if (coupon.type === CouponType.FIXED_AMOUNT) {
           updateData.discount_amount = formData.discount_value;
-        } else if (coupon.type === 'duration_bonus') {
+        } else if (coupon.type === CouponType.DURATION_BONUS) {
           updateData.bonus_duration_months = formData.discount_value;
         }
       }
@@ -402,11 +404,11 @@ export default function EditCouponModal({
                 onChange={(e) => handleChange('discount_value', parseFloat(e.target.value))}
                 disabled={isSubmitting}
                 placeholder={
-                  coupon.type === 'percentage'
+                  coupon.type === CouponType.PERCENTAGE
                     ? 'e.g., 25'
                     : 'e.g., 20.00'
                 }
-                step={coupon.type === 'percentage' ? '1' : '0.01'}
+                step={coupon.type === CouponType.PERCENTAGE ? '1' : '0.01'}
                 min="0"
                 className={cn(errors.discount_value && 'border-red-300')}
               />

@@ -32,9 +32,11 @@ import { ConfirmationModal, TierBadge } from '@/components/plan109';
 import { ProrationChangeTypeBadge, ProrationCalculationModal } from '@/components/plan110';
 import { prorationApi } from '@/api/plan110';
 import {
-  ProrationChangeType,
+  ProrationEventType,
   ProrationStatus,
   type ProrationEvent,
+} from '@rephlo/shared-types';
+import {
   type ProrationStats,
   type ProrationCalculationBreakdown,
 } from '@/types/plan110.types';
@@ -85,7 +87,7 @@ function ProrationTracking() {
       // Load prorations and stats in parallel
       const [prorationsResponse, statsData] = await Promise.all([
         prorationApi.getAllProrations({
-          changeType: filterChangeType as ProrationChangeType || undefined,
+          changeType: filterChangeType as ProrationEventType || undefined,
           status: filterStatus as ProrationStatus || undefined,
           search: searchQuery || undefined,
           page,
@@ -280,11 +282,11 @@ function ProrationTracking() {
                 className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               >
                 <option value="">All Types</option>
-                <option value={ProrationChangeType.UPGRADE}>Upgrade</option>
-                <option value={ProrationChangeType.DOWNGRADE}>Downgrade</option>
-                <option value={ProrationChangeType.CYCLE_CHANGE}>Billing Cycle Change</option>
-                <option value={ProrationChangeType.MIGRATION}>Migration</option>
-                <option value={ProrationChangeType.CANCELLATION}>Cancellation</option>
+                <option value={ProrationEventType.UPGRADE}>Upgrade</option>
+                <option value={ProrationEventType.DOWNGRADE}>Downgrade</option>
+                <option value={ProrationEventType.CYCLE_CHANGE}>Billing Cycle Change</option>
+                <option value={ProrationEventType.MIGRATION}>Migration</option>
+                <option value={ProrationEventType.CANCELLATION}>Cancellation</option>
               </select>
             </div>
 

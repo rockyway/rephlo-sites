@@ -877,18 +877,11 @@ function CampaignManagement() {
                 </div>
               </div>
 
-              {selectedCampaign.description && (
-                <div>
-                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Description</p>
-                  <p className="text-deep-navy-800 dark:text-white">{selectedCampaign.description}</p>
-                </div>
-              )}
-
               <div className="grid grid-cols-3 gap-4 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900 p-4">
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Redemptions</p>
                   <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
-                    {selectedCampaign.redemption_count?.toLocaleString() || 0}
+                    {selectedCampaign.redemptions_count?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div>
@@ -900,13 +893,8 @@ function CampaignManagement() {
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Revenue</p>
                   <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
-                    {formatCurrency(selectedCampaign.actual_revenue)}
+                    {formatCurrency(selectedCampaign.actual_revenue || 0)}
                   </p>
-                  {selectedCampaign.expected_revenue && (
-                    <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
-                      Target: {formatCurrency(selectedCampaign.expected_revenue)}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

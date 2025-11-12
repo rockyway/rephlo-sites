@@ -28,9 +28,11 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { billingApi } from '@/api/plan109';
 import {
   InvoiceStatus,
-  TransactionStatus,
-  type Invoice,
-  type Transaction,
+  PaymentStatus,
+  type BillingInvoice,
+  type PaymentTransaction,
+} from '@rephlo/shared-types';
+import {
   type DunningAttempt,
   type RevenueMetrics,
   type RevenueByTier,
@@ -43,8 +45,8 @@ function BillingDashboard() {
   // State
   const [revenueMetrics, setRevenueMetrics] = useState<RevenueMetrics | null>(null);
   const [revenueByTier, setRevenueByTier] = useState<RevenueByTier[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [dunningAttempts, setDunningAttempts] = useState<DunningAttempt[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -438,10 +440,10 @@ function BillingDashboard() {
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                transaction.status === TransactionStatus.SUCCEEDED && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
-                                transaction.status === TransactionStatus.PENDING && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
-                                transaction.status === TransactionStatus.FAILED && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
-                                transaction.status === TransactionStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
+                                transaction.status === PaymentStatus.SUCCEEDED && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+                                transaction.status === PaymentStatus.PENDING && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                                transaction.status === PaymentStatus.FAILED && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
+                                transaction.status === PaymentStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
                               )}>
                                 {transaction.status}
                               </span>
@@ -453,7 +455,7 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-end gap-2">
-                                {transaction.status === TransactionStatus.SUCCEEDED && (
+                                {transaction.status === PaymentStatus.SUCCEEDED && (
                                   <Button
                                     size="sm"
                                     variant="ghost"

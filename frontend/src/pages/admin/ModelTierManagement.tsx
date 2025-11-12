@@ -18,8 +18,10 @@ import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 import type {
-  ModelTierInfo,
   SubscriptionTier,
+} from '@rephlo/shared-types';
+import type {
+  ModelTierInfo,
   TierAuditLogEntry,
   ModelTierUpdateRequest,
 } from '@/types/model-tier';

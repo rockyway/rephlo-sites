@@ -41,6 +41,8 @@ import type {
   CouponCampaign,
   CampaignType,
   CampaignStatus,
+} from '@rephlo/shared-types';
+import type {
   CampaignFilters,
 } from '@/types/plan111.types';
 

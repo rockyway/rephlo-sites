@@ -38,7 +38,7 @@ import type {
   FraudDetectionEvent,
   FraudSeverity,
   FraudResolution,
-} from '@/types/plan111.types';
+} from '@rephlo/shared-types';
 
 function CouponAnalytics() {
   // Data state

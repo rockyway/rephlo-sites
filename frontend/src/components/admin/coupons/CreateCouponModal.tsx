@@ -28,12 +28,14 @@ import CouponCodeInput from '@/components/plan111/CouponCodeInput';
 import { plan111API } from '@/api/plan111';
 import { cn } from '@/lib/utils';
 import type {
-  CouponCreateRequest,
+  CreateCouponRequest,
+  CouponCampaign,
+} from '@rephlo/shared-types';
+import {
   CouponType,
   SubscriptionTier,
   BillingCycle,
-  CouponCampaign,
-} from '@/types/plan111.types';
+} from '@rephlo/shared-types';
 
 interface CreateCouponModalProps {
   isOpen: boolean;
@@ -47,44 +49,44 @@ interface FormErrors {
 
 const COUPON_TYPES: { value: CouponType; label: string; description: string }[] = [
   {
-    value: 'percentage',
+    value: CouponType.PERCENTAGE,
     label: 'Percentage Discount',
     description: '% off subscription price',
   },
   {
-    value: 'fixed_amount',
+    value: CouponType.FIXED_AMOUNT,
     label: 'Fixed Amount Discount',
     description: '$ off subscription price',
   },
   {
-    value: 'tier_specific',
+    value: CouponType.TIER_SPECIFIC,
     label: 'Tier Specific',
     description: 'Discount for specific tier upgrades',
   },
   {
-    value: 'duration_bonus',
+    value: CouponType.DURATION_BONUS,
     label: 'Duration Bonus',
     description: 'Free additional months',
   },
   {
-    value: 'perpetual_migration',
+    value: CouponType.PERPETUAL_MIGRATION,
     label: 'BYOK Migration',
     description: 'Perpetual license migration discount',
   },
 ];
 
 const TIERS: { value: SubscriptionTier; label: string }[] = [
-  { value: 'free', label: 'Free' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'pro_max', label: 'Pro Max' },
-  { value: 'enterprise_pro', label: 'Enterprise Pro' },
-  { value: 'enterprise_max', label: 'Enterprise Max' },
-  { value: 'perpetual', label: 'Perpetual' },
+  { value: SubscriptionTier.FREE, label: 'Free' },
+  { value: SubscriptionTier.PRO, label: 'Pro' },
+  { value: SubscriptionTier.PRO_MAX, label: 'Pro Max' },
+  { value: SubscriptionTier.ENTERPRISE_PRO, label: 'Enterprise Pro' },
+  { value: SubscriptionTier.ENTERPRISE_MAX, label: 'Enterprise Max' },
+  { value: SubscriptionTier.PERPETUAL, label: 'Perpetual' },
 ];
 
 const BILLING_CYCLES: { value: BillingCycle; label: string }[] = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: 'Annual' },
+  { value: BillingCycle.MONTHLY, label: 'Monthly' },
+  { value: BillingCycle.ANNUAL, label: 'Annual' },
 ];
 
 export default function CreateCouponModal({
@@ -93,14 +95,14 @@ export default function CreateCouponModal({
   onSuccess,
 }: CreateCouponModalProps) {
   // Form state (with local discount_value that maps to API fields)
-  const [formData, setFormData] = useState<Partial<CouponCreateRequest> & { discount_value?: number }>({
+  const [formData, setFormData] = useState<Partial<CreateCouponRequest> & { discount_value?: number }>({
     code: '',
-    type: 'percentage',
+    type: CouponType.PERCENTAGE,
     discount_value: undefined, // Local field - maps to discount_percentage/discount_amount/bonus_duration_months
     max_discount_applications: undefined,
     max_per_customer: 1,
-    applicable_tiers: ['free', 'pro', 'pro_max'],
-    applicable_billing_cycles: ['monthly', 'annual'],
+    applicable_tiers: [SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX],
+    applicable_billing_cycles: [BillingCycle.MONTHLY, BillingCycle.ANNUAL],
     valid_from: '',
     valid_until: '',
     is_active: true,
@@ -189,7 +191,7 @@ export default function CreateCouponModal({
 
     // Percentage discount validation (max 100%)
     if (
-      formData.type === 'percentage' &&
+      formData.type === CouponType.PERCENTAGE &&
       formData.discount_value &&
       formData.discount_value > 100
     ) {
@@ -260,13 +262,13 @@ export default function CreateCouponModal({
 
     try {
       // Prepare request data - map discount_value to appropriate API field based on type
-      const requestData: CouponCreateRequest = {
+      const requestData: CreateCouponRequest = {
         code: formData.code!.toUpperCase(),
         type: formData.type!,
         // Map discount_value to the correct field based on coupon type
-        ...(formData.type === 'percentage' && { discount_percentage: formData.discount_value }),
-        ...(formData.type === 'fixed_amount' && { discount_amount: formData.discount_value }),
-        ...(formData.type === 'duration_bonus' && { bonus_duration_months: formData.discount_value }),
+        ...(formData.type === CouponType.PERCENTAGE && { discount_percentage: formData.discount_value }),
+        ...(formData.type === CouponType.FIXED_AMOUNT && { discount_amount: formData.discount_value }),
+        ...(formData.type === CouponType.DURATION_BONUS && { bonus_duration_months: formData.discount_value }),
         max_discount_applications: formData.max_discount_applications,
         max_per_customer: formData.max_per_customer || 1,
         applicable_tiers: formData.applicable_tiers!,
@@ -302,12 +304,12 @@ export default function CreateCouponModal({
   const resetForm = () => {
     setFormData({
       code: '',
-      type: 'percentage',
+      type: CouponType.PERCENTAGE,
       discount_value: undefined,
       max_discount_applications: undefined,
       max_per_customer: 1,
-      applicable_tiers: ['free', 'pro', 'pro_max'],
-      applicable_billing_cycles: ['monthly', 'annual'],
+      applicable_tiers: [SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX],
+      applicable_billing_cycles: [BillingCycle.MONTHLY, BillingCycle.ANNUAL],
       valid_from: '',
       valid_until: '',
       is_active: true,
@@ -432,13 +434,13 @@ export default function CreateCouponModal({
                 onChange={(e) => handleChange('discount_value', parseFloat(e.target.value))}
                 disabled={isSubmitting}
                 placeholder={
-                  formData.type === 'percentage'
+                  formData.type === CouponType.PERCENTAGE
                     ? 'e.g., 25 (%)'
-                    : formData.type === 'duration_bonus'
+                    : formData.type === CouponType.DURATION_BONUS
                     ? 'e.g., 3 (months)'
                     : 'e.g., 20.00 ($)'
                 }
-                step={formData.type === 'percentage' ? '1' : '0.01'}
+                step={formData.type === CouponType.PERCENTAGE ? '1' : '0.01'}
                 min="0"
                 className={cn(errors.discount_value && 'border-red-300')}
               />
@@ -446,9 +448,9 @@ export default function CreateCouponModal({
                 <p className="mt-1 text-sm text-red-600">{errors.discount_value}</p>
               )}
               <p className="mt-1 text-xs text-deep-navy-600 dark:text-deep-navy-300">
-                {formData.type === 'percentage' && 'Enter percentage (0-100)'}
-                {formData.type === 'fixed_amount' && 'Enter dollar amount'}
-                {formData.type === 'duration_bonus' && 'Enter number of free months'}
+                {formData.type === CouponType.PERCENTAGE && 'Enter percentage (0-100)'}
+                {formData.type === CouponType.FIXED_AMOUNT && 'Enter dollar amount'}
+                {formData.type === CouponType.DURATION_BONUS && 'Enter number of free months'}
               </p>
             </div>
 

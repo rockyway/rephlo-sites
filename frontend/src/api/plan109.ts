@@ -13,22 +13,27 @@
 
 import { apiClient } from '@/services/api';
 import type {
-  Subscription,
-  SubscriptionFilters,
-  SubscriptionStats,
+  // Import shared types from shared-types package
   User,
   UserDetails,
+  Subscription,
+  SubscriptionStats,
+  BillingInvoice,
+  PaymentTransaction,
+  CreditAllocation,
+  UserCreditBalance,
+} from '@rephlo/shared-types';
+import type {
+  // Keep plan109-specific types that don't exist in shared-types
+  AdminUserDetails,
+  SubscriptionFilters,
   UserFilters,
-  Invoice,
   InvoiceFilters,
-  Transaction,
   TransactionFilters,
   DunningAttempt,
   RevenueMetrics,
   RevenueByTier,
-  CreditAllocation,
   CreditAdjustmentRequest,
-  CreditBalance,
   CreditUtilization,
   TopCreditConsumer,
   DashboardMetrics,
@@ -45,6 +50,11 @@ import type {
   BulkUpdateUsersRequest,
   AnalyticsFilters,
 } from '@/types/plan109.types';
+
+// Type aliases for compatibility with existing code
+type Invoice = BillingInvoice;
+type Transaction = PaymentTransaction;
+type CreditBalance = UserCreditBalance;
 
 // ============================================================================
 // Subscription Management API
@@ -167,7 +177,7 @@ export const userManagementApi = {
    * Get detailed user information
    */
   getUserDetails: async (userId: string) => {
-    const response = await apiClient.get<UserDetails>(
+    const response = await apiClient.get<AdminUserDetails>(
       `/admin/users/${userId}`
     );
     return response.data;

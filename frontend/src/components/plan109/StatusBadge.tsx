@@ -4,7 +4,7 @@
  * Color-coded badge for displaying subscription and user status
  */
 
-import { SubscriptionStatus, UserStatus } from '@/types/plan109.types';
+import { SubscriptionStatus, UserStatus } from '@rephlo/shared-types';
 import {
   getSubscriptionStatusDisplay,
   getSubscriptionStatusColor,

@@ -6,6 +6,10 @@ import type {
   ModelTierListResponse,
   AuditLogResponse,
 } from '@/types/model-tier';
+import type {
+  User,
+  Subscription,
+} from '@rephlo/shared-types';
 
 // ============================================================================
 // Dashboard Analytics Types
@@ -336,19 +340,10 @@ export const adminAPI = {
 // ============================================================================
 
 export interface UserOverviewResponse {
-  user: {
-    id: string;
-    email: string;
-    name?: string;
-    createdAt: string;
+  user: Pick<User, 'id' | 'email' | 'name' | 'createdAt' | 'status'> & {
     lastLogin?: string;
-    status: 'active' | 'suspended' | 'banned';
   };
-  currentSubscription?: {
-    id: string;
-    tier: string;
-    status: string;
-    billingCycle: 'monthly' | 'annual';
+  currentSubscription?: Pick<Subscription, 'id' | 'tier' | 'status' | 'billingCycle'> & {
     creditAllocation: number;
     nextBillingDate?: string;
     startedAt: string;
@@ -371,11 +366,7 @@ export interface UserOverviewResponse {
 }
 
 export interface UserSubscriptionsResponse {
-  subscriptions: Array<{
-    id: string;
-    tier: string;
-    status: string;
-    billingCycle: 'monthly' | 'annual';
+  subscriptions: Array<Pick<Subscription, 'id' | 'tier' | 'status' | 'billingCycle'> & {
     startedAt: string;
     endedAt?: string;
     price: number;

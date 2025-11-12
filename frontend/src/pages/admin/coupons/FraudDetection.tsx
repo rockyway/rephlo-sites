@@ -93,7 +93,7 @@ function FraudDetection() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Review state
-  const [reviewResolution, setReviewResolution] = useState<FraudResolution>('block_user');
+  const [reviewResolution, setReviewResolution] = useState<FraudResolution>(FraudResolution.CONFIRMED_FRAUD);
   const [reviewNotes, setReviewNotes] = useState('');
 
   // Blacklist state
@@ -132,11 +132,11 @@ function FraudDetection() {
           redemption_id: 'red-1',
           coupon_id: 'coup-1',
           user_id: 'user-1',
-          detection_type: 'velocity_abuse',
-          severity: 'high',
+          detection_type: FraudDetectionType.VELOCITY_ABUSE,
+          severity: FraudSeverity.HIGH,
           risk_score: 85,
           reasons: ['5+ redemptions in 10 minutes', 'Multiple IP addresses'],
-          status: 'pending',
+          status: FraudResolution.PENDING,
           detected_at: new Date().toISOString(),
           coupon_code: 'SAVE20',
           user_email: 'suspicious@example.com',
@@ -147,11 +147,11 @@ function FraudDetection() {
           redemption_id: 'red-2',
           coupon_id: 'coup-2',
           user_id: 'user-2',
-          detection_type: 'ip_switching',
-          severity: 'medium',
+          detection_type: FraudDetectionType.IP_SWITCHING,
+          severity: FraudSeverity.MEDIUM,
           risk_score: 65,
           reasons: ['IP changed 3 times in session'],
-          status: 'pending',
+          status: FraudResolution.PENDING,
           detected_at: new Date(Date.now() - 3600000).toISOString(),
           coupon_code: 'WELCOME10',
           user_email: 'user2@example.com',
@@ -219,8 +219,8 @@ function FraudDetection() {
             bVal = severityOrder[b.severity];
             break;
           case 'riskScore':
-            aVal = a.risk_score;
-            bVal = b.risk_score;
+            aVal = a.risk_score ?? 0;
+            bVal = b.risk_score ?? 0;
             break;
         }
 
@@ -329,7 +329,7 @@ function FraudDetection() {
       'Detection Type': event.detection_type,
       Severity: event.severity,
       'Risk Score': event.risk_score,
-      Reasons: event.reasons.join('; '),
+      Reasons: event.reasons?.join('; ') || '',
       'IP Address': event.ip_address,
       Status: event.status,
     }));
@@ -355,15 +355,13 @@ function FraudDetection() {
   };
 
   const getStatusBadge = (status: FraudResolution) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-      legitimate: 'bg-green-100 text-green-700 border-green-300',
-      block_user: 'bg-red-100 text-red-700 border-red-300',
-      block_coupon: 'bg-orange-100 text-orange-700 border-orange-300',
-      block_ip: 'bg-purple-100 text-purple-700 border-purple-300',
-      false_positive: 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
+    const colors: Record<FraudResolution, string> = {
+      [FraudResolution.PENDING]: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+      [FraudResolution.LEGITIMATE]: 'bg-green-100 text-green-700 border-green-300',
+      [FraudResolution.CONFIRMED_FRAUD]: 'bg-red-100 text-red-700 border-red-300',
+      [FraudResolution.FALSE_POSITIVE]: 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
     };
-    return colors[status] || colors.pending;
+    return colors[status] || colors[FraudResolution.PENDING];
   };
 
   // ============================================================================
@@ -680,12 +678,12 @@ function FraudDetection() {
                             <div
                               className={cn(
                                 'h-full transition-all',
-                                event.risk_score >= 80 ? 'bg-red-500' :
-                                event.risk_score >= 60 ? 'bg-orange-500' :
-                                event.risk_score >= 40 ? 'bg-yellow-500' :
+                                (event.risk_score ?? 0) >= 80 ? 'bg-red-500' :
+                                (event.risk_score ?? 0) >= 60 ? 'bg-orange-500' :
+                                (event.risk_score ?? 0) >= 40 ? 'bg-yellow-500' :
                                 'bg-green-500'
                               )}
-                              style={{ width: `${event.risk_score}%` }}
+                              style={{ width: `${event.risk_score ?? 0}%` }}
                             />
                           </div>
                         </div>
@@ -839,7 +837,7 @@ function FraudDetection() {
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detection Reasons</p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-deep-navy-800 dark:text-white">
-                  {selectedEvent.reasons.map((reason, i) => (
+                  {(selectedEvent.reasons || []).map((reason, i) => (
                     <li key={i}>{reason}</li>
                   ))}
                 </ul>

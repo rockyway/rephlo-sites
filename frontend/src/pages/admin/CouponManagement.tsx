@@ -40,6 +40,8 @@ import {
 import type {
   Coupon,
   CouponType,
+} from '@rephlo/shared-types';
+import type {
   CouponFilters,
   CouponUpdateRequest,
 } from '@/types/plan111.types';
