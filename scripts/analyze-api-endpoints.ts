@@ -24,6 +24,8 @@ const args = process.argv.slice(2);
 const includeTest = args.some(arg => arg === '--include-test=true');
 const formatArg = args.find(arg => arg.startsWith('--format='));
 const format = formatArg ? formatArg.split('=')[1] : 'full'; // 'simple' or 'full'
+const limitArg = args.find(arg => arg.startsWith('--limit='));
+const limit = limitArg ? parseInt(limitArg.split('=')[1]) : undefined; // Limit number of endpoints to analyze
 
 if (!['simple', 'full'].includes(format)) {
   console.error(`Invalid format: ${format}. Must be 'simple' or 'full'.`);
@@ -37,6 +39,8 @@ interface EndpointDefinition {
   line: number;
   handler?: string;
   middleware?: string[];
+  responseSchema?: string;
+  errorSchemas?: string[];
 }
 
 interface EndpointUsage {
@@ -267,6 +271,203 @@ function extractOIDCRoutes(filePath: string): EndpointDefinition[] {
 }
 
 /**
+ * Extract response and error schemas from controller method
+ */
+function extractSchemas(endpoint: EndpointDefinition): { responseSchema?: string; errorSchemas?: string[] } {
+  if (!endpoint.handler) {
+    return {};
+  }
+
+  // Parse handler: controllerName.methodName
+  const handlerParts = endpoint.handler.split('.');
+  if (handlerParts.length !== 2) {
+    return {};
+  }
+
+  const [controllerName, methodName] = handlerParts;
+
+  // Convert camelCase controller names to kebab-case file names
+  // e.g., adminController -> admin.controller.ts, analyticsController -> analytics.controller.ts
+  const kebabName = controllerName
+    .replace(/([A-Z])/g, '-$1')
+    .toLowerCase()
+    .replace(/^-/, '')
+    .replace(/-controller$/, '');
+
+  // Find controller file - try multiple patterns
+  const controllerPatterns = [
+    // Pattern 1: kebab-case with .controller.ts suffix
+    path.join(BACKEND_DIR, 'src', 'controllers', `${kebabName}.controller.ts`),
+    // Pattern 2: direct camelCase name
+    path.join(BACKEND_DIR, 'src', 'controllers', `${controllerName}.ts`),
+    // Pattern 3: nested directories
+    path.join(BACKEND_DIR, 'src', 'controllers', `**`, `${kebabName}.controller.ts`),
+    path.join(BACKEND_DIR, 'src', 'controllers', `**`, `${controllerName}.ts`),
+    // Pattern 4: identity provider
+    path.join(IDP_DIR, 'src', 'controllers', `${kebabName}.controller.ts`),
+    path.join(IDP_DIR, 'src', 'controllers', `${controllerName}.ts`),
+  ];
+
+  let controllerFile: string | undefined;
+  for (const pattern of controllerPatterns) {
+    if (pattern.includes('**')) {
+      // Handle glob pattern
+      const baseDir = pattern.split('**')[0];
+      if (fs.existsSync(baseDir)) {
+        const files = getAllFiles(baseDir, ['.ts']);
+        const found = files.find(f => f.endsWith(`${controllerName}.ts`));
+        if (found) {
+          controllerFile = found;
+          break;
+        }
+      }
+    } else if (fs.existsSync(pattern)) {
+      controllerFile = pattern;
+      break;
+    }
+  }
+
+  if (!controllerFile) {
+    return {};
+  }
+
+  const content = fs.readFileSync(controllerFile, 'utf-8');
+  const lines = content.split('\n');
+
+  // Find the method
+  let methodStartLine = -1;
+  let methodEndLine = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Match method declaration: async methodName(
+    if (line.match(new RegExp(`async\\s+${methodName}\\s*\\(`)) ||
+        line.match(new RegExp(`${methodName}\\s*\\([^)]*\\)\\s*:\\s*Promise`))) {
+      methodStartLine = i;
+
+      // Find method end (closing brace at same indentation level)
+      let braceCount = 0;
+      let foundStart = false;
+
+      for (let j = i; j < lines.length; j++) {
+        const currentLine = lines[j];
+        for (const char of currentLine) {
+          if (char === '{') {
+            braceCount++;
+            foundStart = true;
+          } else if (char === '}') {
+            braceCount--;
+            if (foundStart && braceCount === 0) {
+              methodEndLine = j;
+              break;
+            }
+          }
+        }
+        if (methodEndLine !== -1) break;
+      }
+      break;
+    }
+  }
+
+  if (methodStartLine === -1 || methodEndLine === -1) {
+    return {};
+  }
+
+  const methodCode = lines.slice(methodStartLine, methodEndLine + 1).join('\n');
+
+  // Extract response and error schemas by analyzing res.status().json() patterns
+  let responseSchema: string | undefined;
+  const errorSchemas: string[] = [];
+
+  // Strategy 1: Extract from service method return types
+  const serviceCallMatch = methodCode.match(/await\s+this\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(/);
+  if (serviceCallMatch) {
+    const [, serviceName, serviceMethod] = serviceCallMatch;
+    const serviceFile = path.join(BACKEND_DIR, 'src', 'services', `${serviceName}.ts`);
+    if (fs.existsSync(serviceFile)) {
+      const serviceContent = fs.readFileSync(serviceFile, 'utf-8');
+      const serviceMethodMatch = serviceContent.match(
+        new RegExp(`async\\s+${serviceMethod}\\s*\\([^)]*\\)\\s*:\\s*Promise<([^>]+)>`)
+      );
+      if (serviceMethodMatch) {
+        responseSchema = serviceMethodMatch[1];
+      }
+    }
+  }
+
+  // Strategy 2: Extract from res.json() patterns for success responses
+  if (!responseSchema) {
+    // Pattern 1: res.status(2xx).json(successResponse(...)) OR res.json(successResponse(...))
+    const successResponseMatch = methodCode.match(/res\.(status\(2\d{2}\)\.)?json\(successResponse\(/);
+    if (successResponseMatch) {
+      // Check if it has pagination metadata as second argument to successResponse()
+      // Simpler approach: Check if pagination keywords appear in object literal after successResponse call
+      const successResponseIndex = methodCode.indexOf('successResponse(');
+      const afterSuccessResponse = methodCode.substring(successResponseIndex);
+      // Look for pagination keywords in object literal (both shorthand and full syntax)
+      // Matches: { total: ... } or { total, ... } or { total } (shorthand)
+      const hasPagination = /\{\s*(total|page|limit|totalPages|hasMore)\s*[,:}]/s.test(afterSuccessResponse) &&
+                           // But exclude if it's nested data (like feedback: { total: ... })
+                           !/successResponse\(\s*\{[^}]*(total|page|limit)/s.test(afterSuccessResponse);
+      responseSchema = hasPagination
+        ? '{ status: "success", data: T, meta: PaginationMeta }'
+        : '{ status: "success", data: T }';
+    } else {
+      // Pattern 2: res.status(2xx).json(paginatedResponse(...)) OR res.json(paginatedResponse(...))
+      const paginatedMatch = methodCode.match(/res\.(status\(2\d{2}\)\.)?json\(paginatedResponse\(/);
+      if (paginatedMatch) {
+        responseSchema = '{ status: "success", data: T[], meta: PaginationMeta }';
+      } else {
+        // Pattern 3: res.status(2xx).json({ ... }) OR res.json({ ... })
+        const directJsonMatch = methodCode.match(/res\.(status\(2\d{2}\)\.)?json\(\s*\{/);
+        if (directJsonMatch) {
+          responseSchema = 'Object';
+        }
+      }
+    }
+  }
+
+  // Extract error schemas from res.status(4xx|5xx).json() patterns
+  // Pattern 1: res.status(XXX).json({ error: { code: 'xxx' ... }
+  // Use a more flexible pattern that handles multi-line and nested objects
+  const errorPattern1 = /res\.status\((\d+)\)\.json\([^)]*error:\s*\{[^}]*code:\s*['"]([^'"]+)['"]/gs;
+  let match1;
+  while ((match1 = errorPattern1.exec(methodCode)) !== null) {
+    const [, statusCode, errorCode] = match1;
+    const statusNum = parseInt(statusCode);
+    if (statusNum >= 400 && !errorSchemas.includes(`${statusCode}: ${errorCode}`)) {
+      errorSchemas.push(`${statusCode}: ${errorCode}`);
+    }
+  }
+
+  // Pattern 2: res.status(XXX).json({ success: false ... })
+  const errorPattern2 = /res\.status\((\d+)\)\.json\([^)]*success:\s*false/gs;
+  let match2;
+  while ((match2 = errorPattern2.exec(methodCode)) !== null) {
+    const [, statusCode] = match2;
+    const statusNum = parseInt(statusCode);
+    if (statusNum >= 400 && !errorSchemas.some(e => e.startsWith(statusCode))) {
+      errorSchemas.push(`${statusCode}: error_response`);
+    }
+  }
+
+  // Pattern 3: sendError() or sendServerError() helper calls
+  if (methodCode.includes('sendError(') || methodCode.includes('sendServerError(')) {
+    if (!errorSchemas.some(e => e.startsWith('400'))) {
+      errorSchemas.push('400: validation_error');
+    }
+    if (!errorSchemas.some(e => e.startsWith('500'))) {
+      errorSchemas.push('500: internal_server_error');
+    }
+  }
+
+  return {
+    responseSchema,
+    errorSchemas: errorSchemas.length > 0 ? errorSchemas : undefined,
+  };
+}
+
+/**
  * Find usages of API endpoints in the codebase
  */
 function findEndpointUsages(endpoint: EndpointDefinition, searchDirs: string[]): EndpointUsage[] {
@@ -340,7 +541,7 @@ function analyzeBackend(): ProjectEndpoints {
   const apiDir = path.join(BACKEND_DIR, 'src', 'api');
   const serverFile = path.join(BACKEND_DIR, 'src', 'server.ts');
 
-  const endpoints: EndpointDefinition[] = [];
+  let endpoints: EndpointDefinition[] = [];
 
   // Scan routes directory (primary location)
   if (fs.existsSync(routesDir)) {
@@ -364,6 +565,20 @@ function analyzeBackend(): ProjectEndpoints {
   if (fs.existsSync(serverFile)) {
     const serverEndpoints = extractExpressRoutes(serverFile);
     endpoints.push(...serverEndpoints);
+  }
+
+  // Extract schemas for each endpoint
+  console.log('Extracting schemas...');
+  endpoints.forEach(endpoint => {
+    const schemas = extractSchemas(endpoint);
+    endpoint.responseSchema = schemas.responseSchema;
+    endpoint.errorSchemas = schemas.errorSchemas;
+  });
+
+  // Apply limit if specified
+  if (limit && limit > 0) {
+    console.log(`Limiting to first ${limit} endpoints...`);
+    endpoints = endpoints.slice(0, limit);
   }
 
   // Find usages
@@ -474,8 +689,8 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
     });
 
     // Generate flat table
-    markdown += `| Method | Endpoint | File | Handler | Middleware | Usages |\n`;
-    markdown += `|--------|----------|------|---------|------------|--------|\n`;
+    markdown += `| Method | Endpoint | File | Handler | Response Schema | Error Schemas | Middleware | Usages |\n`;
+    markdown += `|--------|----------|------|---------|-----------------|---------------|------------|--------|\n`;
 
     sortedEndpoints.forEach(endpoint => {
       // Skip root endpoint (any method)
@@ -487,6 +702,10 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
       const endpointPath = endpoint.path;
       const file = `${endpoint.file} L:${endpoint.line}`;
       const handler = endpoint.handler || '-';
+      const responseSchema = endpoint.responseSchema ? `\`${endpoint.responseSchema}\`` : '-';
+      const errorSchemas = endpoint.errorSchemas && endpoint.errorSchemas.length > 0
+        ? endpoint.errorSchemas.map(e => `\`${e}\``).join('<br>')
+        : '-';
       const middleware = endpoint.middleware ? endpoint.middleware.join(', ') : '-';
 
       // Get usages - format with <br> tags for line breaks
@@ -496,7 +715,7 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
         ? usages.map(u => `${u.file} L:${u.line}`).join('<br>')
         : '-';
 
-      markdown += `| ${method} | \`${endpointPath}\` | \`${file}\` | \`${handler}\` | \`${middleware}\` | ${usageStr} |\n`;
+      markdown += `| ${method} | \`${endpointPath}\` | \`${file}\` | \`${handler}\` | ${responseSchema} | ${errorSchemas} | \`${middleware}\` | ${usageStr} |\n`;
     });
 
     markdown += `\n---\n\n`;
@@ -622,7 +841,11 @@ function generateMarkdownReport(projects: ProjectEndpoints[]): string {
 function main() {
   console.log('Starting API endpoint analysis...');
   console.log(`Format: ${format}`);
-  console.log(`Include Tests: ${includeTest}\n`);
+  console.log(`Include Tests: ${includeTest}`);
+  if (limit) {
+    console.log(`Limit: ${limit} endpoints (POC mode)`);
+  }
+  console.log();
 
   const projects: ProjectEndpoints[] = [];
 
