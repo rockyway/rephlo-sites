@@ -68,7 +68,7 @@ function PricingConfiguration() {
   const handleCreateConfig = async (formData: any) => {
     setIsSaving(true);
     try {
-      if (editingConfig) {
+      if (editingConfig?.id) {
         // Update existing config
         const updated = await pricingApi.updatePricingConfig(editingConfig.id, {
           ...formData,
@@ -85,10 +85,11 @@ function PricingConfiguration() {
         setConfigs([newConfig, ...configs]);
         setSuccessMessage('Pricing configuration created successfully');
         setIsCreateDialogOpen(false);
+        setEditingConfig(null);
       }
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || `Failed to ${editingConfig ? 'update' : 'create'} configuration`);
+      setError(err.response?.data?.message || `Failed to ${editingConfig?.id ? 'update' : 'create'} configuration`);
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsSaving(false);
@@ -119,6 +120,22 @@ function PricingConfiguration() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to reject configuration');
       setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  // Handle edit/create for tier multipliers
+  const handleEditTier = (tier: string, config?: PricingConfig) => {
+    if (config) {
+      // Edit existing config
+      setEditingConfig(config);
+    } else {
+      // Create new config for tier
+      setEditingConfig({
+        scopeType: 'tier',
+        subscriptionTier: tier,
+        marginMultiplier: 1.5,
+        reason: 'tier_optimization',
+      } as any);
     }
   };
 
@@ -267,7 +284,7 @@ function PricingConfiguration() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <Button size="sm" variant="ghost" onClick={() => config && setEditingConfig(config)}>
+                        <Button size="sm" variant="ghost" onClick={() => handleEditTier(tier, config)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                       </td>
@@ -423,7 +440,7 @@ function PricingConfiguration() {
           <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-deep-navy-200">
               <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
-                {editingConfig ? 'Edit Configuration' : 'Create Pricing Configuration'}
+                {editingConfig?.id ? 'Edit Configuration' : 'Create Pricing Configuration'}
               </h2>
             </div>
             <div className="p-6">
