@@ -25,6 +25,7 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { PlatformAnalyticsService } from '../services/platform-analytics.service';
 import { validationError } from '../middleware/error.middleware';
+import { successResponse } from '../utils/responses';
 
 // =============================================================================
 // Validation Schemas
@@ -68,14 +69,11 @@ export class AnalyticsController {
     try {
       const mrr = await this.analyticsService.calculateMRR();
 
-      res.status(200).json({
-        success: true,
-        data: {
-          mrr,
-          currency: 'USD',
-          timestamp: new Date().toISOString(),
-        },
-      });
+      res.status(200).json(successResponse({
+        mrr,
+        currency: 'USD',
+        timestamp: new Date().toISOString(),
+      }));
     } catch (error) {
       logger.error('AnalyticsController.getMRR: Error', { error });
       throw error;
@@ -94,14 +92,11 @@ export class AnalyticsController {
     try {
       const arr = await this.analyticsService.calculateARR();
 
-      res.status(200).json({
-        success: true,
-        data: {
-          arr,
-          currency: 'USD',
-          timestamp: new Date().toISOString(),
-        },
-      });
+      res.status(200).json(successResponse({
+        arr,
+        currency: 'USD',
+        timestamp: new Date().toISOString(),
+      }));
     } catch (error) {
       logger.error('AnalyticsController.getARR: Error', { error });
       throw error;
@@ -140,10 +135,7 @@ export class AnalyticsController {
     try {
       const revenueByTier = await this.analyticsService.getRevenueByTier();
 
-      res.status(200).json({
-        success: true,
-        data: revenueByTier,
-      });
+      res.status(200).json(successResponse(revenueByTier));
     } catch (error) {
       logger.error('AnalyticsController.getRevenueByTier: Error', { error });
       throw error;
@@ -166,13 +158,10 @@ export class AnalyticsController {
     try {
       const totalUsers = await this.analyticsService.getTotalActiveUsers();
 
-      res.status(200).json({
-        success: true,
-        data: {
-          totalActiveUsers: totalUsers,
-          timestamp: new Date().toISOString(),
-        },
-      });
+      res.status(200).json(successResponse({
+        totalActiveUsers: totalUsers,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (error) {
       logger.error('AnalyticsController.getTotalActiveUsers: Error', { error });
       throw error;
@@ -191,10 +180,7 @@ export class AnalyticsController {
     try {
       const usersByTier = await this.analyticsService.getUsersByTier();
 
-      res.status(200).json({
-        success: true,
-        data: usersByTier,
-      });
+      res.status(200).json(successResponse(usersByTier));
     } catch (error) {
       logger.error('AnalyticsController.getUsersByTier: Error', { error });
       throw error;
@@ -239,14 +225,11 @@ export class AnalyticsController {
     try {
       const churnRate = await this.analyticsService.getChurnRate(period);
 
-      res.status(200).json({
-        success: true,
-        data: {
-          churnRate,
-          period,
-          timestamp: new Date().toISOString(),
-        },
-      });
+      res.status(200).json(successResponse({
+        churnRate,
+        period,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (error) {
       logger.error('AnalyticsController.getChurnRate: Error', { error });
       throw error;
@@ -265,13 +248,10 @@ export class AnalyticsController {
     try {
       const utilizationRate = await this.analyticsService.getCreditUtilizationRate();
 
-      res.status(200).json({
-        success: true,
-        data: {
-          creditUtilizationRate: utilizationRate,
-          timestamp: new Date().toISOString(),
-        },
-      });
+      res.status(200).json(successResponse({
+        creditUtilizationRate: utilizationRate,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (error) {
       logger.error('AnalyticsController.getCreditUtilizationRate: Error', { error });
       throw error;
@@ -290,13 +270,10 @@ export class AnalyticsController {
     try {
       const conversionRate = await this.analyticsService.getFreeToProConversionRate();
 
-      res.status(200).json({
-        success: true,
-        data: {
-          freeToProConversionRate: conversionRate,
-          timestamp: new Date().toISOString(),
-        },
-      });
+      res.status(200).json(successResponse({
+        freeToProConversionRate: conversionRate,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (error) {
       logger.error('AnalyticsController.getFreeToProConversionRate: Error', { error });
       throw error;
@@ -362,10 +339,7 @@ export class AnalyticsController {
     try {
       const dashboard = await this.analyticsService.getDashboardSummary();
 
-      res.status(200).json({
-        success: true,
-        data: dashboard,
-      });
+      res.status(200).json(successResponse(dashboard));
     } catch (error) {
       logger.error('AnalyticsController.getDashboardSummary: Error', { error });
       throw error;

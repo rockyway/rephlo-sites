@@ -23,6 +23,7 @@ import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
+import { successResponse } from '../utils/responses';
 
 // =============================================================================
 // Admin Controller Class
@@ -163,25 +164,22 @@ export class AdminController {
         diagnostics: diagnosticStats._count.id,
       });
 
-      // Use legacy response format for backward compatibility
-      res.status(200).json({
-        success: true,
-        data: {
-          downloads,
-          feedback: {
-            total: totalFeedback,
-            recentCount: recentFeedbackCount,
-          },
-          diagnostics: {
-            total: diagnosticStats._count.id || 0,
-            totalSize: diagnosticStats._sum.fileSize || 0,
-          },
-          timestamps: {
-            firstDownload: firstDownload?.timestamp.toISOString() || null,
-            lastDownload: lastDownload?.timestamp.toISOString() || null,
-          },
+      // Use modern response format (Phase 2)
+      res.status(200).json(successResponse({
+        downloads,
+        feedback: {
+          total: totalFeedback,
+          recentCount: recentFeedbackCount,
         },
-      });
+        diagnostics: {
+          total: diagnosticStats._count.id || 0,
+          totalSize: diagnosticStats._sum.fileSize || 0,
+        },
+        timestamps: {
+          firstDownload: firstDownload?.timestamp.toISOString() || null,
+          lastDownload: lastDownload?.timestamp.toISOString() || null,
+        },
+      }));
     } catch (error) {
       logger.error('AdminController.getMetrics: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -296,8 +294,8 @@ export class AdminController {
         tier,
       });
 
-      res.json({
-        users: users.map((user) => {
+      res.json(successResponse(
+        users.map((user) => {
           const activeSubscription = user.subscriptions[0] || null;
           return {
             id: user.id,
@@ -318,13 +316,14 @@ export class AdminController {
               : null,
           };
         }),
-        pagination: {
+        {
+          total,
           page,
           limit,
-          total,
           totalPages: Math.ceil(total / limit),
-        },
-      });
+          hasMore: page * limit + users.length < total
+        }
+      ));
     } catch (error) {
       logger.error('AdminController.listUsers: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -397,11 +396,10 @@ export class AdminController {
         reason: reason || 'No reason provided',
       });
 
-      res.json({
-        success: true,
+      res.json(successResponse({
         message: `User ${id} suspended`,
         note: 'Suspension functionality requires User model update (add suspended field)',
-      });
+      }));
     } catch (error) {
       logger.error('AdminController.suspendUser: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -472,7 +470,7 @@ export class AdminController {
         tierCount: Object.keys(byTier).length,
       });
 
-      res.json({
+      res.json(successResponse({
         subscriptionStats: stats.map((s) => ({
           tier: s.tier,
           status: s.status,
@@ -481,7 +479,7 @@ export class AdminController {
         totalActive,
         byTier,
         byStatus,
-      });
+      }));
     } catch (error) {
       logger.error('AdminController.getSubscriptionOverview: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -618,7 +616,7 @@ export class AdminController {
         endDate: endDate?.toISOString(),
       });
 
-      res.json({
+      res.json(successResponse({
         totalOperations: aggregates._count.id || 0,
         totalCreditsUsed: aggregates._sum.creditsUsed || 0,
         byModel: byModel.map((m: any) => ({
@@ -635,7 +633,7 @@ export class AdminController {
           startDate: startDate?.toISOString() || null,
           endDate: endDate?.toISOString() || null,
         },
-      });
+      }));
     } catch (error) {
       logger.error('AdminController.getSystemUsage: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -739,12 +737,11 @@ export class AdminController {
         payload: testPayload,
       });
 
-      res.json({
-        success: true,
+      res.json(successResponse({
         message: 'Test webhook functionality pending',
         note: 'Requires WebhookService.sendTestWebhook implementation',
         payload: testPayload,
-      });
+      }));
     } catch (error) {
       logger.error('AdminController.testWebhook: Error', {
         error: error instanceof Error ? error.message : String(error),

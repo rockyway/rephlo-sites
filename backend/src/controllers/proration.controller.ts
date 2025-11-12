@@ -340,24 +340,89 @@ export class ProrationController {
    */
   async reverseProration(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      res.status(400).json({
+        error: {
+          code: 'validation_error',
+          message: 'Reason is required for proration reversal',
+        },
+      });
+      return;
+    }
 
     try {
-      // This would implement the reversal logic
-      // For now, placeholder
-      res.status(501).json({
-        error: {
-          code: 'not_implemented',
-          message: 'Proration reversal not yet implemented',
+      const adminUserId = (req as any).userId;
+      const reversedEvent = await this.prorationService.reverseProration(id, reason, adminUserId);
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          id: reversedEvent.id,
+          originalProrationId: id,
+          userId: reversedEvent.userId,
+          subscriptionId: reversedEvent.subscriptionId,
+          fromTier: reversedEvent.fromTier,
+          toTier: reversedEvent.toTier,
+          netCharge: Number(reversedEvent.netChargeUsd),
+          status: reversedEvent.status,
+          effectiveDate: reversedEvent.effectiveDate.toISOString(),
+          reason,
+          message: 'Proration reversed successfully',
         },
       });
     } catch (error) {
-      logger.error('Failed to reverse proration', { prorationId: id, error });
-      res.status(500).json({
-        error: {
-          code: 'internal_server_error',
-          message: 'Failed to reverse proration',
-        },
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          error: {
+            code: 'proration_not_found',
+            message: error.message,
+          },
+        });
+      } else {
+        logger.error('Failed to reverse proration', { prorationId: id, error });
+        res.status(500).json({
+          error: {
+            code: 'internal_server_error',
+            message: 'Failed to reverse proration',
+          },
+        });
+      }
+    }
+  }
+
+  /**
+   * GET /admin/prorations/:id/calculation
+   * Get detailed calculation breakdown for a proration event (admin only)
+   */
+  async getCalculationBreakdown(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
+    try {
+      const breakdown = await this.prorationService.getCalculationBreakdown(id);
+
+      res.status(200).json({
+        status: 'success',
+        data: breakdown,
       });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          error: {
+            code: 'proration_not_found',
+            message: error.message,
+          },
+        });
+      } else {
+        logger.error('Failed to get calculation breakdown', { prorationId: id, error });
+        res.status(500).json({
+          error: {
+            code: 'internal_server_error',
+            message: 'Failed to retrieve calculation breakdown',
+          },
+        });
+      }
     }
   }
 }

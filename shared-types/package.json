@@ -1,0 +1,27 @@
+{
+  "name": "@rephlo/shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Rephlo backend and frontend",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "rephlo",
+    "types",
+    "typescript"
+  ],
+  "author": "Rephlo Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  }
+}

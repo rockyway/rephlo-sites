@@ -29,6 +29,8 @@ import {
   safeValidateRequest,
 } from '../types/coupon-validation';
 import logger from '../utils/logger';
+import { sendPaginatedResponse, successResponse } from '../utils/responses';
+import { mapCouponToApiType, mapRedemptionToApiType } from '../utils/typeMappers';
 
 @injectable()
 export class CouponController {
@@ -218,10 +220,14 @@ export class CouponController {
           internalNotes: data.internal_notes || null,
           createdBy: adminUserId,
         },
+        include: {
+          usageLimits: true,
+          campaign: true,
+        },
       });
 
       // Create usage limits record
-      await this.prisma.couponUsageLimit.create({
+      const usageLimits = await this.prisma.couponUsageLimit.create({
         data: {
           couponId: coupon.id,
           totalUses: 0,
@@ -230,13 +236,25 @@ export class CouponController {
         },
       });
 
+      // Return full object like getSingleCoupon
       res.status(201).json({
         id: coupon.id,
         code: coupon.code,
-        coupon_type: coupon.couponType,
-        discount_value: parseFloat(coupon.discountValue.toString()),
-        discount_type: coupon.discountType,
+        type: coupon.couponType,
+        discount_percentage: coupon.couponType === 'percentage' ? parseFloat(coupon.discountValue.toString()) : undefined,
+        discount_amount: coupon.couponType === 'fixed_amount' ? parseFloat(coupon.discountValue.toString()) : undefined,
+        bonus_duration_months: coupon.couponType === 'duration_bonus' ? parseInt(coupon.discountValue.toString()) : undefined,
+        max_discount_applications: coupon.maxUses || null,
+        redemption_count: usageLimits.totalUses,
+        total_discount_value: parseFloat(usageLimits.totalDiscountAppliedUsd.toString()),
+        valid_from: coupon.validFrom.toISOString(),
+        valid_until: coupon.validUntil.toISOString(),
+        is_active: coupon.isActive,
+        description: coupon.description,
+        campaign_id: coupon.campaignId,
+        campaign_name: (coupon as any).campaign?.campaignName || null,
         created_at: coupon.createdAt.toISOString(),
+        updated_at: coupon.updatedAt.toISOString(),
       });
     } catch (error: any) {
       logger.error('Failed to create coupon', { error });
@@ -274,11 +292,30 @@ export class CouponController {
       const coupon = await this.prisma.coupon.update({
         where: { id },
         data: updateData,
+        include: {
+          usageLimits: true,
+          campaign: true,
+        },
       });
 
+      // Return full object like getSingleCoupon
       res.json({
         id: coupon.id,
         code: coupon.code,
+        type: coupon.couponType,
+        discount_percentage: coupon.couponType === 'percentage' ? parseFloat(coupon.discountValue.toString()) : undefined,
+        discount_amount: coupon.couponType === 'fixed_amount' ? parseFloat(coupon.discountValue.toString()) : undefined,
+        bonus_duration_months: coupon.couponType === 'duration_bonus' ? parseInt(coupon.discountValue.toString()) : undefined,
+        max_discount_applications: coupon.maxUses || null,
+        redemption_count: coupon.usageLimits?.totalUses || 0,
+        total_discount_value: parseFloat(coupon.usageLimits?.totalDiscountAppliedUsd.toString() || '0'),
+        valid_from: coupon.validFrom.toISOString(),
+        valid_until: coupon.validUntil.toISOString(),
+        is_active: coupon.isActive,
+        description: coupon.description,
+        campaign_id: coupon.campaignId,
+        campaign_name: (coupon as any).campaign?.campaignName || null,
+        created_at: coupon.createdAt.toISOString(),
         updated_at: coupon.updatedAt.toISOString(),
       });
     } catch (error: any) {
@@ -315,34 +352,90 @@ export class CouponController {
   }
 
   /**
-   * GET /admin/coupons
-   * List all coupons (admin only)
+   * GET /admin/coupons/:id
+   * Get a single coupon by ID (admin only)
    */
-  async listCoupons(_req: Request, res: Response): Promise<void> {
+  async getSingleCoupon(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
     try {
-      const coupons = await this.prisma.coupon.findMany({
-        orderBy: { createdAt: 'desc' },
+      const coupon = await this.prisma.coupon.findUnique({
+        where: { id },
         include: {
           usageLimits: true,
           campaign: true,
         },
       });
 
-      res.json({
-        coupons: coupons.map((c) => ({
-          id: c.id,
-          code: c.code,
-          coupon_type: c.couponType,
-          discount_value: parseFloat(c.discountValue.toString()),
-          discount_type: c.discountType,
-          max_uses: c.maxUses,
-          total_uses: c.usageLimits?.totalUses || 0,
-          is_active: c.isActive,
-          valid_from: c.validFrom.toISOString(),
-          valid_until: c.validUntil.toISOString(),
-          campaign_name: (c as any).campaign?.campaignName || null,
-        })),
+      if (!coupon) {
+        res.status(404).json({
+          error: {
+            code: 'coupon_not_found',
+            message: 'Coupon not found',
+          },
+        });
+        return;
+      }
+
+      // Map to shared Coupon type using mapper
+      const mappedCoupon = mapCouponToApiType(coupon);
+      res.json(mappedCoupon);
+    } catch (error: any) {
+      logger.error('Failed to get coupon', { id, error });
+      res.status(500).json({
+        error: {
+          code: 'internal_server_error',
+          message: 'Failed to retrieve coupon',
+        },
       });
+    }
+  }
+
+  /**
+   * GET /admin/coupons
+   * List all coupons (admin only)
+   *
+   * Query params:
+   * - page: number (default: 0)
+   * - limit: number (default: 50)
+   * - status: string (optional filter)
+   * - type: string (optional filter)
+   */
+  async listCoupons(req: Request, res: Response): Promise<void> {
+    try {
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Cap at 100
+
+      // Build filter conditions
+      const where: any = {};
+      if (req.query.status) {
+        where.isActive = req.query.status === 'active';
+      }
+      if (req.query.type) {
+        where.couponType = req.query.type;
+      }
+
+      // Fetch coupons with pagination
+      const [coupons, total] = await Promise.all([
+        this.prisma.coupon.findMany({
+          where,
+          skip: page * limit,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            usageLimits: true,
+            campaign: true,
+          },
+        }),
+        this.prisma.coupon.count({ where }),
+      ]);
+
+      // Map to shared Coupon type using mapper
+      const mappedCoupons = coupons.map((c) => mapCouponToApiType(c));
+
+      // Send modern paginated response
+      sendPaginatedResponse(res, mappedCoupons, total, page, limit);
     } catch (error: any) {
       logger.error('Failed to list coupons', { error });
       res.status(500).json({
@@ -357,25 +450,52 @@ export class CouponController {
   /**
    * GET /admin/coupons/:id/redemptions
    * Get redemption history (admin only)
+   *
+   * Query params:
+   * - page: number (default: 0)
+   * - limit: number (default: 50)
    */
   async getCouponRedemptions(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
 
     try {
-      const redemptions = await this.redemptionService.getCouponRedemptions(id);
-      const stats = await this.redemptionService.getRedemptionStats(id);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
-      res.json({
-        stats,
-        redemptions: redemptions.map((r) => ({
-          id: r.id,
-          user_id: r.userId,
-          discount_applied: parseFloat(r.discountAppliedUsd.toString()),
-          status: r.redemptionStatus,
-          redeemed_at: r.redemptionDate.toISOString(),
-          ip_address: r.ipAddress,
-        })),
-      });
+      // Fetch redemptions with pagination
+      const [redemptions, total, stats] = await Promise.all([
+        this.prisma.couponRedemption.findMany({
+          where: { couponId: id },
+          skip: page * limit,
+          take: limit,
+          orderBy: { redemptionDate: 'desc' },
+        }),
+        this.prisma.couponRedemption.count({ where: { couponId: id } }),
+        this.redemptionService.getRedemptionStats(id),
+      ]);
+
+      // Map redemptions to response format
+      const mappedRedemptions = redemptions.map((r) => ({
+        id: r.id,
+        user_id: r.userId,
+        discount_applied: parseFloat(r.discountAppliedUsd.toString()),
+        status: r.redemptionStatus,
+        redeemed_at: r.redemptionDate.toISOString(),
+        ip_address: r.ipAddress,
+      }));
+
+      // Send modern response with stats in data object
+      res.json(successResponse({
+        redemptions: mappedRedemptions,
+        stats
+      }, {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit + redemptions.length < total
+      }));
     } catch (error: any) {
       logger.error('Failed to get coupon redemptions', { id, error });
       res.status(500).json({

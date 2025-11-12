@@ -26,6 +26,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import logger from '../utils/logger';
 import { BillingPaymentsService } from '../services/billing-payments.service';
+import { successResponse } from '../utils/responses';
 import {
   badRequestError,
   validationError,
@@ -270,16 +271,14 @@ export class BillingController {
 
       const result = await this.billingService.listAllInvoices(page, limit);
 
-      res.status(200).json({
-        success: true,
-        data: result.data,
-        meta: {
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: result.totalPages,
-        },
-      });
+      // Use modern response format
+      res.status(200).json(successResponse(result.data, {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+        hasMore: result.page * result.limit + result.data.length < result.total
+      }));
     } catch (error) {
       logger.error('BillingController.listInvoices: Error', { error });
       throw error;

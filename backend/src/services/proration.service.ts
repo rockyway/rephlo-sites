@@ -626,4 +626,132 @@ export class ProrationService {
   private roundToTwoDecimals(value: number): number {
     return Math.round(value * 100) / 100;
   }
+
+  // ===========================================================================
+  // Proration Reversal
+  // ===========================================================================
+
+  /**
+   * Reverse a proration event
+   * Creates a reverse proration event and restores subscription to original tier
+   * @param prorationId - Proration event ID to reverse
+   * @param reason - Reason for reversal
+   * @param adminUserId - Admin user ID performing the reversal
+   * @returns New reverse proration event
+   */
+  async reverseProration(
+    prorationId: string,
+    reason: string,
+    adminUserId: string
+  ): Promise<ProrationEvent> {
+    // Get original proration event
+    const originalEvent = await this.getProrationEventById(prorationId);
+
+    // Check if already reversed
+    if (originalEvent.status === 'reversed') {
+      throw new Error('Proration event has already been reversed');
+    }
+
+    // Create reverse proration event (swap tiers, negate amounts)
+    const reverseEvent = await this.prisma.prorationEvent.create({
+      data: {
+        userId: originalEvent.userId,
+        subscriptionId: originalEvent.subscriptionId,
+        fromTier: originalEvent.toTier, // Swap tiers
+        toTier: originalEvent.fromTier,
+        changeType: 'migration', // Use migration type for reversals
+        daysRemaining: originalEvent.daysRemaining,
+        daysInCycle: originalEvent.daysInCycle,
+        unusedCreditValueUsd: -originalEvent.unusedCreditValueUsd, // Negate amounts
+        newTierProratedCostUsd: -originalEvent.newTierProratedCostUsd,
+        netChargeUsd: -originalEvent.netChargeUsd,
+        effectiveDate: new Date(),
+        status: 'applied',
+        stripeInvoiceId: null, // No Stripe invoice for manual reversal
+      },
+    });
+
+    // Mark original proration as reversed
+    await this.prisma.prorationEvent.update({
+      where: { id: prorationId },
+      data: { status: 'reversed' },
+    });
+
+    // Restore subscription to original tier
+    await this.prisma.subscriptionMonetization.update({
+      where: { id: originalEvent.subscriptionId },
+      data: {
+        tier: originalEvent.fromTier as any,
+        basePriceUsd: this.TIER_PRICING[originalEvent.fromTier || 'free'] || 0,
+      },
+    });
+
+    logger.warn('ProrationService: Proration reversed', {
+      originalProrationId: prorationId,
+      reverseProrationId: reverseEvent.id,
+      adminUserId,
+      reason,
+    });
+
+    return reverseEvent;
+  }
+
+  /**
+   * Get calculation breakdown for a proration event
+   * @param prorationId - Proration event ID
+   * @returns Detailed calculation breakdown
+   */
+  async getCalculationBreakdown(prorationId: string): Promise<{
+    originalTier: string;
+    originalPrice: number;
+    newTier: string;
+    newPrice: number;
+    billingCycle: number;
+    changeDate: string;
+    daysRemaining: number;
+    steps: {
+      unusedCredit: { calculation: string; amount: number };
+      newTierCost: { calculation: string; amount: number };
+      netCharge: { calculation: string; amount: number };
+    };
+    stripeInvoiceUrl?: string;
+    status: string;
+  }> {
+    const event = await this.getProrationEventById(prorationId);
+
+    const originalPrice = this.TIER_PRICING[event.fromTier || 'free'] || 0;
+    const newPrice = this.TIER_PRICING[event.toTier || 'free'] || 0;
+
+    const unusedCreditAmount = Number(event.unusedCreditValueUsd);
+    const newTierCostAmount = Number(event.newTierProratedCostUsd);
+    const netChargeAmount = Number(event.netChargeUsd);
+
+    return {
+      originalTier: event.fromTier || 'unknown',
+      originalPrice,
+      newTier: event.toTier || 'unknown',
+      newPrice,
+      billingCycle: event.daysInCycle,
+      changeDate: event.effectiveDate.toISOString(),
+      daysRemaining: event.daysRemaining,
+      steps: {
+        unusedCredit: {
+          calculation: `(${event.daysRemaining} / ${event.daysInCycle}) × $${originalPrice.toFixed(2)}`,
+          amount: unusedCreditAmount,
+        },
+        newTierCost: {
+          calculation: `(${event.daysRemaining} / ${event.daysInCycle}) × $${newPrice.toFixed(2)}`,
+          amount: newTierCostAmount,
+        },
+        netCharge: {
+          calculation: `$${newTierCostAmount.toFixed(2)} - $${unusedCreditAmount.toFixed(2)}`,
+          amount: netChargeAmount,
+        },
+      },
+      stripeInvoiceUrl: event.stripeInvoiceId
+        ? `https://dashboard.stripe.com/invoices/${event.stripeInvoiceId}`
+        : undefined,
+      status: event.status,
+    };
+  }
 }

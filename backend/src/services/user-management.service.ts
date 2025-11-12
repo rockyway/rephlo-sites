@@ -22,6 +22,16 @@ import { notFoundError } from '../middleware/error.middleware';
 import { RoleCacheService } from './role-cache.service';
 import { PermissionCacheService } from './permission-cache.service';
 import { SessionManagementService } from './session-management.service';
+import {
+  User,
+  UserDetails,
+  UserListResponse,
+  PaginationParams,
+} from '@rephlo/shared-types';
+import {
+  mapUserToApiType,
+  mapUserDetailsToApiType,
+} from '../utils/typeMappers';
 
 // =============================================================================
 // Types and Interfaces
@@ -47,30 +57,6 @@ export interface PaginatedUsers {
   page: number;
   limit: number;
   totalPages: number;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  username: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  profilePictureUrl: string | null;
-  isActive: boolean;
-  role: string;
-  createdAt: Date;
-  lastLoginAt: Date | null;
-  // Moderation fields
-  deactivatedAt: Date | null;
-  deletedAt: Date | null;
-}
-
-export interface UserDetails extends User {
-  emailVerified: boolean;
-  status: string; // PHASE 1 FIX: Add status field
-  subscriptionTier?: string;
-  creditsRemaining?: number;
-  totalApiCalls?: number;
 }
 
 export interface UserProfileUpdates {
@@ -219,15 +205,8 @@ export class UserManagementService {
 
       const totalPages = Math.ceil(total / pagination.limit);
 
-      // PHASE 1 FIX: Map users to include flattened credit balance and tier
-      const mappedUsers = users.map((user) => ({
-        ...user,
-        creditsBalance: user.credit_balance?.amount || 0,
-        currentTier: user.subscriptionMonetization[0]?.tier || 'free',
-        // Keep original relations for potential frontend use
-        userCreditBalance: user.credit_balance,
-        subscription: user.subscriptionMonetization[0] || null,
-      }));
+      // Map database users to API type using shared type mapper
+      const mappedUsers = users.map((user) => mapUserToApiType(user));
 
       logger.info('UserManagementService: Users listed', {
         count: users.length,
@@ -313,8 +292,13 @@ export class UserManagementService {
             orderBy: { createdAt: 'desc' },
             take: 1,
           },
-          usageHistory: {
-            take: 1,
+          credit_balance: true,
+          token_usage: {
+            take: 100,
+            orderBy: { createdAt: 'desc' },
+          },
+          credit_deductions: {
+            take: 100,
             orderBy: { createdAt: 'desc' },
           },
         },
@@ -329,28 +313,31 @@ export class UserManagementService {
         where: { userId },
       });
 
-      // TODO: Get credits remaining from Plan 112's user_credit_balance
-      const creditsRemaining = 0;
+      // Calculate credits used from deductions
+      const creditsUsed = user.credit_deductions.reduce(
+        (sum, deduction) => sum + deduction.amount,
+        0
+      );
 
-      const userDetails: UserDetails = {
-        id: user.id,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profilePictureUrl: user.profilePictureUrl,
-        isActive: user.isActive,
-        status: user.status, // PHASE 1 FIX: Include status enum from database
-        role: user.role,
-        createdAt: user.createdAt,
-        lastLoginAt: user.lastLoginAt,
-        deactivatedAt: user.deactivatedAt,
-        deletedAt: user.deletedAt,
-        subscriptionTier: user.subscriptionMonetization[0]?.tier || 'free',
-        creditsRemaining,
+      // Calculate average calls per day (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const recentApiCalls = await this.prisma.usageHistory.count({
+        where: {
+          userId,
+          createdAt: { gte: thirtyDaysAgo },
+        },
+      });
+      const averageCallsPerDay = recentApiCalls / 30;
+
+      const usageStats = {
         totalApiCalls,
+        creditsUsed,
+        averageCallsPerDay: Math.round(averageCallsPerDay * 100) / 100,
       };
+
+      // Map to shared UserDetails type using type mapper
+      const userDetails = mapUserDetailsToApiType(user, usageStats);
 
       logger.info('UserManagementService: User details retrieved', { userId });
 
@@ -382,9 +369,21 @@ export class UserManagementService {
         },
       });
 
+      // Fetch updated user with relations for mapper
+      const updatedUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptionMonetization: {
+            where: { status: { in: ['trial', 'active'] } },
+            take: 1,
+          },
+          credit_balance: true,
+        },
+      });
+
       logger.info('UserManagementService: User profile updated', { userId });
 
-      return this.mapUser(user);
+      return mapUserToApiType(updatedUser!);
     } catch (error) {
       logger.error('UserManagementService.editUserProfile: Error', { error });
       throw error;
@@ -423,9 +422,21 @@ export class UserManagementService {
       //   data: { userId, reason, suspendedAt: now, expiresAt }
       // });
 
+      // Fetch user with relations for mapper
+      const updatedUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptionMonetization: {
+            where: { status: { in: ['trial', 'active'] } },
+            take: 1,
+          },
+          credit_balance: true,
+        },
+      });
+
       logger.info('UserManagementService: User suspended', { userId, expiresAt });
 
-      return this.mapUser(user);
+      return mapUserToApiType(updatedUser!);
     } catch (error) {
       logger.error('UserManagementService.suspendUser: Error', { error });
       throw error;
@@ -450,9 +461,21 @@ export class UserManagementService {
         },
       });
 
+      // Fetch user with relations for mapper
+      const updatedUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptionMonetization: {
+            where: { status: { in: ['trial', 'active'] } },
+            take: 1,
+          },
+          credit_balance: true,
+        },
+      });
+
       logger.info('UserManagementService: User unsuspended', { userId });
 
-      return this.mapUser(user);
+      return mapUserToApiType(updatedUser!);
     } catch (error) {
       logger.error('UserManagementService.unsuspendUser: Error', { error });
       throw error;
@@ -483,9 +506,21 @@ export class UserManagementService {
 
       // TODO: Store ban reason in separate table or use metadata field
 
+      // Fetch user with relations for mapper
+      const updatedUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptionMonetization: {
+            where: { status: { in: ['trial', 'active'] } },
+            take: 1,
+          },
+          credit_balance: true,
+        },
+      });
+
       logger.info('UserManagementService: User banned', { userId, permanent });
 
-      return this.mapUser(user);
+      return mapUserToApiType(updatedUser!);
     } catch (error) {
       logger.error('UserManagementService.banUser: Error', { error });
       throw error;
@@ -510,9 +545,21 @@ export class UserManagementService {
         },
       });
 
+      // Fetch user with relations for mapper
+      const updatedUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptionMonetization: {
+            where: { status: { in: ['trial', 'active'] } },
+            take: 1,
+          },
+          credit_balance: true,
+        },
+      });
+
       logger.info('UserManagementService: User unbanned', { userId });
 
-      return this.mapUser(user);
+      return mapUserToApiType(updatedUser!);
     } catch (error) {
       logger.error('UserManagementService.unbanUser: Error', { error });
       throw error;
@@ -718,27 +765,4 @@ export class UserManagementService {
     }
   }
 
-  // ===========================================================================
-  // Private Helper Methods
-  // ===========================================================================
-
-  /**
-   * Map Prisma user to service interface
-   */
-  private mapUser(user: any): User {
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profilePictureUrl: user.profilePictureUrl,
-      isActive: user.isActive,
-      role: user.role,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
-      deactivatedAt: user.deactivatedAt,
-      deletedAt: user.deletedAt,
-    };
-  }
 }

@@ -1004,6 +1004,12 @@ model LicenseActivation {
   // Status
   status ActivationStatus @default(active)
 
+  // Fraud Detection
+  ipAddress       String?  @map("ip_address") @db.VarChar(45) // IPv4/IPv6 address
+  ipAddressHash   String?  @map("ip_address_hash") @db.VarChar(64) // SHA-256 hash for privacy
+  isSuspicious    Boolean  @default(false) @map("is_suspicious") // Fraud flag
+  suspiciousFlags Json?    @default("[]") @map("suspicious_flags") @db.JsonB // Array of fraud indicators
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1018,6 +1024,8 @@ model LicenseActivation {
   @@index([machineFingerprint])
   @@index([status])
   @@index([activatedAt])
+  @@index([isSuspicious])
+  @@index([ipAddressHash])
   @@map("license_activation")
 }
 
