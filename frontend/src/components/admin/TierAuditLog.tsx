@@ -75,9 +75,9 @@ function TierAuditLog({
 
   if (!logs || (logs.length === 0 && !isLoading)) {
     return (
-      <div className="text-center py-12 bg-deep-navy-50 rounded-lg">
-        <AlertCircle className="h-12 w-12 text-deep-navy-300 mx-auto mb-3" />
-        <p className="text-body text-deep-navy-700">No audit logs found</p>
+      <div className="text-center py-12 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg">
+        <AlertCircle className="h-12 w-12 text-deep-navy-300 dark:text-deep-navy-600 mx-auto mb-3" />
+        <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">No audit logs found</p>
       </div>
     );
   }
