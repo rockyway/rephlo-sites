@@ -177,7 +177,7 @@ function ProrationTracking() {
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
-{/* Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Proration Tracking</h1>
@@ -190,81 +190,82 @@ function ProrationTracking() {
           Refresh
         </Button>
       </div>
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
+
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-green-600" />
+          <p className="text-body text-green-800">{successMessage}</p>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-body text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Prorations This Month</h3>
+              <Calculator className="h-5 w-5 text-rephlo-blue" />
+            </div>
+            <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalProrations)}</p>
           </div>
-        )}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
+
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Net Proration Revenue</h3>
+              <DollarSign
+                className={cn('h-5 w-5', stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600')}
+              />
+            </div>
+            <p
+              className={cn(
+                'text-h2 font-bold',
+                stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600'
+              )}
+            >
+              {stats.netRevenue >= 0 ? '+' : ''}
+              {formatCurrency(stats.netRevenue, 0)}
+            </p>
+            <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+              {stats.netRevenue >= 0 ? 'Collected' : 'Refunded'}
+            </p>
           </div>
-        )}
 
-        {/* Quick Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Prorations This Month</h3>
-                <Calculator className="h-5 w-5 text-rephlo-blue" />
-              </div>
-              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalProrations)}</p>
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Average Net Charge</h3>
+              <TrendingUp className="h-5 w-5 text-rephlo-blue" />
             </div>
-
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Net Proration Revenue</h3>
-                <DollarSign
-                  className={cn('h-5 w-5', stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600')}
-                />
-              </div>
-              <p
-                className={cn(
-                  'text-h2 font-bold',
-                  stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600'
-                )}
-              >
-                {stats.netRevenue >= 0 ? '+' : ''}
-                {formatCurrency(stats.netRevenue, 0)}
-              </p>
-              <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                {stats.netRevenue >= 0 ? 'Collected' : 'Refunded'}
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Average Net Charge</h3>
-                <TrendingUp className="h-5 w-5 text-rephlo-blue" />
-              </div>
-              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.avgNetCharge)}</p>
-            </div>
-
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Pending Prorations</h3>
-                <Clock
-                  className={cn('h-5 w-5', stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-400')}
-                />
-              </div>
-              <p
-                className={cn(
-                  'text-h2 font-bold',
-                  stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-800'
-                )}
-              >
-                {stats.pendingProrations}
-              </p>
-            </div>
+            <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.avgNetCharge)}</p>
           </div>
-        )}
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Pending Prorations</h3>
+              <Clock
+                className={cn('h-5 w-5', stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-400')}
+              />
+            </div>
+            <p
+              className={cn(
+                'text-h2 font-bold',
+                stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-800'
+              )}
+            >
+              {stats.pendingProrations}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
           <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Change Type Filter */}
