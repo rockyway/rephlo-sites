@@ -10,35 +10,43 @@
 // Import shared types from @rephlo/shared-types
 import type {
   User,
-  UserStatus,
   Subscription,
+  SubscriptionStats,
+  BillingInvoice as Invoice,
+  PaymentTransaction as Transaction,
+  CreditAllocation,
+  UsageStats,
+  PaginationData,
+} from '@rephlo/shared-types';
+
+// Import enums as runtime values (not type-only)
+import {
+  UserStatus,
   SubscriptionTier,
   SubscriptionStatus,
   BillingCycle,
-  SubscriptionStats,
-  BillingInvoice as Invoice,
   InvoiceStatus,
-  PaymentTransaction as Transaction,
   PaymentStatus,
-  CreditAllocation,
   CreditSource,
-  UsageStats,
-  PaginationData,
 } from '@rephlo/shared-types';
 
 // Re-export commonly used types for convenience
 export type {
   User,
-  UserStatus,
   Subscription,
+  SubscriptionStats,
+  UsageStats,
+};
+
+// Re-export enums as values (not types)
+export {
+  UserStatus,
   SubscriptionTier,
   SubscriptionStatus,
   BillingCycle,
-  SubscriptionStats,
   InvoiceStatus,
   PaymentStatus,
   CreditSource,
-  UsageStats,
 };
 
 // Re-export with alias for backward compatibility

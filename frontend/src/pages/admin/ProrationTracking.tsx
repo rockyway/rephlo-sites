@@ -161,13 +161,13 @@ function ProrationTracking() {
 
     switch (sortBy) {
       case 'changeDate':
-        compareValue = new Date(a.changeDate).getTime() - new Date(b.changeDate).getTime();
+        compareValue = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         break;
       case 'netCharge':
-        compareValue = a.netCharge - b.netCharge;
+        compareValue = a.netChargeUsd - b.netChargeUsd;
         break;
       case 'changeType':
-        compareValue = a.eventType.localeCompare(b.eventType);
+        compareValue = a.changeType.localeCompare(b.changeType);
         break;
     }
 
@@ -284,7 +284,7 @@ function ProrationTracking() {
                 <option value="">All Types</option>
                 <option value={ProrationEventType.UPGRADE}>Upgrade</option>
                 <option value={ProrationEventType.DOWNGRADE}>Downgrade</option>
-                <option value={ProrationEventType.CYCLE_CHANGE}>Billing Cycle Change</option>
+                <option value={ProrationEventType.INTERVAL_CHANGE}>Billing Cycle Change</option>
                 <option value={ProrationEventType.MIGRATION}>Migration</option>
                 <option value={ProrationEventType.CANCELLATION}>Cancellation</option>
               </select>
@@ -455,7 +455,7 @@ function ProrationTracking() {
                 </thead>
                 <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {sortedProrations.map((proration) => {
-                    const netChargeData = formatNetCharge(proration.netCharge);
+                    const netChargeData = formatNetCharge(proration.netChargeUsd);
 
                     return (
                       <tr key={proration.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
@@ -479,19 +479,19 @@ function ProrationTracking() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <ProrationChangeTypeBadge type={proration.eventType} />
+                          <ProrationChangeTypeBadge type={proration.changeType} />
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">{proration.daysRemaining} days</span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-green-600 font-medium">
-                            {formatCurrency(proration.unusedCredit)}
+                            {formatCurrency(proration.unusedCreditValueUsd)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-rephlo-blue font-medium">
-                            {formatCurrency(proration.newTierCost)}
+                            {formatCurrency(proration.prorationCreditChargedUsd)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -502,7 +502,7 @@ function ProrationTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                            {formatDate(proration.changeDate)}
+                            {formatDate(proration.createdAt)}
                           </span>
                         </td>
                         <td className="px-6 py-4">

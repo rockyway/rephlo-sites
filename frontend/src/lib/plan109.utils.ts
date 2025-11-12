@@ -191,6 +191,9 @@ export function getSubscriptionStatusDisplay(status: SubscriptionStatus): string
     [SubscriptionStatus.CANCELLED]: 'Cancelled',
     [SubscriptionStatus.EXPIRED]: 'Expired',
     [SubscriptionStatus.SUSPENDED]: 'Suspended',
+    [SubscriptionStatus.GRACE_PERIOD]: 'Grace Period',
+    [SubscriptionStatus.INACTIVE]: 'Inactive',
+    [SubscriptionStatus.PENDING]: 'Pending',
   };
   return names[status] || status;
 }
@@ -206,6 +209,9 @@ export function getSubscriptionStatusColor(status: SubscriptionStatus): string {
     [SubscriptionStatus.CANCELLED]: 'bg-gray-100 text-gray-700 border-gray-300',
     [SubscriptionStatus.EXPIRED]: 'bg-gray-100 text-gray-700 border-gray-300',
     [SubscriptionStatus.SUSPENDED]: 'bg-amber-100 text-amber-700 border-amber-300',
+    [SubscriptionStatus.GRACE_PERIOD]: 'bg-orange-100 text-orange-700 border-orange-300',
+    [SubscriptionStatus.INACTIVE]: 'bg-gray-100 text-gray-700 border-gray-300',
+    [SubscriptionStatus.PENDING]: 'bg-yellow-100 text-yellow-700 border-yellow-300',
   };
   return colors[status] || 'bg-gray-100 text-gray-700';
 }

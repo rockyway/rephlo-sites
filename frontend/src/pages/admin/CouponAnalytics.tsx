@@ -36,6 +36,8 @@ import type {
   CouponAnalyticsMetrics,
   TopPerformingCoupon,
   FraudDetectionEvent,
+} from '@rephlo/shared-types';
+import {
   FraudSeverity,
   FraudResolution,
 } from '@rephlo/shared-types';
@@ -179,24 +181,24 @@ function CouponAnalytics() {
               Total Redemptions
             </div>
             <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
-              {formatNumber(metrics.total_redemptions)}
+              {formatNumber(metrics.totalRedemptions)}
             </div>
-            {metrics.month_over_month_change?.redemptions !== undefined && (
+            {metrics.monthOverMonthChange?.redemptions !== undefined && (
               <div
                 className={cn(
                   'mt-1 flex items-center text-sm',
-                  metrics.month_over_month_change.redemptions >= 0
+                  metrics.monthOverMonthChange.redemptions >= 0
                     ? 'text-green-600'
                     : 'text-red-600'
                 )}
               >
-                {metrics.month_over_month_change.redemptions >= 0 ? (
+                {metrics.monthOverMonthChange.redemptions >= 0 ? (
                   <TrendingUp className="w-4 h-4 mr-1" />
                 ) : (
                   <TrendingDown className="w-4 h-4 mr-1" />
                 )}
                 {formatPercentage(
-                  Math.abs(metrics.month_over_month_change.redemptions)
+                  Math.abs(metrics.monthOverMonthChange.redemptions)
                 )}{' '}
                 MoM
               </div>
@@ -207,25 +209,25 @@ function CouponAnalytics() {
               Total Discount Value
             </div>
             <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
-              {formatCurrency(metrics.total_discount_value)}
+              {formatCurrency(metrics.totalDiscountValue)}
             </div>
-            {metrics.month_over_month_change?.discount_value !==
+            {metrics.monthOverMonthChange?.discountValue !==
               undefined && (
               <div
                 className={cn(
                   'mt-1 flex items-center text-sm',
-                  metrics.month_over_month_change.discount_value >= 0
+                  metrics.monthOverMonthChange.discountValue >= 0
                     ? 'text-green-600'
                     : 'text-red-600'
                 )}
               >
-                {metrics.month_over_month_change.discount_value >= 0 ? (
+                {metrics.monthOverMonthChange.discountValue >= 0 ? (
                   <TrendingUp className="w-4 h-4 mr-1" />
                 ) : (
                   <TrendingDown className="w-4 h-4 mr-1" />
                 )}
                 {formatPercentage(
-                  Math.abs(metrics.month_over_month_change.discount_value)
+                  Math.abs(metrics.monthOverMonthChange.discountValue)
                 )}{' '}
                 MoM
               </div>
@@ -236,7 +238,7 @@ function CouponAnalytics() {
               Avg Discount/Redemption
             </div>
             <div className="mt-2 text-3xl font-bold text-deep-navy-800 dark:text-white">
-              {formatCurrency(metrics.average_discount_per_redemption)}
+              {formatCurrency(metrics.averageDiscountPerRedemption)}
             </div>
           </div>
           <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
@@ -246,12 +248,12 @@ function CouponAnalytics() {
             <div
               className={cn(
                 'mt-2 text-3xl font-bold',
-                metrics.conversion_rate > 10
+                metrics.conversionRate > 10
                   ? 'text-green-600'
                   : 'text-deep-navy-800 dark:text-white'
               )}
             >
-              {formatPercentage(metrics.conversion_rate)}
+              {formatPercentage(metrics.conversionRate)}
             </div>
           </div>
           <div className="bg-white dark:bg-deep-navy-800 p-6 rounded-lg shadow-sm border border-deep-navy-200 dark:border-deep-navy-700">
@@ -261,12 +263,12 @@ function CouponAnalytics() {
             <div
               className={cn(
                 'mt-2 text-3xl font-bold',
-                metrics.fraud_detection_rate > 5
+                metrics.fraudDetectionRate > 5
                   ? 'text-red-600'
                   : 'text-deep-navy-800 dark:text-white'
               )}
             >
-              {formatPercentage(metrics.fraud_detection_rate)}
+              {formatPercentage(metrics.fraudDetectionRate)}
             </div>
           </div>
         </div>
@@ -319,13 +321,13 @@ function CouponAnalytics() {
                       {formatNumber(coupon.redemptions)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
-                      {formatCurrency(coupon.discount_value)}
+                      {formatCurrency(coupon.discountValue)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
-                      {formatPercentage(coupon.conversion_rate)}
+                      {formatPercentage(coupon.conversionRate)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
-                      {formatCurrency(coupon.average_discount)}
+                      {formatCurrency(coupon.averageDiscount)}
                     </td>
                   </tr>
                 ))}
@@ -414,33 +416,31 @@ function CouponAnalytics() {
                 {fraudEvents.map((event) => (
                   <tr key={event.id} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-deep-navy-800 dark:text-white">
-                      {event.coupon_code}
+                      {event.couponCode}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500 dark:text-deep-navy-300">
-                      {event.user_email}
+                      {event.userEmail}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
-                      {event.detection_type.replace(/_/g, ' ')}
+                      {event.detectionType.replace(/_/g, ' ')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <FraudSeverityBadge severity={event.severity} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-500 dark:text-deep-navy-300">
-                      {formatDateTime(event.detected_at)}
+                      {formatDateTime(event.detectedAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={cn(
                           'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                          event.status === 'pending' &&
+                          event.status === FraudResolution.PENDING &&
                             'bg-yellow-100 text-yellow-800',
-                          event.status === 'legitimate' &&
+                          event.status === FraudResolution.LEGITIMATE &&
                             'bg-green-100 text-green-800',
-                          event.status === 'false_positive' &&
+                          event.status === FraudResolution.FALSE_POSITIVE &&
                             'bg-blue-100 text-blue-800',
-                          (event.status === 'block_user' ||
-                            event.status === 'block_coupon' ||
-                            event.status === 'block_ip') &&
+                          event.status === FraudResolution.CONFIRMED_FRAUD &&
                             'bg-red-100 text-red-800'
                         )}
                       >

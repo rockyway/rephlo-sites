@@ -9,9 +9,9 @@ import Textarea from '@/components/common/Textarea';
 import { cn } from '@/lib/utils';
 import type {
   ModelTierInfo,
-  SubscriptionTier,
   TierRestrictionMode,
 } from '@/types/model-tier';
+import { SubscriptionTier } from '@rephlo/shared-types';
 
 interface ModelTierEditDialogProps {
   model: ModelTierInfo | null;
@@ -42,11 +42,11 @@ function ModelTierEditDialog({
   onSave,
   isSaving = false,
 }: ModelTierEditDialogProps) {
-  const [requiredTier, setRequiredTier] = useState<SubscriptionTier>('free');
+  const [requiredTier, setRequiredTier] = useState<SubscriptionTier>(SubscriptionTier.FREE);
   const [restrictionMode, setRestrictionMode] =
     useState<TierRestrictionMode>('minimum');
   const [allowedTiers, setAllowedTiers] = useState<Set<SubscriptionTier>>(
-    new Set(['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'])
+    new Set([SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX, SubscriptionTier.ENTERPRISE_PRO, SubscriptionTier.ENTERPRISE_MAX])
   );
   const [reason, setReason] = useState('');
 

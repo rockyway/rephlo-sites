@@ -349,7 +349,7 @@ function BillingDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800 dark:text-white">{invoice.user?.email || 'N/A'}</span>
+                              <span className="text-body text-deep-navy-800 dark:text-white">{invoice.userId || 'N/A'}</span>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body font-medium text-deep-navy-800 dark:text-white">
@@ -369,7 +369,7 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                                {invoice.dueDate ? formatDate(invoice.dueDate) : '-'}
+                                {invoice.periodEnd ? formatDate(invoice.periodEnd) : '-'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
@@ -379,8 +379,8 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-end gap-2">
-                                {invoice.invoicePdfUrl && (
-                                  <a href={invoice.invoicePdfUrl} target="_blank" rel="noopener noreferrer">
+                                {invoice.invoicePdf && (
+                                  <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer">
                                     <Button size="sm" variant="ghost">
                                       <Download className="h-4 w-4" />
                                     </Button>
@@ -425,7 +425,7 @@ function BillingDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800 dark:text-white">{transaction.user?.email || 'N/A'}</span>
+                              <span className="text-body text-deep-navy-800 dark:text-white">{transaction.userId || 'N/A'}</span>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body font-medium text-deep-navy-800 dark:text-white">
@@ -434,7 +434,7 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                                {transaction.paymentMethodType || 'N/A'} {transaction.last4 && `****${transaction.last4}`}
+                                {transaction.paymentMethodType || 'N/A'}
                               </span>
                             </td>
                             <td className="px-6 py-4">

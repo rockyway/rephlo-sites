@@ -134,6 +134,8 @@ export enum SubscriptionStatus {
   EXPIRED = 'expired',
   SUSPENDED = 'suspended',
   GRACE_PERIOD = 'grace_period',
+  INACTIVE = 'inactive',
+  PENDING = 'pending',
 }
 
 export enum BillingCycle {

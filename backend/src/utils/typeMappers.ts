@@ -185,46 +185,46 @@ export function mapCouponToApiType(
 
   // Split discount fields based on coupon type
   const discountFields: {
-    discount_percentage?: number;
-    discount_amount?: number;
-    bonus_duration_months?: number;
+    discountPercentage?: number;
+    discountAmount?: number;
+    bonusDurationMonths?: number;
   } = {};
 
   if (dbCoupon.couponType === 'percentage') {
-    discountFields.discount_percentage = discountValue;
+    discountFields.discountPercentage = discountValue;
   } else if (dbCoupon.couponType === 'fixed_amount') {
-    discountFields.discount_amount = discountValue;
+    discountFields.discountAmount = discountValue;
   } else if (dbCoupon.couponType === 'duration_bonus') {
-    discountFields.bonus_duration_months = Math.round(discountValue);
+    discountFields.bonusDurationMonths = Math.round(discountValue);
   }
 
   return {
     id: dbCoupon.id,
     code: dbCoupon.code,
-    type: dbCoupon.couponType as CouponType, // Renamed field
+    type: dbCoupon.couponType as CouponType,
     ...discountFields, // Spread split discount fields
-    discount_type: dbCoupon.discountType as any,
-    max_discount_applications: dbCoupon.maxUses, // Renamed field
-    max_uses_per_user: dbCoupon.maxUsesPerUser,
-    redemption_count: dbCoupon.usageLimits?.totalUses || 0, // Computed from usageLimits
-    total_discount_value: parseFloat(
+    discountType: dbCoupon.discountType as any,
+    maxDiscountApplications: dbCoupon.maxUses,
+    maxUsesPerUser: dbCoupon.maxUsesPerUser,
+    redemptionCount: dbCoupon.usageLimits?.totalUses || 0, // Computed from usageLimits
+    totalDiscountValue: parseFloat(
       dbCoupon.usageLimits?.totalDiscountAppliedUsd.toString() || '0'
     ), // Computed
-    min_purchase_amount: dbCoupon.minPurchaseAmount
+    minPurchaseAmount: dbCoupon.minPurchaseAmount
       ? parseFloat(dbCoupon.minPurchaseAmount.toString())
       : null,
-    tier_eligibility: dbCoupon.tierEligibility as SubscriptionTier[],
-    billing_cycles: dbCoupon.billingCycles,
-    valid_from: dbCoupon.validFrom.toISOString(),
-    valid_until: dbCoupon.validUntil.toISOString(),
-    is_active: dbCoupon.isActive,
-    campaign_id: dbCoupon.campaignId,
-    campaign_name: dbCoupon.campaign?.campaignName || null, // Populated from join
+    tierEligibility: dbCoupon.tierEligibility as SubscriptionTier[],
+    billingCycles: dbCoupon.billingCycles,
+    validFrom: dbCoupon.validFrom.toISOString(),
+    validUntil: dbCoupon.validUntil.toISOString(),
+    isActive: dbCoupon.isActive,
+    campaignId: dbCoupon.campaignId,
+    campaignName: dbCoupon.campaign?.campaignName || null, // Populated from join
     description: dbCoupon.description,
-    internal_notes: dbCoupon.internalNotes,
-    created_by: dbCoupon.createdBy,
-    created_at: dbCoupon.createdAt.toISOString(),
-    updated_at: dbCoupon.updatedAt.toISOString(),
+    internalNotes: dbCoupon.internalNotes,
+    createdBy: dbCoupon.createdBy,
+    createdAt: dbCoupon.createdAt.toISOString(),
+    updatedAt: dbCoupon.updatedAt.toISOString(),
   };
 }
 
@@ -268,9 +268,9 @@ export function mapCampaignToApiType(
     };
   }>,
   aggregatedStats?: {
-    actual_revenue?: number;
-    redemptions_count?: number;
-    conversion_rate?: number;
+    actualRevenue?: number;
+    redemptionsCount?: number;
+    conversionRate?: number;
   }
 ): CouponCampaign {
   const status = computeCampaignStatus(
@@ -281,23 +281,23 @@ export function mapCampaignToApiType(
 
   return {
     id: dbCampaign.id,
-    name: dbCampaign.campaignName, // Renamed field
-    type: dbCampaign.campaignType as CampaignType, // Renamed field
-    starts_at: dbCampaign.startDate.toISOString(), // Renamed field
-    ends_at: dbCampaign.endDate.toISOString(), // Renamed field
+    name: dbCampaign.campaignName,
+    type: dbCampaign.campaignType as CampaignType,
+    startsAt: dbCampaign.startDate.toISOString(),
+    endsAt: dbCampaign.endDate.toISOString(),
     status, // Computed field
-    budget_cap: parseFloat(dbCampaign.budgetLimitUsd.toString()), // Renamed field
-    current_spend: parseFloat(dbCampaign.totalSpentUsd.toString()), // Renamed field
-    actual_revenue: aggregatedStats?.actual_revenue,
-    redemptions_count: aggregatedStats?.redemptions_count,
-    conversion_rate: aggregatedStats?.conversion_rate,
-    target_audience: dbCampaign.targetTier
-      ? { user_tiers: [dbCampaign.targetTier as SubscriptionTier] }
+    budgetCap: parseFloat(dbCampaign.budgetLimitUsd.toString()),
+    currentSpend: parseFloat(dbCampaign.totalSpentUsd.toString()),
+    actualRevenue: aggregatedStats?.actualRevenue,
+    redemptionsCount: aggregatedStats?.redemptionsCount,
+    conversionRate: aggregatedStats?.conversionRate,
+    targetAudience: dbCampaign.targetTier
+      ? { userTiers: [dbCampaign.targetTier as SubscriptionTier] }
       : undefined,
-    is_active: dbCampaign.isActive,
-    created_by: dbCampaign.createdBy,
-    created_at: dbCampaign.createdAt.toISOString(),
-    updated_at: dbCampaign.updatedAt.toISOString(),
+    isActive: dbCampaign.isActive,
+    createdBy: dbCampaign.createdBy,
+    createdAt: dbCampaign.createdAt.toISOString(),
+    updatedAt: dbCampaign.updatedAt.toISOString(),
   };
 }
 
@@ -322,28 +322,28 @@ export function mapRedemptionToApiType(
 ): CouponRedemption {
   return {
     id: dbRedemption.id,
-    coupon_id: dbRedemption.couponId,
-    coupon_code: dbRedemption.coupon.code,
-    user_id: dbRedemption.userId,
-    user_email: userEmail,
-    subscription_id: dbRedemption.subscriptionId,
-    redemption_date: dbRedemption.redemptionDate.toISOString(),
-    discount_applied: parseFloat(dbRedemption.discountAppliedUsd.toString()),
-    original_amount: parseFloat(dbRedemption.originalAmountUsd.toString()),
-    final_amount: parseFloat(dbRedemption.finalAmountUsd.toString()),
+    couponId: dbRedemption.couponId,
+    couponCode: dbRedemption.coupon.code,
+    userId: dbRedemption.userId,
+    userEmail: userEmail,
+    subscriptionId: dbRedemption.subscriptionId,
+    redemptionDate: dbRedemption.redemptionDate.toISOString(),
+    discountApplied: parseFloat(dbRedemption.discountAppliedUsd.toString()),
+    originalAmount: parseFloat(dbRedemption.originalAmountUsd.toString()),
+    finalAmount: parseFloat(dbRedemption.finalAmountUsd.toString()),
     status: dbRedemption.redemptionStatus as RedemptionStatus,
-    failure_reason: dbRedemption.failureReason,
-    ip_address: dbRedemption.ipAddress,
-    user_agent: dbRedemption.userAgent,
-    is_proration_involved: dbRedemption.isProrationInvolved,
-    proration_amount: dbRedemption.prorationAmount
+    failureReason: dbRedemption.failureReason,
+    ipAddress: dbRedemption.ipAddress,
+    userAgent: dbRedemption.userAgent,
+    isProrationInvolved: dbRedemption.isProrationInvolved,
+    prorationAmount: dbRedemption.prorationAmount
       ? parseFloat(dbRedemption.prorationAmount.toString())
       : null,
-    user_tier_before: dbRedemption.userTierBefore,
-    user_tier_after: dbRedemption.userTierAfter,
-    billing_cycle_before: dbRedemption.billingCycleBefore,
-    billing_cycle_after: dbRedemption.billingCycleAfter,
-    created_at: dbRedemption.createdAt.toISOString(),
+    userTierBefore: dbRedemption.userTierBefore,
+    userTierAfter: dbRedemption.userTierAfter,
+    billingCycleBefore: dbRedemption.billingCycleBefore,
+    billingCycleAfter: dbRedemption.billingCycleAfter,
+    createdAt: dbRedemption.createdAt.toISOString(),
   };
 }
 
@@ -372,24 +372,24 @@ export function mapFraudEventToApiType(
 
   return {
     id: dbFraud.id,
-    redemption_id: null, // TODO: Add this field to schema
-    coupon_id: dbFraud.couponId,
-    coupon_code: dbFraud.coupon.code,
-    user_id: dbFraud.userId,
-    user_email: userEmail,
-    detection_type: dbFraud.detectionType as FraudDetectionType,
+    redemptionId: null, // TODO: Add this field to schema
+    couponId: dbFraud.couponId,
+    couponCode: dbFraud.coupon.code,
+    userId: dbFraud.userId,
+    userEmail: userEmail,
+    detectionType: dbFraud.detectionType as FraudDetectionType,
     severity: dbFraud.severity as FraudSeverity,
-    detected_at: dbFraud.detectedAt.toISOString(),
-    risk_score: details?.risk_score || 0,
+    detectedAt: dbFraud.detectedAt.toISOString(),
+    riskScore: details?.risk_score || 0,
     reasons: details?.reasons || [],
-    ip_address: details?.ip_address || null,
-    device_fingerprint: details?.device_fingerprint || null,
+    ipAddress: details?.ip_address || null,
+    deviceFingerprint: details?.device_fingerprint || null,
     status: (dbFraud.resolution as FraudResolution) || FraudResolution.PENDING,
-    is_flagged: dbFraud.isFlagged,
-    reviewed_by: dbFraud.reviewedBy,
-    reviewed_at: dbFraud.reviewedAt?.toISOString() || null,
+    isFlagged: dbFraud.isFlagged,
+    reviewedBy: dbFraud.reviewedBy,
+    reviewedAt: dbFraud.reviewedAt?.toISOString() || null,
     resolution: dbFraud.resolution,
-    created_at: dbFraud.createdAt.toISOString(),
+    createdAt: dbFraud.createdAt.toISOString(),
   };
 }
 

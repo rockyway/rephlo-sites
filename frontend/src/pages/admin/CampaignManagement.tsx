@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 import { formatDate, formatCurrency } from '@/lib/plan111.utils';
 import type {
   CouponCampaign,
+} from '@rephlo/shared-types';
+import {
   CampaignType,
   CampaignStatus,
 } from '@rephlo/shared-types';
@@ -113,12 +115,12 @@ function CampaignManagement() {
         (c) => c.status === 'active'
       );
 
-      const totalCoupons = campaigns.reduce((sum, c) => sum + (c.redemption_count || 0), 0);
-      const totalBudgetSpent = campaigns.reduce((sum, c) => sum + (c.current_spend || 0), 0);
+      const totalCoupons = campaigns.reduce((sum, c) => sum + (c.redemptionsCount || 0), 0);
+      const totalBudgetSpent = campaigns.reduce((sum, c) => sum + (c.currentSpend || 0), 0);
 
       // Simple ROI calculation (would need more data for accurate calculation)
       const averageROI = campaigns.length > 0
-        ? campaigns.reduce((sum, c) => sum + ((c.expected_revenue || 0) / (c.budget_cap || 1) - 1) * 100, 0) / campaigns.length
+        ? campaigns.reduce((sum, c) => sum + ((c.actualRevenue || 0) / (c.budgetCap || 1) - 1) * 100, 0) / campaigns.length
         : 0;
 
       setStats({
@@ -177,14 +179,16 @@ function CampaignManagement() {
 
   const getTypeColor = (type: CampaignType): string => {
     switch (type) {
-      case 'holiday':
+      case CampaignType.SEASONAL:
         return 'text-green-600 bg-green-50';
-      case 'marketing':
+      case CampaignType.PROMOTIONAL:
         return 'text-purple-600 bg-purple-50';
-      case 'behavioral':
+      case CampaignType.WIN_BACK:
         return 'text-blue-600 bg-blue-50';
-      case 'referral':
+      case CampaignType.REFERRAL:
         return 'text-indigo-600 bg-indigo-50';
+      case CampaignType.EARLY_BIRD:
+        return 'text-teal-600 bg-teal-50';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -387,12 +391,6 @@ function CampaignManagement() {
                         <div className="text-sm font-medium text-gray-900">
                           {campaign.name}
                         </div>
-                        {campaign.description && (
-                          <div className="text-sm text-gray-500">
-                            {campaign.description.substring(0, 60)}
-                            {campaign.description.length > 60 ? '...' : ''}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </td>
@@ -417,16 +415,16 @@ function CampaignManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>{formatDate(campaign.starts_at)}</div>
+                    <div>{formatDate(campaign.startsAt)}</div>
                     <div className="text-xs text-gray-400">
-                      to {formatDate(campaign.ends_at)}
+                      to {formatDate(campaign.endsAt)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex items-center">
                       <DollarSign className="h-4 w-4 text-gray-400 mr-1" />
                       <span>
-                        {formatCurrency(campaign.current_spend || 0)} / {formatCurrency(campaign.budget_cap || 0)}
+                        {formatCurrency(campaign.currentSpend || 0)} / {formatCurrency(campaign.budgetCap || 0)}
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
@@ -434,7 +432,7 @@ function CampaignManagement() {
                         className="bg-blue-600 h-1.5 rounded-full"
                         style={{
                           width: `${Math.min(
-                            ((campaign.current_spend || 0) / (campaign.budget_cap || 1)) * 100,
+                            ((campaign.currentSpend || 0) / (campaign.budgetCap || 1)) * 100,
                             100
                           )}%`,
                         }}
@@ -444,7 +442,7 @@ function CampaignManagement() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900">
                       <Target className="h-4 w-4 text-gray-400 mr-1" />
-                      {campaign.redemption_count || 0}
+                      {campaign.redemptionsCount || 0}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">

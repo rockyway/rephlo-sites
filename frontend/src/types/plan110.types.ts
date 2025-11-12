@@ -11,11 +11,13 @@
  * Perpetual license types are not yet in @rephlo/shared-types.
  */
 
-// Import SubscriptionTier from shared-types
-import type { SubscriptionTier, ProrationEvent, ProrationStatus, ProrationEventType } from '@rephlo/shared-types';
+// Import SubscriptionTier and ProrationEventType from shared-types
+import type { SubscriptionTier, ProrationEvent, ProrationStatus } from '@rephlo/shared-types';
+import { ProrationEventType } from '@rephlo/shared-types';
 
 // Re-export for convenience
-export type { SubscriptionTier, ProrationEvent, ProrationStatus, ProrationEventType };
+export type { SubscriptionTier, ProrationEvent, ProrationStatus };
+export { ProrationEventType };
 
 // ============================================================================
 // Enums

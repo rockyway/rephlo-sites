@@ -33,7 +33,7 @@ import {
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { FraudSeverity, FraudResolution, type FraudDetectionEvent } from '@/types/plan111.types';
+import { FraudSeverity, FraudResolution, FraudDetectionType, type FraudDetectionEvent } from '@/types/plan111.types';
 import { formatDate, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
@@ -129,33 +129,33 @@ function FraudDetection() {
       const mockEvents: FraudDetectionEvent[] = [
         {
           id: '1',
-          redemption_id: 'red-1',
-          coupon_id: 'coup-1',
-          user_id: 'user-1',
-          detection_type: FraudDetectionType.VELOCITY_ABUSE,
+          redemptionId: 'red-1',
+          couponId: 'coup-1',
+          userId: 'user-1',
+          detectionType: FraudDetectionType.VELOCITY_ABUSE,
           severity: FraudSeverity.HIGH,
-          risk_score: 85,
+          riskScore: 85,
           reasons: ['5+ redemptions in 10 minutes', 'Multiple IP addresses'],
           status: FraudResolution.PENDING,
-          detected_at: new Date().toISOString(),
-          coupon_code: 'SAVE20',
-          user_email: 'suspicious@example.com',
-          ip_address: '192.168.1.1',
+          detectedAt: new Date().toISOString(),
+          couponCode: 'SAVE20',
+          userEmail: 'suspicious@example.com',
+          ipAddress: '192.168.1.1',
         },
         {
           id: '2',
-          redemption_id: 'red-2',
-          coupon_id: 'coup-2',
-          user_id: 'user-2',
-          detection_type: FraudDetectionType.IP_SWITCHING,
+          redemptionId: 'red-2',
+          couponId: 'coup-2',
+          userId: 'user-2',
+          detectionType: FraudDetectionType.IP_SWITCHING,
           severity: FraudSeverity.MEDIUM,
-          risk_score: 65,
+          riskScore: 65,
           reasons: ['IP changed 3 times in session'],
           status: FraudResolution.PENDING,
-          detected_at: new Date(Date.now() - 3600000).toISOString(),
-          coupon_code: 'WELCOME10',
-          user_email: 'user2@example.com',
-          ip_address: '10.0.0.1',
+          detectedAt: new Date(Date.now() - 3600000).toISOString(),
+          couponCode: 'WELCOME10',
+          userEmail: 'user2@example.com',
+          ipAddress: '10.0.0.1',
         },
       ];
 
@@ -197,9 +197,9 @@ function FraudDetection() {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(
           (e) =>
-            e.user_email?.toLowerCase().includes(query) ||
-            e.coupon_code?.toLowerCase().includes(query) ||
-            e.ip_address?.toLowerCase().includes(query)
+            e.userEmail?.toLowerCase().includes(query) ||
+            e.couponCode?.toLowerCase().includes(query) ||
+            e.ipAddress?.toLowerCase().includes(query)
         );
       }
 
@@ -210,8 +210,8 @@ function FraudDetection() {
 
         switch (sortBy) {
           case 'detected':
-            aVal = new Date(a.detected_at).getTime();
-            bVal = new Date(b.detected_at).getTime();
+            aVal = new Date(a.detectedAt).getTime();
+            bVal = new Date(b.detectedAt).getTime();
             break;
           case 'severity':
             const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -219,8 +219,8 @@ function FraudDetection() {
             bVal = severityOrder[b.severity];
             break;
           case 'riskScore':
-            aVal = a.risk_score ?? 0;
-            bVal = b.risk_score ?? 0;
+            aVal = a.riskScore ?? 0;
+            bVal = b.riskScore ?? 0;
             break;
         }
 
@@ -323,14 +323,14 @@ function FraudDetection() {
     if (events.length === 0) return;
 
     const exportData = events.map((event) => ({
-      'Detected At': formatDate(event.detected_at, 'long'),
-      'User Email': event.user_email,
-      'Coupon Code': event.coupon_code,
-      'Detection Type': event.detection_type,
+      'Detected At': formatDate(event.detectedAt, 'long'),
+      'User Email': event.userEmail,
+      'Coupon Code': event.couponCode,
+      'Detection Type': event.detectionType,
       Severity: event.severity,
-      'Risk Score': event.risk_score,
+      'Risk Score': event.riskScore,
       Reasons: event.reasons?.join('; ') || '',
-      'IP Address': event.ip_address,
+      'IP Address': event.ipAddress,
       Status: event.status,
     }));
 
@@ -648,18 +648,18 @@ function FraudDetection() {
                       )}
                     >
                       <td className="px-4 py-4 text-sm text-deep-navy-500 dark:text-deep-navy-300">
-                        {formatDate(event.detected_at, 'long')}
+                        {formatDate(event.detectedAt, 'long')}
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="text-sm font-medium text-deep-navy-800 dark:text-white">{event.user_email}</p>
+                          <p className="text-sm font-medium text-deep-navy-800 dark:text-white">{event.userEmail}</p>
                           <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
-                            Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{event.coupon_code}</code>
+                            Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{event.couponCode}</code>
                           </p>
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white capitalize">
-                        {event.detection_type.replace('_', ' ')}
+                        {event.detectionType.replace('_', ' ')}
                       </td>
                       <td className="px-4 py-4">
                         <span
@@ -673,23 +673,23 @@ function FraudDetection() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-deep-navy-800 dark:text-white">{event.risk_score}</span>
+                          <span className="font-medium text-deep-navy-800 dark:text-white">{event.riskScore}</span>
                           <div className="h-1.5 w-16 overflow-hidden rounded-full bg-deep-navy-200 dark:bg-deep-navy-700">
                             <div
                               className={cn(
                                 'h-full transition-all',
-                                (event.risk_score ?? 0) >= 80 ? 'bg-red-500' :
-                                (event.risk_score ?? 0) >= 60 ? 'bg-orange-500' :
-                                (event.risk_score ?? 0) >= 40 ? 'bg-yellow-500' :
+                                (event.riskScore ?? 0) >= 80 ? 'bg-red-500' :
+                                (event.riskScore ?? 0) >= 60 ? 'bg-orange-500' :
+                                (event.riskScore ?? 0) >= 40 ? 'bg-yellow-500' :
                                 'bg-green-500'
                               )}
-                              style={{ width: `${event.risk_score ?? 0}%` }}
+                              style={{ width: `${event.riskScore ?? 0}%` }}
                             />
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <code className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-200">{event.ip_address}</code>
+                        <code className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-200">{event.ipAddress}</code>
                       </td>
                       <td className="px-4 py-4">
                         <span
@@ -784,18 +784,18 @@ function FraudDetection() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">User Email</p>
-                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.user_email}</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.userEmail}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupon Code</p>
                   <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-2 py-1 text-sm text-deep-navy-800 dark:text-white">
-                    {selectedEvent.coupon_code}
+                    {selectedEvent.couponCode}
                   </code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detection Type</p>
                   <p className="text-deep-navy-800 dark:text-white capitalize">
-                    {selectedEvent.detection_type.replace('_', ' ')}
+                    {selectedEvent.detectionType.replace('_', ' ')}
                   </p>
                 </div>
                 <div>
@@ -811,15 +811,15 @@ function FraudDetection() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Risk Score</p>
-                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.risk_score}/100</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.riskScore}/100</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">IP Address</p>
-                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedEvent.ip_address}</code>
+                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedEvent.ipAddress}</code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detected At</p>
-                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedEvent.detected_at, 'long')}</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedEvent.detectedAt, 'long')}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Status</p>
@@ -856,10 +856,10 @@ function FraudDetection() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
-                  User: <strong>{selectedEvent.user_email}</strong>
+                  User: <strong>{selectedEvent.userEmail}</strong>
                 </p>
                 <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
-                  Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{selectedEvent.coupon_code}</code>
+                  Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{selectedEvent.couponCode}</code>
                 </p>
               </div>
 

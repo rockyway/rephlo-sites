@@ -43,9 +43,10 @@ const STATUS_COLORS = {
 
 // Helper function to derive status from redemption fields
 const getRedemptionStatus = (redemption: CouponRedemption): 'success' | 'flagged' | 'pending' => {
-  if (redemption.is_flagged) return 'flagged';
-  if (redemption.processed_at) return 'success';
-  return 'pending';
+  // Map RedemptionStatus to display status
+  if (redemption.status === 'success') return 'success';
+  if (redemption.status === 'pending') return 'pending';
+  return 'flagged'; // failed or reversed
 };
 
 export default function ViewRedemptionsModal({
@@ -87,14 +88,14 @@ export default function ViewRedemptionsModal({
       setRedemptions(response.redemptions || []);
       setTotalPages(Math.ceil((response.total || 0) / pageSize));
 
-      // Calculate stats from redemptions (status = success if processed_at exists)
+      // Calculate stats from redemptions (status = success if status is 'success')
       const allRedemptions = response.redemptions || [];
       const totalRedemptions = allRedemptions.length;
-      const successfulRedemptions = allRedemptions.filter((r) => r.processed_at).length;
-      const uniqueUsers = new Set(allRedemptions.map((r) => r.user_id)).size;
+      const successfulRedemptions = allRedemptions.filter((r) => r.status === 'success').length;
+      const uniqueUsers = new Set(allRedemptions.map((r) => r.userId)).size;
       const totalDiscount = allRedemptions
-        .filter((r) => r.processed_at)
-        .reduce((sum, r) => sum + (r.discount_applied_amount || 0), 0) || 0;
+        .filter((r) => r.status === 'success')
+        .reduce((sum, r) => sum + (r.discountApplied || 0), 0) || 0;
 
       setStats({
         total_redemptions: totalRedemptions,
@@ -287,12 +288,12 @@ export default function ViewRedemptionsModal({
                         >
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className="text-sm font-mono text-deep-navy-800 dark:text-white">
-                              {redemption.user_id.slice(0, 8)}...
+                              {redemption.userId.slice(0, 8)}...
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                              {formatCurrency(redemption.discount_applied_amount || 0)}
+                              {formatCurrency(redemption.discountApplied || 0)}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -307,11 +308,11 @@ export default function ViewRedemptionsModal({
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
-                            {formatDate(redemption.created_at)}
+                            {formatDate(redemption.createdAt)}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-300">
-                              {redemption.ip_address || 'N/A'}
+                              {redemption.ipAddress || 'N/A'}
                             </span>
                           </td>
                         </tr>

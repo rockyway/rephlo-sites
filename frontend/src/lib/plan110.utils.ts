@@ -4,7 +4,7 @@
  * Helper functions for perpetual licenses, version upgrades, and proration.
  */
 
-import { LicenseStatus, ActivationStatus, ProrationChangeType, DiscountType } from '@/types/plan110.types';
+import { LicenseStatus, ActivationStatus, ProrationEventType, DiscountType } from '@/types/plan110.types';
 import { SubscriptionTier } from '@/types/plan109.types';
 
 // ============================================================================
@@ -258,17 +258,17 @@ export function calculateProration(
 /**
  * Get proration change type badge color
  */
-export function getProrationChangeTypeColor(type: ProrationChangeType): string {
+export function getProrationChangeTypeColor(type: ProrationEventType): string {
   switch (type) {
-    case ProrationChangeType.UPGRADE:
+    case ProrationEventType.UPGRADE:
       return 'text-green-600 bg-green-50 border-green-200';
-    case ProrationChangeType.DOWNGRADE:
+    case ProrationEventType.DOWNGRADE:
       return 'text-orange-600 bg-orange-50 border-orange-200';
-    case ProrationChangeType.CANCELLATION:
+    case ProrationEventType.CANCELLATION:
       return 'text-red-600 bg-red-50 border-red-200';
-    case ProrationChangeType.MIGRATION:
+    case ProrationEventType.MIGRATION:
       return 'text-blue-600 bg-blue-50 border-blue-200';
-    case ProrationChangeType.CYCLE_CHANGE:
+    case ProrationEventType.INTERVAL_CHANGE:
       return 'text-purple-600 bg-purple-50 border-purple-200';
     default:
       return 'text-gray-600 bg-gray-50 border-gray-200';
@@ -278,17 +278,17 @@ export function getProrationChangeTypeColor(type: ProrationChangeType): string {
 /**
  * Get proration change type icon
  */
-export function getProrationChangeTypeIcon(type: ProrationChangeType): string {
+export function getProrationChangeTypeIcon(type: ProrationEventType): string {
   switch (type) {
-    case ProrationChangeType.UPGRADE:
+    case ProrationEventType.UPGRADE:
       return '↑';
-    case ProrationChangeType.DOWNGRADE:
+    case ProrationEventType.DOWNGRADE:
       return '↓';
-    case ProrationChangeType.CANCELLATION:
+    case ProrationEventType.CANCELLATION:
       return '×';
-    case ProrationChangeType.MIGRATION:
+    case ProrationEventType.MIGRATION:
       return '↻';
-    case ProrationChangeType.CYCLE_CHANGE:
+    case ProrationEventType.INTERVAL_CHANGE:
       return '⟲';
     default:
       return '';
@@ -298,17 +298,17 @@ export function getProrationChangeTypeIcon(type: ProrationChangeType): string {
 /**
  * Get proration change type label
  */
-export function getProrationChangeTypeLabel(type: ProrationChangeType): string {
+export function getProrationChangeTypeLabel(type: ProrationEventType): string {
   switch (type) {
-    case ProrationChangeType.UPGRADE:
+    case ProrationEventType.UPGRADE:
       return 'Upgrade';
-    case ProrationChangeType.DOWNGRADE:
+    case ProrationEventType.DOWNGRADE:
       return 'Downgrade';
-    case ProrationChangeType.CANCELLATION:
+    case ProrationEventType.CANCELLATION:
       return 'Cancellation';
-    case ProrationChangeType.MIGRATION:
+    case ProrationEventType.MIGRATION:
       return 'Migration';
-    case ProrationChangeType.CYCLE_CHANGE:
+    case ProrationEventType.INTERVAL_CHANGE:
       return 'Billing Cycle Change';
     default:
       return 'Unknown';

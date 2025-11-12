@@ -39,6 +39,8 @@ import {
 } from '@/lib/plan111.utils';
 import type {
   CouponCampaign,
+} from '@rephlo/shared-types';
+import {
   CampaignType,
   CampaignStatus,
 } from '@rephlo/shared-types';
@@ -104,18 +106,18 @@ function CampaignCalendar() {
     try {
       const activeCampaigns = campaigns.filter((c) => c.status === 'active');
       const totalBudget = campaigns.reduce(
-        (sum, c) => sum + (c.budget_cap || 0),
+        (sum, c) => sum + (c.budgetCap || 0),
         0
       );
       const budgetUtilized = campaigns.reduce(
-        (sum, c) => sum + (c.current_spend || 0),
+        (sum, c) => sum + (c.currentSpend || 0),
         0
       );
 
       // Find top performing campaign
       const topCampaign = campaigns.reduce((top, c) => {
-        const topRevenue = top?.actual_revenue || 0;
-        const currentRevenue = c.actual_revenue || 0;
+        const topRevenue = top?.actualRevenue || 0;
+        const currentRevenue = c.actualRevenue || 0;
         return currentRevenue > topRevenue ? c : top;
       }, null as CouponCampaign | null);
 
@@ -137,12 +139,11 @@ function CampaignCalendar() {
 
   const handleToggleCampaignStatus = async (campaign: CouponCampaign) => {
     try {
-      const newStatus: CampaignStatus =
-        campaign.status === 'active' ? 'paused' : 'active';
+      const newIsActive = campaign.status !== CampaignStatus.ACTIVE;
 
-      await plan111API.updateCampaign(campaign.id, { status: newStatus });
+      await plan111API.updateCampaign(campaign.id, { isActive: newIsActive });
       setSuccessMessage(
-        `Campaign ${newStatus === 'active' ? 'activated' : 'paused'} successfully`
+        `Campaign ${newIsActive ? 'activated' : 'paused'} successfully`
       );
       setTimeout(() => setSuccessMessage(null), 3000);
       loadCampaigns();
@@ -347,8 +348,8 @@ function CampaignCalendar() {
               <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                 {campaigns.map((campaign) => {
                   const budgetUtilization = calculateBudgetUtilization(
-                    campaign.current_spend || 0,
-                    campaign.budget_cap
+                    campaign.currentSpend || 0,
+                    campaign.budgetCap
                   );
 
                   return (
@@ -357,31 +358,26 @@ function CampaignCalendar() {
                         <div className="text-sm font-medium text-deep-navy-900">
                           {campaign.name}
                         </div>
-                        {campaign.description && (
-                          <div className="text-sm text-deep-navy-700 dark:text-deep-navy-200">
-                            {campaign.description}
-                          </div>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <CampaignTypeBadge type={campaign.type} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-700 dark:text-deep-navy-200">
-                        {formatDate(campaign.starts_at)}
+                        {formatDate(campaign.startsAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-700 dark:text-deep-navy-200">
-                        {formatDate(campaign.ends_at)}
+                        {formatDate(campaign.endsAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-900">
-                        {campaign.budget_cap
-                          ? formatCurrency(campaign.budget_cap)
+                        {campaign.budgetCap
+                          ? formatCurrency(campaign.budgetCap)
                           : 'Unlimited'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-deep-navy-900">
-                          {formatCurrency(campaign.current_spend || 0)}
+                          {formatCurrency(campaign.currentSpend || 0)}
                         </div>
-                        {campaign.budget_cap && (
+                        {campaign.budgetCap && (
                           <div
                             className={cn(
                               'text-xs',

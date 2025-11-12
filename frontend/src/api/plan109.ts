@@ -15,7 +15,6 @@ import { apiClient } from '@/services/api';
 import type {
   // Import shared types from shared-types package
   User,
-  UserDetails,
   Subscription,
   SubscriptionStats,
   BillingInvoice,

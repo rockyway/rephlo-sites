@@ -7,17 +7,9 @@
 // Import shared types from @rephlo/shared-types
 import type {
   Coupon,
-  CouponType,
-  DiscountType,
   CouponCampaign,
-  CampaignType,
-  CampaignStatus,
   CouponRedemption,
-  RedemptionStatus,
   FraudDetectionEvent,
-  FraudDetectionType,
-  FraudSeverity,
-  FraudResolution,
   CouponListResponse,
   CampaignListResponse,
   RedemptionListResponse,
@@ -33,20 +25,24 @@ import type {
   BillingCycle,
 } from '@rephlo/shared-types';
 
-// Re-export for convenience
-export type {
-  Coupon,
+// Import enums as runtime values (not type-only)
+import {
   CouponType,
   DiscountType,
-  CouponCampaign,
   CampaignType,
   CampaignStatus,
-  CouponRedemption,
   RedemptionStatus,
-  FraudDetectionEvent,
   FraudDetectionType,
   FraudSeverity,
   FraudResolution,
+} from '@rephlo/shared-types';
+
+// Re-export types for convenience
+export type {
+  Coupon,
+  CouponCampaign,
+  CouponRedemption,
+  FraudDetectionEvent,
   CouponListResponse,
   CampaignListResponse,
   RedemptionListResponse,
@@ -60,6 +56,18 @@ export type {
   ReviewFraudEventRequest,
   SubscriptionTier,
   BillingCycle,
+};
+
+// Re-export enums as values (not types)
+export {
+  CouponType,
+  DiscountType,
+  CampaignType,
+  CampaignStatus,
+  RedemptionStatus,
+  FraudDetectionType,
+  FraudSeverity,
+  FraudResolution,
 };
 
 // Frontend-specific redemption type (not in shared-types)

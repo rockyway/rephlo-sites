@@ -1875,3 +1875,14 @@ All verification tests passed:
 
 Next: Phase 2 - API Client Layer Migration (5 days estimated)
 
+
+[2025-11-12] QA Verification: camelCase Standardization - FAILED
+- Completed comprehensive QA verification of Phase 1 (backend) and Phase 2 (frontend)
+- Backend: ✅ PASS (0 errors, correct snake_case to snake_case transformation)
+- Frontend: ❌ FAIL (296 TypeScript errors, wrong field names used)
+- Root cause: Frontend uses incorrect field names (applicable_tiers, max_per_customer) that don't exist in shared-types
+- Shared-types correctly uses snake_case (tier_eligibility, max_uses_per_user, billing_cycles)
+- Critical blockers: 200+ field name mismatches, 8 enum errors, 80+ type access errors
+- Estimated fix effort: 23-27 hours
+- Report: docs/progress/160-camelcase-standardization-qa-report.md
+

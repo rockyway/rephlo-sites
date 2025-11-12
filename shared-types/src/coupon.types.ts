@@ -83,41 +83,41 @@ export interface Coupon {
 
   // Type and discount (IMPORTANT: Split discount fields by type)
   type: CouponType; // Renamed from couponType
-  discount_percentage?: number; // Only populated if type === PERCENTAGE
-  discount_amount?: number; // Only populated if type === FIXED_AMOUNT
-  bonus_duration_months?: number; // Only populated if type === DURATION_BONUS
-  discount_type: DiscountType;
+  discountPercentage?: number; // Only populated if type === PERCENTAGE
+  discountAmount?: number; // Only populated if type === FIXED_AMOUNT
+  bonusDurationMonths?: number; // Only populated if type === DURATION_BONUS
+  discountType: DiscountType;
 
   // Usage limits
-  max_discount_applications?: number | null; // Maps to maxUses
-  max_uses_per_user: number;
+  maxDiscountApplications?: number | null; // Maps to maxUses
+  maxUsesPerUser: number;
 
   // Computed fields (from CouponUsageLimit)
-  redemption_count: number; // totalUses
-  total_discount_value: number; // totalDiscountAppliedUsd (in USD)
+  redemptionCount: number; // totalUses
+  totalDiscountValue: number; // totalDiscountAppliedUsd (in USD)
 
   // Eligibility
-  min_purchase_amount?: number | null;
-  tier_eligibility: SubscriptionTier[];
-  billing_cycles: string[]; // ['monthly', 'annual']
+  minPurchaseAmount?: number | null;
+  tierEligibility: SubscriptionTier[];
+  billingCycles: string[]; // ['monthly', 'annual']
 
   // Validity
-  valid_from: string; // ISO 8601
-  valid_until: string; // ISO 8601
-  is_active: boolean;
+  validFrom: string; // ISO 8601
+  validUntil: string; // ISO 8601
+  isActive: boolean;
 
   // Campaign
-  campaign_id?: string | null;
-  campaign_name?: string | null; // Populated from join
+  campaignId?: string | null;
+  campaignName?: string | null; // Populated from join
 
   // Description
   description?: string | null;
-  internal_notes?: string | null;
+  internalNotes?: string | null;
 
   // Audit
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Coupon List Response
@@ -125,7 +125,7 @@ export interface CouponListResponse {
   coupons: Coupon[];
   total: number;
   page: number;
-  page_size: number;
+  pageSize: number;
 }
 
 // Coupon Campaign Interface
@@ -135,33 +135,33 @@ export interface CouponCampaign {
   type: CampaignType; // Renamed from campaignType
 
   // Timing
-  starts_at: string; // Renamed from startDate
-  ends_at: string; // Renamed from endDate
+  startsAt: string; // Renamed from startDate
+  endsAt: string; // Renamed from endDate
 
   // Computed status field (not in DB)
   status: CampaignStatus; // planning | active | paused | ended
 
   // Budget
-  budget_cap: number; // Renamed from budgetLimitUsd
-  current_spend: number; // Renamed from totalSpentUsd
+  budgetCap: number; // Renamed from budgetLimitUsd
+  currentSpend: number; // Renamed from totalSpentUsd
 
   // Computed analytics fields (not in DB)
-  actual_revenue?: number; // Aggregate from redemptions
-  redemptions_count?: number; // Count from coupons
-  conversion_rate?: number; // Percentage
+  actualRevenue?: number; // Aggregate from redemptions
+  redemptionsCount?: number; // Count from coupons
+  conversionRate?: number; // Percentage
 
   // Targeting
-  target_audience?: {
-    user_tiers?: SubscriptionTier[];
+  targetAudience?: {
+    userTiers?: SubscriptionTier[];
   };
 
   // Status
-  is_active: boolean;
+  isActive: boolean;
 
   // Audit
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Campaign List Response
@@ -169,17 +169,17 @@ export interface CampaignListResponse {
   campaigns: CouponCampaign[];
   total: number;
   page: number;
-  page_size: number;
+  pageSize: number;
 }
 
 // Campaign Performance Metrics
 export interface CampaignPerformanceMetrics {
-  total_redemptions: number;
-  total_discount_value: number;
-  total_revenue: number;
-  conversion_rate: number; // Percentage
+  totalRedemptions: number;
+  totalDiscountValue: number;
+  totalRevenue: number;
+  conversionRate: number; // Percentage
   roi: number; // Return on investment
-  redemption_trend: Array<{
+  redemptionTrend: Array<{
     date: string;
     redemptions: number;
     revenue: number;
@@ -189,33 +189,33 @@ export interface CampaignPerformanceMetrics {
 // Coupon Redemption Interface
 export interface CouponRedemption {
   id: string;
-  coupon_id: string;
-  coupon_code?: string; // Populated from join
-  user_id: string;
-  user_email?: string; // Populated from join
-  subscription_id?: string | null;
+  couponId: string;
+  couponCode?: string; // Populated from join
+  userId: string;
+  userEmail?: string; // Populated from join
+  subscriptionId?: string | null;
 
   // Redemption details
-  redemption_date: string;
-  discount_applied: number; // discountAppliedUsd
-  original_amount: number;
-  final_amount: number;
+  redemptionDate: string;
+  discountApplied: number; // discountAppliedUsd
+  originalAmount: number;
+  finalAmount: number;
   status: RedemptionStatus;
-  failure_reason?: string | null;
+  failureReason?: string | null;
 
   // Fraud metadata
-  ip_address?: string | null;
-  user_agent?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
 
   // Proration (Plan 110 integration)
-  is_proration_involved: boolean;
-  proration_amount?: number | null;
-  user_tier_before?: string | null;
-  user_tier_after?: string | null;
-  billing_cycle_before?: string | null;
-  billing_cycle_after?: string | null;
+  isProrationInvolved: boolean;
+  prorationAmount?: number | null;
+  userTierBefore?: string | null;
+  userTierAfter?: string | null;
+  billingCycleBefore?: string | null;
+  billingCycleAfter?: string | null;
 
-  created_at: string;
+  createdAt: string;
 }
 
 // Redemption List Response
@@ -223,39 +223,39 @@ export interface RedemptionListResponse {
   redemptions: CouponRedemption[];
   total: number;
   page: number;
-  page_size: number;
+  pageSize: number;
 }
 
 // Fraud Detection Event Interface
 export interface FraudDetectionEvent {
   id: string;
-  redemption_id?: string | null; // Missing in current schema (needs migration)
-  coupon_id: string;
-  coupon_code?: string; // Populated from join
-  user_id: string;
-  user_email?: string; // Populated from join
+  redemptionId?: string | null; // Missing in current schema (needs migration)
+  couponId: string;
+  couponCode?: string; // Populated from join
+  userId: string;
+  userEmail?: string; // Populated from join
 
   // Detection details
-  detection_type: FraudDetectionType;
+  detectionType: FraudDetectionType;
   severity: FraudSeverity;
-  detected_at: string;
+  detectedAt: string;
 
   // Risk analysis (extracted from details JSON)
-  risk_score?: number; // 0-100
+  riskScore?: number; // 0-100
   reasons?: string[];
-  ip_address?: string | null;
-  device_fingerprint?: string | null;
+  ipAddress?: string | null;
+  deviceFingerprint?: string | null;
 
   // Status
   status: FraudResolution; // Maps to resolution field
-  is_flagged: boolean;
+  isFlagged: boolean;
 
   // Review
-  reviewed_by?: string | null;
-  reviewed_at?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
   resolution?: string | null; // Free-text notes
 
-  created_at: string;
+  createdAt: string;
 }
 
 // Fraud Event List Response
@@ -263,72 +263,86 @@ export interface FraudEventListResponse {
   events: FraudDetectionEvent[];
   total: number;
   page: number;
-  page_size: number;
+  pageSize: number;
 }
 
 // Analytics Interfaces
 export interface CouponAnalyticsMetrics {
-  total_redemptions: number;
-  total_discount_value: number;
-  average_discount_per_redemption: number;
-  conversion_rate: number; // Percentage
-  fraud_detection_rate: number; // Percentage
-  month_over_month_change: {
+  totalRedemptions: number;
+  totalDiscountValue: number;
+  averageDiscountPerRedemption: number;
+  conversionRate: number; // Percentage
+  fraudDetectionRate: number; // Percentage
+  monthOverMonthChange: {
     redemptions: number; // Percentage change
-    discount_value: number; // Percentage change
+    discountValue: number; // Percentage change
   };
 }
 
 export interface TopPerformingCoupon {
   code: string;
   redemptions: number;
-  discount_value: number;
-  conversion_rate: number;
-  average_discount: number;
+  discountValue: number;
+  conversionRate: number;
+  averageDiscount: number;
 }
 
 // Request DTOs
 export interface CreateCouponRequest {
   code: string;
   type: CouponType;
-  discount_value: number;
-  discount_type: DiscountType;
-  max_uses?: number | null;
-  max_uses_per_user?: number;
-  min_purchase_amount?: number | null;
-  tier_eligibility?: SubscriptionTier[];
-  billing_cycles?: string[];
-  valid_from: string;
-  valid_until: string;
-  is_active?: boolean;
-  campaign_id?: string | null;
+  discountValue: number;
+  discountType: DiscountType;
+  maxUses?: number | null;
+  maxUsesPerUser?: number;
+  minPurchaseAmount?: number | null;
+  tierEligibility?: SubscriptionTier[];
+  billingCycles?: string[];
+  validFrom: string;
+  validUntil: string;
+  isActive?: boolean;
+  campaignId?: string | null;
   description?: string | null;
-  internal_notes?: string | null;
+  internalNotes?: string | null;
 }
 
 export interface UpdateCouponRequest {
   code?: string;
-  is_active?: boolean;
-  valid_until?: string;
-  max_uses?: number | null;
+  type?: CouponType;
+  discountValue?: number;
+  discountType?: DiscountType;
+  discountPercentage?: number; // Type-specific discount fields
+  discountAmount?: number;
+  bonusDurationMonths?: number;
+  maxUses?: number | null;
+  maxUsesPerUser?: number;
+  maxDiscountApplications?: number | null; // Alias for maxUses
+  minPurchaseAmount?: number | null;
+  tierEligibility?: SubscriptionTier[];
+  billingCycles?: string[];
+  validFrom?: string;
+  validUntil?: string;
+  isActive?: boolean;
+  campaignId?: string | null; // Campaign association
   description?: string | null;
+  internalNotes?: string | null;
 }
 
 export interface CreateCampaignRequest {
   name: string;
   type: CampaignType;
-  starts_at: string;
-  ends_at: string;
-  budget_cap: number;
-  target_tier?: SubscriptionTier | null;
-  is_active?: boolean;
+  startsAt: string;
+  endsAt: string;
+  budgetCap: number;
+  targetTier?: SubscriptionTier | null;
+  isActive?: boolean;
 }
 
 export interface UpdateCampaignRequest {
   name?: string;
-  ends_at?: string;
-  budget_cap?: number;
-  is_active?: boolean;
+  endsAt?: string;
+  budgetCap?: number;
+  isActive?: boolean;
 }
 
 export interface ReviewFraudEventRequest {
@@ -340,44 +354,53 @@ export interface ReviewFraudEventRequest {
 export const CreateCouponRequestSchema = z.object({
   code: z.string().regex(/^[A-Z0-9]{4,50}$/, 'Code must be 4-50 uppercase alphanumeric characters'),
   type: CouponTypeSchema,
-  discount_value: z.number().positive(),
-  discount_type: DiscountTypeSchema,
-  max_uses: z.number().int().positive().nullable().optional(),
-  max_uses_per_user: z.number().int().positive().default(1),
-  min_purchase_amount: z.number().positive().nullable().optional(),
-  tier_eligibility: z.array(z.nativeEnum(SubscriptionTier)).optional(),
-  billing_cycles: z.array(z.string()).optional(),
-  valid_from: z.string(),
-  valid_until: z.string(),
-  is_active: z.boolean().default(true),
-  campaign_id: z.string().uuid().nullable().optional(),
+  discountValue: z.number().positive(),
+  discountType: DiscountTypeSchema,
+  maxUses: z.number().int().positive().nullable().optional(),
+  maxUsesPerUser: z.number().int().positive().default(1),
+  minPurchaseAmount: z.number().positive().nullable().optional(),
+  tierEligibility: z.array(z.nativeEnum(SubscriptionTier)).optional(),
+  billingCycles: z.array(z.string()).optional(),
+  validFrom: z.string(),
+  validUntil: z.string(),
+  isActive: z.boolean().default(true),
+  campaignId: z.string().uuid().nullable().optional(),
   description: z.string().max(1000).nullable().optional(),
-  internal_notes: z.string().max(1000).nullable().optional(),
+  internalNotes: z.string().max(1000).nullable().optional(),
 });
 
 export const UpdateCouponRequestSchema = z.object({
   code: z.string().regex(/^[A-Z0-9]{4,50}$/).optional(),
-  is_active: z.boolean().optional(),
-  valid_until: z.string().optional(),
-  max_uses: z.number().int().positive().nullable().optional(),
+  type: CouponTypeSchema.optional(),
+  discountValue: z.number().positive().optional(),
+  discountType: DiscountTypeSchema.optional(),
+  maxUses: z.number().int().positive().nullable().optional(),
+  maxUsesPerUser: z.number().int().positive().optional(),
+  minPurchaseAmount: z.number().positive().nullable().optional(),
+  tierEligibility: z.array(z.nativeEnum(SubscriptionTier)).optional(),
+  billingCycles: z.array(z.string()).optional(),
+  validFrom: z.string().optional(),
+  validUntil: z.string().optional(),
+  isActive: z.boolean().optional(),
   description: z.string().max(1000).nullable().optional(),
+  internalNotes: z.string().max(1000).nullable().optional(),
 });
 
 export const CreateCampaignRequestSchema = z.object({
   name: z.string().min(1).max(255),
   type: CampaignTypeSchema,
-  starts_at: z.string(),
-  ends_at: z.string(),
-  budget_cap: z.number().positive(),
-  target_tier: z.nativeEnum(SubscriptionTier).nullable().optional(),
-  is_active: z.boolean().default(true),
+  startsAt: z.string(),
+  endsAt: z.string(),
+  budgetCap: z.number().positive(),
+  targetTier: z.nativeEnum(SubscriptionTier).nullable().optional(),
+  isActive: z.boolean().default(true),
 });
 
 export const UpdateCampaignRequestSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  ends_at: z.string().optional(),
-  budget_cap: z.number().positive().optional(),
-  is_active: z.boolean().optional(),
+  endsAt: z.string().optional(),
+  budgetCap: z.number().positive().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const ReviewFraudEventRequestSchema = z.object({

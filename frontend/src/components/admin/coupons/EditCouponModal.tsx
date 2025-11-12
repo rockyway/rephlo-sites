@@ -94,8 +94,8 @@ export default function EditCouponModal({
   onSuccess,
   coupon,
 }: EditCouponModalProps) {
-  // Form state - Initialize with coupon data (includes local discount_value field)
-  const [formData, setFormData] = useState<Partial<UpdateCouponRequest> & { discount_value?: number }>({});
+  // Form state - Initialize with coupon data (includes local discountValue field)
+  const [formData, setFormData] = useState<Partial<UpdateCouponRequest> & { discountValue?: number }>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -108,24 +108,24 @@ export default function EditCouponModal({
     if (isOpen && coupon) {
       // Convert coupon to form format - extract the appropriate discount value
       const discountValue =
-        coupon.discount_percentage ||
-        coupon.discount_amount ||
-        coupon.bonus_duration_months ||
+        coupon.discountPercentage ||
+        coupon.discountAmount ||
+        coupon.bonusDurationMonths ||
         0;
 
       setFormData({
         type: coupon.type,
-        discount_value: discountValue, // Local field for form
-        max_discount_applications: coupon.max_discount_applications,
-        max_per_customer: coupon.max_per_customer || 1,
-        applicable_tiers: coupon.applicable_tiers,
-        applicable_billing_cycles: coupon.applicable_billing_cycles,
-        valid_from: coupon.valid_from ? new Date(coupon.valid_from).toISOString().slice(0, 16) : '',
-        valid_until: coupon.valid_until ? new Date(coupon.valid_until).toISOString().slice(0, 16) : '',
-        is_active: coupon.is_active,
-        campaign_id: coupon.campaign_id || undefined,
+        discountValue: discountValue, // Local field for form
+        maxDiscountApplications: coupon.maxDiscountApplications,
+        maxUsesPerUser: coupon.maxUsesPerUser || 1,
+        tierEligibility: coupon.tierEligibility,
+        billingCycles: coupon.billingCycles,
+        validFrom: coupon.validFrom ? new Date(coupon.validFrom).toISOString().slice(0, 16) : '',
+        validUntil: coupon.validUntil ? new Date(coupon.validUntil).toISOString().slice(0, 16) : '',
+        isActive: coupon.isActive,
+        campaignId: coupon.campaignId || undefined,
         description: coupon.description || '',
-        internal_notes: coupon.internal_notes || '',
+        internalNotes: coupon.internalNotes || '',
       });
 
       loadCampaigns();
@@ -144,7 +144,7 @@ export default function EditCouponModal({
     }
   };
 
-  const handleChange = (field: keyof UpdateCouponRequest | 'discount_value', value: any) => {
+  const handleChange = (field: keyof UpdateCouponRequest | 'discountValue', value: any) => {
     setFormData({ ...formData, [field]: value });
     // Clear error for this field when user makes changes
     if (errors[field]) {
@@ -155,74 +155,74 @@ export default function EditCouponModal({
   };
 
   const handleTierToggle = (tier: SubscriptionTier) => {
-    const currentTiers = formData.applicable_tiers || [];
+    const currentTiers = formData.tierEligibility || [];
     const newTiers = currentTiers.includes(tier)
       ? currentTiers.filter((t) => t !== tier)
       : [...currentTiers, tier];
-    handleChange('applicable_tiers', newTiers);
+    handleChange('tierEligibility', newTiers);
   };
 
   const handleBillingCycleToggle = (cycle: BillingCycle) => {
-    const currentCycles = formData.applicable_billing_cycles || [];
+    const currentCycles = formData.billingCycles || [];
     const newCycles = currentCycles.includes(cycle)
       ? currentCycles.filter((c) => c !== cycle)
       : [...currentCycles, cycle];
-    handleChange('applicable_billing_cycles', newCycles);
+    handleChange('billingCycles', newCycles);
   };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
     // Discount value validation (if changed)
-    if (formData.discount_value !== undefined) {
-      if (formData.discount_value <= 0) {
-        newErrors.discount_value = 'Discount value must be greater than 0';
+    if (formData.discountValue !== undefined) {
+      if (formData.discountValue <= 0) {
+        newErrors.discountValue = 'Discount value must be greater than 0';
       }
 
       // Percentage discount validation (max 100%)
       if (
         coupon.type === CouponType.PERCENTAGE &&
-        formData.discount_value > 100
+        formData.discountValue > 100
       ) {
-        newErrors.discount_value = 'Percentage discount cannot exceed 100%';
+        newErrors.discountValue = 'Percentage discount cannot exceed 100%';
       }
     }
 
     // Date validation (if changed)
-    if (formData.valid_from && formData.valid_until) {
-      const fromDate = new Date(formData.valid_from);
-      const untilDate = new Date(formData.valid_until);
+    if (formData.validFrom && formData.validUntil) {
+      const fromDate = new Date(formData.validFrom);
+      const untilDate = new Date(formData.validUntil);
 
       if (untilDate <= fromDate) {
-        newErrors.valid_until = 'Valid until date must be after valid from date';
+        newErrors.validUntil = 'Valid until date must be after valid from date';
       }
     }
 
     // Max uses validation (if changed)
-    if (formData.max_discount_applications !== null && formData.max_discount_applications !== undefined) {
-      if (formData.max_discount_applications <= 0) {
-        newErrors.max_discount_applications = 'Max uses must be greater than 0 or left empty for unlimited';
+    if (formData.maxDiscountApplications !== null && formData.maxDiscountApplications !== undefined) {
+      if (formData.maxDiscountApplications <= 0) {
+        newErrors.maxDiscountApplications = 'Max uses must be greater than 0 or left empty for unlimited';
       }
     }
 
     // Max uses per customer validation (if changed)
-    if (formData.max_per_customer !== undefined) {
-      if (formData.max_per_customer < 1) {
-        newErrors.max_per_customer = 'Max uses per customer must be at least 1';
+    if (formData.maxUsesPerUser !== undefined) {
+      if (formData.maxUsesPerUser < 1) {
+        newErrors.maxUsesPerUser = 'Max uses per customer must be at least 1';
       }
     }
 
     // Tier eligibility validation (if changed)
-    if (formData.applicable_tiers !== undefined) {
-      if (formData.applicable_tiers.length === 0) {
-        newErrors.applicable_tiers = 'At least one tier must be selected';
+    if (formData.tierEligibility !== undefined) {
+      if (formData.tierEligibility.length === 0) {
+        newErrors.tierEligibility = 'At least one tier must be selected';
       }
     }
 
     // Billing cycles validation (if changed)
-    if (formData.applicable_billing_cycles !== undefined) {
-      if (formData.applicable_billing_cycles.length === 0) {
-        newErrors.applicable_billing_cycles = 'At least one billing cycle must be selected';
+    if (formData.billingCycles !== undefined) {
+      if (formData.billingCycles.length === 0) {
+        newErrors.billingCycles = 'At least one billing cycle must be selected';
       }
     }
 
@@ -245,45 +245,45 @@ export default function EditCouponModal({
       // Only include changed fields in update request
       const updateData: UpdateCouponRequest = {};
 
-      // Map discount_value to the appropriate API field based on coupon type
-      if (formData.discount_value !== undefined) {
+      // Map discountValue to the appropriate API field based on coupon type
+      if (formData.discountValue !== undefined) {
         if (coupon.type === CouponType.PERCENTAGE) {
-          updateData.discount_percentage = formData.discount_value;
+          updateData.discountPercentage = formData.discountValue;
         } else if (coupon.type === CouponType.FIXED_AMOUNT) {
-          updateData.discount_amount = formData.discount_value;
+          updateData.discountAmount = formData.discountValue;
         } else if (coupon.type === CouponType.DURATION_BONUS) {
-          updateData.bonus_duration_months = formData.discount_value;
+          updateData.bonusDurationMonths = formData.discountValue;
         }
       }
-      if (formData.max_discount_applications !== undefined) {
-        updateData.max_discount_applications = formData.max_discount_applications;
+      if (formData.maxDiscountApplications !== undefined) {
+        updateData.maxDiscountApplications = formData.maxDiscountApplications;
       }
-      if (formData.max_per_customer !== undefined) {
-        updateData.max_per_customer = formData.max_per_customer;
+      if (formData.maxUsesPerUser !== undefined) {
+        updateData.maxUsesPerUser = formData.maxUsesPerUser;
       }
-      if (formData.applicable_tiers !== undefined) {
-        updateData.applicable_tiers = formData.applicable_tiers;
+      if (formData.tierEligibility !== undefined) {
+        updateData.tierEligibility = formData.tierEligibility;
       }
-      if (formData.applicable_billing_cycles !== undefined) {
-        updateData.applicable_billing_cycles = formData.applicable_billing_cycles;
+      if (formData.billingCycles !== undefined) {
+        updateData.billingCycles = formData.billingCycles;
       }
-      if (formData.valid_from !== undefined) {
-        updateData.valid_from = formData.valid_from;
+      if (formData.validFrom !== undefined) {
+        updateData.validFrom = formData.validFrom;
       }
-      if (formData.valid_until !== undefined) {
-        updateData.valid_until = formData.valid_until;
+      if (formData.validUntil !== undefined) {
+        updateData.validUntil = formData.validUntil;
       }
-      if (formData.is_active !== undefined) {
-        updateData.is_active = formData.is_active;
+      if (formData.isActive !== undefined) {
+        updateData.isActive = formData.isActive;
       }
-      if (formData.campaign_id !== undefined) {
-        updateData.campaign_id = formData.campaign_id;
+      if (formData.campaignId !== undefined) {
+        updateData.campaignId = formData.campaignId;
       }
       if (formData.description !== undefined) {
         updateData.description = formData.description;
       }
-      if (formData.internal_notes !== undefined) {
-        updateData.internal_notes = formData.internal_notes;
+      if (formData.internalNotes !== undefined) {
+        updateData.internalNotes = formData.internalNotes;
       }
 
       await plan111API.updateCoupon(coupon.id, updateData);
@@ -400,8 +400,8 @@ export default function EditCouponModal({
               </label>
               <Input
                 type="number"
-                value={formData.discount_value || ''}
-                onChange={(e) => handleChange('discount_value', parseFloat(e.target.value))}
+                value={formData.discountValue || ''}
+                onChange={(e) => handleChange('discountValue', parseFloat(e.target.value))}
                 disabled={isSubmitting}
                 placeholder={
                   coupon.type === CouponType.PERCENTAGE
@@ -410,10 +410,10 @@ export default function EditCouponModal({
                 }
                 step={coupon.type === CouponType.PERCENTAGE ? '1' : '0.01'}
                 min="0"
-                className={cn(errors.discount_value && 'border-red-300')}
+                className={cn(errors.discountValue && 'border-red-300')}
               />
-              {errors.discount_value && (
-                <p className="mt-1 text-sm text-red-600">{errors.discount_value}</p>
+              {errors.discountValue && (
+                <p className="mt-1 text-sm text-red-600">{errors.discountValue}</p>
               )}
             </div>
 
@@ -430,7 +430,7 @@ export default function EditCouponModal({
                   >
                     <input
                       type="checkbox"
-                      checked={formData.applicable_tiers?.includes(tier.value) || false}
+                      checked={formData.tierEligibility?.includes(tier.value) || false}
                       onChange={() => handleTierToggle(tier.value)}
                       disabled={isSubmitting}
                       className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
@@ -441,8 +441,8 @@ export default function EditCouponModal({
                   </label>
                 ))}
               </div>
-              {errors.applicable_tiers && (
-                <p className="mt-1 text-sm text-red-600">{errors.applicable_tiers}</p>
+              {errors.tierEligibility && (
+                <p className="mt-1 text-sm text-red-600">{errors.tierEligibility}</p>
               )}
             </div>
 
@@ -459,7 +459,7 @@ export default function EditCouponModal({
                   >
                     <input
                       type="checkbox"
-                      checked={formData.applicable_billing_cycles?.includes(cycle.value) || false}
+                      checked={formData.billingCycles?.includes(cycle.value) || false}
                       onChange={() => handleBillingCycleToggle(cycle.value)}
                       disabled={isSubmitting}
                       className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
@@ -470,8 +470,8 @@ export default function EditCouponModal({
                   </label>
                 ))}
               </div>
-              {errors.applicable_billing_cycles && (
-                <p className="mt-1 text-sm text-red-600">{errors.applicable_billing_cycles}</p>
+              {errors.billingCycles && (
+                <p className="mt-1 text-sm text-red-600">{errors.billingCycles}</p>
               )}
             </div>
 
@@ -483,13 +483,13 @@ export default function EditCouponModal({
                 </label>
                 <Input
                   type="datetime-local"
-                  value={formData.valid_from}
-                  onChange={(e) => handleChange('valid_from', e.target.value)}
+                  value={formData.validFrom}
+                  onChange={(e) => handleChange('validFrom', e.target.value)}
                   disabled={isSubmitting}
-                  className={cn(errors.valid_from && 'border-red-300')}
+                  className={cn(errors.validFrom && 'border-red-300')}
                 />
-                {errors.valid_from && (
-                  <p className="mt-1 text-sm text-red-600">{errors.valid_from}</p>
+                {errors.validFrom && (
+                  <p className="mt-1 text-sm text-red-600">{errors.validFrom}</p>
                 )}
               </div>
               <div>
@@ -498,13 +498,13 @@ export default function EditCouponModal({
                 </label>
                 <Input
                   type="datetime-local"
-                  value={formData.valid_until}
-                  onChange={(e) => handleChange('valid_until', e.target.value)}
+                  value={formData.validUntil}
+                  onChange={(e) => handleChange('validUntil', e.target.value)}
                   disabled={isSubmitting}
-                  className={cn(errors.valid_until && 'border-red-300')}
+                  className={cn(errors.validUntil && 'border-red-300')}
                 />
-                {errors.valid_until && (
-                  <p className="mt-1 text-sm text-red-600">{errors.valid_until}</p>
+                {errors.validUntil && (
+                  <p className="mt-1 text-sm text-red-600">{errors.validUntil}</p>
                 )}
               </div>
             </div>
@@ -517,20 +517,20 @@ export default function EditCouponModal({
                 </label>
                 <Input
                   type="number"
-                  value={formData.max_discount_applications || ''}
+                  value={formData.maxDiscountApplications || ''}
                   onChange={(e) =>
-                    handleChange('max_discount_applications', e.target.value ? parseInt(e.target.value) : undefined)
+                    handleChange('maxDiscountApplications', e.target.value ? parseInt(e.target.value) : undefined)
                   }
                   disabled={isSubmitting}
                   placeholder="Leave empty for unlimited"
                   min="1"
-                  className={cn(errors.max_discount_applications && 'border-red-300')}
+                  className={cn(errors.maxDiscountApplications && 'border-red-300')}
                 />
-                {errors.max_discount_applications && (
-                  <p className="mt-1 text-sm text-red-600">{errors.max_discount_applications}</p>
+                {errors.maxDiscountApplications && (
+                  <p className="mt-1 text-sm text-red-600">{errors.maxDiscountApplications}</p>
                 )}
                 <p className="mt-1 text-xs text-deep-navy-600 dark:text-deep-navy-300">
-                  Current uses: {coupon.redemption_count || 0}
+                  Current uses: {coupon.redemptionCount || 0}
                 </p>
               </div>
               <div>
@@ -539,17 +539,17 @@ export default function EditCouponModal({
                 </label>
                 <Input
                   type="number"
-                  value={formData.max_per_customer || ''}
+                  value={formData.maxUsesPerUser || ''}
                   onChange={(e) =>
-                    handleChange('max_per_customer', parseInt(e.target.value))
+                    handleChange('maxUsesPerUser', parseInt(e.target.value))
                   }
                   disabled={isSubmitting}
                   placeholder="1"
                   min="1"
-                  className={cn(errors.max_per_customer && 'border-red-300')}
+                  className={cn(errors.maxUsesPerUser && 'border-red-300')}
                 />
-                {errors.max_per_customer && (
-                  <p className="mt-1 text-sm text-red-600">{errors.max_per_customer}</p>
+                {errors.maxUsesPerUser && (
+                  <p className="mt-1 text-sm text-red-600">{errors.maxUsesPerUser}</p>
                 )}
               </div>
             </div>
@@ -565,9 +565,9 @@ export default function EditCouponModal({
                 </div>
               ) : (
                 <select
-                  value={formData.campaign_id || ''}
+                  value={formData.campaignId || ''}
                   onChange={(e) =>
-                    handleChange('campaign_id', e.target.value || undefined)
+                    handleChange('campaignId', e.target.value || undefined)
                   }
                   disabled={isSubmitting}
                   className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue dark:focus:border-electric-cyan dark:focus:ring-electric-cyan"
@@ -603,8 +603,8 @@ export default function EditCouponModal({
                 Internal Notes (Admin Only)
               </label>
               <textarea
-                value={formData.internal_notes || ''}
-                onChange={(e) => handleChange('internal_notes', e.target.value)}
+                value={formData.internalNotes || ''}
+                onChange={(e) => handleChange('internalNotes', e.target.value)}
                 disabled={isSubmitting}
                 placeholder="Optional - for admin reference only"
                 rows={2}
@@ -617,8 +617,8 @@ export default function EditCouponModal({
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.is_active || false}
-                  onChange={(e) => handleChange('is_active', e.target.checked)}
+                  checked={formData.isActive || false}
+                  onChange={(e) => handleChange('isActive', e.target.checked)}
                   disabled={isSubmitting}
                   className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
                 />

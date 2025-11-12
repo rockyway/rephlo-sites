@@ -203,31 +203,35 @@ export class CouponController {
       const coupon = await this.prisma.coupon.create({
         data: {
           code: data.code.toUpperCase(),
-          couponType: data.coupon_type,
-          discountValue: new Prisma.Decimal(data.discount_value),
-          discountType: data.discount_type,
-          currency: data.currency || 'usd',
-          maxUses: data.max_uses,
-          maxUsesPerUser: data.max_uses_per_user || 1,
-          minPurchaseAmount: data.min_purchase_amount ? new Prisma.Decimal(data.min_purchase_amount) : null,
-          tierEligibility: data.tier_eligibility || ['free', 'pro', 'enterprise'],
-          billingCycles: data.billing_cycles || ['monthly', 'annual'],
-          validFrom: new Date(data.valid_from),
-          validUntil: new Date(data.valid_until),
-          isActive: data.is_active ?? true,
-          campaignId: data.campaign_id || null,
+          couponType: data.type,
+          discountValue: new Prisma.Decimal(data.discountValue),
+          discountType: data.discountType,
+          currency: 'usd',
+          maxUses: data.maxUses,
+          maxUsesPerUser: data.maxUsesPerUser || 1,
+          minPurchaseAmount: data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null,
+          tierEligibility: data.tierEligibility || ['free', 'pro', 'enterprise'],
+          billingCycles: data.billingCycles || ['monthly', 'annual'],
+          validFrom: new Date(data.validFrom),
+          validUntil: new Date(data.validUntil),
+          isActive: data.isActive ?? true,
+          campaignId: data.campaignId || null,
           description: data.description || null,
-          internalNotes: data.internal_notes || null,
+          internalNotes: data.internalNotes || null,
           createdBy: adminUserId,
         },
         include: {
           usageLimits: true,
-          campaign: true,
+          campaign: {
+            select: {
+              campaignName: true,
+            },
+          },
         },
       });
 
       // Create usage limits record
-      const usageLimits = await this.prisma.couponUsageLimit.create({
+      await this.prisma.couponUsageLimit.create({
         data: {
           couponId: coupon.id,
           totalUses: 0,
@@ -236,26 +240,21 @@ export class CouponController {
         },
       });
 
-      // Return full object like getSingleCoupon
-      res.status(201).json({
-        id: coupon.id,
-        code: coupon.code,
-        type: coupon.couponType,
-        discount_percentage: coupon.couponType === 'percentage' ? parseFloat(coupon.discountValue.toString()) : undefined,
-        discount_amount: coupon.couponType === 'fixed_amount' ? parseFloat(coupon.discountValue.toString()) : undefined,
-        bonus_duration_months: coupon.couponType === 'duration_bonus' ? parseInt(coupon.discountValue.toString()) : undefined,
-        max_discount_applications: coupon.maxUses || null,
-        redemption_count: usageLimits.totalUses,
-        total_discount_value: parseFloat(usageLimits.totalDiscountAppliedUsd.toString()),
-        valid_from: coupon.validFrom.toISOString(),
-        valid_until: coupon.validUntil.toISOString(),
-        is_active: coupon.isActive,
-        description: coupon.description,
-        campaign_id: coupon.campaignId,
-        campaign_name: (coupon as any).campaign?.campaignName || null,
-        created_at: coupon.createdAt.toISOString(),
-        updated_at: coupon.updatedAt.toISOString(),
+      // Refetch coupon with usageLimits to use mapper
+      const createdCoupon = await this.prisma.coupon.findUnique({
+        where: { id: coupon.id },
+        include: {
+          usageLimits: true,
+          campaign: {
+            select: {
+              campaignName: true,
+            },
+          },
+        },
       });
+
+      // Use mapper for consistent camelCase response
+      res.status(201).json(mapCouponToApiType(createdCoupon!));
     } catch (error: any) {
       logger.error('Failed to create coupon', { error });
       res.status(400).json({
@@ -278,46 +277,37 @@ export class CouponController {
       const data = safeValidateRequest(updateCouponRequestSchema, req.body);
 
       const updateData: any = {};
-      if (data.discount_value !== undefined) updateData.discountValue = new Prisma.Decimal(data.discount_value);
-      if (data.max_uses !== undefined) updateData.maxUses = data.max_uses;
-      if (data.max_uses_per_user !== undefined) updateData.maxUsesPerUser = data.max_uses_per_user;
-      if (data.min_purchase_amount !== undefined)
-        updateData.minPurchaseAmount = data.min_purchase_amount ? new Prisma.Decimal(data.min_purchase_amount) : null;
-      if (data.valid_from) updateData.validFrom = new Date(data.valid_from);
-      if (data.valid_until) updateData.validUntil = new Date(data.valid_until);
-      if (data.is_active !== undefined) updateData.isActive = data.is_active;
+      if (data.code !== undefined) updateData.code = data.code.toUpperCase();
+      if (data.type !== undefined) updateData.couponType = data.type;
+      if (data.discountValue !== undefined) updateData.discountValue = new Prisma.Decimal(data.discountValue);
+      if (data.discountType !== undefined) updateData.discountType = data.discountType;
+      if (data.maxUses !== undefined) updateData.maxUses = data.maxUses;
+      if (data.maxUsesPerUser !== undefined) updateData.maxUsesPerUser = data.maxUsesPerUser;
+      if (data.minPurchaseAmount !== undefined)
+        updateData.minPurchaseAmount = data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null;
+      if (data.tierEligibility !== undefined) updateData.tierEligibility = data.tierEligibility;
+      if (data.billingCycles !== undefined) updateData.billingCycles = data.billingCycles;
+      if (data.validFrom) updateData.validFrom = new Date(data.validFrom);
+      if (data.validUntil) updateData.validUntil = new Date(data.validUntil);
+      if (data.isActive !== undefined) updateData.isActive = data.isActive;
       if (data.description !== undefined) updateData.description = data.description;
-      if (data.internal_notes !== undefined) updateData.internalNotes = data.internal_notes;
+      if (data.internalNotes !== undefined) updateData.internalNotes = data.internalNotes;
 
       const coupon = await this.prisma.coupon.update({
         where: { id },
         data: updateData,
         include: {
           usageLimits: true,
-          campaign: true,
+          campaign: {
+            select: {
+              campaignName: true,
+            },
+          },
         },
       });
 
-      // Return full object like getSingleCoupon
-      res.json({
-        id: coupon.id,
-        code: coupon.code,
-        type: coupon.couponType,
-        discount_percentage: coupon.couponType === 'percentage' ? parseFloat(coupon.discountValue.toString()) : undefined,
-        discount_amount: coupon.couponType === 'fixed_amount' ? parseFloat(coupon.discountValue.toString()) : undefined,
-        bonus_duration_months: coupon.couponType === 'duration_bonus' ? parseInt(coupon.discountValue.toString()) : undefined,
-        max_discount_applications: coupon.maxUses || null,
-        redemption_count: coupon.usageLimits?.totalUses || 0,
-        total_discount_value: parseFloat(coupon.usageLimits?.totalDiscountAppliedUsd.toString() || '0'),
-        valid_from: coupon.validFrom.toISOString(),
-        valid_until: coupon.validUntil.toISOString(),
-        is_active: coupon.isActive,
-        description: coupon.description,
-        campaign_id: coupon.campaignId,
-        campaign_name: (coupon as any).campaign?.campaignName || null,
-        created_at: coupon.createdAt.toISOString(),
-        updated_at: coupon.updatedAt.toISOString(),
-      });
+      // Use mapper for consistent camelCase response
+      res.json(mapCouponToApiType(coupon));
     } catch (error: any) {
       logger.error('Failed to update coupon', { id, error });
       res.status(400).json({

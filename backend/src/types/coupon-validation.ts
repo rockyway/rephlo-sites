@@ -226,21 +226,20 @@ export type AssignCouponRequest = z.infer<typeof assignCouponRequestSchema>;
  */
 export const createCouponRequestSchema = z.object({
   code: couponCodeSchema,
-  coupon_type: z.nativeEnum(CouponType),
-  discount_value: z.number().min(0),
-  discount_type: z.nativeEnum(DiscountType),
-  currency: z.string().length(3).optional().default('usd'),
-  max_uses: z.number().int().positive().optional().nullable(),
-  max_uses_per_user: z.number().int().positive().optional().default(1),
-  min_purchase_amount: amountSchema.optional().nullable(),
-  tier_eligibility: z.array(z.nativeEnum(SubscriptionTier)).optional().default(['free', 'pro', 'enterprise'] as SubscriptionTier[]),
-  billing_cycles: z.array(z.string()).optional().default(['monthly', 'annual']),
-  valid_from: z.string().datetime(),
-  valid_until: z.string().datetime(),
-  is_active: z.boolean().optional().default(true),
-  campaign_id: uuidSchema.optional().nullable(),
+  type: z.nativeEnum(CouponType),
+  discountValue: z.number().min(0),
+  discountType: z.nativeEnum(DiscountType),
+  maxUses: z.number().int().positive().optional().nullable(),
+  maxUsesPerUser: z.number().int().positive().optional().default(1),
+  minPurchaseAmount: amountSchema.optional().nullable(),
+  tierEligibility: z.array(z.nativeEnum(SubscriptionTier)).optional().default(['free', 'pro', 'enterprise'] as SubscriptionTier[]),
+  billingCycles: z.array(z.string()).optional().default(['monthly', 'annual']),
+  validFrom: z.string().datetime(),
+  validUntil: z.string().datetime(),
+  isActive: z.boolean().optional().default(true),
+  campaignId: uuidSchema.optional().nullable(),
   description: z.string().optional().nullable(),
-  internal_notes: z.string().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
 });
 
 export type CreateCouponRequest = z.infer<typeof createCouponRequestSchema>;
@@ -250,15 +249,20 @@ export type CreateCouponRequest = z.infer<typeof createCouponRequestSchema>;
  * PATCH /admin/coupons/:id
  */
 export const updateCouponRequestSchema = z.object({
-  discount_value: z.number().min(0).optional(),
-  max_uses: z.number().int().positive().optional().nullable(),
-  max_uses_per_user: z.number().int().positive().optional(),
-  min_purchase_amount: amountSchema.optional().nullable(),
-  valid_from: z.string().datetime().optional(),
-  valid_until: z.string().datetime().optional(),
-  is_active: z.boolean().optional(),
+  code: couponCodeSchema.optional(),
+  type: z.nativeEnum(CouponType).optional(),
+  discountValue: z.number().min(0).optional(),
+  discountType: z.nativeEnum(DiscountType).optional(),
+  maxUses: z.number().int().positive().optional().nullable(),
+  maxUsesPerUser: z.number().int().positive().optional(),
+  minPurchaseAmount: amountSchema.optional().nullable(),
+  tierEligibility: z.array(z.nativeEnum(SubscriptionTier)).optional(),
+  billingCycles: z.array(z.string()).optional(),
+  validFrom: z.string().datetime().optional(),
+  validUntil: z.string().datetime().optional(),
+  isActive: z.boolean().optional(),
   description: z.string().optional().nullable(),
-  internal_notes: z.string().optional().nullable(),
+  internalNotes: z.string().optional().nullable(),
 });
 
 export type UpdateCouponRequest = z.infer<typeof updateCouponRequestSchema>;
