@@ -8,10 +8,27 @@
  * 2. Identify file/source and line numbers where they are defined
  * 3. Find all usages of these endpoints
  * 4. Generate a comprehensive markdown report
+ *
+ * Usage:
+ *   npm run analyze:api
+ *   npm run analyze:api -- --include-test=true
+ *   npm run analyze:api -- --format=simple
+ *   npm run analyze:api -- --format=simple --include-test=true
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+const includeTest = args.some(arg => arg === '--include-test=true');
+const formatArg = args.find(arg => arg.startsWith('--format='));
+const format = formatArg ? formatArg.split('=')[1] : 'full'; // 'simple' or 'full'
+
+if (!['simple', 'full'].includes(format)) {
+  console.error(`Invalid format: ${format}. Must be 'simple' or 'full'.`);
+  process.exit(1);
+}
 
 interface EndpointDefinition {
   method: string;
@@ -54,10 +71,19 @@ function getAllFiles(dirPath: string, extensions: string[]): string[] {
     const stat = fs.statSync(currentPath);
 
     if (stat.isDirectory()) {
-      // Skip node_modules and other common directories
       const basename = path.basename(currentPath);
+
+      // Always skip these directories
       if (basename === 'node_modules' || basename === 'dist' || basename === '.git') {
         return;
+      }
+
+      // Skip test directories unless includeTest is true
+      if (!includeTest) {
+        if (basename === '__tests__' || basename === 'test' || basename === 'tests' ||
+            basename === '__mocks__' || basename === '__tests__mocks') {
+          return;
+        }
       }
 
       const entries = fs.readdirSync(currentPath);
@@ -219,6 +245,22 @@ function findEndpointUsages(endpoint: EndpointDefinition, searchDirs: string[]):
     const files = getAllFiles(dir, ['.ts', '.tsx', '.js', '.jsx']);
 
     files.forEach(file => {
+      // Skip test files from usages unless includeTest is true
+      if (!includeTest) {
+        const relativePath = path.relative(ROOT_DIR, file);
+        const isTestFile = relativePath.includes('__tests__') ||
+                          relativePath.includes('test') ||
+                          relativePath.includes('tests') ||
+                          relativePath.includes('__mocks__') ||
+                          /\.test\.(ts|tsx|js|jsx)$/.test(file) ||
+                          /\.spec\.(ts|tsx|js|jsx)$/.test(file) ||
+                          /test-.*\.(ts|tsx|js|jsx)$/.test(file);
+
+        if (isTestFile) {
+          return; // Skip this file
+        }
+      }
+
       try {
         const content = fs.readFileSync(file, 'utf-8');
         const lines = content.split('\n');
@@ -351,13 +393,91 @@ function analyzeIdentityProvider(): ProjectEndpoints {
 }
 
 /**
- * Generate markdown report
+ * Generate simple format markdown report
+ */
+function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
+  const now = new Date().toISOString();
+
+  let markdown = `# API Endpoints Analysis Report (Simple Format)\n\n`;
+  markdown += `**Generated:** ${now}\n`;
+  markdown += `**Format:** Simple\n`;
+  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n\n`;
+  markdown += `**Projects Analyzed:**\n`;
+  projects.forEach(p => {
+    markdown += `- ${p.projectName} (${p.baseUrl})\n`;
+  });
+  markdown += `\n---\n\n`;
+
+  projects.forEach(project => {
+    markdown += `## ${project.projectName}\n\n`;
+    markdown += `**Base URL:** \`${project.baseUrl}\`\n\n`;
+    markdown += `**Total Endpoints:** ${project.endpoints.length}\n\n`;
+
+    // Sort endpoints by path (ascending)
+    const sortedEndpoints = [...project.endpoints].sort((a, b) => {
+      // First by path, then by method
+      const pathCompare = a.path.localeCompare(b.path);
+      if (pathCompare !== 0) return pathCompare;
+      return a.method.localeCompare(b.method);
+    });
+
+    // Generate flat table
+    markdown += `| Method | Endpoint | File | Handler | Middleware | Usages |\n`;
+    markdown += `|--------|----------|------|---------|------------|--------|\n`;
+
+    sortedEndpoints.forEach(endpoint => {
+      // Skip root endpoint
+      if (endpoint.method === 'GET' && endpoint.path === '/') {
+        return;
+      }
+
+      const method = endpoint.method;
+      const endpointPath = endpoint.path;
+      const file = `${endpoint.file} L:${endpoint.line}`;
+      const handler = endpoint.handler || '-';
+      const middleware = endpoint.middleware ? endpoint.middleware.join(', ') : '-';
+
+      // Get usages - format with <br> tags for line breaks
+      const key = `${endpoint.method} ${endpoint.path}`;
+      const usages = project.usages.get(key);
+      const usageStr = usages && usages.length > 0
+        ? usages.map(u => `${u.file} L:${u.line}`).join('<br>')
+        : '-';
+
+      markdown += `| ${method} | \`${endpointPath}\` | \`${file}\` | \`${handler}\` | \`${middleware}\` | ${usageStr} |\n`;
+    });
+
+    markdown += `\n---\n\n`;
+  });
+
+  // Summary statistics
+  markdown += `## Summary Statistics\n\n`;
+
+  projects.forEach(project => {
+    const totalEndpoints = project.endpoints.length;
+    const endpointsWithUsages = Array.from(project.usages.keys()).length;
+    const totalUsages = Array.from(project.usages.values()).reduce((sum, usages) => sum + usages.length, 0);
+
+    markdown += `### ${project.projectName}\n\n`;
+    markdown += `- **Total Endpoints:** ${totalEndpoints}\n`;
+    markdown += `- **Endpoints with Usages:** ${endpointsWithUsages}\n`;
+    markdown += `- **Total Usage References:** ${totalUsages}\n`;
+    markdown += `- **Unused Endpoints:** ${totalEndpoints - endpointsWithUsages}\n\n`;
+  });
+
+  return markdown;
+}
+
+/**
+ * Generate full format markdown report
  */
 function generateMarkdownReport(projects: ProjectEndpoints[]): string {
   const now = new Date().toISOString();
 
-  let markdown = `# API Endpoints Analysis Report\n\n`;
-  markdown += `**Generated:** ${now}\n\n`;
+  let markdown = `# API Endpoints Analysis Report (Full Format)\n\n`;
+  markdown += `**Generated:** ${now}\n`;
+  markdown += `**Format:** Full\n`;
+  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n\n`;
   markdown += `**Projects Analyzed:**\n`;
   projects.forEach(p => {
     markdown += `- ${p.projectName} (${p.baseUrl})\n`;
@@ -448,7 +568,9 @@ function generateMarkdownReport(projects: ProjectEndpoints[]): string {
  * Main execution
  */
 function main() {
-  console.log('Starting API endpoint analysis...\n');
+  console.log('Starting API endpoint analysis...');
+  console.log(`Format: ${format}`);
+  console.log(`Include Tests: ${includeTest}\n`);
 
   const projects: ProjectEndpoints[] = [];
 
@@ -460,7 +582,9 @@ function main() {
 
   // Generate report
   console.log('\nGenerating markdown report...');
-  const markdown = generateMarkdownReport(projects);
+  const markdown = format === 'simple'
+    ? generateSimpleMarkdownReport(projects)
+    : generateMarkdownReport(projects);
 
   // Determine next document number
   const docsAnalysisDir = path.join(ROOT_DIR, 'docs', 'analysis');
