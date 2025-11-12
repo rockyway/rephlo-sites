@@ -6,7 +6,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 /**
  * Validation target type
@@ -60,8 +60,6 @@ export function validateRequest<T>(
   options: ValidationOptions = {}
 ): (req: Request, res: Response, next: NextFunction) => void {
   const {
-    stripUnknown = true,
-    abortEarly = false,
     onError,
   } = options;
 
@@ -148,7 +146,7 @@ export function validateRequest<T>(
  */
 export function validateResponse<T>(
   schema: ZodSchema<T>,
-  options: ValidationOptions = {}
+  _options: ValidationOptions = {}
 ): (req: Request, res: Response, next: NextFunction) => void {
   // Only validate responses in development mode
   if (process.env.NODE_ENV !== 'development') {
@@ -252,7 +250,7 @@ function formatZodErrors(error: ZodError): Array<{
  */
 export function validateMultiple(
   schemas: Partial<Record<ValidationTarget, ZodSchema>>,
-  options: ValidationOptions = {}
+  _options: ValidationOptions = {}
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req: Request, res: Response, next: NextFunction): void => {
     const errors: Array<{

@@ -255,7 +255,7 @@ SELECT
     ) AS total_api_calls,
 
     COALESCE(
-        (SELECT SUM(credits_deducted) FROM credit_deduction_ledger WHERE user_id = u.id),
+        (SELECT SUM(amount) FROM credit_deduction_ledger WHERE user_id = u.id),
         0
     ) AS credits_used,
 
@@ -279,41 +279,43 @@ LEFT JOIN user_credit_balance ucb ON ucb.user_id = u.id;
 -- =============================================================================
 
 -- Index for coupon status computation (valid_from, valid_until, is_active)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_coupon_validity_dates
+CREATE INDEX IF NOT EXISTS idx_coupon_validity_dates
     ON coupon (valid_from, valid_until, is_active);
 
 -- Index for campaign status computation (start_date, end_date, is_active)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_campaign_dates
+CREATE INDEX IF NOT EXISTS idx_campaign_dates
     ON coupon_campaign (start_date, end_date, is_active);
 
 -- Index for subscription MRR calculations (status, billing_cycle)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscription_mrr
+CREATE INDEX IF NOT EXISTS idx_subscription_mrr
     ON subscription_monetization (status, billing_cycle, base_price_usd);
 
 -- Index for credit allocation by source and period
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_credit_allocation_source_period
+CREATE INDEX IF NOT EXISTS idx_credit_allocation_source_period
     ON credit_allocation (user_id, source, allocation_period_start, allocation_period_end);
 
 -- Index for fraud detection details JSON field (GIN index for JSONB queries)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_fraud_detection_details
-    ON coupon_fraud_detection USING gin (details);
+-- Note: Skipping GIN index on Json column (would need JSONB or operator class)
+-- Use JSONB column type if JSON querying performance is critical
+-- CREATE INDEX IF NOT EXISTS idx_fraud_detection_details
+--     ON coupon_fraud_detection USING gin (details);
 
 -- Index for user full name search (trigram for fuzzy search)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_first_last_name
+CREATE INDEX IF NOT EXISTS idx_user_first_last_name
     ON users USING gin ((first_name || ' ' || last_name) gin_trgm_ops);
 
 -- Index for active subscriptions by tier
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscription_active_tier
+CREATE INDEX IF NOT EXISTS idx_subscription_active_tier
     ON subscription_monetization (tier)
     WHERE status IN ('trial', 'active');
 
 -- Index for coupon redemptions by date range (for analytics)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_coupon_redemption_date
+CREATE INDEX IF NOT EXISTS idx_coupon_redemption_date
     ON coupon_redemption (redemption_date, redemption_status);
 
 -- Index for token usage by date range (for usage summaries)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_token_usage_date
+CREATE INDEX IF NOT EXISTS idx_token_usage_date
     ON token_usage_ledger (created_at, user_id, status);
 
 -- =============================================================================

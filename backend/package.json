@@ -27,6 +27,7 @@
     "@anthropic-ai/sdk": "^0.68.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.19.0",
+    "@rephlo/shared-types": "file:../shared-types",
     "@sendgrid/mail": "^8.1.6",
     "@types/bcrypt": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.10",

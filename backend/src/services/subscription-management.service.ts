@@ -217,7 +217,7 @@ export class SubscriptionManagementService {
           : Number(newTierConfig.monthlyPriceUsd);
 
       // Update subscription
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
@@ -305,7 +305,7 @@ export class SubscriptionManagementService {
           : Number(newTierConfig.monthlyPriceUsd);
 
       // Update subscription (downgrade takes effect at period end)
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
@@ -374,7 +374,7 @@ export class SubscriptionManagementService {
       const now = new Date();
       const newStatus = cancelAtPeriodEnd ? subscription.status : 'cancelled';
 
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           status: newStatus,
@@ -434,7 +434,7 @@ export class SubscriptionManagementService {
         throw badRequestError('Subscription is not cancelled');
       }
 
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           status: 'active',
@@ -489,14 +489,21 @@ export class SubscriptionManagementService {
     });
 
     try {
-      // Get subscription
+      // Get subscription (always fetch from Prisma for consistent types)
       let subscription;
       if (subscriptionId) {
         subscription = await this.prisma.subscriptionMonetization.findUnique({
           where: { id: subscriptionId },
         });
       } else {
-        subscription = await this.getActiveSubscription(userId);
+        // Fetch active subscription directly from Prisma (not using mapper)
+        subscription = await this.prisma.subscriptionMonetization.findFirst({
+          where: {
+            userId,
+            status: { in: ['trial', 'active'] },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
       }
 
       if (!subscription) {

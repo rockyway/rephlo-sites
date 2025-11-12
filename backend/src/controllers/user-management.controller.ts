@@ -219,24 +219,14 @@ export class UserManagementController {
     try {
       const userDetails = await this.userManagementService.viewUserDetails(userId);
 
-      // Map backend fields to frontend expectations for the modal
-      const mappedResponse = {
-        ...userDetails,
-        name: userDetails.firstName && userDetails.lastName
-          ? `${userDetails.firstName} ${userDetails.lastName}`
-          : userDetails.firstName || userDetails.lastName || null,
-        currentTier: userDetails.subscriptionTier,
-        // PHASE 1 FIX: Use status enum from database instead of mapping from isActive
-        status: userDetails.status,
-        creditsBalance: userDetails.creditsRemaining || 0,
-        usageStats: {
-          totalApiCalls: userDetails.totalApiCalls || 0,
-          creditsUsed: 0, // TODO: Get from credit tracking
-          averageCallsPerDay: 0, // TODO: Calculate from usage history
-        },
-      };
+      // UserDetails from shared types already has the correct structure with:
+      // - name (computed from firstName + lastName)
+      // - currentTier (from active subscription)
+      // - status (from database enum)
+      // - creditsBalance (from credit_balance table)
+      // - usageStats (totalApiCalls, creditsUsed, averageCallsPerDay)
 
-      res.status(200).json(mappedResponse);
+      res.status(200).json(userDetails);
     } catch (error) {
       logger.error('UserManagementController.viewUserDetails: Error', { error });
       throw error;

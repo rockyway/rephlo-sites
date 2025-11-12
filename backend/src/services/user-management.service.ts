@@ -25,8 +25,6 @@ import { SessionManagementService } from './session-management.service';
 import {
   User,
   UserDetails,
-  UserListResponse,
-  PaginationParams,
 } from '@rephlo/shared-types';
 import {
   mapUserToApiType,
@@ -170,32 +168,10 @@ export class UserManagementService {
           skip,
           take: pagination.limit,
           orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            email: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-            profilePictureUrl: true,
-            isActive: true,
-            status: true, // PHASE 1 FIX: Include status enum from database
-            role: true,
-            createdAt: true,
-            lastLoginAt: true,
-            deactivatedAt: true,
-            deletedAt: true,
-            // PHASE 1 FIX: Include credit balance relation
-            credit_balance: {
-              select: {
-                amount: true,
-              },
-            },
-            // PHASE 1 FIX: Include active subscription for tier information
+          include: {
+            credit_balance: true,
             subscriptionMonetization: {
               where: { status: { in: ['trial', 'active'] } },
-              select: {
-                tier: true,
-              },
               take: 1,
             },
           },
@@ -246,25 +222,18 @@ export class UserManagementService {
           ],
         },
         take: 20, // Limit search results
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          firstName: true,
-          lastName: true,
-          profilePictureUrl: true,
-          isActive: true,
-          role: true,
-          createdAt: true,
-          lastLoginAt: true,
-          deactivatedAt: true,
-          deletedAt: true,
+        include: {
+          credit_balance: true,
+          subscriptionMonetization: {
+            where: { status: { in: ['trial', 'active'] } },
+            take: 1,
+          },
         },
       });
 
       logger.info('UserManagementService: Users searched', { query, count: users.length });
 
-      return users;
+      return users.map((user) => mapUserToApiType(user));
     } catch (error) {
       logger.error('UserManagementService.searchUsers: Error', { error });
       throw error;
@@ -358,7 +327,7 @@ export class UserManagementService {
     logger.info('UserManagementService.editUserProfile', { userId, updates });
 
     try {
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: userId },
         data: {
           ...(updates.username && { username: updates.username }),
@@ -408,7 +377,7 @@ export class UserManagementService {
       const now = new Date();
       const expiresAt = duration ? new Date(now.getTime() + duration * 24 * 60 * 60 * 1000) : null;
 
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: userId },
         data: {
           isActive: false,
@@ -452,7 +421,7 @@ export class UserManagementService {
     logger.info('UserManagementService.unsuspendUser', { userId });
 
     try {
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: userId },
         data: {
           isActive: true,
@@ -495,7 +464,7 @@ export class UserManagementService {
     try {
       const now = new Date();
 
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: userId },
         data: {
           isActive: false,
@@ -536,7 +505,7 @@ export class UserManagementService {
     logger.info('UserManagementService.unbanUser', { userId });
 
     try {
-      const user = await this.prisma.user.update({
+      await this.prisma.user.update({
         where: { id: userId },
         data: {
           isActive: true,

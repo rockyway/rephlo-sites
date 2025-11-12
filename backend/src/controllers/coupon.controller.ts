@@ -30,7 +30,7 @@ import {
 } from '../types/coupon-validation';
 import logger from '../utils/logger';
 import { sendPaginatedResponse, successResponse } from '../utils/responses';
-import { mapCouponToApiType, mapRedemptionToApiType } from '../utils/typeMappers';
+import { mapCouponToApiType } from '../utils/typeMappers';
 
 @injectable()
 export class CouponController {
