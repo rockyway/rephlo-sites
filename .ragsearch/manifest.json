@@ -43,8 +43,63 @@
       "chunk_count": 20,
       "file_type": "markdown",
       "last_indexed": "2025-11-08T17:34:58.453Z"
+    },
+    "ddc07e295903c230": {
+      "source": "D:\\sources\\work\\rephlo-sites\\backend\\SCHEMA_DIAGRAM.md",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\backend\\SCHEMA_DIAGRAM.md",
+      "content_hash": "75735c85658e9f74ced5763d162272771089ba84081ee2e93240983575287b33",
+      "file_size": 12375,
+      "modified_time": "2025-11-04T00:10:08.930Z",
+      "chunk_count": 4,
+      "file_type": "markdown",
+      "last_indexed": "2025-11-11T23:03:29.362Z"
+    },
+    "f3f54fe665d0dd1d": {
+      "source": "D:\\sources\\work\\rephlo-sites\\backend\\tests\\helpers\\tokens.ts",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\backend\\tests\\helpers\\tokens.ts",
+      "content_hash": "ac452df4e2871cdde304692cce19f39c1b3de79ceb572ac5ed40369818f5734b",
+      "file_size": 2159,
+      "modified_time": "2025-11-11T23:00:28.716Z",
+      "chunk_count": 8,
+      "file_type": "typescript",
+      "last_indexed": "2025-11-11T23:05:03.004Z"
+    },
+    "db72f89142f0ac7e": {
+      "source": "D:\\sources\\work\\rephlo-sites\\docs\\plan\\104-phase4-email-testing-completion.md",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\docs\\plan\\104-phase4-email-testing-completion.md",
+      "content_hash": "f70bb72593d5358805eca31403df7121538235debb0abfebdf1d31bde4ca6c1b",
+      "file_size": 9396,
+      "modified_time": "2025-11-11T23:00:28.787Z",
+      "chunk_count": 3,
+      "file_type": "markdown",
+      "last_indexed": "2025-11-11T23:06:08.295Z"
+    },
+    "1092243cdf76c559": {
+      "source": "D:\\sources\\work\\rephlo-sites\\docs\\plan\\111-coupon-discount-code-system.md",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\docs\\plan\\111-coupon-discount-code-system.md",
+      "content_hash": "9cbdb61765e8d44d21e6814bddbf895c43121a74ecda1518ca0d53cf3d1e2d34",
+      "file_size": 77219,
+      "modified_time": "2025-11-11T23:00:28.791Z",
+      "chunk_count": 24,
+      "file_type": "markdown",
+      "last_indexed": "2025-11-11T23:06:17.321Z"
+    },
+    "1967e329b4d69826": {
+      "source": "D:\\sources\\work\\rephlo-sites\\frontend\\src\\components\\admin\\ModelTierEditDialog.tsx",
+      "source_type": "file",
+      "file_path": "D:\\sources\\work\\rephlo-sites\\frontend\\src\\components\\admin\\ModelTierEditDialog.tsx",
+      "content_hash": "767be4683e8b8b2fb188befb0afcb83a7e1625399d19e74dc707faa94224dbb5",
+      "file_size": 8910,
+      "modified_time": "2025-11-11T23:00:28.865Z",
+      "chunk_count": 31,
+      "file_type": "typescript",
+      "last_indexed": "2025-11-11T23:07:11.521Z"
     }
   },
-  "last_updated": "2025-11-08T17:34:58.453Z",
+  "last_updated": "2025-11-11T23:07:11.521Z",
   "version": "1.0.0"
 }

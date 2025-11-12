@@ -8,20 +8,33 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Coupon, PerpetualLicense } from '@prisma/client';
+import { PrismaClient, Coupon, PerpetualLicense, CouponRedemption } from '@prisma/client';
 import { CouponValidationService } from './coupon-validation.service';
 import { CouponRedemptionService } from './coupon-redemption.service';
 import { LicenseManagementService } from './license-management.service';
+import { ProrationService, ProrationCalculation } from './proration.service';
 import { DiscountCalculation } from '../types/coupon-validation';
 import logger from '../utils/logger';
 
 @injectable()
 export class CheckoutIntegrationService {
+  // Tier pricing (monthly rates in USD) - DEPRECATED
+  // Use getTierPriceForBillingCycle() instead for billing-cycle-aware pricing
+  private readonly TIER_PRICING: Record<string, number> = {
+    free: 0,
+    pro: 19.0,
+    pro_max: 49.0,
+    enterprise_pro: 149.0,
+    enterprise_max: 499.0,
+    perpetual: 0,
+  };
+
   constructor(
     @inject('PrismaClient') private prisma: PrismaClient,
     @inject(CouponValidationService) private validationService: CouponValidationService,
     @inject(CouponRedemptionService) private redemptionService: CouponRedemptionService,
-    @inject(LicenseManagementService) private licenseManagementService: LicenseManagementService
+    @inject(LicenseManagementService) private licenseManagementService: LicenseManagementService,
+    @inject(ProrationService) private prorationService: ProrationService
   ) {
     logger.debug('CheckoutIntegrationService: Initialized');
   }
@@ -32,11 +45,16 @@ export class CheckoutIntegrationService {
   ): Promise<any> {
     logger.info('Applying coupon to checkout', { couponCode, userId: checkoutSession.userId });
 
-    // Step 1: Validate coupon
+    // Step 1: Fetch subscription to get actual tier (GAP FIX #2)
+    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      where: { id: checkoutSession.subscriptionId }
+    });
+
+    // Step 2: Validate coupon against actual tier
     const validation = await this.validationService.validateCoupon(couponCode, checkoutSession.userId, {
       cartTotal: checkoutSession.total,
       subscriptionId: checkoutSession.subscriptionId,
-      subscriptionTier: 'free',
+      subscriptionTier: subscription?.tier || 'free',  // Use actual tier, not hardcoded 'free'
       ipAddress: checkoutSession.ipAddress,
       userAgent: checkoutSession.userAgent,
     });
@@ -213,5 +231,210 @@ export class CheckoutIntegrationService {
       });
       throw new Error('Failed to grant perpetual license');
     }
+  }
+
+  /**
+   * Get active discount for a subscription (GAP FIX #3)
+   * Returns current effective discount if coupon is still active
+   * @param subscriptionId - Subscription ID
+   * @returns Active discount details or null
+   */
+  async getActiveDiscountForSubscription(
+    subscriptionId: string
+  ): Promise<{
+    couponCode: string;
+    discountType: 'percentage' | 'fixed_amount';
+    discountValue: number;
+    effectivePrice: number;
+  } | null> {
+    logger.debug('CheckoutIntegrationService: Getting active discount', { subscriptionId });
+
+    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        couponRedemptions: {
+          where: {
+            redemptionStatus: 'success', // Successfully redeemed coupons only
+          },
+          include: {
+            coupon: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (!subscription || !subscription.couponRedemptions.length) {
+      return null;
+    }
+
+    const redemption = subscription.couponRedemptions[0];
+    const coupon = redemption.coupon;
+
+    // Calculate effective price based on discount type
+    const basePriceUsd = parseFloat(subscription.basePriceUsd.toString());
+    let effectivePrice = basePriceUsd;
+    const discountType = coupon.discountType as 'percentage' | 'fixed_amount';
+    const discountValue = parseFloat(coupon.discountValue.toString());
+
+    if (discountType === 'percentage') {
+      effectivePrice = basePriceUsd * (1 - discountValue / 100);
+    } else if (discountType === 'fixed_amount') {
+      effectivePrice = Math.max(0, basePriceUsd - discountValue);
+    }
+
+    logger.info('CheckoutIntegrationService: Active discount found', {
+      couponCode: coupon.code,
+      discountType,
+      discountValue,
+      basePriceUsd,
+      effectivePrice,
+    });
+
+    return {
+      couponCode: coupon.code,
+      discountType,
+      discountValue,
+      effectivePrice,
+    };
+  }
+
+  /**
+   * Get tier price based on billing cycle (billing-cycle-aware pricing)
+   * @param tier - Tier name
+   * @param billingCycle - Billing cycle (monthly, annual, lifetime)
+   * @returns Price for the tier based on billing cycle
+   */
+  private async getTierPriceForBillingCycle(
+    tier: string,
+    billingCycle: string
+  ): Promise<number> {
+    const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
+      where: { tierName: tier },
+    });
+
+    if (!tierConfig) {
+      logger.warn('CheckoutIntegrationService: Tier config not found, using fallback pricing', {
+        tier,
+      });
+      return this.TIER_PRICING[tier] || 0;
+    }
+
+    // Calculate based on billing cycle
+    if (billingCycle === 'annual') {
+      return Number(tierConfig.annualPriceUsd);
+    } else {
+      return Number(tierConfig.monthlyPriceUsd);
+    }
+  }
+
+  /**
+   * Apply mid-cycle coupon upgrade with proration (GAP FIX #2)
+   * Orchestrates: validation, proration calculation, redemption, and tier change
+   * @param subscriptionId - Subscription ID
+   * @param newTier - Target tier
+   * @param couponCode - Coupon code to apply
+   * @param userId - User ID
+   * @returns Proration details, redemption, and charge amount
+   */
+  async applyMidCycleCouponUpgrade(
+    subscriptionId: string,
+    newTier: string,
+    couponCode: string,
+    userId: string
+  ): Promise<{
+    proration: ProrationCalculation;
+    redemption: CouponRedemption;
+    chargeAmount: number;
+  }> {
+    logger.info('CheckoutIntegrationService: Applying mid-cycle coupon upgrade', {
+      subscriptionId,
+      newTier,
+      couponCode,
+      userId,
+    });
+
+    // Step 1: Validate coupon against actual subscription tier
+    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      where: { id: subscriptionId },
+    });
+
+    if (!subscription) {
+      throw new Error('Subscription not found');
+    }
+
+    // Get billing-cycle-aware pricing for new tier
+    const newTierPrice = await this.getTierPriceForBillingCycle(
+      newTier,
+      subscription.billingCycle
+    );
+
+    logger.debug('CheckoutIntegrationService: Billing-cycle-aware validation pricing', {
+      newTier,
+      billingCycle: subscription.billingCycle,
+      newTierPrice,
+    });
+
+    const validation = await this.validationService.validateCoupon(couponCode, userId, {
+      subscriptionTier: subscription.tier,
+      cartTotal: newTierPrice, // Use billing-cycle-aware pricing
+    });
+
+    if (!validation.isValid) {
+      throw new Error(`Coupon validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    const discount = validation.discount!;
+
+    // Step 2: Get active discount for current subscription (if any)
+    const activeDiscount = await this.getActiveDiscountForSubscription(subscriptionId);
+
+    // Step 3: Calculate proration with coupon
+    const proration = await this.prorationService.calculateProration(subscriptionId, newTier, {
+      newTierCoupon: {
+        code: couponCode,
+        discountType: discount.discountType === 'percentage' ? 'percentage' : 'fixed_amount',
+        discountValue: discount.percentage || discount.fixedAmount || 0,
+      },
+      currentTierEffectivePrice: activeDiscount?.effectivePrice,
+    });
+
+    logger.info('CheckoutIntegrationService: Proration calculated with coupon', {
+      unusedCredit: proration.unusedCreditValueUsd,
+      newTierCost: proration.newTierProratedCostUsd,
+      couponDiscount: proration.couponDiscountAmount,
+      netCharge: proration.netChargeUsd,
+    });
+
+    // Step 4: Redeem coupon with proration fields
+    const redemption = await this.redemptionService.redeemCoupon(discount.couponId, userId, {
+      code: couponCode,
+      subscriptionId,
+      originalAmount: proration.newTierProratedCostUsd,
+      ipAddress: '',
+      userAgent: '',
+      prorationAmount: proration.couponDiscountAmount,
+      isProrationInvolved: true,
+      tierBefore: subscription.tier,
+      tierAfter: newTier,
+    });
+
+    // Step 5: Apply tier change via ProrationService
+    await this.prorationService.applyTierUpgrade(subscriptionId, newTier);
+
+    logger.info('CheckoutIntegrationService: Mid-cycle upgrade completed', {
+      subscriptionId,
+      fromTier: subscription.tier,
+      toTier: newTier,
+      chargeAmount: proration.netChargeUsd,
+      redemptionId: redemption.id,
+    });
+
+    return {
+      proration,
+      redemption,
+      chargeAmount: proration.netChargeUsd,
+    };
   }
 }
