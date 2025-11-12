@@ -244,6 +244,112 @@ Three independent services sharing a single PostgreSQL database:
 - Prisma error helpers (P2002, P2003, P2025)
 - Strategic indexes on foreign keys and common queries
 
+### Naming Convention Standards
+
+**IMPORTANT: Consistent naming conventions across the stack**
+
+The project follows industry-standard REST API naming patterns with automatic transformation between layers:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Database Layer (Prisma)        → snake_case (SQL standard)  │
+│   tier_eligibility, billing_cycles, max_uses                │
+├─────────────────────────────────────────────────────────────┤
+│ Type Mappers (Backend)         → Transform layer            │
+│   backend/src/utils/typeMappers.ts                          │
+│   Converts: snake_case → camelCase                          │
+├─────────────────────────────────────────────────────────────┤
+│ API Responses (REST JSON)      → camelCase                  │
+│   tierEligibility, billingCycles, maxUses                   │
+├─────────────────────────────────────────────────────────────┤
+│ Shared Types (@rephlo/shared-types) → camelCase             │
+│   Single source of truth for TypeScript interfaces          │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend (React/TypeScript)    → camelCase                  │
+│   Components consume camelCase directly                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Principles:**
+
+1. **Database Fields:** Always use `snake_case` in Prisma schema
+   - Example: `max_uses`, `tier_eligibility`, `created_at`
+   - Follows PostgreSQL and SQL conventions
+
+2. **API Responses:** Always use `camelCase` in JSON
+   - Example: `maxUses`, `tierEligibility`, `createdAt`
+   - Follows REST API standards (Google, Stripe, Twilio, Firebase)
+
+3. **Type Mappers:** Centralized transformation in `backend/src/utils/typeMappers.ts`
+   - `mapCouponToApiType()`, `mapUserToApiType()`, `mapSubscriptionToApiType()`
+   - Handles ALL database → API conversions
+   - Never manually transform in controllers or services
+
+4. **Shared Types:** TypeScript interfaces always use `camelCase`
+   - Located in `shared-types/src/*.types.ts`
+   - Shared between frontend and backend
+   - Single source of truth for type definitions
+
+5. **Frontend:** Consume `camelCase` directly
+   - No transformations needed in React components
+   - Type-safe with shared-types package
+
+**Example Transformation:**
+
+```typescript
+// Database (Prisma schema) - snake_case
+model Coupon {
+  max_uses             Int?
+  tier_eligibility     String[]
+  billing_cycles       String[]
+  created_at           DateTime
+}
+
+// Type Mapper (backend/src/utils/typeMappers.ts)
+export function mapCouponToApiType(dbCoupon: PrismaCoupon): Coupon {
+  return {
+    maxUses: dbCoupon.max_uses,              // Transform
+    tierEligibility: dbCoupon.tier_eligibility,
+    billingCycles: dbCoupon.billing_cycles,
+    createdAt: dbCoupon.created_at.toISOString(),
+  };
+}
+
+// API Response (JSON) - camelCase
+{
+  "maxUses": 100,
+  "tierEligibility": ["pro", "enterprise"],
+  "billingCycles": ["monthly", "annual"],
+  "createdAt": "2025-01-15T10:30:00.000Z"
+}
+
+// Frontend (TypeScript) - camelCase
+interface Coupon {
+  maxUses?: number | null;
+  tierEligibility: SubscriptionTier[];
+  billingCycles: string[];
+  createdAt: string;
+}
+```
+
+**TypeScript Enum Imports:**
+
+Enums are BOTH types AND runtime values, requiring special import handling:
+
+```typescript
+// ❌ WRONG - Causes "cannot be used as a value" errors
+import type { User, SubscriptionTier } from '@rephlo/shared-types';
+
+// ✅ CORRECT - Separate type-only and value imports
+import type { User } from '@rephlo/shared-types';
+import { SubscriptionTier } from '@rephlo/shared-types';
+```
+
+**References:**
+- Implementation: `docs/progress/161-camelcase-standardization-completion-report.md`
+- Type mappers: `backend/src/utils/typeMappers.ts`
+- Shared types: `shared-types/src/*.types.ts`
+
 ---
 
 ## Database Schema (Backend)
