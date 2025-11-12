@@ -110,78 +110,113 @@ function extractExpressRoutes(filePath: string): EndpointDefinition[] {
   const lines = content.split('\n');
   const endpoints: EndpointDefinition[] = [];
 
-  // Multi-line regex patterns for Express routes
-  // Remove newlines and extra whitespace for matching
-  const normalizedContent = content.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ');
+  // Parse line-by-line to build route definitions
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
 
-  // Regex patterns for Express routes (with multiline support)
-  const routePatterns = [
-    /router\.(get|post|put|patch|delete|options|head)\s*\(\s*['"`]([^'"`]+)['"`]/gi,
-    /app\.(get|post|put|patch|delete|options|head)\s*\(\s*['"`]([^'"`]+)['"`]/gi,
-    /\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*\)\s*\.(get|post|put|patch|delete)/gi,
-  ];
+    // Check if this line starts a route definition
+    const routeMatch = line.match(/^\s*(router|app)\s*\.\s*(get|post|put|patch|delete|options|head)\s*\(/);
 
-  // Extract routes from normalized content
-  routePatterns.forEach(pattern => {
-    pattern.lastIndex = 0;
-    let match;
+    if (routeMatch) {
+      const method = routeMatch[2].toUpperCase();
+      const routeStartLine = i;
 
-    while ((match = pattern.exec(normalizedContent)) !== null) {
-      const method = match[1] || match[2];
-      const routePath = match[2] || match[1];
+      // Collect lines until we find the closing );
+      let routeCode = '';
+      let bracketCount = 0;
+      let foundStart = false;
+      let j = i;
 
-      if (method && routePath) {
-        // Find the line number by searching for the route path in original content
-        let lineNumber = 1;
-        for (let i = 0; i < lines.length; i++) {
-          if (lines[i].includes(routePath) && lines[i].match(new RegExp(`\\.(${method})\\s*\\(`))) {
-            lineNumber = i + 1;
-            break;
+      while (j < lines.length) {
+        const currentLine = lines[j];
+        routeCode += currentLine + ' ';
+
+        // Count parentheses to find the end of the route definition
+        for (const char of currentLine) {
+          if (char === '(') {
+            bracketCount++;
+            foundStart = true;
+          } else if (char === ')') {
+            bracketCount--;
+            if (foundStart && bracketCount === 0) {
+              // Found the end of this route definition
+              break;
+            }
           }
         }
 
-        // Extract middleware from the context around the match
-        const contextStart = Math.max(0, match.index - 200);
-        const contextEnd = Math.min(normalizedContent.length, match.index + 200);
-        const context = normalizedContent.substring(contextStart, contextEnd);
+        if (foundStart && bracketCount === 0) {
+          break;
+        }
 
+        j++;
+        if (j - i > 20) break; // Safety limit
+      }
+
+      // Extract route path from the collected code
+      const pathMatch = routeCode.match(/\(\s*['"`]([^'"`]+)['"`]/);
+      if (pathMatch) {
+        const routePath = pathMatch[1];
+
+        // Extract middleware
         const middleware: string[] = [];
-
-        // Look for common middleware patterns
-        if (context.match(/authMiddleware|authenticate\(\)/)) middleware.push('authenticate');
-        if (context.match(/requireAdmin\(\)/)) middleware.push('requireAdmin');
-        if (context.match(/requireScopes\(\[([^\]]+)\]\)/)) {
-          const scopeMatch = context.match(/requireScopes\(\[([^\]]+)\]\)/);
+        if (routeCode.match(/authMiddleware|authenticate\(\)/)) middleware.push('authenticate');
+        if (routeCode.match(/requireAdmin\(\)/)) middleware.push('requireAdmin');
+        if (routeCode.match(/requireScopes\(\[([^\]]+)\]\)/)) {
+          const scopeMatch = routeCode.match(/requireScopes\(\[([^\]]+)\]\)/);
           if (scopeMatch) middleware.push(`requireScopes(${scopeMatch[1]})`);
         }
-        if (context.match(/requireRoles?\(\[([^\]]+)\]\)/)) {
-          const roleMatch = context.match(/requireRoles?\(\[([^\]]+)\]\)/);
+        if (routeCode.match(/requireRoles?\(\[([^\]]+)\]\)/)) {
+          const roleMatch = routeCode.match(/requireRoles?\(\[([^\]]+)\]\)/);
           if (roleMatch) middleware.push(`requireRole(${roleMatch[1]})`);
         }
-        if (context.match(/auditLog\(/)) middleware.push('auditLog');
+        if (routeCode.match(/auditLog\(/)) middleware.push('auditLog');
 
-        // Extract handler name
-        const handlerMatch = context.match(/asyncHandler\(([a-zA-Z0-9_.]+)\./);
-        const handler = handlerMatch ? handlerMatch[1] : undefined;
+        // Extract handler name - support multiple patterns
+        let handler: string | undefined = undefined;
 
-        // Check if we already have this endpoint (avoid duplicates)
+        // Pattern 1: asyncHandler(controller.method.bind(...))
+        const bindMatch = routeCode.match(/asyncHandler\(([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\.bind/);
+        if (bindMatch) {
+          handler = `${bindMatch[1]}.${bindMatch[2]}`;
+        } else {
+          // Pattern 2: asyncHandler(async (req, res) => controller.method(req, res))
+          const arrowMatch = routeCode.match(/asyncHandler\(async\s*\([^)]*\)\s*=>\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(/);
+          if (arrowMatch) {
+            handler = `${arrowMatch[1]}.${arrowMatch[2]}`;
+          } else {
+            // Pattern 3: Direct controller reference asyncHandler(controller.method)
+            const directMatch = routeCode.match(/asyncHandler\(([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\)/);
+            if (directMatch) {
+              handler = `${directMatch[1]}.${directMatch[2]}`;
+            }
+          }
+        }
+
+        // Check for duplicates
         const exists = endpoints.some(
-          e => e.method === method.toUpperCase() && e.path === routePath && e.file === path.relative(ROOT_DIR, filePath)
+          e => e.method === method && e.path === routePath
         );
 
         if (!exists) {
           endpoints.push({
-            method: method.toUpperCase(),
+            method,
             path: routePath,
             file: path.relative(ROOT_DIR, filePath),
-            line: lineNumber,
+            line: routeStartLine + 1,
             handler,
             middleware: middleware.length > 0 ? middleware : undefined,
           });
         }
       }
+
+      // Move to the end of this route definition
+      i = j + 1;
+    } else {
+      i++;
     }
-  });
+  }
 
   return endpoints;
 }
@@ -426,8 +461,8 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
     markdown += `|--------|----------|------|---------|------------|--------|\n`;
 
     sortedEndpoints.forEach(endpoint => {
-      // Skip root endpoint
-      if (endpoint.method === 'GET' && endpoint.path === '/') {
+      // Skip root endpoint (any method)
+      if (endpoint.path === '/') {
         return;
       }
 
