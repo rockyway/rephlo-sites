@@ -34,11 +34,41 @@ info:
     - `models.read` - Access to model information
     - `llm.inference` - Permission to make inference requests
 
-  version: 2.0.0
+  version: 3.0.0
   contact:
     name: API Support
     url: https://textassistant.com/support
     email: support@textassistant.com
+  x-changelog:
+    version: 3.0.0
+    date: 2025-11-12
+    summary: |
+      Major API-schema alignment update covering Phases 1-4 of admin panel improvements.
+
+      **Phase 1: Critical Security & Data Integrity Fixes**
+      - Added user `status` field (active/suspended/banned/deleted) to all user endpoints
+      - Updated subscription stats endpoint with MRR and trial conversion metrics
+      - Added `credit_balance` to user list responses
+      - Added field name aliases (finalPriceUsd, monthlyCreditsAllocated, nextBillingDate)
+
+      **Phase 2: Response Format Standardization**
+      - Standardized 38+ endpoints to use modern format: { status: 'success', data: T, meta?: PaginationMeta }
+      - Consistent pagination metadata across all admin endpoints
+      - Updated: coupons, campaigns, fraud-detection, billing, analytics, audit-logs
+
+      **Phase 3: Missing Features Implementation**
+      - Added 5 device activation management endpoints (list, stats, deactivate, revoke, bulk actions)
+      - Added 2 proration management endpoints (reverse, calculation breakdown)
+      - Added 2 single-item detail endpoints (GET /admin/coupons/:id, GET /admin/campaigns/:id)
+      - Updated POST/PATCH responses to return full objects instead of minimal fields
+
+      **Phase 4: Schema Alignment & Type Safety**
+      - Integration with @rephlo/shared-types package
+      - Added computed fields documentation (creditBalance, nextBillingDate, campaign status)
+      - Type-safe request/response validation with Zod schemas
+      - 6 analytical database views for optimized queries
+
+      **Breaking Changes**: None - all changes are additive or backwards compatible through field aliases
 
 servers:
   - url: https://api.textassistant.com
@@ -70,6 +100,14 @@ tags:
     description: User webhook configuration
   - name: Admin
     description: Administrative endpoints (requires admin role)
+  - name: Device Management
+    description: Perpetual license device activation management (admin only)
+  - name: Prorations
+    description: Subscription tier change proration tracking and reversal (admin only)
+  - name: Coupons
+    description: Coupon and discount code management (admin only)
+  - name: Campaigns
+    description: Marketing campaign management (admin only)
 
 paths:
   # =============================================================================
@@ -2532,6 +2570,673 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  # =============================================================================
+  # DEVICE MANAGEMENT ENDPOINTS (Phase 3)
+  # =============================================================================
+
+  /admin/licenses/devices:
+    get:
+      tags:
+        - Device Management
+      summary: List all device activations
+      description: |
+        Get paginated list of all device activations across all licenses with filtering options.
+
+        **Phase 3 Addition**: Device activation management backend infrastructure
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Response Format**: Modern format with pagination
+
+        **Rate Limit**: 30 requests per minute
+      operationId: getAllDeviceActivations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of devices per page
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, revoked]
+          description: Filter by activation status
+        - name: os
+          in: query
+          schema:
+            type: string
+            enum: [windows, macos, linux]
+          description: Filter by operating system
+        - name: suspicious
+          in: query
+          schema:
+            type: boolean
+          description: Filter by suspicious flag
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by device name, device ID, or user email
+      responses:
+        '200':
+          description: Device activations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceActivation'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/licenses/devices/stats:
+    get:
+      tags:
+        - Device Management
+      summary: Get device activation statistics
+      description: |
+        Get dashboard statistics for device activations including counts by status and OS.
+
+        **Phase 3 Addition**: Device management dashboard metrics
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Response Format**: Modern format
+      operationId: getDeviceStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Device statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        description: Total device activations
+                        example: 342
+                      active:
+                        type: integer
+                        description: Active devices
+                        example: 285
+                      suspicious:
+                        type: integer
+                        description: Suspicious devices flagged
+                        example: 12
+                      byOS:
+                        type: object
+                        properties:
+                          windows:
+                            type: integer
+                            example: 150
+                          macos:
+                            type: integer
+                            example: 95
+                          linux:
+                            type: integer
+                            example: 40
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/licenses/devices/{id}/deactivate:
+    post:
+      tags:
+        - Device Management
+      summary: Deactivate a device
+      description: |
+        Deactivate a device activation (user-initiated or admin action).
+
+        **Phase 3 Addition**: Device deactivation management
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Audit**: Creates audit log entry
+      operationId: deactivateDevice
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Device activation ID
+      responses:
+        '200':
+          description: Device deactivated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Device deactivated successfully
+                      activationId:
+                        type: string
+                        format: uuid
+        '404':
+          description: Device activation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/licenses/devices/{id}/revoke:
+    post:
+      tags:
+        - Device Management
+      summary: Revoke a device permanently
+      description: |
+        Permanently revoke a device activation (admin only). This action cannot be undone.
+
+        **Phase 3 Addition**: Permanent device revocation for security/fraud cases
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Audit**: Creates audit log entry with reason
+      operationId: revokeDevice
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Device activation ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Reason for revoking device (required for audit)
+                  example: Suspected fraud - multiple activations from different IPs
+      responses:
+        '200':
+          description: Device revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Device permanently revoked
+                      activationId:
+                        type: string
+                        format: uuid
+                      reason:
+                        type: string
+        '400':
+          description: Missing or invalid reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Device activation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/licenses/devices/bulk-action:
+    post:
+      tags:
+        - Device Management
+      summary: Perform bulk actions on devices
+      description: |
+        Perform bulk operations on multiple device activations (deactivate, revoke, flag as suspicious).
+
+        **Phase 3 Addition**: Bulk device management for administrative efficiency
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Audit**: Creates audit log entries for each action
+      operationId: bulkActionDevices
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+                - activationIds
+              properties:
+                action:
+                  type: string
+                  enum: [deactivate, revoke, flag_suspicious]
+                  description: Action to perform on devices
+                activationIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array of device activation IDs
+                  minItems: 1
+                  maxItems: 100
+                reason:
+                  type: string
+                  description: Required for revoke action
+                flags:
+                  type: array
+                  items:
+                    type: string
+                  description: Suspicious flags for flag_suspicious action
+            example:
+              action: revoke
+              activationIds: ["uuid1", "uuid2", "uuid3"]
+              reason: Bulk fraud detection - similar IP patterns
+      responses:
+        '200':
+          description: Bulk action completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      action:
+                        type: string
+                      successCount:
+                        type: integer
+                        description: Number of successful operations
+                      failedCount:
+                        type: integer
+                        description: Number of failed operations
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            activationId:
+                              type: string
+                            error:
+                              type: string
+        '400':
+          description: Invalid action or missing parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================================================
+  # PRORATION MANAGEMENT ENDPOINTS (Phase 3)
+  # =============================================================================
+
+  /admin/prorations/{id}/reverse:
+    post:
+      tags:
+        - Prorations
+      summary: Reverse a proration event
+      description: |
+        Reverse a proration event, restoring the subscription to its original tier.
+        This creates a compensating proration event and marks the original as reversed.
+
+        **Phase 3 Addition**: Fixed 501 Not Implemented status
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Audit**: Creates audit log entry with reason
+
+        **Transaction**: Atomic operation - all changes committed or rolled back together
+      operationId: reverseProration
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Proration event ID to reverse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Reason for reversing proration (required for audit)
+                  example: Customer billing dispute - incorrect tier change
+            example:
+              reason: Customer billing dispute - incorrect tier change
+      responses:
+        '200':
+          description: Proration reversed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/ProrationEvent'
+        '400':
+          description: Invalid request or already reversed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                alreadyReversed:
+                  value:
+                    error:
+                      code: invalid_operation
+                      message: Proration event has already been reversed
+                missingReason:
+                  value:
+                    error:
+                      code: validation_error
+                      message: Reason is required for proration reversal
+        '404':
+          description: Proration event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/prorations/{id}/calculation:
+    get:
+      tags:
+        - Prorations
+      summary: Get calculation breakdown for proration
+      description: |
+        Get detailed calculation breakdown for a proration event showing formulas and amounts.
+
+        **Phase 3 Addition**: New endpoint for proration transparency
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Response Format**: Modern format with calculation details
+      operationId: getProrationCalculation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Proration event ID
+      responses:
+        '200':
+          description: Calculation breakdown retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    type: object
+                    properties:
+                      prorationId:
+                        type: string
+                        format: uuid
+                      subscriptionId:
+                        type: string
+                        format: uuid
+                      calculation:
+                        type: object
+                        properties:
+                          unusedCreditFormula:
+                            type: string
+                            example: (25 days remaining / 30 days in cycle) × $29.00 = $24.17
+                          unusedCreditAmount:
+                            type: number
+                            format: float
+                            example: 24.17
+                          newTierCostFormula:
+                            type: string
+                            example: (25 days remaining / 30 days in cycle) × $99.00 = $82.50
+                          newTierCostAmount:
+                            type: number
+                            format: float
+                            example: 82.50
+                          netChargeFormula:
+                            type: string
+                            example: $82.50 - $24.17 = $58.33
+                          netChargeAmount:
+                            type: number
+                            format: float
+                            example: 58.33
+                      fromTier:
+                        type: string
+                        example: pro
+                      toTier:
+                        type: string
+                        example: enterprise
+                      daysRemaining:
+                        type: integer
+                        example: 25
+                      daysInCycle:
+                        type: integer
+                        example: 30
+                      status:
+                        type: string
+                        enum: [pending, applied, reversed, failed]
+                      stripeInvoiceUrl:
+                        type: string
+                        format: uri
+                        nullable: true
+        '404':
+          description: Proration event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # =============================================================================
+  # COUPON & CAMPAIGN DETAIL ENDPOINTS (Phase 3)
+  # =============================================================================
+
+  /admin/coupons/{id}:
+    get:
+      tags:
+        - Coupons
+      summary: Get single coupon details
+      description: |
+        Get full details for a single coupon by ID including usage limits and campaign relations.
+
+        **Phase 3 Addition**: Single-item detail endpoint to avoid unnecessary list queries
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Response Format**: Modern format with full object
+      operationId: getSingleCoupon
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Coupon ID
+      responses:
+        '200':
+          description: Coupon retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/Coupon'
+        '404':
+          description: Coupon not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/campaigns/{id}:
+    get:
+      tags:
+        - Campaigns
+      summary: Get single campaign details
+      description: |
+        Get full details for a single campaign by ID including computed status and coupon count.
+
+        **Phase 3 Addition**: Single-item detail endpoint for campaign management
+
+        **Authentication**: Requires Bearer token and admin role
+
+        **Response Format**: Modern format with computed fields (status based on dates)
+      operationId: getSingleCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Campaign ID
+      responses:
+        '200':
+          description: Campaign retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  data:
+                    $ref: '#/components/schemas/Campaign'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3057,6 +3762,424 @@ components:
     # =============================================================================
     # ADMIN SCHEMAS
     # =============================================================================
+
+    # Phase 2: Modern Response Format Schemas
+    SuccessResponse:
+      type: object
+      required:
+        - status
+        - data
+      properties:
+        status:
+          type: string
+          enum: [success]
+          description: Operation status (always 'success' for 2xx responses)
+          example: success
+        data:
+          description: Response data (type varies by endpoint)
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+      description: |
+        Modern response format used across all Phase 2 migrated endpoints.
+        Replaces legacy {success: boolean, data: T} format.
+
+    PaginationMeta:
+      type: object
+      required:
+        - total
+        - page
+        - limit
+        - totalPages
+        - hasMore
+      properties:
+        total:
+          type: integer
+          description: Total number of items across all pages
+          example: 142
+        page:
+          type: integer
+          description: Current page number (1-indexed)
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          description: Number of items per page
+          minimum: 1
+          maximum: 100
+          example: 20
+        totalPages:
+          type: integer
+          description: Total number of pages
+          minimum: 1
+          example: 8
+        hasMore:
+          type: boolean
+          description: Whether more pages are available
+          example: true
+      description: Pagination metadata included in paginated list responses
+
+    # Phase 1 & 4: User Management Schemas
+    UserDetails:
+      type: object
+      required:
+        - id
+        - email
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User ID
+        email:
+          type: string
+          format: email
+          description: User email address
+        name:
+          type: string
+          nullable: true
+          description: Computed field - firstName + lastName
+          example: John Doe
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, suspended, banned, deleted]
+          description: |
+            User account status (Phase 1 fix)
+            - active: Normal account
+            - suspended: Temporarily restricted
+            - banned: Permanently restricted
+            - deleted: Soft-deleted account
+          example: active
+        currentTier:
+          type: string
+          enum: [free, pro, enterprise]
+          description: Current subscription tier (computed from active subscription)
+          example: pro
+        creditsBalance:
+          type: number
+          format: float
+          description: Current credit balance (Phase 1 addition)
+          example: 150.50
+        totalApiCalls:
+          type: integer
+          description: Total API requests made
+          example: 2584
+        creditsUsed:
+          type: number
+          format: float
+          description: Total credits consumed
+          example: 458.25
+        averageCallsPerDay:
+          type: number
+          format: float
+          description: Average API calls per day (last 30 days)
+          example: 86.13
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      description: |
+        Extended user information with computed fields and usage statistics.
+        Phase 1: Added status field and creditBalance
+        Phase 4: Mapped from @rephlo/shared-types
+
+    SubscriptionStats:
+      type: object
+      required:
+        - totalActive
+        - mrr
+        - pastDueCount
+        - trialConversionsThisMonth
+      properties:
+        totalActive:
+          type: integer
+          description: Count of active subscriptions (Phase 1 fix)
+          example: 342
+        mrr:
+          type: number
+          format: float
+          description: Monthly Recurring Revenue in USD (Phase 1 calculation)
+          example: 24850.50
+        pastDueCount:
+          type: integer
+          description: Count of past_due subscriptions (Phase 1 addition)
+          example: 12
+        trialConversionsThisMonth:
+          type: integer
+          description: Trials converted to active this month (Phase 1 metric)
+          example: 18
+      description: |
+        Subscription dashboard statistics (Phase 1 rewrite).
+        Replaces old format: {total, active, trial, cancelled}
+
+    # Phase 3: Device Management Schemas
+    DeviceActivation:
+      type: object
+      required:
+        - id
+        - licenseId
+        - deviceName
+        - os
+        - status
+        - activatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Device activation ID
+        licenseId:
+          type: string
+          format: uuid
+          description: Parent license ID
+        deviceName:
+          type: string
+          description: Device name/hostname
+          example: DESKTOP-ABC123
+        deviceId:
+          type: string
+          description: Unique device identifier
+          example: win-abc123-xyz789
+        os:
+          type: string
+          enum: [windows, macos, linux]
+          description: Operating system
+        osVersion:
+          type: string
+          description: OS version string
+          example: Windows 11 Pro
+        status:
+          type: string
+          enum: [active, inactive, revoked]
+          description: Activation status
+        ipAddress:
+          type: string
+          nullable: true
+          description: IP address at activation (privacy: hashed in DB)
+        isSuspicious:
+          type: boolean
+          description: Flagged as suspicious by fraud detection
+          default: false
+        suspiciousFlags:
+          type: array
+          items:
+            type: string
+          description: Fraud detection flags
+          example: ["multiple_ips", "rapid_activation"]
+        activatedAt:
+          type: string
+          format: date-time
+        deactivatedAt:
+          type: string
+          format: date-time
+          nullable: true
+      description: Device activation record with fraud detection fields (Phase 3)
+
+    # Phase 3: Proration Schemas
+    ProrationEvent:
+      type: object
+      required:
+        - id
+        - subscriptionId
+        - fromTier
+        - toTier
+        - unusedCredit
+        - newTierCost
+        - netCharge
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        subscriptionId:
+          type: string
+          format: uuid
+        fromTier:
+          type: string
+          example: pro
+        toTier:
+          type: string
+          example: enterprise
+        unusedCredit:
+          type: number
+          format: float
+          description: Unused credit from old tier
+          example: 24.17
+        newTierCost:
+          type: number
+          format: float
+          description: Cost for new tier (prorated)
+          example: 82.50
+        netCharge:
+          type: number
+          format: float
+          description: Net charge amount (newTierCost - unusedCredit)
+          example: 58.33
+        status:
+          type: string
+          enum: [pending, applied, reversed, failed]
+          description: Proration status
+        reversedBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: Admin user who reversed this proration
+        reversalReason:
+          type: string
+          nullable: true
+          description: Reason for reversal
+        stripeInvoiceId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      description: Proration event for subscription tier changes (Phase 3)
+
+    # Phase 3: Coupon & Campaign Schemas
+    Coupon:
+      type: object
+      required:
+        - id
+        - code
+        - type
+        - discountType
+        - isActive
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Coupon code (unique)
+          example: SUMMER2025
+        type:
+          type: string
+          enum: [percentage_discount, fixed_amount_discount, bonus_duration, trial_extension]
+          description: Coupon type (mapped from couponType in DB)
+        discountType:
+          type: string
+          enum: [percentage, fixed_amount]
+          nullable: true
+        discountPercentage:
+          type: number
+          format: float
+          nullable: true
+          description: Discount percentage (0-100)
+          example: 20
+        discountAmount:
+          type: number
+          format: float
+          nullable: true
+          description: Fixed discount amount in USD
+          example: 10.00
+        bonusDurationMonths:
+          type: integer
+          nullable: true
+          description: Bonus subscription months
+        maxDiscountAmount:
+          type: number
+          format: float
+          nullable: true
+          description: Maximum discount cap for percentage coupons
+        validFrom:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        maxRedemptions:
+          type: integer
+          nullable: true
+        redemptionCount:
+          type: integer
+          description: Current redemption count (computed from usageLimits)
+          example: 42
+        campaignId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      description: |
+        Coupon with full details (Phase 3 single-item endpoint).
+        Field mappings: couponType → type, discountValue split into specific fields
+
+    Campaign:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+        - startsAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Campaign name (mapped from campaignName)
+          example: Summer Sale 2025
+        type:
+          type: string
+          enum: [holiday, marketing, behavioral, referral]
+        status:
+          type: string
+          enum: [planning, active, paused, ended]
+          description: |
+            Computed status based on dates:
+            - planning: startDate in future
+            - active: between startDate and endDate, isActive=true
+            - ended: past endDate
+            - paused: isActive=false
+        startsAt:
+          type: string
+          format: date-time
+          description: Campaign start date (mapped from start_date)
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Campaign end date (mapped from end_date)
+        budgetCap:
+          type: number
+          format: float
+          nullable: true
+          description: Budget limit in USD
+        currentSpend:
+          type: number
+          format: float
+          description: Current spend amount
+          example: 1250.50
+        couponCount:
+          type: integer
+          description: Number of coupons in this campaign
+          example: 5
+        redemptionCount:
+          type: integer
+          description: Total redemptions across all coupons
+          example: 142
+        createdAt:
+          type: string
+          format: date-time
+      description: |
+        Campaign with computed status and aggregated metrics (Phase 3).
+        Field mappings: campaignName → name, start_date → startsAt
 
     AdminMetricsResponse:
       type: object
