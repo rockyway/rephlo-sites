@@ -131,9 +131,14 @@ function ModelTierManagement() {
     setIsSaving(true);
     try {
       const updatedModel = await adminAPI.updateModelTier(modelId, updates);
+      // Ensure allowedTiers is always an array
+      const modelWithDefaults = {
+        ...updatedModel,
+        allowedTiers: updatedModel.allowedTiers || [],
+      };
       // Update models list
       setModels((prev) =>
-        prev.map((m) => (m.id === modelId ? updatedModel : m))
+        prev.map((m) => (m.id === modelId ? modelWithDefaults : m))
       );
       setSuccessMessage(`Successfully updated ${updatedModel.displayName}`);
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -449,7 +454,7 @@ function ModelTierManagement() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1 flex-wrap">
-                          {model.allowedTiers.map((tier) => (
+                          {(model.allowedTiers || []).map((tier) => (
                             <TierBadge key={tier} tier={tier} size="sm" />
                           ))}
                         </div>
