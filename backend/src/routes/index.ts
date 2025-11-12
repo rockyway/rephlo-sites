@@ -27,6 +27,7 @@ import { createPlan109Router } from './plan109.routes';
 import { createPlan110Router } from './plan110.routes';
 import { createPlan111Router } from './plan111.routes';
 import { createMFARouter } from './mfa.routes';
+import adminModelsRoutes from './admin-models.routes';
 
 // Import subscription controller for webhooks
 import { SubscriptionsController } from '../controllers/subscriptions.controller';
@@ -229,6 +230,10 @@ router.use('/api-docs', createSwaggerRouter());
 
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);
+
+// ===== Admin Model Lifecycle Routes =====
+// Admin endpoints for model lifecycle management (create, mark legacy, archive, etc.)
+router.use('/admin/models', adminModelsRoutes);
 
 // ===== Plan 109: Subscription Monetization Routes =====
 // Additional admin endpoints for subscription, user, billing, and analytics management

@@ -374,7 +374,7 @@ export class UserService implements IUserService {
       defaultModelId: modelId,
       model: {
         id: model.id,
-        name: model.displayName,
+        name: model.displayName ?? model.id,
         capabilities: model.capabilities,
       },
     };
@@ -420,7 +420,7 @@ export class UserService implements IUserService {
       model: preferences.defaultModel
         ? {
             id: preferences.defaultModel.id,
-            name: preferences.defaultModel.displayName,
+            name: preferences.defaultModel.displayName ?? preferences.defaultModel.id,
             capabilities: preferences.defaultModel.capabilities,
           }
         : null,

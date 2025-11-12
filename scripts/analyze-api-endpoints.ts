@@ -43,6 +43,13 @@ interface EndpointDefinition {
   errorSchemas?: string[];
 }
 
+interface SchemaDefinition {
+  name: string;
+  definition: string;
+  file?: string;
+  line?: number;
+}
+
 interface EndpointUsage {
   file: string;
   line: number;
@@ -54,6 +61,7 @@ interface ProjectEndpoints {
   baseUrl: string;
   endpoints: EndpointDefinition[];
   usages: Map<string, EndpointUsage[]>;
+  schemas: Map<string, SchemaDefinition>;
 }
 
 const BACKEND_DIR = path.join(__dirname, '..', 'backend');
@@ -271,9 +279,74 @@ function extractOIDCRoutes(filePath: string): EndpointDefinition[] {
 }
 
 /**
+ * Extract TypeScript type/interface definition from source files
+ */
+function extractTypeDefinition(typeName: string, searchDirs: string[]): SchemaDefinition | null {
+  // Search paths for type definitions
+  const typeFiles = [
+    path.join(ROOT_DIR, 'shared-types', 'src', '**', '*.types.ts'),
+    path.join(BACKEND_DIR, 'src', 'types', '**', '*.ts'),
+    path.join(BACKEND_DIR, 'src', 'services', '**', '*.ts'),
+    path.join(IDP_DIR, 'src', 'types', '**', '*.ts'),
+  ];
+
+  for (const pattern of typeFiles) {
+    const baseDir = pattern.split('**')[0];
+    if (!fs.existsSync(baseDir)) continue;
+
+    const files = getAllFiles(baseDir, ['.ts']);
+    for (const file of files) {
+      const content = fs.readFileSync(file, 'utf-8');
+      const lines = content.split('\n');
+
+      // Search for interface or type definition
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Match: export interface TypeName { or export type TypeName = {
+        const match = line.match(new RegExp(`export\\s+(interface|type)\\s+${typeName}\\s*[={]`));
+        if (match) {
+          // Extract the full definition (handle multi-line)
+          let definition = '';
+          let braceCount = 0;
+          let startLine = i;
+          let foundStart = false;
+
+          for (let j = i; j < Math.min(lines.length, i + 200); j++) {
+            const currentLine = lines[j];
+            definition += currentLine + '\n';
+
+            for (const char of currentLine) {
+              if (char === '{') {
+                braceCount++;
+                foundStart = true;
+              } else if (char === '}') {
+                braceCount--;
+                if (foundStart && braceCount === 0) {
+                  return {
+                    name: typeName,
+                    definition: definition.trim(),
+                    file: path.relative(ROOT_DIR, file),
+                    line: startLine + 1,
+                  };
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Extract response and error schemas from controller method
  */
-function extractSchemas(endpoint: EndpointDefinition): { responseSchema?: string; errorSchemas?: string[] } {
+function extractSchemas(
+  endpoint: EndpointDefinition,
+  schemasMap: Map<string, SchemaDefinition>
+): { responseSchema?: string; errorSchemas?: string[] } {
   if (!endpoint.handler) {
     return {};
   }
@@ -383,14 +456,46 @@ function extractSchemas(endpoint: EndpointDefinition): { responseSchema?: string
   const serviceCallMatch = methodCode.match(/await\s+this\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\(/);
   if (serviceCallMatch) {
     const [, serviceName, serviceMethod] = serviceCallMatch;
-    const serviceFile = path.join(BACKEND_DIR, 'src', 'services', `${serviceName}.ts`);
-    if (fs.existsSync(serviceFile)) {
+
+    // Convert camelCase to kebab-case for file lookup
+    // e.g., platformAnalyticsService -> platform-analytics.service.ts
+    const kebabName = serviceName
+      .replace(/([A-Z])/g, '-$1')
+      .toLowerCase()
+      .replace(/^-/, '')
+      .replace(/-service$/, '');
+
+    // Try multiple file patterns
+    const serviceFilePatterns = [
+      path.join(BACKEND_DIR, 'src', 'services', `${kebabName}.service.ts`),
+      path.join(BACKEND_DIR, 'src', 'services', `${serviceName}.ts`),
+      path.join(IDP_DIR, 'src', 'services', `${kebabName}.service.ts`),
+      path.join(IDP_DIR, 'src', 'services', `${serviceName}.ts`),
+    ];
+
+    let serviceFile: string | undefined;
+    for (const pattern of serviceFilePatterns) {
+      if (fs.existsSync(pattern)) {
+        serviceFile = pattern;
+        break;
+      }
+    }
+
+    if (serviceFile) {
       const serviceContent = fs.readFileSync(serviceFile, 'utf-8');
       const serviceMethodMatch = serviceContent.match(
         new RegExp(`async\\s+${serviceMethod}\\s*\\([^)]*\\)\\s*:\\s*Promise<([^>]+)>`)
       );
       if (serviceMethodMatch) {
-        responseSchema = serviceMethodMatch[1];
+        const typeName = serviceMethodMatch[1].trim();
+        // Extract type definition and store in schemas map
+        if (!schemasMap.has(typeName)) {
+          const typeDef = extractTypeDefinition(typeName, []);
+          if (typeDef) {
+            schemasMap.set(typeName, typeDef);
+          }
+        }
+        responseSchema = typeName;
       }
     }
   }
@@ -569,8 +674,9 @@ function analyzeBackend(): ProjectEndpoints {
 
   // Extract schemas for each endpoint
   console.log('Extracting schemas...');
+  const schemasMap = new Map<string, SchemaDefinition>();
   endpoints.forEach(endpoint => {
-    const schemas = extractSchemas(endpoint);
+    const schemas = extractSchemas(endpoint, schemasMap);
     endpoint.responseSchema = schemas.responseSchema;
     endpoint.errorSchemas = schemas.errorSchemas;
   });
@@ -602,6 +708,7 @@ function analyzeBackend(): ProjectEndpoints {
     baseUrl: 'http://localhost:7150',
     endpoints,
     usages,
+    schemas: schemasMap,
   };
 }
 
@@ -635,6 +742,14 @@ function analyzeIdentityProvider(): ProjectEndpoints {
 
   endpoints.push(...oidcStandardEndpoints);
 
+  // Extract schemas for each endpoint
+  const schemasMap = new Map<string, SchemaDefinition>();
+  endpoints.forEach(endpoint => {
+    const schemas = extractSchemas(endpoint, schemasMap);
+    endpoint.responseSchema = schemas.responseSchema;
+    endpoint.errorSchemas = schemas.errorSchemas;
+  });
+
   // Find usages
   const usages = new Map<string, EndpointUsage[]>();
   endpoints.forEach(endpoint => {
@@ -656,6 +771,7 @@ function analyzeIdentityProvider(): ProjectEndpoints {
     baseUrl: 'http://localhost:7151',
     endpoints,
     usages,
+    schemas: schemasMap,
   };
 }
 
@@ -735,6 +851,36 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
     markdown += `- **Total Usage References:** ${totalUsages}\n`;
     markdown += `- **Unused Endpoints:** ${totalEndpoints - endpointsWithUsages}\n\n`;
   });
+
+  // Collect all unique schemas from all projects
+  const allSchemas = new Map<string, SchemaDefinition>();
+  projects.forEach(project => {
+    project.schemas.forEach((schema, name) => {
+      if (!allSchemas.has(name)) {
+        allSchemas.set(name, schema);
+      }
+    });
+  });
+
+  // Add Schemas section if we have any
+  if (allSchemas.size > 0) {
+    markdown += `---\n\n`;
+    markdown += `## Schemas\n\n`;
+    markdown += `Referenced TypeScript types and interfaces used in API responses:\n\n`;
+
+    // Sort schemas alphabetically
+    const sortedSchemas = Array.from(allSchemas.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+    sortedSchemas.forEach(([name, schema]) => {
+      markdown += `### ${name}\n\n`;
+      if (schema.file) {
+        markdown += `**Source:** \`${schema.file}\` (Line ${schema.line})\n\n`;
+      }
+      markdown += `\`\`\`typescript\n`;
+      markdown += schema.definition;
+      markdown += `\n\`\`\`\n\n`;
+    });
+  }
 
   return markdown;
 }

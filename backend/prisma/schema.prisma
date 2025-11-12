@@ -493,40 +493,56 @@ model UsageHistory {
 // Models Table
 // Stores available LLM models with pricing and capability information
 model Model {
-  id                         String            @id @db.VarChar(100)
-  name                       String            @db.VarChar(255)
-  displayName                String            @map("display_name") @db.VarChar(255)
-  provider                   String            @db.VarChar(100)
+  // Core Identity Fields (Remain in columns for query performance)
+  id       String @id @db.VarChar(100)
+  name     String @db.VarChar(255)
+  provider String @db.VarChar(100)
+
+  // Lifecycle State Fields (Indexed for fast filtering)
+  isAvailable Boolean @default(true) @map("is_available")
+  isLegacy    Boolean @default(false) @map("is_legacy")
+  isArchived  Boolean @default(false) @map("is_archived")
+
+  // JSONB Metadata - All variable/descriptive properties consolidated
+  // Contains: displayName, description, version, capabilities, contextLength,
+  // maxOutputTokens, inputCostPerMillionTokens, outputCostPerMillionTokens,
+  // creditsPer1kTokens, requiredTier, tierRestrictionMode, allowedTiers,
+  // legacyReplacementModelId, deprecationNotice, sunsetDate, providerMetadata, etc.
+  meta Json @db.JsonB
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // OLD FIELDS (Deprecated - Keep during transition, will be removed after migration)
+  // TODO: Remove these fields after verifying meta JSONB migration is successful
+  displayName                String?           @map("display_name") @db.VarChar(255)
   description                String?           @db.Text
   capabilities               ModelCapability[]
-  contextLength              Int               @map("context_length")
+  contextLength              Int?              @map("context_length")
   maxOutputTokens            Int?              @map("max_output_tokens")
-  inputCostPerMillionTokens  Int               @map("input_cost_per_million_tokens")
-  outputCostPerMillionTokens Int               @map("output_cost_per_million_tokens")
-  creditsPer1kTokens         Int               @map("credits_per_1k_tokens")
-  isAvailable                Boolean           @default(true) @map("is_available")
-  isDeprecated               Boolean           @default(false) @map("is_deprecated")
+  inputCostPerMillionTokens  Int?              @map("input_cost_per_million_tokens")
+  outputCostPerMillionTokens Int?              @map("output_cost_per_million_tokens")
+  creditsPer1kTokens         Int?              @map("credits_per_1k_tokens")
+  isDeprecated               Boolean?          @default(false) @map("is_deprecated")
   version                    String?           @db.VarChar(50)
-  createdAt                  DateTime          @default(now()) @map("created_at")
-  updatedAt                  DateTime          @updatedAt @map("updated_at")
-
-  // Tier Access Control Fields (Added: 2025-11-08)
-  requiredTier        SubscriptionTier   @default(free) @map("required_tier")
-  // Minimum tier required to access this model
-  tierRestrictionMode String             @default("minimum") @map("tier_restriction_mode") @db.VarChar(20)
-  // "minimum" = tier >= requiredTier, "exact" = tier == requiredTier, "whitelist" = use allowedTiers
-  allowedTiers        SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("allowed_tiers")
-  // Explicit whitelist of allowed tiers (used when mode = "whitelist")
+  requiredTier               SubscriptionTier? @default(free) @map("required_tier")
+  tierRestrictionMode        String?           @default("minimum") @map("tier_restriction_mode") @db.VarChar(20)
+  allowedTiers               SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("allowed_tiers")
 
   // Relations
   usageHistory    UsageHistory[]
   userPreferences UserPreference[]
   auditLogs       ModelTierAuditLog[]
 
+  // Indexes for lifecycle states and provider filtering
   @@index([isAvailable])
+  @@index([isLegacy])
+  @@index([isArchived])
   @@index([provider])
-  @@index([requiredTier])
-  @@index([isAvailable, requiredTier])
+  @@index([isAvailable, isArchived]) // Common query: active non-archived models
+  // Note: Gin index on meta JSONB will be added via raw SQL in migration
+  // @@index(fields: [meta], type: Gin) - Not supported in Prisma schema syntax
   @@map("models")
 }
 

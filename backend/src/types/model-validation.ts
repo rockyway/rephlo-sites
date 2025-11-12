@@ -185,6 +185,16 @@ export type ChatCompletionRequest = z.infer<typeof chatCompletionSchema>;
 // =============================================================================
 
 /**
+ * Legacy model information
+ */
+export interface LegacyInfo {
+  isLegacy: boolean;
+  replacementModelId?: string;
+  deprecationNotice?: string;
+  sunsetDate?: string; // ISO 8601
+}
+
+/**
  * Model listing response
  */
 export interface ModelListItem {
@@ -197,12 +207,15 @@ export interface ModelListItem {
   max_output_tokens: number | null;
   credits_per_1k_tokens: number;
   is_available: boolean;
+  is_legacy?: boolean; // NEW: Legacy status
+  is_archived?: boolean; // NEW: Archived status
   version: string | null;
   // Tier access control fields
   required_tier: 'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual';
   tier_restriction_mode: 'minimum' | 'exact' | 'whitelist';
   allowed_tiers: Array<'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual'>;
   access_status: 'allowed' | 'restricted' | 'upgrade_required';
+  legacy_info?: LegacyInfo; // NEW: Legacy deprecation info
 }
 
 export interface ModelListResponse {
@@ -228,6 +241,8 @@ export interface ModelDetailsResponse {
   credits_per_1k_tokens: number;
   is_available: boolean;
   is_deprecated: boolean;
+  is_legacy?: boolean; // NEW: Legacy status
+  is_archived?: boolean; // NEW: Archived status
   version: string | null;
   created_at: string;
   updated_at: string;
@@ -240,6 +255,7 @@ export interface ModelDetailsResponse {
     required_tier: string;
     upgrade_url: string;
   };
+  legacy_info?: LegacyInfo; // NEW: Legacy deprecation info
 }
 
 /**
