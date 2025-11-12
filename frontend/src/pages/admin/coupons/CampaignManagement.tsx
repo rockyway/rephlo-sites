@@ -113,6 +113,10 @@ function CampaignManagement() {
           startsAt: new Date(2024, 10, 29).toISOString(),
           endsAt: new Date(2024, 11, 2).toISOString(),
           status: CampaignStatus.ACTIVE,
+          budgetCap: 50000,
+          currentSpend: 28400,
+          isActive: true,
+          createdBy: 'admin-001',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           redemptionsCount: 156,
@@ -126,6 +130,10 @@ function CampaignManagement() {
           startsAt: new Date(2024, 0, 1).toISOString(),
           endsAt: new Date(2024, 2, 31).toISOString(),
           status: CampaignStatus.ENDED,
+          budgetCap: 30000,
+          currentSpend: 29500,
+          isActive: false,
+          createdBy: 'admin-002',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           redemptionsCount: 423,
@@ -155,7 +163,7 @@ function CampaignManagement() {
         filtered = filtered.filter(
           (c) =>
             c.name.toLowerCase().includes(query) ||
-            (c.description && c.description.toLowerCase().includes(query))
+            c.type.toLowerCase().includes(query)
         );
       }
 
@@ -282,7 +290,8 @@ function CampaignManagement() {
       'Redemptions': campaign.redemptionsCount || 0,
       'Conversion Rate': campaign.conversionRate ? `${campaign.conversionRate.toFixed(1)}%` : '0%',
       'Actual Revenue': formatCurrency(campaign.actualRevenue),
-      'Expected Revenue': formatCurrency(campaign.expectedRevenue),
+      'Budget Cap': formatCurrency(campaign.budgetCap),
+      'Current Spend': formatCurrency(campaign.currentSpend),
     }));
 
     downloadCSV(exportData, 'campaigns');
@@ -773,26 +782,15 @@ function CampaignManagement() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
-                    Expected Revenue
+                    Budget Cap
                   </label>
                   <Input
                     type="number"
-                    value={formData.expectedRevenue}
+                    value={formData.budgetCap}
+                    onChange={(e) => setFormData({ ...formData, budgetCap: e.target.value })}
                     placeholder="0.00"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  placeholder="Campaign description..."
-                  rows={3}
-                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
-                />
               </div>
             </div>
 

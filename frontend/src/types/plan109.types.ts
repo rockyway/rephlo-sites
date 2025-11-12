@@ -36,6 +36,7 @@ export type {
   Subscription,
   SubscriptionStats,
   UsageStats,
+  PaginationData,
 };
 
 // Re-export enums as values (not types)

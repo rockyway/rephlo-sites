@@ -137,10 +137,12 @@ function FraudDetection() {
           riskScore: 85,
           reasons: ['5+ redemptions in 10 minutes', 'Multiple IP addresses'],
           status: FraudResolution.PENDING,
+          isFlagged: true,
           detectedAt: new Date().toISOString(),
           couponCode: 'SAVE20',
           userEmail: 'suspicious@example.com',
           ipAddress: '192.168.1.1',
+          createdAt: new Date().toISOString(),
         },
         {
           id: '2',
@@ -152,10 +154,12 @@ function FraudDetection() {
           riskScore: 65,
           reasons: ['IP changed 3 times in session'],
           status: FraudResolution.PENDING,
+          isFlagged: true,
           detectedAt: new Date(Date.now() - 3600000).toISOString(),
           couponCode: 'WELCOME10',
           userEmail: 'user2@example.com',
           ipAddress: '10.0.0.1',
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
         },
       ];
 

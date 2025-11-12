@@ -34,6 +34,7 @@ import { prorationApi } from '@/api/plan110';
 import {
   ProrationEventType,
   ProrationStatus,
+  SubscriptionTier,
   type ProrationEvent,
 } from '@rephlo/shared-types';
 import {
@@ -461,19 +462,19 @@ function ProrationTracking() {
                       <tr key={proration.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-800 dark:text-white">
-                            {proration.user?.email || 'N/A'}
+                            {proration.userId || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           {proration.fromTier ? (
-                            <TierBadge tier={proration.fromTier} />
+                            <TierBadge tier={proration.fromTier as SubscriptionTier} />
                           ) : (
                             <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           {proration.toTier ? (
-                            <TierBadge tier={proration.toTier} />
+                            <TierBadge tier={proration.toTier as SubscriptionTier} />
                           ) : (
                             <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
@@ -491,7 +492,7 @@ function ProrationTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-rephlo-blue font-medium">
-                            {formatCurrency(proration.prorationCreditChargedUsd)}
+                            {formatCurrency(proration.newTierProratedCostUsd)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -613,8 +614,8 @@ function ProrationTracking() {
         }}
         onConfirm={handleReverseProration}
         title="Reverse Proration"
-        description={`Are you sure you want to reverse this proration for ${
-          selectedProration?.user?.email || 'this user'
+        description={`Are you sure you want to reverse this proration for user ${
+          selectedProration?.userId || 'this user'
         }? This will undo the tier change and refund/charge as necessary.`}
         confirmText="Reverse Proration"
         requireReason

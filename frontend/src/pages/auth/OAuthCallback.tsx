@@ -168,11 +168,23 @@ export default function OAuthCallback() {
         const userData: User = {
           id: idTokenClaims.sub || '',
           email: idTokenClaims.email,
-          name: idTokenClaims.name || `${idTokenClaims.given_name || ''} ${idTokenClaims.family_name || ''}`.trim() || undefined,
+          name: idTokenClaims.name || `${idTokenClaims.given_name || ''} ${idTokenClaims.family_name || ''}`.trim() || null,
+          firstName: idTokenClaims.given_name || null,
+          lastName: idTokenClaims.family_name || null,
+          username: null,
+          profilePictureUrl: null,
+          status: 'active' as any,
+          isActive: true,
+          currentTier: 'free' as any,
+          creditsBalance: 0,
           role: (idTokenClaims.role === 'admin' || idTokenClaims.role === 'user') ? idTokenClaims.role : 'user',
-          emailVerified: idTokenClaims.email_verified ?? false,
           createdAt: idTokenClaims.created_at || new Date().toISOString(),
-          permissions: idTokenClaims.permissions
+          lastActiveAt: null,
+          deactivatedAt: null,
+          deletedAt: null,
+          suspendedUntil: null,
+          bannedAt: null,
+          lifetimeValue: 0,
         };
 
         // Store tokens in session storage (temporary - will be improved with secure storage)
@@ -276,11 +288,9 @@ export default function OAuthCallback() {
               <p className="text-body-sm text-deep-navy-300 mb-1">
                 <span className="font-semibold">Role:</span> {user.role}
               </p>
-              {user.permissions && user.permissions.length > 0 && (
-                <p className="text-body-sm text-deep-navy-300">
-                  <span className="font-semibold">Permissions:</span> {user.permissions.join(', ')}
-                </p>
-              )}
+              <p className="text-body-sm text-deep-navy-300">
+                <span className="font-semibold">Tier:</span> {user.currentTier}
+              </p>
             </div>
           )}
         </Card>

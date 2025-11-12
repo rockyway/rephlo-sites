@@ -431,7 +431,15 @@ function PricingConfiguration() {
             <div className="p-6">
               <PricingConfigForm
                 key={editingConfig?.id || 'new'}
-                initialValues={editingConfig || undefined}
+                initialValues={editingConfig ? {
+                  scopeType: editingConfig.scopeType as any,
+                  subscriptionTier: editingConfig.subscriptionTier ?? undefined,
+                  providerId: editingConfig.providerId ?? undefined,
+                  modelId: editingConfig.modelId ?? undefined,
+                  marginMultiplier: editingConfig.marginMultiplier,
+                  reason: editingConfig.reason ?? undefined,
+                  reasonDetails: editingConfig.reasonDetails ?? undefined,
+                } : undefined}
                 onSubmit={handleCreateConfig}
                 onCancel={() => {
                   setIsCreateDialogOpen(false);
