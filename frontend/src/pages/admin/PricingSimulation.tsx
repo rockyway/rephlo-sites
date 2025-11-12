@@ -197,14 +197,7 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
       <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <Link
-                to="/admin"
-                className="inline-flex items-center text-body text-rephlo-blue hover:text-rephlo-blue-600 mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
-              </Link>
+            <div>             
               <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Pricing Simulation
               </h1>

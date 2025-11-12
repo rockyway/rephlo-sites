@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   RefreshCw,
   Search,
   Edit,
@@ -238,17 +236,10 @@ function ModelTierManagement() {
       </div>
 
       {/* Header */}
-      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
+      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200 dark:border-deep-navy-700">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <Link
-                to="/admin"
-                className="inline-flex items-center text-body text-rephlo-blue hover:text-rephlo-blue-600 mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
-              </Link>
+            <div>         
               <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
                 Model Tier Management
               </h1>
@@ -277,15 +268,15 @@ function ModelTierManagement() {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Success/Error Messages */}
         {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
+          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md p-4 flex items-center gap-2">
+            <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <p className="text-body text-green-800 dark:text-green-200">{successMessage}</p>
           </div>
         )}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <p className="text-body text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
 
@@ -344,7 +335,7 @@ function ModelTierManagement() {
 
         {/* Bulk Actions Bar */}
         {selectedModels.size > 0 && (
-          <div className="bg-rephlo-blue text-white rounded-lg p-4 mb-6 flex items-center justify-between">
+          <div className="bg-rephlo-blue dark:bg-electric-cyan/90 text-white dark:text-deep-navy-900 rounded-lg p-4 mb-6 flex items-center justify-between">
             <span className="font-medium">
               {selectedModels.size} model(s) selected
             </span>
@@ -372,7 +363,7 @@ function ModelTierManagement() {
         <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
+              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200 dark:border-deep-navy-700">
                 <tr>
                   <th className="px-4 py-3 text-left">
                     <input

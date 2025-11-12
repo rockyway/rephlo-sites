@@ -1,6 +1,13 @@
 // Model Tier Types for Admin UI
 
-export type SubscriptionTier = 'free' | 'pro' | 'enterprise';
+export type SubscriptionTier =
+  | 'free'
+  | 'pro'
+  | 'pro_max'
+  | 'enterprise_pro'
+  | 'enterprise_max'
+  | 'perpetual'
+  | 'enterprise'; // Legacy support
 export type TierRestrictionMode = 'minimum' | 'exact' | 'whitelist';
 export type AccessStatus = 'allowed' | 'restricted' | 'upgrade_required';
 

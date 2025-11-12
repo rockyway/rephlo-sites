@@ -180,14 +180,7 @@ function CampaignCalendar() {
         <Breadcrumbs />
 
         {/* Header */}
-        <div className="mb-6">
-          <Link
-            to="/admin"
-            className="inline-flex items-center text-sm text-deep-navy-600 dark:text-deep-navy-200 hover:text-deep-navy-900 mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Admin Dashboard
-          </Link>
+        <div className="mb-6">         
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-deep-navy-900">
