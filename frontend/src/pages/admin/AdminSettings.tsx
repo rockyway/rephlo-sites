@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Save, X as XIcon, RefreshCw, AlertCircle, CheckCircle, Mail, Trash2, Database } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -45,6 +46,8 @@ const TABS: Tab[] = [
 ];
 
 function AdminSettings() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('general');
   const [allSettings, setAllSettings] = useState<Record<SettingCategory, CategorySettings>>({} as any);
   const [formData, setFormData] = useState<CategorySettings>({});
@@ -57,6 +60,18 @@ function AdminSettings() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Sync activeTab with URL hash
+  useEffect(() => {
+    const hash = location.hash.replace('#', '') as TabId;
+    const validTab = TABS.find(t => t.id === hash);
+    if (validTab) {
+      setActiveTab(hash);
+    } else if (!location.hash) {
+      // Default to 'general' if no hash
+      setActiveTab('general');
+    }
+  }, [location.hash]);
 
   // Load all settings on mount
   useEffect(() => {
@@ -274,7 +289,9 @@ function AdminSettings() {
             {TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  navigate(`/admin/settings#${tab.id}`, { replace: true });
+                }}
                 className={cn(
                   'px-6 py-4 text-body-sm font-medium whitespace-nowrap transition-colors',
                   activeTab === tab.id
