@@ -510,35 +510,21 @@ export const analyticsApi = {
   getConversionFunnel: async (period: '7d' | '30d' | '90d' | '1y' = '30d') => {
     try {
       const response = await apiClient.get<{
-        freeTier: { count: number; percentage: number };
-        paidSubscription: { count: number; percentage: number; conversionRate: number };
-        perpetualLicense: { count: number; percentage: number; conversionRate: number };
+        stages: { name: string; count: number; percentage: number; conversionRate?: number }[];
+        period: string;
       }>('/admin/analytics/revenue/funnel', { params: { period } });
 
       // Validate response structure
-      if (!response.data || !response.data.freeTier) {
+      if (!response.data || !response.data.stages || !Array.isArray(response.data.stages)) {
         throw new Error('Invalid response format from conversion funnel endpoint');
       }
 
       // Transform backend response to frontend format
-      const data = response.data;
-      const funnel: ConversionFunnel[] = [
-        {
-          stage: 'Free Tier',
-          count: data.freeTier.count,
-          conversionRate: 100, // Starting point
-        },
-        {
-          stage: 'Paid Subscription',
-          count: data.paidSubscription.count,
-          conversionRate: data.paidSubscription.conversionRate,
-        },
-        {
-          stage: 'Perpetual License',
-          count: data.perpetualLicense.count,
-          conversionRate: data.perpetualLicense.conversionRate,
-        },
-      ];
+      const funnel: ConversionFunnel[] = response.data.stages.map(stage => ({
+        stage: stage.name,
+        count: stage.count,
+        conversionRate: stage.conversionRate ?? 100, // Default to 100 for first stage
+      }));
 
       return { funnel };
     } catch (error: any) {
