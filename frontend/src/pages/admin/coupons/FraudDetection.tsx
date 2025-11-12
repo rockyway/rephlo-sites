@@ -371,15 +371,15 @@ function FraudDetection() {
   // ============================================================================
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
-{/* Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection</h1>
-          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Fraud Detection</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Monitor and prevent coupon abuse
           </p>
         </div>

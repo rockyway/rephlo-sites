@@ -145,391 +145,384 @@ function MarginTracking() {
   );
 
   return (
-    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
-      {/* Breadcrumbs */}
+    <div className="space-y-6">
       <Breadcrumbs />
 
-{/* Header */}
-      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>             
-              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
-                Margin Tracking
-              </h1>
-              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                Real-time profitability monitoring and analysis
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan"
-              >
-                <option value="7">Last 7 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="90">Last 90 days</option>
-              </select>
-              <Button onClick={loadAllData} disabled={isLoading} variant="ghost">
-                <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-                Refresh
-              </Button>
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
+            Margin Tracking
+          </h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Real-time profitability monitoring and analysis
+          </p>
         </div>
-      </header>
+        <div className="flex items-center gap-3">
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="flex h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan"
+          >
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <Button onClick={loadAllData} disabled={isLoading} variant="ghost">
+            <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
-          </div>
-        )}
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-red-600" />
+          <p className="text-body text-red-800">{error}</p>
+        </div>
+      )}
 
-        {isLoading && !metrics ? (
-          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
-            <LoadingSpinner size="lg" />
-          </div>
-        ) : isEmptyData ? (
-          <EmptyMarginState />
-        ) : (
-          <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <MetricsCard
-                title="Actual Gross Margin"
-                value={`${(metrics?.actualGrossMargin ?? 0).toFixed(1)}%`}
-                subtitle={
-                  metrics?.variance !== undefined
-                    ? `${metrics.variance > 0 ? '+' : ''}${(metrics.variance ?? 0).toFixed(1)}% vs target`
-                    : undefined
-                }
-                icon={Activity}
-                color={
-                  metrics?.status === 'on_target'
-                    ? 'green'
-                    : metrics?.status === 'below_target'
-                    ? 'amber'
-                    : 'blue'
-                }
-              >
-                {metrics && (
-                  <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Target:</span>
-                    <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                      {(metrics.targetMargin ?? 0).toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-              </MetricsCard>
-
-              <MetricsCard
-                title="This Month Vendor Cost"
-                value={`$${(metrics?.thisMonthVendorCost ?? 0).toLocaleString()}`}
-                subtitle="Tokens consumed"
-                icon={DollarSign}
-                color="amber"
-              >
-                {metrics && metrics.creditValue !== undefined && (
-                  <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credit Value:</span>
-                    <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                      ${metrics.creditValue.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </MetricsCard>
-
-              <MetricsCard
-                title="Gross Margin"
-                value={`$${(metrics?.grossMarginDollars ?? 0).toLocaleString()}`}
-                subtitle="Net contribution"
-                icon={TrendingUp}
-                color="green"
-              >
-                {metrics && (
-                  <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
-                    <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Status:</span>
-                    <span className={cn('text-body-sm font-semibold', getStatusColor(metrics.status))}>
-                      {metrics.status === 'on_target'
-                        ? 'On Target'
-                        : metrics.status === 'below_target'
-                        ? 'Below Target'
-                        : 'Above Target'}
-                    </span>
-                  </div>
-                )}
-              </MetricsCard>
-            </div>
-
-            {/* Margin by Tier */}
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
-              <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-rephlo-blue" />
-                  <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
-                    Margin by Tier
-                  </h2>
+      {isLoading && !metrics ? (
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-12 text-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      ) : isEmptyData ? (
+        <EmptyMarginState />
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <MetricsCard
+              title="Actual Gross Margin"
+              value={`${(metrics?.actualGrossMargin ?? 0).toFixed(1)}%`}
+              subtitle={
+                metrics?.variance !== undefined
+                  ? `${metrics.variance > 0 ? '+' : ''}${(metrics.variance ?? 0).toFixed(1)}% vs target`
+                  : undefined
+              }
+              icon={Activity}
+              color={
+                metrics?.status === 'on_target'
+                  ? 'green'
+                  : metrics?.status === 'below_target'
+                  ? 'amber'
+                  : 'blue'
+              }
+            >
+              {metrics && (
+                <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
+                  <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Target:</span>
+                  <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                    {(metrics.targetMargin ?? 0).toFixed(1)}%
+                  </span>
                 </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Tier
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Margin %
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Target %
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Variance
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Requests
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Vendor Cost
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
-                    {tierMargins && tierMargins.length > 0 ? (
-                      tierMargins.map((tier) => (
-                        <tr key={tier.tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-deep-navy-800 dark:text-white capitalize">
-                              {tier.tier.replace(/_/g, ' ')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <MarginBadge marginPercent={tier.marginPercent} targetMargin={tier.targetMargin} />
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                              {(tier.targetMargin ?? 0).toFixed(1)}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1">
-                              {tier.variance > 0 ? (
-                                <TrendingUp className="h-4 w-4 text-green-600" />
-                              ) : tier.variance < 0 ? (
-                                <TrendingDown className="h-4 w-4 text-red-600" />
-                              ) : null}
-                              <span className={cn(
-                                'text-body-sm font-medium',
-                                tier.variance > 0 ? 'text-green-600' : tier.variance < 0 ? 'text-red-600' : 'text-deep-navy-600'
-                              )}>
-                                {tier.variance > 0 ? '+' : ''}{(tier.variance ?? 0).toFixed(1)}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                              {tier.requests.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                              ${tier.vendorCost.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(tier.status)}
-                              <span className={cn('text-body-sm', getStatusColor(tier.status))}>
-                                {tier.status === 'on_target' ? 'On Target' : tier.status === 'warning' ? 'Warning' : 'Critical'}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
-                          <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">
-                            No tier data available for selected period.
-                          </p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              )}
+            </MetricsCard>
 
-            {/* Margin by Provider */}
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
-              <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5 text-rephlo-blue" />
-                  <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
-                    Margin by Provider
-                  </h2>
+            <MetricsCard
+              title="This Month Vendor Cost"
+              value={`$${(metrics?.thisMonthVendorCost ?? 0).toLocaleString()}`}
+              subtitle="Tokens consumed"
+              icon={DollarSign}
+              color="amber"
+            >
+              {metrics && metrics.creditValue !== undefined && (
+                <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
+                  <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credit Value:</span>
+                  <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                    ${metrics.creditValue.toLocaleString()}
+                  </span>
                 </div>
-              </div>
-              <div className="p-6">
-                {providerMargins && providerMargins.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {providerMargins.map((provider) => (
-                      <div
-                        key={provider.providerId}
-                        className="border border-deep-navy-200 dark:border-deep-navy-700 rounded-lg p-4"
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-deep-navy-800 dark:text-white">
-                            {provider.providerName}
-                          </h3>
-                          <MarginBadge marginPercent={provider.marginPercent} />
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-body-sm">
-                            <span className="text-deep-navy-700 dark:text-deep-navy-200">Requests:</span>
-                            <span className="font-medium text-deep-navy-800 dark:text-white">
-                              {provider.requests.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-body-sm">
-                            <span className="text-deep-navy-700 dark:text-deep-navy-200">Cost:</span>
-                            <span className="font-medium text-deep-navy-800 dark:text-white">
-                              ${provider.vendorCost.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">
-                      No provider data available for selected period.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+              )}
+            </MetricsCard>
 
-            {/* Top Models by Usage */}
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
-              <div className="p-6 border-b border-deep-navy-200">
+            <MetricsCard
+              title="Gross Margin"
+              value={`$${(metrics?.grossMarginDollars ?? 0).toLocaleString()}`}
+              subtitle="Net contribution"
+              icon={TrendingUp}
+              color="green"
+            >
+              {metrics && (
+                <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
+                  <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Status:</span>
+                  <span className={cn('text-body-sm font-semibold', getStatusColor(metrics.status))}>
+                    {metrics.status === 'on_target'
+                      ? 'On Target'
+                      : metrics.status === 'below_target'
+                      ? 'Below Target'
+                      : 'Above Target'}
+                  </span>
+                </div>
+              )}
+            </MetricsCard>
+          </div>
+
+          {/* Margin by Tier */}
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
+            <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-rephlo-blue" />
                 <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
-                  Top Models by Usage
+                  Margin by Tier
                 </h2>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Model
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Requests
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Tokens (M)
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Vendor Cost
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Margin %
-                      </th>
-                      <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
-                    {topModels && topModels.length > 0 ? (
-                      topModels.map((model) => (
-                        <tr key={model.modelId} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-deep-navy-800 dark:text-white">
-                              {model.modelName}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Tier
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Margin %
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Target %
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Variance
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Requests
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Vendor Cost
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
+                  {tierMargins && tierMargins.length > 0 ? (
+                    tierMargins.map((tier) => (
+                      <tr key={tier.tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
+                        <td className="px-6 py-4">
+                          <span className="font-medium text-deep-navy-800 dark:text-white capitalize">
+                            {tier.tier.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <MarginBadge marginPercent={tier.marginPercent} targetMargin={tier.targetMargin} />
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                            {(tier.targetMargin ?? 0).toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            {tier.variance > 0 ? (
+                              <TrendingUp className="h-4 w-4 text-green-600" />
+                            ) : tier.variance < 0 ? (
+                              <TrendingDown className="h-4 w-4 text-red-600" />
+                            ) : null}
+                            <span className={cn(
+                              'text-body-sm font-medium',
+                              tier.variance > 0 ? 'text-green-600' : tier.variance < 0 ? 'text-red-600' : 'text-deep-navy-600'
+                            )}>
+                              {tier.variance > 0 ? '+' : ''}{(tier.variance ?? 0).toFixed(1)}%
                             </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                              {model.requests.toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                            {tier.requests.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                            ${tier.vendorCost.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(tier.status)}
+                            <span className={cn('text-body-sm', getStatusColor(tier.status))}>
+                              {tier.status === 'on_target' ? 'On Target' : tier.status === 'warning' ? 'Warning' : 'Critical'}
                             </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                              {(model.tokensMillions ?? 0).toFixed(1)}M
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                              ${model.vendorCost.toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <MarginBadge marginPercent={model.marginPercent} />
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(model.status)}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center">
-                          <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">
-                            No model data available for selected period.
-                          </p>
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">
+                          No tier data available for selected period.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Margin by Provider */}
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
+            <div className="p-6 border-b border-deep-navy-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-rephlo-blue" />
+                <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
+                  Margin by Provider
+                </h2>
               </div>
             </div>
-
-            {/* Alerts Section */}
-            {tierMargins.some((t) => t.status !== 'on_target') && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mt-8">
-                <h3 className="text-h4 font-semibold text-amber-900 mb-4 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Margin Alerts
-                </h3>
-                <div className="space-y-2">
-                  {tierMargins
-                    .filter((t) => t.status !== 'on_target')
-                    .map((tier) => (
-                      <div key={tier.tier} className="bg-white dark:bg-deep-navy-800 rounded-md p-3 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-deep-navy-800 dark:text-white capitalize">
-                            {tier.tier.replace(/_/g, ' ')} tier margin {tier.variance < 0 ? 'below' : 'above'} target by{' '}
-                            {Math.abs(tier.variance ?? 0).toFixed(1)}%
-                          </p>
-                          <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
-                            Current: {(tier.marginPercent ?? 0).toFixed(1)}% | Target: {(tier.targetMargin ?? 0).toFixed(1)}%
-                          </p>
-                        </div>
-                        <Button size="sm" variant="secondary">
-                          Review Multiplier
-                        </Button>
+            <div className="p-6">
+              {providerMargins && providerMargins.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {providerMargins.map((provider) => (
+                    <div
+                      key={provider.providerId}
+                      className="border border-deep-navy-200 dark:border-deep-navy-700 rounded-lg p-4"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-deep-navy-800 dark:text-white">
+                          {provider.providerName}
+                        </h3>
+                        <MarginBadge marginPercent={provider.marginPercent} />
                       </div>
-                    ))}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-body-sm">
+                          <span className="text-deep-navy-700 dark:text-deep-navy-200">Requests:</span>
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
+                            {provider.requests.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-body-sm">
+                          <span className="text-deep-navy-700 dark:text-deep-navy-200">Cost:</span>
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
+                            ${provider.vendorCost.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">
+                    No provider data available for selected period.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Models by Usage */}
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
+            <div className="p-6 border-b border-deep-navy-200">
+              <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
+                Top Models by Usage
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Model
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Requests
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Tokens (M)
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Vendor Cost
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Margin %
+                    </th>
+                    <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
+                  {topModels && topModels.length > 0 ? (
+                    topModels.map((model) => (
+                      <tr key={model.modelId} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
+                        <td className="px-6 py-4">
+                          <span className="font-medium text-deep-navy-800 dark:text-white">
+                            {model.modelName}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                            {model.requests.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                            {(model.tokensMillions ?? 0).toFixed(1)}M
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                            ${model.vendorCost.toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <MarginBadge marginPercent={model.marginPercent} />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(model.status)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        <p className="text-body text-deep-navy-700 dark:text-deep-navy-300">
+                          No model data available for selected period.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Alerts Section */}
+          {tierMargins.some((t) => t.status !== 'on_target') && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mt-8">
+              <h3 className="text-h4 font-semibold text-amber-900 mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Margin Alerts
+              </h3>
+              <div className="space-y-2">
+                {tierMargins
+                  .filter((t) => t.status !== 'on_target')
+                  .map((tier) => (
+                    <div key={tier.tier} className="bg-white dark:bg-deep-navy-800 rounded-md p-3 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-deep-navy-800 dark:text-white capitalize">
+                          {tier.tier.replace(/_/g, ' ')} tier margin {tier.variance < 0 ? 'below' : 'above'} target by{' '}
+                          {Math.abs(tier.variance ?? 0).toFixed(1)}%
+                        </p>
+                        <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
+                          Current: {(tier.marginPercent ?? 0).toFixed(1)}% | Target: {(tier.targetMargin ?? 0).toFixed(1)}%
+                        </p>
+                      </div>
+                      <Button size="sm" variant="secondary">
+                        Review Multiplier
+                      </Button>
+                    </div>
+                  ))}
               </div>
-            )}
-          </>
-        )}
-      </main>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
