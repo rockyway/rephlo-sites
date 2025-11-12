@@ -190,6 +190,13 @@ function extractExpressRoutes(filePath: string): EndpointDefinition[] {
             const directMatch = routeCode.match(/asyncHandler\(([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\)/);
             if (directMatch) {
               handler = `${directMatch[1]}.${directMatch[2]}`;
+            } else {
+              // Pattern 4: Direct controller method without asyncHandler (identity-provider style)
+              // e.g., app.get('/path', authController.method)
+              const directControllerMatch = routeCode.match(/['"`]\s*,\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\s*[,)]/);
+              if (directControllerMatch) {
+                handler = `${directControllerMatch[1]}.${directControllerMatch[2]}`;
+              }
             }
           }
         }
@@ -274,10 +281,12 @@ function findEndpointUsages(endpoint: EndpointDefinition, searchDirs: string[]):
     new RegExp(`['"\`](/[^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
     new RegExp(`axios\\.(${endpoint.method.toLowerCase()}|request)\\s*\\([^)]*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
     new RegExp(`fetch\\s*\\([^)]*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
+    new RegExp(`(action|href)\\s*=\\s*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
+    new RegExp(`location\\.href\\s*=\\s*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
   ];
 
   searchDirs.forEach(dir => {
-    const files = getAllFiles(dir, ['.ts', '.tsx', '.js', '.jsx']);
+    const files = getAllFiles(dir, ['.ts', '.tsx', '.js', '.jsx', '.html']);
 
     files.forEach(file => {
       // Skip test files from usages unless includeTest is true
@@ -362,8 +371,14 @@ function analyzeBackend(): ProjectEndpoints {
   endpoints.forEach(endpoint => {
     const key = `${endpoint.method} ${endpoint.path}`;
     const endpointUsages = findEndpointUsages(endpoint, [FRONTEND_DIR, BACKEND_DIR]);
-    if (endpointUsages.length > 0) {
-      usages.set(key, endpointUsages);
+
+    // Deduplicate usages by file:line
+    const uniqueUsages = Array.from(
+      new Map(endpointUsages.map(u => [`${u.file}:${u.line}`, u])).values()
+    );
+
+    if (uniqueUsages.length > 0) {
+      usages.set(key, uniqueUsages);
     }
   });
 
@@ -389,10 +404,6 @@ function analyzeIdentityProvider(): ProjectEndpoints {
     files.forEach(file => {
       const fileEndpoints = extractExpressRoutes(file);
       endpoints.push(...fileEndpoints);
-
-      // Also extract OIDC-specific routes
-      const oidcEndpoints = extractOIDCRoutes(file);
-      endpoints.push(...oidcEndpoints);
     });
   }
 
@@ -414,8 +425,14 @@ function analyzeIdentityProvider(): ProjectEndpoints {
   endpoints.forEach(endpoint => {
     const key = `${endpoint.method} ${endpoint.path}`;
     const endpointUsages = findEndpointUsages(endpoint, [FRONTEND_DIR, BACKEND_DIR, IDP_DIR]);
-    if (endpointUsages.length > 0) {
-      usages.set(key, endpointUsages);
+
+    // Deduplicate usages by file:line
+    const uniqueUsages = Array.from(
+      new Map(endpointUsages.map(u => [`${u.file}:${u.line}`, u])).values()
+    );
+
+    if (uniqueUsages.length > 0) {
+      usages.set(key, uniqueUsages);
     }
   });
 

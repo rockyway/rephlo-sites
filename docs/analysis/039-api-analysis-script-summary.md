@@ -46,15 +46,36 @@ Created a comprehensive TypeScript script that analyzes the entire Rephlo monore
   - String literals containing endpoint paths
 
 ### 4. **Report Generation**
-- Markdown format with tables
-- Organized by project (Backend API, Identity Provider)
-- Grouped by HTTP method
+
+Two output formats available:
+
+#### **Full Format** (default)
+- Markdown with detailed sections
+- Organized by project and HTTP method
+- Separate section for each endpoint
 - Includes:
   - Endpoint path and method
   - Definition location (file:line)
   - Handler and middleware information
-  - All usage locations with context
+  - All usage locations with context in tables
   - Summary statistics
+- Best for: Detailed investigation, understanding context
+
+#### **Simple Format** (recommended)
+- Single flat table per project
+- Sorted by endpoint (ascending)
+- Columns: Method | Endpoint | File | Handler | Middleware | Usages
+- Compact format with all info in one view
+- Semicolon-separated usage list
+- Best for: Quick reference, API catalog, searching
+
+**Example Simple Format Table:**
+```markdown
+| Method | Endpoint | File | Handler | Middleware | Usages |
+|--------|----------|------|---------|------------|--------|
+| GET | `/admin/metrics` | `backend\src\routes\admin.routes.ts L:63` | `adminController.getMetrics` | `authenticate, requireAdmin` | `frontend\src\api\admin.ts L:96; frontend\src\services\api.ts L:260` |
+| POST | `/admin/users` | `backend\src\routes\admin.routes.ts L:75` | `adminController.createUser` | `authenticate, requireAdmin, auditLog` | `frontend\src\api\admin.ts L:158` |
+```
 
 ---
 
@@ -111,11 +132,32 @@ For each usage, the report shows:
 ### Run the Analysis
 ```bash
 # From project root
+
+# Default (full format, no tests)
 npm run analyze:api
 
-# Or directly
-npx tsx scripts/analyze-api-endpoints.ts
+# Simple table format (recommended)
+npm run analyze:api:simple
+
+# Full detailed format
+npm run analyze:api:full
+
+# Include test files
+npm run analyze:api:with-tests
+
+# Or directly with custom options
+npx tsx scripts/analyze-api-endpoints.ts -- --format=simple
+npx tsx scripts/analyze-api-endpoints.ts -- --format=full
+npx tsx scripts/analyze-api-endpoints.ts -- --include-test=true
+npx tsx scripts/analyze-api-endpoints.ts -- --format=simple --include-test=true
 ```
+
+### Arguments
+- `--format=simple|full` - Output format (default: full)
+  - **simple**: Single flat table per project, sorted by endpoint
+  - **full**: Detailed report grouped by HTTP method with context
+- `--include-test=true` - Include test files (default: false)
+  - When false, excludes `__tests__/`, `test/`, `tests/`, `__mocks__/`, `*.test.ts`, `*.spec.ts`
 
 ### Output
 - Generates sequentially numbered reports in `docs/analysis/`
