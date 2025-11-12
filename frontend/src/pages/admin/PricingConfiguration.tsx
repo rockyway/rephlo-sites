@@ -260,7 +260,7 @@ function PricingConfiguration() {
                     </td>
                     <td className="px-6 py-4">
                       {config ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-green-100 text-green-700">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                           Active
                         </span>
                       ) : (

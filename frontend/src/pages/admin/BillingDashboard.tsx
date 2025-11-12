@@ -308,7 +308,7 @@ function BillingDashboard() {
               <AlertCircle className="h-4 w-4 inline-block mr-2" />
               Failed Payments & Dunning
               {activeDunning.length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-caption font-medium bg-red-100 text-red-700">
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-caption font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
                   {activeDunning.length}
                 </span>
               )}
@@ -363,10 +363,10 @@ function BillingDashboard() {
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                invoice.status === InvoiceStatus.PAID && 'bg-green-100 text-green-700 border-green-300',
-                                invoice.status === InvoiceStatus.OPEN && 'bg-blue-100 text-blue-700 border-blue-300',
+                                invoice.status === InvoiceStatus.PAID && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+                                invoice.status === InvoiceStatus.OPEN && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
                                 invoice.status === InvoiceStatus.VOID && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
-                                invoice.status === InvoiceStatus.UNCOLLECTIBLE && 'bg-red-100 text-red-700 border-red-300'
+                                invoice.status === InvoiceStatus.UNCOLLECTIBLE && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
                               )}>
                                 {invoice.status}
                               </span>
@@ -444,9 +444,9 @@ function BillingDashboard() {
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                transaction.status === TransactionStatus.SUCCEEDED && 'bg-green-100 text-green-700 border-green-300',
-                                transaction.status === TransactionStatus.PENDING && 'bg-blue-100 text-blue-700 border-blue-300',
-                                transaction.status === TransactionStatus.FAILED && 'bg-red-100 text-red-700 border-red-300',
+                                transaction.status === TransactionStatus.SUCCEEDED && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+                                transaction.status === TransactionStatus.PENDING && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                                transaction.status === TransactionStatus.FAILED && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
                                 transaction.status === TransactionStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
                               )}>
                                 {transaction.status}
@@ -527,9 +527,9 @@ function BillingDashboard() {
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                attempt.attemptNumber >= 3 && 'bg-red-100 text-red-700 border-red-300',
-                                attempt.attemptNumber === 2 && 'bg-amber-100 text-amber-700 border-amber-300',
-                                attempt.attemptNumber === 1 && 'bg-blue-100 text-blue-700 border-blue-300'
+                                attempt.attemptNumber >= 3 && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
+                                attempt.attemptNumber === 2 && 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                                attempt.attemptNumber === 1 && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
                               )}>
                                 Attempt {attempt.attemptNumber}/3
                               </span>
