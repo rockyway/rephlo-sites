@@ -71,11 +71,12 @@ function BillingDashboard() {
         billingApi.getDunningAttempts(),
       ]);
 
-      setRevenueMetrics(metrics);
-      setRevenueByTier(tierRevenue.tiers);
-      setInvoices(invoiceData.data);
-      setTransactions(transactionData.data);
-      setDunningAttempts(dunningData.attempts);
+      // Handle multiple response formats consistently
+      setRevenueMetrics((metrics as any).data || metrics);
+      setRevenueByTier((tierRevenue as any).tiers || (tierRevenue as any).data?.tiers || (tierRevenue as any).data || []);
+      setInvoices((invoiceData as any).data || invoiceData || []);
+      setTransactions((transactionData as any).data || transactionData || []);
+      setDunningAttempts((dunningData as any).attempts || (dunningData as any).data?.attempts || (dunningData as any).data || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load billing data');
     } finally {

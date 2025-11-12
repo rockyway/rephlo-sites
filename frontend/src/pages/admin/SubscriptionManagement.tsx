@@ -86,13 +86,14 @@ function SubscriptionManagement() {
         subscriptionApi.getStats(),
       ]);
 
-      // Backend wraps responses in { success, data }
-      const unwrappedSubs = (subsResponse as any).data || subsResponse;
-      const unwrappedStats = (statsData as any).data || statsData;
+      // Handle both response formats: { data: [...] } or direct array
+      // Some endpoints return { data: {...}, pagination: {...} }, others return unwrapped
+      const subscriptionsArray = (subsResponse as any).data || subsResponse || [];
+      const paginationData = (subsResponse as any).pagination || subsResponse;
 
-      setSubscriptions(unwrappedSubs.data || unwrappedSubs || []);
-      setTotalPages(unwrappedSubs.totalPages || 1);
-      setStats(unwrappedStats);
+      setSubscriptions(subscriptionsArray);
+      setTotalPages(paginationData.totalPages || 1);
+      setStats((statsData as any).data || statsData);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load subscriptions');
     } finally {

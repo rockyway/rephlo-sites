@@ -72,20 +72,39 @@ export default function PlatformAnalytics() {
         analyticsApi.getTierTransitions(),
       ]);
 
-      // Backend wraps responses in { success, data }
-      const unwrapMetrics = (metricsData as any).data || metricsData;
-      const unwrapDistribution = (distributionData as any).data || distributionData;
-      const unwrapTrend = (trendData as any).data || trendData;
-      const unwrapCredits = (creditsData as any).data || creditsData;
-      const unwrapFunnel = (funnelData as any).data || funnelData;
-      const unwrapTransitions = (transitionsData as any).data || transitionsData;
+      // Handle both wrapped and unwrapped API responses
+      // Try: response.data first, then response directly
+      setMetrics((metricsData as any).data || metricsData);
 
-      setMetrics(unwrapMetrics);
-      setUserDistribution(unwrapDistribution.distribution || unwrapDistribution || []); // Ensure array fallback
-      setRevenueTrend(unwrapTrend.timeSeries || unwrapTrend || []); // Ensure array fallback
-      setCreditsByModel(unwrapCredits.models || unwrapCredits || []); // Ensure array fallback
-      setConversionFunnel(unwrapFunnel.funnel || unwrapFunnel || []); // Ensure array fallback
-      setTierTransitions(unwrapTransitions.transitions || unwrapTransitions || []); // Ensure array fallback
+      // For distribution: try data.distribution, then distribution, then data, then empty array
+      const distribution = (distributionData as any).distribution ||
+                          (distributionData as any).data?.distribution ||
+                          (distributionData as any).data || [];
+      setUserDistribution(Array.isArray(distribution) ? distribution : []);
+
+      // For trend: try data.timeSeries, then timeSeries, then data, then empty array
+      const trend = (trendData as any).timeSeries ||
+                   (trendData as any).data?.timeSeries ||
+                   (trendData as any).data || [];
+      setRevenueTrend(Array.isArray(trend) ? trend : []);
+
+      // For credits: try data.models, then models, then data, then empty array
+      const credits = (creditsData as any).models ||
+                     (creditsData as any).data?.models ||
+                     (creditsData as any).data || [];
+      setCreditsByModel(Array.isArray(credits) ? credits : []);
+
+      // For funnel: try data.funnel, then funnel, then data, then empty array
+      const funnel = (funnelData as any).funnel ||
+                    (funnelData as any).data?.funnel ||
+                    (funnelData as any).data || [];
+      setConversionFunnel(Array.isArray(funnel) ? funnel : []);
+
+      // For transitions: try data.transitions, then transitions, then data, then empty array
+      const transitions = (transitionsData as any).transitions ||
+                         (transitionsData as any).data?.transitions ||
+                         (transitionsData as any).data || [];
+      setTierTransitions(Array.isArray(transitions) ? transitions : []);
     } catch (err: any) {
       console.error('Failed to load analytics:', err);
 

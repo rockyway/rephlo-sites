@@ -53,9 +53,11 @@ function PricingConfiguration() {
         subscriptionTier: filterTier || undefined,
         isActive: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
       });
-      // Backend wraps responses in { success, data }
-      const unwrapped = (response as any).data || response;
-      setConfigs(unwrapped.configs || unwrapped || []);
+      // Handle multiple response formats: { data: { configs: [...] } }, { configs: [...] }, or direct array
+      const configs = (response as any).configs ||
+                     (response as any).data?.configs ||
+                     (response as any).data || [];
+      setConfigs(Array.isArray(configs) ? configs : []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load pricing configurations');
     } finally {
