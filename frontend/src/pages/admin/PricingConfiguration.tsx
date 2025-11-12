@@ -12,6 +12,7 @@ import { MarginBadge, PricingConfigForm } from '@/components/admin/PricingCompon
 import { pricingApi, type PricingConfig } from '@/api/pricing';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 /**
  * PricingConfiguration Page
@@ -56,8 +57,8 @@ function PricingConfiguration() {
       // Handle multiple response formats: { data: { configs: [...] } }, { configs: [...] }, or direct array
       const configs = (response as any).configs ||
                      (response as any).data?.configs ||
-                     (response as any).data || [];
-      setConfigs(Array.isArray(configs) ? configs : []);
+                     (response as any).data;
+      setConfigs(safeArray<PricingConfig>(configs));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load pricing configurations');
     } finally {
@@ -140,7 +141,7 @@ function PricingConfiguration() {
   };
 
   // Group configs by tier for summary
-  const tierSummary = (configs || [])
+  const tierSummary = safeArray<PricingConfig>(configs)
     .filter((c) => c.scopeType === 'tier' && c.isActive)
     .reduce((acc, config) => {
       if (config.subscriptionTier) {
@@ -152,7 +153,7 @@ function PricingConfiguration() {
   const tiers = ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'];
 
   // Model-specific overrides
-  const modelOverrides = (configs || []).filter(
+  const modelOverrides = safeArray<PricingConfig>(configs).filter(
     (c) => (c.scopeType === 'model' || c.scopeType === 'combination') && c.isActive
   );
 

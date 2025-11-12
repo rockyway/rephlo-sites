@@ -67,19 +67,19 @@ export class CreditsController {
 
     const response: CurrentCreditsResponse = {
       id: credit.id,
-      user_id: credit.userId,
-      total_credits: credit.totalCredits,
-      used_credits: credit.usedCredits,
-      remaining_credits: this.creditService.calculateRemainingCredits(credit),
-      billing_period_start: credit.billingPeriodStart.toISOString(),
-      billing_period_end: credit.billingPeriodEnd.toISOString(),
-      usage_percentage: this.creditService.calculateUsagePercentage(credit),
+      userId: credit.userId,
+      totalCredits: credit.totalCredits,
+      usedCredits: credit.usedCredits,
+      remainingCredits: this.creditService.calculateRemainingCredits(credit),
+      billingPeriodStart: credit.billingPeriodStart.toISOString(),
+      billingPeriodEnd: credit.billingPeriodEnd.toISOString(),
+      usagePercentage: this.creditService.calculateUsagePercentage(credit),
     };
 
     logger.info('CreditsController: Current credits retrieved', {
       userId,
       creditId: credit.id,
-      remainingCredits: response.remaining_credits,
+      remainingCredits: response.remainingCredits,
     });
 
     res.status(200).json(response);
@@ -144,14 +144,14 @@ export class CreditsController {
     const response: UsageHistoryResponse = {
       usage: result.usage.map((item) => ({
         id: item.id,
-        model_id: item.modelId,
+        modelId: item.modelId,
         operation: item.operation,
-        credits_used: item.creditsUsed,
-        input_tokens: item.inputTokens,
-        output_tokens: item.outputTokens,
-        total_tokens: item.totalTokens,
-        request_duration_ms: item.requestDurationMs,
-        created_at: item.createdAt.toISOString(),
+        creditsUsed: item.creditsUsed,
+        inputTokens: item.inputTokens,
+        outputTokens: item.outputTokens,
+        totalTokens: item.totalTokens,
+        requestDurationMs: item.requestDurationMs,
+        createdAt: item.createdAt.toISOString(),
       })),
       pagination: result.pagination,
       summary: result.summary,

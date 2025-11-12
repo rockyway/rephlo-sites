@@ -40,6 +40,7 @@ import {
 import { formatCurrency, formatDate, formatPercentage, getTierDisplayName, getTierColor } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 function BillingDashboard() {
   // State
@@ -75,10 +76,10 @@ function BillingDashboard() {
 
       // Handle multiple response formats consistently
       setRevenueMetrics((metrics as any).data || metrics);
-      setRevenueByTier((tierRevenue as any).tiers || (tierRevenue as any).data?.tiers || (tierRevenue as any).data || []);
-      setInvoices((invoiceData as any).data || invoiceData || []);
-      setTransactions((transactionData as any).data || transactionData || []);
-      setDunningAttempts((dunningData as any).attempts || (dunningData as any).data?.attempts || (dunningData as any).data || []);
+      setRevenueByTier(safeArray<RevenueByTier>((tierRevenue as any).tiers || (tierRevenue as any).data?.tiers || (tierRevenue as any).data));
+      setInvoices(safeArray<BillingInvoice>((invoiceData as any).data || invoiceData));
+      setTransactions(safeArray<PaymentTransaction>((transactionData as any).data || transactionData));
+      setDunningAttempts(safeArray<DunningAttempt>((dunningData as any).attempts || (dunningData as any).data?.attempts || (dunningData as any).data));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load billing data');
     } finally {

@@ -77,10 +77,10 @@ export function listSubscriptionPlans() {
     id,
     name: plan.name,
     description: plan.description,
-    credits_per_month: plan.creditsPerMonth,
-    price_cents: plan.priceCents,
-    billing_intervals: plan.billingIntervals,
-    yearly_discount_percent: 'yearlyDiscountPercent' in plan ? plan.yearlyDiscountPercent : undefined,
+    creditsPerMonth: plan.creditsPerMonth,
+    priceCents: plan.priceCents,
+    billingIntervals: plan.billingIntervals,
+    yearlyDiscountPercent: 'yearlyDiscountPercent' in plan ? plan.yearlyDiscountPercent : undefined,
     features: plan.features,
   }));
 }
@@ -211,11 +211,11 @@ export async function createSubscription(
     try {
       const webhookService = container.resolve<IWebhookService>('IWebhookService');
       await webhookService.queueWebhook(userId, 'subscription.created', {
-        subscription_id: subscription.id,
-        user_id: userId,
+        subscriptionId: subscription.id,
+        userId: userId,
         tier: subscription.tier,
         status: subscription.status,
-        credits_per_month: subscription.creditsPerMonth,
+        creditsPerMonth: subscription.creditsPerMonth,
       });
     } catch (webhookError) {
       // Don't fail subscription creation if webhook fails
@@ -319,10 +319,10 @@ export async function updateSubscription(
       try {
         const webhookService = container.resolve<IWebhookService>('IWebhookService');
         await webhookService.queueWebhook(userId, 'subscription.updated', {
-          subscription_id: updatedSubscription.id,
-          user_id: userId,
+          subscriptionId: updatedSubscription.id,
+          userId: userId,
           tier: updatedSubscription.tier,
-          previous_tier: currentSubscription.tier,
+          previousTier: currentSubscription.tier,
         });
       } catch (webhookError) {
         // Don't fail subscription update if webhook fails
@@ -391,10 +391,10 @@ export async function cancelSubscription(
     try {
       const webhookService = container.resolve<IWebhookService>('IWebhookService');
       await webhookService.queueWebhook(userId, 'subscription.cancelled', {
-        subscription_id: updatedSubscription.id,
-        user_id: userId,
-        cancelled_at: updatedSubscription.cancelledAt!.toISOString(),
-        cancel_at_period_end: cancelAtPeriodEnd,
+        subscriptionId: updatedSubscription.id,
+        userId: userId,
+        cancelledAt: updatedSubscription.cancelledAt!.toISOString(),
+        cancelAtPeriodEnd: cancelAtPeriodEnd,
       });
     } catch (webhookError) {
       // Don't fail subscription cancellation if webhook fails
@@ -407,7 +407,7 @@ export async function cancelSubscription(
 
     return {
       ...updatedSubscription,
-      cancel_at_period_end: cancelAtPeriodEnd,
+      cancelAtPeriodEnd: cancelAtPeriodEnd,
     };
   } catch (error) {
     logger.error('Failed to cancel subscription', { userId, error });

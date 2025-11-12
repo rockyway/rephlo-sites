@@ -17,6 +17,7 @@ import TierAuditLog from '@/components/admin/TierAuditLog';
 import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 import type {
   SubscriptionTier,
 } from '@rephlo/shared-types';
@@ -84,8 +85,8 @@ function ModelTierManagement() {
       // Handle both response formats: { data: { models: [...] } } or { models: [...] } or direct array
       const models = (response as any).models ||
                     (response as any).data?.models ||
-                    (response as any).data || [];
-      setModels(Array.isArray(models) ? models : []);
+                    (response as any).data;
+      setModels(safeArray<ModelTierInfo>(models));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load models');
     } finally {
@@ -138,7 +139,7 @@ function ModelTierManagement() {
       // Ensure allowedTiers is always an array
       const modelWithDefaults = {
         ...updatedModel,
-        allowedTiers: updatedModel.allowedTiers || [],
+        allowedTiers: safeArray<SubscriptionTier>(updatedModel.allowedTiers),
       };
       // Update models list
       setModels((prev) =>
@@ -225,7 +226,7 @@ function ModelTierManagement() {
     }
   };
 
-  const filteredModels = (models || []).filter((model) => {
+  const filteredModels = safeArray<ModelTierInfo>(models).filter((model) => {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
@@ -449,7 +450,7 @@ function ModelTierManagement() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 flex-wrap">
-                        {(model.allowedTiers || []).map((tier) => (
+                        {safeArray<SubscriptionTier>(model.allowedTiers).map((tier) => (
                           <TierBadge key={tier} tier={tier} size="sm" />
                         ))}
                       </div>

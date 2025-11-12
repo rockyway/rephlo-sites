@@ -17,6 +17,7 @@ import { MarginBadge } from '@/components/admin/PricingComponents';
 import { pricingApi, type MarginMetrics, type MarginByTier, type MarginByProvider, type TopModel } from '@/api/pricing';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeToFixed } from '@/lib/safeUtils';
 
 /**
  * MarginTracking Page
@@ -195,10 +196,10 @@ function MarginTracking() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <MetricsCard
               title="Actual Gross Margin"
-              value={`${(metrics?.actualGrossMargin ?? 0).toFixed(1)}%`}
+              value={`${safeToFixed(metrics?.actualGrossMargin)}%`}
               subtitle={
                 metrics?.variance !== undefined
-                  ? `${metrics.variance > 0 ? '+' : ''}${(metrics.variance ?? 0).toFixed(1)}% vs target`
+                  ? `${metrics.variance > 0 ? '+' : ''}${safeToFixed(metrics.variance)}% vs target`
                   : undefined
               }
               icon={Activity}
@@ -214,7 +215,7 @@ function MarginTracking() {
                 <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
                   <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Target:</span>
                   <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    {(metrics.targetMargin ?? 0).toFixed(1)}%
+                    {safeToFixed(metrics.targetMargin)}%
                   </span>
                 </div>
               )}
@@ -310,7 +311,7 @@ function MarginTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            {(tier.targetMargin ?? 0).toFixed(1)}%
+                            {safeToFixed(tier.targetMargin)}%
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -324,7 +325,7 @@ function MarginTracking() {
                               'text-body-sm font-medium',
                               tier.variance > 0 ? 'text-green-600' : tier.variance < 0 ? 'text-red-600' : 'text-deep-navy-600'
                             )}>
-                              {tier.variance > 0 ? '+' : ''}{(tier.variance ?? 0).toFixed(1)}%
+                              {tier.variance > 0 ? '+' : ''}{safeToFixed(tier.variance)}%
                             </span>
                           </div>
                         </td>
@@ -460,7 +461,7 @@ function MarginTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            {(model.tokensMillions ?? 0).toFixed(1)}M
+                            {safeToFixed(model.tokensMillions)}M
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -507,10 +508,10 @@ function MarginTracking() {
                       <div>
                         <p className="font-medium text-deep-navy-800 dark:text-white capitalize">
                           {tier.tier.replace(/_/g, ' ')} tier margin {tier.variance < 0 ? 'below' : 'above'} target by{' '}
-                          {Math.abs(tier.variance ?? 0).toFixed(1)}%
+                          {safeToFixed(Math.abs(tier.variance ?? 0))}%
                         </p>
                         <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
-                          Current: {(tier.marginPercent ?? 0).toFixed(1)}% | Target: {(tier.targetMargin ?? 0).toFixed(1)}%
+                          Current: {safeToFixed(tier.marginPercent)}% | Target: {safeToFixed(tier.targetMargin)}%
                         </p>
                       </div>
                       <Button size="sm" variant="secondary">

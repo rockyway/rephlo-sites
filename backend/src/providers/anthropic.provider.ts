@@ -34,9 +34,9 @@ export class AnthropicProvider implements ILLMProvider {
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
     };
   }> {
     if (!this.client) {
@@ -93,9 +93,9 @@ export class AnthropicProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: message.usage.input_tokens,
-        completion_tokens: message.usage.output_tokens,
-        total_tokens: message.usage.input_tokens + message.usage.output_tokens,
+        promptTokens: message.usage.input_tokens,
+        completionTokens: message.usage.output_tokens,
+        totalTokens: message.usage.input_tokens + message.usage.output_tokens,
       },
     };
   }
@@ -166,9 +166,9 @@ export class AnthropicProvider implements ILLMProvider {
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
     };
   }> {
     if (!this.client) {
@@ -207,9 +207,9 @@ export class AnthropicProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: message.usage.input_tokens,
-        completion_tokens: message.usage.output_tokens,
-        total_tokens: message.usage.input_tokens + message.usage.output_tokens,
+        promptTokens: message.usage.input_tokens,
+        completionTokens: message.usage.output_tokens,
+        totalTokens: message.usage.input_tokens + message.usage.output_tokens,
       },
     };
   }

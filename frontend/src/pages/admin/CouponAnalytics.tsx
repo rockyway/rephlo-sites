@@ -32,6 +32,7 @@ import {
   formatNumber,
   formatDateTime,
 } from '@/lib/plan111.utils';
+import { safeArray, isArrayEmpty } from '@/lib/safeUtils';
 import type {
   CouponAnalyticsMetrics,
   TopPerformingCoupon,
@@ -285,7 +286,7 @@ function CouponAnalytics() {
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="lg" />
           </div>
-        ) : topCoupons.length === 0 ? (
+        ) : isArrayEmpty(topCoupons) ? (
           <div className="text-center py-12">
             <p className="text-deep-navy-500 dark:text-deep-navy-300">No coupon data available</p>
           </div>
@@ -312,7 +313,7 @@ function CouponAnalytics() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
-                {topCoupons.map((coupon, index) => (
+                {safeArray<TopPerformingCoupon>(topCoupons).map((coupon, index) => (
                   <tr key={index} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-deep-navy-800 dark:text-white">
                       {coupon.code}
@@ -380,7 +381,7 @@ function CouponAnalytics() {
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="lg" />
           </div>
-        ) : fraudEvents.length === 0 ? (
+        ) : isArrayEmpty(fraudEvents) ? (
           <div className="text-center py-12">
             <p className="text-deep-navy-500 dark:text-deep-navy-300">No fraud events detected</p>
           </div>
@@ -413,7 +414,7 @@ function CouponAnalytics() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-deep-navy-800 divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
-                {fraudEvents.map((event) => (
+                {safeArray<FraudDetectionEvent>(fraudEvents).map((event) => (
                   <tr key={event.id} className="hover:bg-deep-navy-50 dark:bg-deep-navy-900">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-deep-navy-800 dark:text-white">
                       {event.couponCode}

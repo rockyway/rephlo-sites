@@ -112,6 +112,11 @@ export interface ProrationEvent {
   status: ProrationStatus;
   createdAt: string;
   updatedAt: string;
+
+  // Optional populated fields from joins
+  user?: {
+    email: string;
+  };
 }
 
 export enum ProrationEventType {

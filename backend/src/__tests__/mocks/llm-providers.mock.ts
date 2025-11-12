@@ -30,9 +30,9 @@ export class MockOpenAIProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 10,
-        completion_tokens: 20,
-        total_tokens: 30,
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
       },
     };
   }
@@ -62,9 +62,9 @@ export class MockOpenAIProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 10,
-        completion_tokens: 20,
-        total_tokens: 30,
+        promptTokens: 10,
+        completionTokens: 20,
+        totalTokens: 30,
       },
     };
   }
@@ -102,9 +102,9 @@ export class MockAzureOpenAIProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 12,
-        completion_tokens: 18,
-        total_tokens: 30,
+        promptTokens: 12,
+        completionTokens: 18,
+        totalTokens: 30,
       },
     };
   }
@@ -132,9 +132,9 @@ export class MockAzureOpenAIProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 12,
-        completion_tokens: 18,
-        total_tokens: 30,
+        promptTokens: 12,
+        completionTokens: 18,
+        totalTokens: 30,
       },
     };
   }
@@ -171,9 +171,9 @@ export class MockAnthropicProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 15,
-        completion_tokens: 25,
-        total_tokens: 40,
+        promptTokens: 15,
+        completionTokens: 25,
+        totalTokens: 40,
       },
     };
   }
@@ -201,9 +201,9 @@ export class MockAnthropicProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 15,
-        completion_tokens: 25,
-        total_tokens: 40,
+        promptTokens: 15,
+        completionTokens: 25,
+        totalTokens: 40,
       },
     };
   }
@@ -241,9 +241,9 @@ export class MockGoogleProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 8,
-        completion_tokens: 22,
-        total_tokens: 30,
+        promptTokens: 8,
+        completionTokens: 22,
+        totalTokens: 30,
       },
     };
   }
@@ -271,9 +271,9 @@ export class MockGoogleProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: 8,
-        completion_tokens: 22,
-        total_tokens: 30,
+        promptTokens: 8,
+        completionTokens: 22,
+        totalTokens: 30,
       },
     };
   }

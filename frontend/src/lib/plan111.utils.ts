@@ -346,8 +346,13 @@ export function formatCurrency(value: number): string {
  * @param value - Numeric value (0-100)
  * @param decimals - Number of decimal places
  * @returns Formatted percentage string
+ * @deprecated Use safeFormatPercentage from @/lib/safeUtils instead
  */
-export function formatPercentage(value: number, decimals = 1): string {
+export function formatPercentage(value: number | undefined | null, decimals = 1): string {
+  // Handle undefined, null, or NaN values
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0.0%';
+  }
   return `${value.toFixed(decimals)}%`;
 }
 
@@ -355,8 +360,14 @@ export function formatPercentage(value: number, decimals = 1): string {
  * Format large numbers with abbreviations (K, M)
  * @param value - Numeric value
  * @returns Formatted string
+ * @deprecated Use safeFormatNumber from @/lib/safeUtils instead
  */
-export function formatNumber(value: number): string {
+export function formatNumber(value: number | undefined | null): string {
+  // Handle undefined, null, or NaN values
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
+
   if (value >= 1000000) {
     return `${(value / 1000000).toFixed(1)}M`;
   }

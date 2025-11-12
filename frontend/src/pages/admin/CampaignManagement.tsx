@@ -34,6 +34,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { plan111API } from '@/api/plan111';
 import { cn } from '@/lib/utils';
 import { formatDate, formatCurrency } from '@/lib/plan111.utils';
+import { safeArray } from '@/lib/safeUtils';
 import type {
   CouponCampaign,
 } from '@rephlo/shared-types';
@@ -100,7 +101,7 @@ function CampaignManagement() {
         pageSize
       );
 
-      setCampaigns(response.campaigns || []);
+      setCampaigns(safeArray<CouponCampaign>(response.campaigns));
       setTotalCampaigns(response.total);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load campaigns');

@@ -15,6 +15,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { pricingApi, type VendorPriceAlert, type VendorPricing } from '@/api/pricing';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 /**
  * VendorPriceMonitoring Page
@@ -52,7 +53,7 @@ function VendorPriceMonitoring() {
       });
       // Backend wraps responses in { success, data }
       const unwrapped = (response as any).data || response;
-      setAlerts(unwrapped.alerts || unwrapped || []);
+      setAlerts(safeArray<VendorPriceAlert>(unwrapped.alerts || unwrapped));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load price alerts');
     } finally {
@@ -65,7 +66,7 @@ function VendorPriceMonitoring() {
       const response = await pricingApi.listVendorPricing({ isActive: true });
       // Backend wraps responses in { success, data }
       const unwrapped = (response as any).data || response;
-      setPricing(unwrapped.pricing || unwrapped || []);
+      setPricing(safeArray<VendorPricing>(unwrapped.pricing || unwrapped));
     } catch (err: any) {
       console.error('Failed to load vendor pricing:', err);
     }

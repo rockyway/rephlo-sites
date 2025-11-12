@@ -35,12 +35,12 @@ export interface UsageHistoryResult {
     limit: number;
     offset: number;
     total: number;
-    has_more: boolean;
+    hasMore: boolean;
   };
   summary: {
-    total_credits_used: number;
-    total_requests: number;
-    total_tokens: number;
+    totalCreditsUsed: number;
+    totalRequests: number;
+    totalTokens: number;
   };
 }
 
@@ -50,11 +50,11 @@ export interface UsageHistoryResult {
 export interface UsageStatsItem {
   date?: string;
   hour?: number;
-  model_id?: string;
-  credits_used: number;
-  requests_count: number;
-  tokens_total: number;
-  average_duration_ms: number;
+  modelId?: string;
+  creditsUsed: number;
+  requestsCount: number;
+  tokensTotal: number;
+  averageDurationMs: number;
 }
 
 /**
@@ -63,10 +63,10 @@ export interface UsageStatsItem {
 export interface UsageStatsResult {
   stats: UsageStatsItem[];
   total: {
-    credits_used: number;
-    requests_count: number;
-    tokens_total: number;
-    average_duration_ms: number;
+    creditsUsed: number;
+    requestsCount: number;
+    tokensTotal: number;
+    averageDurationMs: number;
   };
 }
 
@@ -179,9 +179,9 @@ export class UsageService {
     });
 
     const summary = {
-      total_credits_used: summaryData._sum.creditsUsed || 0,
-      total_requests: total,
-      total_tokens: summaryData._sum.totalTokens || 0,
+      totalCreditsUsed: summaryData._sum.creditsUsed || 0,
+      totalRequests: total,
+      totalTokens: summaryData._sum.totalTokens || 0,
     };
 
     const result: UsageHistoryResult = {
@@ -190,7 +190,7 @@ export class UsageService {
         limit: params.limit,
         offset: params.offset,
         total,
-        has_more: params.offset + params.limit < total,
+        hasMore: params.offset + params.limit < total,
       },
       summary,
     };
@@ -255,24 +255,24 @@ export class UsageService {
     // Calculate total statistics
     const total = stats.reduce(
       (acc, stat) => ({
-        credits_used: acc.credits_used + stat.credits_used,
-        requests_count: acc.requests_count + stat.requests_count,
-        tokens_total: acc.tokens_total + stat.tokens_total,
-        average_duration_ms:
-          acc.average_duration_ms + stat.average_duration_ms,
+        creditsUsed: acc.creditsUsed + stat.creditsUsed,
+        requestsCount: acc.requestsCount + stat.requestsCount,
+        tokensTotal: acc.tokensTotal + stat.tokensTotal,
+        averageDurationMs:
+          acc.averageDurationMs + stat.averageDurationMs,
       }),
       {
-        credits_used: 0,
-        requests_count: 0,
-        tokens_total: 0,
-        average_duration_ms: 0,
+        creditsUsed: 0,
+        requestsCount: 0,
+        tokensTotal: 0,
+        averageDurationMs: 0,
       }
     );
 
     // Calculate average duration
     if (stats.length > 0) {
-      total.average_duration_ms = Math.round(
-        total.average_duration_ms / stats.length
+      total.averageDurationMs = Math.round(
+        total.averageDurationMs / stats.length
       );
     }
 
@@ -316,10 +316,10 @@ export class UsageService {
 
     return results.map((row) => ({
       date: row.date.toISOString().split('T')[0],
-      credits_used: row.credits_used,
-      requests_count: row.requests_count,
-      tokens_total: row.tokens_total,
-      average_duration_ms: row.average_duration_ms,
+      creditsUsed: row.credits_used,
+      requestsCount: row.requests_count,
+      tokensTotal: row.tokens_total,
+      averageDurationMs: row.average_duration_ms,
     }));
   }
 
@@ -348,10 +348,10 @@ export class UsageService {
 
     return results.map((row) => ({
       hour: row.hour,
-      credits_used: row.credits_used,
-      requests_count: row.requests_count,
-      tokens_total: row.tokens_total,
-      average_duration_ms: row.average_duration_ms,
+      creditsUsed: row.credits_used,
+      requestsCount: row.requests_count,
+      tokensTotal: row.tokens_total,
+      averageDurationMs: row.average_duration_ms,
     }));
   }
 
@@ -384,11 +384,11 @@ export class UsageService {
     });
 
     return results.map((row) => ({
-      model_id: row.modelId,
-      credits_used: row._sum.creditsUsed || 0,
-      requests_count: row._count.id,
-      tokens_total: row._sum.totalTokens || 0,
-      average_duration_ms: Math.round(row._avg.requestDurationMs || 0),
+      modelId: row.modelId,
+      creditsUsed: row._sum.creditsUsed || 0,
+      requestsCount: row._count.id,
+      tokensTotal: row._sum.totalTokens || 0,
+      averageDurationMs: Math.round(row._avg.requestDurationMs || 0),
     }));
   }
 

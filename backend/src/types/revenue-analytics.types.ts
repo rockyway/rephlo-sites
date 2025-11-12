@@ -202,7 +202,7 @@ export interface CreditUsageEntry {
   model: string; // Model ID
   credits: number; // Total credits used
   requests: number; // Number of requests
-  revenue_contribution: number; // USD cents, estimated
+  revenueContribution: number; // USD cents, estimated
 }
 
 /**
@@ -231,12 +231,12 @@ export interface CouponROIQuery {
  * Single campaign ROI entry
  */
 export interface CouponROIEntry {
-  campaign_name: string;
-  coupons_issued: number;
-  coupons_redeemed: number;
-  discount_value: number; // USD cents
-  revenue_generated: number; // USD cents
-  roi_percentage: number; // ROI % (can be negative)
+  campaignName: string;
+  couponsIssued: number;
+  couponsRedeemed: number;
+  discountValue: number; // USD cents
+  revenueGenerated: number; // USD cents
+  roiPercentage: number; // ROI % (can be negative)
 }
 
 /**

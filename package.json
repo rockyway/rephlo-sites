@@ -12,7 +12,8 @@
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
     "build:idp": "npm run build --prefix identity-provider",
-    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend && npm install --prefix identity-provider"
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend && npm install --prefix identity-provider",
+    "analyze:api": "npx tsx scripts/analyze-api-endpoints.ts"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

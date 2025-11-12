@@ -37,6 +37,7 @@ import {
 import { formatCurrency, formatDate, formatNumber, calculateDaysBetween } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 function SubscriptionManagement() {
   // State
@@ -88,10 +89,10 @@ function SubscriptionManagement() {
 
       // Handle both response formats: { data: [...] } or direct array
       // Some endpoints return { data: {...}, pagination: {...} }, others return unwrapped
-      const subscriptionsArray = (subsResponse as any).data || subsResponse || [];
+      const subscriptionsData = (subsResponse as any).data || subsResponse;
       const paginationData = (subsResponse as any).pagination || subsResponse;
 
-      setSubscriptions(subscriptionsArray);
+      setSubscriptions(safeArray<Subscription>(subscriptionsData));
       setTotalPages(paginationData.totalPages || 1);
       setStats((statsData as any).data || statsData);
     } catch (err: any) {

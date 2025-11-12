@@ -37,6 +37,7 @@ import {
   calculateBudgetUtilization,
   getBudgetUtilizationColor,
 } from '@/lib/plan111.utils';
+import { safeArray } from '@/lib/safeUtils';
 import type {
   CouponCampaign,
 } from '@rephlo/shared-types';
@@ -93,7 +94,7 @@ function CampaignCalendar() {
         pageSize
       );
 
-      setCampaigns(response.campaigns);
+      setCampaigns(safeArray<CouponCampaign>(response.campaigns));
       setTotalCampaigns(response.total);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load campaigns');
@@ -104,18 +105,19 @@ function CampaignCalendar() {
 
   const loadStats = async () => {
     try {
-      const activeCampaigns = campaigns.filter((c) => c.status === 'active');
-      const totalBudget = campaigns.reduce(
+      const safeCampaigns = safeArray<CouponCampaign>(campaigns);
+      const activeCampaigns = safeCampaigns.filter((c) => c.status === 'active');
+      const totalBudget = safeCampaigns.reduce(
         (sum, c) => sum + (c.budgetCap || 0),
         0
       );
-      const budgetUtilized = campaigns.reduce(
+      const budgetUtilized = safeCampaigns.reduce(
         (sum, c) => sum + (c.currentSpend || 0),
         0
       );
 
       // Find top performing campaign
-      const topCampaign = campaigns.reduce((top, c) => {
+      const topCampaign = safeCampaigns.reduce((top, c) => {
         const topRevenue = top?.actualRevenue || 0;
         const currentRevenue = c.actualRevenue || 0;
         return currentRevenue > topRevenue ? c : top;

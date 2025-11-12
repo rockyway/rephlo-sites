@@ -462,7 +462,7 @@ function ProrationTracking() {
                       <tr key={proration.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-800 dark:text-white">
-                            {proration.userId || 'N/A'}
+                            {proration.user?.email || proration.userId || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4">

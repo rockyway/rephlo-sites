@@ -266,21 +266,21 @@ export class AdminUserDetailService {
           id: sub.id,
           tier: sub.tier,
           status: sub.status,
-          billing_cycle: sub.billingCycle as 'monthly' | 'annual',
-          monthly_credit_allocation: sub.monthlyCreditAllocation,
-          started_at: sub.createdAt,
-          ended_at: sub.cancelledAt,
-          next_billing_date: sub.status === 'active' ? sub.currentPeriodEnd : null,
-          monthly_price_usd: Number(sub.basePriceUsd),
+          billingCycle: sub.billingCycle as 'monthly' | 'annual',
+          monthlyCreditAllocation: sub.monthlyCreditAllocation,
+          startedAt: sub.createdAt,
+          endedAt: sub.cancelledAt,
+          nextBillingDate: sub.status === 'active' ? sub.currentPeriodEnd : null,
+          monthlyPriceUsd: Number(sub.basePriceUsd),
         })),
         prorations: prorations.map((pro) => ({
           id: pro.id,
-          from_tier: pro.fromTier || 'unknown',
-          to_tier: pro.toTier || 'unknown',
-          from_price_usd: Number(pro.unusedCreditValueUsd),
-          to_price_usd: Number(pro.newTierProratedCostUsd),
-          proration_amount_usd: Number(pro.netChargeUsd),
-          created_at: pro.createdAt,
+          fromTier: pro.fromTier || 'unknown',
+          toTier: pro.toTier || 'unknown',
+          fromPriceUsd: Number(pro.unusedCreditValueUsd),
+          toPriceUsd: Number(pro.newTierProratedCostUsd),
+          prorationAmountUsd: Number(pro.netChargeUsd),
+          createdAt: pro.createdAt,
         })),
         total,
         limit: safeLimit,
@@ -365,27 +365,27 @@ export class AdminUserDetailService {
       return {
         licenses: licenses.map((license) => ({
           id: license.id,
-          license_key: license.licenseKey,
+          licenseKey: license.licenseKey,
           status: license.status as 'active' | 'pending' | 'revoked',
-          purchase_price_usd: Number(license.purchasePriceUsd),
-          purchase_date: license.purchasedAt,
-          activated_at: license.activatedAt,
-          eligible_until_version: license.eligibleUntilVersion,
-          device_activations: license.activations.map((activation) => ({
+          purchasePriceUsd: Number(license.purchasePriceUsd),
+          purchaseDate: license.purchasedAt,
+          activatedAt: license.activatedAt,
+          eligibleUntilVersion: license.eligibleUntilVersion,
+          deviceActivations: license.activations.map((activation) => ({
             id: activation.id,
-            device_name: activation.deviceName,
-            device_id: activation.machineFingerprint,
-            activated_at: activation.activatedAt,
-            last_seen_at: activation.lastSeenAt,
+            deviceName: activation.deviceName,
+            deviceId: activation.machineFingerprint,
+            activatedAt: activation.activatedAt,
+            lastSeenAt: activation.lastSeenAt,
             status: activation.status as 'active' | 'deactivated',
           })),
         })),
         upgrades: upgrades.map((upgrade) => ({
           id: upgrade.id,
-          from_version: upgrade.fromVersion,
-          to_version: upgrade.toVersion,
-          upgrade_price_usd: Number(upgrade.upgradePriceUsd),
-          upgrade_date: upgrade.purchasedAt,
+          fromVersion: upgrade.fromVersion,
+          toVersion: upgrade.toVersion,
+          upgradePriceUsd: Number(upgrade.upgradePriceUsd),
+          upgradeDate: upgrade.purchasedAt,
         })),
         total,
         limit: safeLimit,
@@ -519,32 +519,32 @@ export class AdminUserDetailService {
       return {
         balance: {
           amount: balance?.amount || 0,
-          last_updated: balance?.updatedAt || new Date(),
+          lastUpdated: balance?.updatedAt || new Date(),
         },
         allocations: allocations.map((alloc) => ({
           id: alloc.id,
           amount: alloc.amount,
           source: alloc.source as any,
           reason: null, // Not stored in current schema
-          allocated_at: alloc.createdAt,
+          allocatedAt: alloc.createdAt,
         })),
         usage: usageByModel.map((usage) => ({
           model: modelPricingMap.get(usage.modelId) || 'Unknown Model',
-          total_credits: usage._sum?.creditsDeducted || 0,
-          request_count: usage._count?.id || 0,
+          totalCredits: usage._sum?.creditsDeducted || 0,
+          requestCount: usage._count?.id || 0,
         })),
         deductions: deductions.map((deduction) => ({
           id: deduction.id,
           amount: deduction.amount,
-          model_used: 'Unknown', // Would need to join with usage ledger
+          modelUsed: 'Unknown', // Would need to join with usage ledger
           timestamp: deduction.createdAt,
         })),
-        total_allocations: totalAllocations._sum?.amount || 0,
-        total_usage: usageByModel.reduce(
+        totalAllocations: totalAllocations._sum?.amount || 0,
+        totalUsage: usageByModel.reduce(
           (sum, u) => sum + (u._sum?.creditsDeducted || 0),
           0
         ),
-        total_deductions: totalDeductions._sum?.amount || 0,
+        totalDeductions: totalDeductions._sum?.amount || 0,
       };
     } catch (error) {
       logger.error('AdminUserDetailService.getUserCredits: Error', {
@@ -651,20 +651,20 @@ export class AdminUserDetailService {
           coupon: {
             code: redemption.coupon.code,
             type: redemption.coupon.couponType,
-            discount_type: redemption.coupon.discountType,
-            discount_value: Number(redemption.coupon.discountValue),
+            discountType: redemption.coupon.discountType,
+            discountValue: Number(redemption.coupon.discountValue),
           },
-          redeemed_at: redemption.redemptionDate,
-          discount_value_usd: Number(redemption.discountAppliedUsd),
-          subscription_tier_granted: redemption.subscription?.tier || null,
-          perpetual_license_granted: false, // Not tracked in current schema
+          redeemedAt: redemption.redemptionDate,
+          discountValueUsd: Number(redemption.discountAppliedUsd),
+          subscriptionTierGranted: redemption.subscription?.tier || null,
+          perpetualLicenseGranted: false, // Not tracked in current schema
         })),
         fraudFlags: fraudFlags.map((flag) => ({
           id: flag.id,
-          coupon_code: flag.coupon.code,
-          flag_reason: flag.detectionType,
+          couponCode: flag.coupon.code,
+          flagReason: flag.detectionType,
           severity: flag.severity as 'low' | 'medium' | 'high',
-          flagged_at: flag.detectedAt,
+          flaggedAt: flag.detectedAt,
         })),
         totalDiscountValue: Number(totalDiscountSum._sum.discountAppliedUsd || 0) * 100, // Convert to cents
         total,

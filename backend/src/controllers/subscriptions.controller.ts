@@ -377,7 +377,7 @@ export class SubscriptionsController {
         id: subscription.id,
         status: subscription.status,
         cancelled_at: subscription.cancelledAt?.toISOString() || null,
-        cancel_at_period_end: subscription.cancel_at_period_end,
+        cancel_at_period_end: subscription.cancelAtPeriodEnd,
         current_period_end: subscription.currentPeriodEnd.toISOString(),
       });
     } catch (error: any) {

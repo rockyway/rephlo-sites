@@ -758,7 +758,7 @@ export class RevenueAnalyticsService {
           model: item.modelId,
           credits,
           requests: item._count.id,
-          revenue_contribution: revenueContribution,
+          revenueContribution,
         };
       });
 
@@ -865,12 +865,12 @@ export class RevenueAnalyticsService {
           : 0;
 
         return {
-          campaign_name: campaign.campaignName,
-          coupons_issued: totalCouponsIssued,
-          coupons_redeemed: totalCouponsRedeemed,
-          discount_value: totalDiscount,
-          revenue_generated: totalRevenueGenerated,
-          roi_percentage: roi,
+          campaignName: campaign.campaignName,
+          couponsIssued: totalCouponsIssued,
+          couponsRedeemed: totalCouponsRedeemed,
+          discountValue: totalDiscount,
+          revenueGenerated: totalRevenueGenerated,
+          roiPercentage: roi,
         };
       });
 

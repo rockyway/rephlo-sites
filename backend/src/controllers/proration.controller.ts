@@ -20,6 +20,7 @@ import { Request, Response } from 'express';
 import { ProrationService } from '../services/proration.service';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
+import { mapProrationEventToApiType } from '../utils/typeMappers';
 
 @injectable()
 export class ProrationController {
@@ -251,44 +252,7 @@ export class ProrationController {
       res.status(200).json({
         status: 'success',
         data: {
-          data: result.data.map((event) => {
-            const subscription = (event as any).subscription;
-            return {
-              id: event.id,
-              userId: event.userId,
-              subscriptionId: event.subscriptionId,
-
-              // Map backend property names to frontend expectations
-              eventType: event.changeType, // Frontend expects eventType
-              fromTier: event.fromTier,
-              toTier: event.toTier,
-
-              // Proration calculation fields - map to frontend names
-              daysInPeriod: event.daysInCycle, // Frontend expects daysInPeriod
-              daysUsed: event.daysInCycle - event.daysRemaining,
-              daysRemaining: event.daysRemaining,
-              unusedCredit: Number(event.unusedCreditValueUsd), // Frontend expects number
-              newTierCost: Number(event.newTierProratedCostUsd),
-              netCharge: Number(event.netChargeUsd),
-
-              // Date fields - map effectiveDate to changeDate
-              periodStart: subscription?.currentPeriodStart?.toISOString() || event.createdAt.toISOString(),
-              periodEnd: subscription?.currentPeriodEnd?.toISOString() || event.createdAt.toISOString(),
-              changeDate: event.effectiveDate.toISOString(), // Frontend expects changeDate
-              effectiveDate: event.effectiveDate.toISOString(),
-              nextBillingDate: subscription?.currentPeriodEnd?.toISOString() || event.effectiveDate.toISOString(),
-
-              status: event.status,
-              stripeInvoiceId: event.stripeInvoiceId,
-
-              // User object matching frontend expectations
-              user: (event as any).user ? {
-                email: (event as any).user.email,
-              } : undefined,
-
-              createdAt: event.createdAt.toISOString(),
-            };
-          }),
+          data: result.data.map((event) => mapProrationEventToApiType(event as any)),
           total: result.total,
           totalPages: result.totalPages,
           page: parseInt((page as string) || '1', 10),

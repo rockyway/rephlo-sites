@@ -735,31 +735,6 @@ npm run prisma:studio
 
 ---
 
-## Performance Considerations
-
-### Frontend
-
-- Use React Query for server state (automatic caching)
-- Code splitting with React Router lazy imports
-- Image optimization (use responsive sizes)
-- TailwindCSS purges unused styles in production build
-
-### Backend
-
-- Connection pooling (20 default) prevents exhaustion
-- JWKS caching (5 minutes) reduces Identity Provider calls
-- Redis rate limiting distributes load
-- Database indexes on foreign keys and common queries
-- Async/await for concurrent I/O
-
-### Identity Provider
-
-- Session storage in PostgreSQL (no in-memory)
-- Token caching in client applications
-- JWKS endpoint cached by clients
-- Graceful shutdown waits for active requests
-
----
 
 ## Important Notes
 
@@ -810,11 +785,6 @@ npm run prisma:studio
 **Workaround:** Use integer TTL values for all token types.
 **Reference:** `identity-provider/src/config/oidc.ts` lines 175-190
 
-### PostgreSQL on Windows
-
-**Issue:** Some Windows PostgreSQL installations may have permission issues.
-**Workaround:** Use postgres user account or create dedicated database user with full privileges.
-
 ---
 
 ## When to Use Specialized Agents
@@ -829,7 +799,5 @@ If delegating tasks to Claude Code agents:
 
 ---
 
-**Last Updated:** November 9, 2025
-**Version:** 1.0.0 (Production Ready)
-**Node.js:** >=18.0.0
-**PostgreSQL:** >=14.0
+## When testing API
+- use temporary raw access token in the text file in `temp_token.txt`

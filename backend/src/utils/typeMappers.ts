@@ -394,6 +394,56 @@ export function mapFraudEventToApiType(
 }
 
 // =============================================================================
+// PRORATION EVENT MAPPERS
+// =============================================================================
+
+/**
+ * Map database ProrationEvent to API ProrationEvent type
+ * Handles field renaming from DB snake_case to API camelCase
+ * Ensures response matches shared-types ProrationEvent interface
+ */
+export function mapProrationEventToApiType(
+  dbEvent: Prisma.ProrationEventGetPayload<{
+    include: {
+      user: {
+        select: {
+          email: true;
+        };
+      };
+    };
+  }>
+): import('@rephlo/shared-types').ProrationEvent {
+  return {
+    id: dbEvent.id,
+    userId: dbEvent.userId,
+    subscriptionId: dbEvent.subscriptionId,
+    fromTier: dbEvent.fromTier,
+    toTier: dbEvent.toTier,
+    changeType: dbEvent.changeType as any, // ProrationEventType enum
+    daysRemaining: dbEvent.daysRemaining,
+    daysInCycle: dbEvent.daysInCycle,
+
+    // Field name mapping: DB uses full names, API uses same
+    unusedCreditValueUsd: parseFloat(dbEvent.unusedCreditValueUsd.toString()),
+    newTierProratedCostUsd: parseFloat(dbEvent.newTierProratedCostUsd.toString()),
+    netChargeUsd: parseFloat(dbEvent.netChargeUsd.toString()),
+
+    effectiveDate: dbEvent.effectiveDate.toISOString(),
+    stripeInvoiceId: dbEvent.stripeInvoiceId,
+    status: dbEvent.status as any, // ProrationStatus enum
+    createdAt: dbEvent.createdAt.toISOString(),
+    updatedAt: dbEvent.updatedAt.toISOString(),
+
+    // Optional user field from join
+    user: dbEvent.user
+      ? {
+          email: dbEvent.user.email,
+        }
+      : undefined,
+  };
+}
+
+// =============================================================================
 // DECIMAL TO NUMBER CONVERSION
 // =============================================================================
 

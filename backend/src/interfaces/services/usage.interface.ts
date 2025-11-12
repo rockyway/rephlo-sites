@@ -25,32 +25,32 @@ export interface UsageHistoryResult {
     limit: number;
     offset: number;
     total: number;
-    has_more: boolean;
+    hasMore: boolean;
   };
   summary: {
-    total_credits_used: number;
-    total_requests: number;
-    total_tokens: number;
+    totalCreditsUsed: number;
+    totalRequests: number;
+    totalTokens: number;
   };
 }
 
 export interface UsageStatsItem {
   date?: string;
   hour?: number;
-  model_id?: string;
-  credits_used: number;
-  requests_count: number;
-  tokens_total: number;
-  average_duration_ms: number;
+  modelId?: string;
+  creditsUsed: number;
+  requestsCount: number;
+  tokensTotal: number;
+  averageDurationMs: number;
 }
 
 export interface UsageStatsResult {
   stats: UsageStatsItem[];
   total: {
-    credits_used: number;
-    requests_count: number;
-    tokens_total: number;
-    average_duration_ms: number;
+    creditsUsed: number;
+    requestsCount: number;
+    tokensTotal: number;
+    averageDurationMs: number;
   };
 }
 

@@ -190,3 +190,4 @@ nul
 # Claude configuration (keep .claude/ directory structure but not configs)
 .claude/*.json
 .claude/settings.json
+temp_*.*

@@ -252,10 +252,10 @@ export interface TextCompletionChoice {
 }
 
 export interface CompletionUsage {
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-  credits_used: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  creditsUsed: number;
 }
 
 export interface TextCompletionResponse {
