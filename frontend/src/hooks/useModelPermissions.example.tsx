@@ -79,6 +79,9 @@ export function ModelAdminPanel() {
 export function ModelActionMenu({ modelId }: { modelId: string }) {
   const { canManageLifecycle, canEditMeta } = useModelPermissions();
 
+  // modelId would be used in actual onclick handlers
+  console.log('Model:', modelId);
+
   return (
     <div>
       {canManageLifecycle && (

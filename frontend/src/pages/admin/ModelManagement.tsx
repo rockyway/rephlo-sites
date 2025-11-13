@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   RefreshCw,
   Search,
-  Edit,
   Check,
   X,
   AlertCircle,
@@ -19,6 +18,7 @@ import LifecycleActionMenu from '@/components/admin/LifecycleActionMenu';
 import MarkLegacyDialog from '@/components/admin/MarkLegacyDialog';
 import ArchiveDialog from '@/components/admin/ArchiveDialog';
 import UnarchiveDialog from '@/components/admin/UnarchiveDialog';
+import AddModelDialog from '@/components/admin/AddModelDialog';
 import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
@@ -32,6 +32,7 @@ import type {
   ModelTierUpdateRequest,
 } from '@/types/model-tier';
 import type { ModelInfo, MarkLegacyRequest } from '@/types/model';
+import { useModelPermissions } from '@/hooks/useModelPermissions';
 
 /**
  * ModelManagement Page
@@ -43,8 +44,11 @@ import type { ModelInfo, MarkLegacyRequest } from '@/types/model';
  * - Individual model editing
  * - Lifecycle management (mark legacy, archive, unarchive)
  * - Audit log viewing
+ * - RBAC enforcement for admin-only actions
  */
 function ModelManagement() {
+  // RBAC permissions
+  const permissions = useModelPermissions();
   // Data state
   const [models, setModels] = useState<ModelTierInfo[]>([]);
   const [auditLogs, setAuditLogs] = useState<TierAuditLogEntry[]>([]);
@@ -75,6 +79,9 @@ function ModelManagement() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [unarchiveDialogOpen, setUnarchiveDialogOpen] = useState(false);
   const [lifecycleTargetModel, setLifecycleTargetModel] = useState<ModelInfo | null>(null);
+
+  // Add Model dialog state
+  const [addModelDialogOpen, setAddModelDialogOpen] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -235,6 +242,23 @@ function ModelManagement() {
     }
   };
 
+  const handleAddModelConfirm = async (modelData: any) => {
+    try {
+      setIsSaving(true);
+      await adminAPI.createModel(modelData);
+      setSuccessMessage(`Successfully created model '${modelData.meta.displayName || modelData.name}'`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setAddModelDialogOpen(false);
+      loadModels();
+      loadAuditLogs();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to create model');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleMarkLegacyConfirm = async (data: MarkLegacyRequest) => {
     if (!lifecycleTargetModel) return;
     try {
@@ -325,19 +349,29 @@ function ModelManagement() {
             Configure models, tier access, and lifecycle management
           </p>
         </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          variant="ghost"
-        >
-          <RefreshCw
-            className={cn(
-              'h-4 w-4 mr-2',
-              isLoading && 'animate-spin'
-            )}
-          />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-3">
+          {permissions.canCreateModels && (
+            <Button
+              onClick={() => setAddModelDialogOpen(true)}
+              className="bg-rephlo-blue hover:bg-rephlo-blue/90 dark:bg-electric-cyan dark:hover:bg-electric-cyan/90"
+            >
+              Add New Model
+            </Button>
+          )}
+          <Button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            variant="ghost"
+          >
+            <RefreshCw
+              className={cn(
+                'h-4 w-4 mr-2',
+                isLoading && 'animate-spin'
+              )}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
       {/* Success/Error Messages */}
       {successMessage && (
@@ -492,13 +526,13 @@ function ModelManagement() {
             <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
               {isLoading && filteredModels.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
+                  <td colSpan={9} className="px-4 py-12 text-center">
                     <LoadingSpinner size="lg" />
                   </td>
                 </tr>
               ) : filteredModels.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
+                  <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
                       No models found
                     </p>
@@ -580,8 +614,8 @@ function ModelManagement() {
                         }}
                         onEditMeta={() => handleEditModel(model)}
                         permissions={{
-                          canManageLifecycle: true,
-                          canEditMeta: true,
+                          canManageLifecycle: permissions.canManageLifecycle,
+                          canEditMeta: permissions.canEditMeta,
                         }}
                       />
                     </td>
@@ -617,8 +651,8 @@ function ModelManagement() {
       {/* Lifecycle Dialogs */}
       <MarkLegacyDialog
         isOpen={markLegacyDialogOpen}
-        model={lifecycleTargetModel}
-        availableModels={models.filter(m => m.id !== lifecycleTargetModel?.id) as any[]}
+        model={lifecycleTargetModel as any}
+        availableModels={models as any[]}
         onConfirm={handleMarkLegacyConfirm}
         onCancel={() => setMarkLegacyDialogOpen(false)}
         isSaving={isSaving}
@@ -626,7 +660,7 @@ function ModelManagement() {
 
       <ArchiveDialog
         isOpen={archiveDialogOpen}
-        model={lifecycleTargetModel}
+        model={lifecycleTargetModel as any}
         onConfirm={handleArchiveConfirm}
         onCancel={() => setArchiveDialogOpen(false)}
         isSaving={isSaving}
@@ -634,9 +668,17 @@ function ModelManagement() {
 
       <UnarchiveDialog
         isOpen={unarchiveDialogOpen}
-        model={lifecycleTargetModel}
+        model={lifecycleTargetModel as any}
         onConfirm={handleUnarchiveConfirm}
         onCancel={() => setUnarchiveDialogOpen(false)}
+        isSaving={isSaving}
+      />
+
+      {/* Add Model Dialog */}
+      <AddModelDialog
+        isOpen={addModelDialogOpen}
+        onConfirm={handleAddModelConfirm}
+        onCancel={() => setAddModelDialogOpen(false)}
         isSaving={isSaving}
       />
     </div>

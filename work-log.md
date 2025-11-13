@@ -712,3 +712,48 @@ res.status(200).json(metrics);
 **Next Steps:** Review plan with stakeholders and begin Phase 1 implementation.
 
 2025-11-13 00:26:12 - API schema extraction: Comprehensive enhancement reducing missing schemas from 55 to 23 (58% improvement). Implemented recursive controller/service lookup, wrapped response detection, helper function detection, and redirect endpoint handling. Reports 099-101 generated.
+
+## 2025-11-13 - Phase 5 UI Testing (Model Lifecycle Management)
+
+### Testing Session Summary
+- **Tested Component**: Model Lifecycle Management UI (Phase 5)
+- **Browser**: Chrome DevTools automated testing
+- **User Role**: admin (admin.test@rephlo.ai)
+
+### Critical Bug Found & Fixed
+**Issue**: Infinite render loop in MarkLegacyDialog component
+- **Location**: `frontend/src/components/admin/MarkLegacyDialog.tsx:135-136`
+- **Root Cause**: `validateForm()` function called during render, which calls `setErrors()`, triggering re-render loop
+- **Fix**: Replaced validation call with simple state checks for button enable logic
+- **Impact**: Page completely unusable before fix; now renders perfectly
+
+### UI Features Successfully Tested ✅
+1. **Model Management Page** - Loads with all 18 models
+2. **Status Column** - Displays green "Active" badges correctly
+3. **Status Filter** - 4th filter dropdown present (All Statuses/Active/Legacy/Archived)
+4. **Lifecycle Action Menus** - 3-dot buttons working, showing correct options
+5. **Mark Legacy Dialog** - Opens successfully with all fields:
+   - Replacement Model dropdown (17 options, excludes current model)
+   - Deprecation Notice textarea with character counter (0/1000 → 179/1000)
+   - Sunset Date picker (mm/dd/yyyy format)
+   - Confirmation checkbox with warning message
+   - Cancel and "Mark as Legacy" buttons
+6. **Form Validation** - Working correctly:
+   - Submit button disabled until form data entered + checkbox checked
+   - Button enables when requirements met
+   - Character counter updates in real-time
+
+### Backend Integration Issue Found ⚠️
+**API Call**: `POST /admin/models/claude-haiku-4-5/mark-legacy`
+- **Status**: HTTP 200 (success response)
+- **Request Body**: `{"deprecationNotice":"This model is being deprecated..."}`
+- **Response**: `{"status":"success","message":"Model 'claude-haiku-4-5' marked as legacy"}`
+- **Problem**: Model status remains "Active" after successful API call
+- **Conclusion**: Backend endpoint is a stub - returns success but doesn't update database
+
+### Next Steps Required
+1. Implement actual backend logic for mark-legacy endpoint
+2. Update Model table to include lifecycle fields (status, deprecation_notice, replacement_model_id, sunset_date)
+3. Test other lifecycle actions (Archive Model, Edit Metadata)
+4. Verify audit log captures lifecycle changes
+

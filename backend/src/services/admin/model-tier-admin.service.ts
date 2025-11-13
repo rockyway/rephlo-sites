@@ -64,10 +64,8 @@ export class ModelTierAdminService {
       where: { id: modelId },
       select: {
         id: true,
-        displayName: true,
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
+        name: true,
+        meta: true,
       },
     });
 
@@ -75,49 +73,52 @@ export class ModelTierAdminService {
       throw new Error(`Model '${modelId}' not found`);
     }
 
-    // Prepare update data
-    const updateData: any = {};
+    const currentMeta = currentModel.meta as any;
+
+    // Prepare update data for meta JSONB
     const changes: Record<string, any> = {};
     const previousValues: Record<string, any> = {};
 
     if (tierData.requiredTier !== undefined) {
-      updateData.requiredTier = tierData.requiredTier;
       changes.requiredTier = tierData.requiredTier;
-      previousValues.requiredTier = currentModel.requiredTier;
+      previousValues.requiredTier = currentMeta?.requiredTier;
     }
 
     if (tierData.tierRestrictionMode !== undefined) {
-      updateData.tierRestrictionMode = tierData.tierRestrictionMode;
       changes.tierRestrictionMode = tierData.tierRestrictionMode;
-      previousValues.tierRestrictionMode = currentModel.tierRestrictionMode;
+      previousValues.tierRestrictionMode = currentMeta?.tierRestrictionMode;
     }
 
     if (tierData.allowedTiers !== undefined) {
-      updateData.allowedTiers = tierData.allowedTiers;
       changes.allowedTiers = tierData.allowedTiers;
-      previousValues.allowedTiers = currentModel.allowedTiers;
+      previousValues.allowedTiers = currentMeta?.allowedTiers;
     }
 
     // Validate that there are changes
-    if (Object.keys(updateData).length === 0) {
+    if (Object.keys(changes).length === 0) {
       throw new Error('No tier configuration changes provided');
     }
 
+    // Merge changes into meta JSONB
+    const updatedMeta = {
+      ...currentMeta,
+      ...changes,
+    };
+
     // Update model in transaction with audit log
     const result = await this.prisma.$transaction(async (tx) => {
-      // Update model
+      // Update model - only update meta JSONB field
       const updatedModel = await tx.model.update({
         where: { id: modelId },
-        data: updateData,
+        data: {
+          meta: updatedMeta as any,
+        },
         select: {
           id: true,
           name: true,
-          displayName: true,
           provider: true,
-          requiredTier: true,
-          tierRestrictionMode: true,
-          allowedTiers: true,
           isAvailable: true,
+          meta: true,
           updatedAt: true,
         },
       });
@@ -153,16 +154,17 @@ export class ModelTierAdminService {
       adminUserId,
     });
 
+    const resultMeta = result.updatedModel.meta as any;
+
     return {
       model: {
         id: result.updatedModel.id,
         name: result.updatedModel.name,
-        displayName: result.updatedModel.displayName ?? result.updatedModel.name,
+        displayName: resultMeta?.displayName ?? result.updatedModel.name,
         provider: result.updatedModel.provider,
-        requiredTier: result.updatedModel.requiredTier ?? 'free',
-        tierRestrictionMode: result.updatedModel
-          .tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
-        allowedTiers: result.updatedModel.allowedTiers,
+        requiredTier: resultMeta?.requiredTier ?? 'free',
+        tierRestrictionMode: (resultMeta?.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
+        allowedTiers: resultMeta?.allowedTiers ?? ['free'],
         isAvailable: result.updatedModel.isAvailable,
         lastModified: result.updatedModel.updatedAt.toISOString(),
       },
@@ -379,7 +381,7 @@ export class ModelTierAdminService {
   ): Promise<ModelTierListResponse> {
     logger.debug('ModelTierAdminService: Listing models with tiers', filters);
 
-    // Build where clause
+    // Build where clause using JSONB queries for tier fields
     const where: any = {};
 
     if (filters?.provider) {
@@ -387,42 +389,56 @@ export class ModelTierAdminService {
     }
 
     if (filters?.tier) {
-      where.requiredTier = filters.tier;
+      // Use JSONB path query for requiredTier filtering
+      where.meta = {
+        path: ['requiredTier'],
+        equals: filters.tier,
+      };
     }
 
     if (filters?.restrictionMode) {
-      where.tierRestrictionMode = filters.restrictionMode;
+      // Use JSONB path query for tierRestrictionMode filtering
+      where.meta = {
+        ...where.meta,
+        path: ['tierRestrictionMode'],
+        equals: filters.restrictionMode,
+      };
     }
 
-    // Query models
+    // Query models - only select meta JSONB, not deprecated root columns
     const models = await this.prisma.model.findMany({
       where,
       select: {
         id: true,
         name: true,
-        displayName: true,
         provider: true,
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
         isAvailable: true,
+        isLegacy: true,
+        isArchived: true,
+        meta: true,
         updatedAt: true,
       },
-      orderBy: [{ provider: 'asc' }, { displayName: 'asc' }],
+      orderBy: [{ provider: 'asc' }, { name: 'asc' }],
     });
 
     return {
-      models: models.map((model) => ({
-        id: model.id,
-        name: model.name,
-        displayName: model.displayName ?? model.name,
-        provider: model.provider,
-        requiredTier: model.requiredTier ?? 'free',
-        tierRestrictionMode: model.tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
-        allowedTiers: model.allowedTiers,
-        isAvailable: model.isAvailable,
-        lastModified: model.updatedAt.toISOString(),
-      })),
+      models: models.map((model) => {
+        const meta = model.meta as any;
+        return {
+          id: model.id,
+          name: model.name,
+          displayName: meta?.displayName ?? model.name,
+          provider: model.provider,
+          requiredTier: meta?.requiredTier ?? 'free',
+          tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
+          allowedTiers: meta?.allowedTiers ?? ['free'],
+          isAvailable: model.isAvailable,
+          isLegacy: model.isLegacy,
+          isArchived: model.isArchived,
+          meta: model.meta,
+          lastModified: model.updatedAt.toISOString(),
+        };
+      }),
       total: models.length,
     };
   }

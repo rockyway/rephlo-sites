@@ -132,8 +132,13 @@ function MarkLegacyDialog({
     }
   };
 
-  const isFormValid =
-    validateForm() && isConfirmed && !isSaving;
+  // Check if form has data (for enabling submit button)
+  const hasFormData =
+    replacementModelId.trim() !== '' ||
+    deprecationNotice.trim() !== '' ||
+    sunsetDate.trim() !== '';
+
+  const isFormValid = hasFormData && isConfirmed && !isSaving;
 
   // Filter out the current model from replacement options
   const replacementOptions = availableModels.filter(

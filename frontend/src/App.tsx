@@ -8,7 +8,7 @@ import Privacy from '@/pages/Privacy'
 import Terms from '@/pages/Terms'
 import Login from '@/pages/Login'
 import OAuthCallback from '@/pages/auth/OAuthCallback'
-import ModelTierManagement from '@/pages/admin/ModelTierManagement'
+import ModelManagement from '@/pages/admin/ModelManagement'
 import PricingConfiguration from '@/pages/admin/PricingConfiguration'
 import PricingSimulation from '@/pages/admin/PricingSimulation'
 import VendorPriceMonitoring from '@/pages/admin/VendorPriceMonitoring'
@@ -28,7 +28,7 @@ const routes: RouteObject[] = [
 
   // Legacy admin routes (TODO: migrate to AdminLayout)
   { path: '/admin-legacy', element: <ProtectedRoute><Admin /></ProtectedRoute> },
-  { path: '/admin/model-tiers', element: <ProtectedRoute><ModelTierManagement /></ProtectedRoute> },
+  { path: '/admin/model-tiers', element: <ProtectedRoute><ModelManagement /></ProtectedRoute> },
   { path: '/admin/pricing-configuration', element: <ProtectedRoute><PricingConfiguration /></ProtectedRoute> },
   { path: '/admin/pricing-simulation', element: <ProtectedRoute><PricingSimulation /></ProtectedRoute> },
   { path: '/admin/vendor-price-monitoring', element: <ProtectedRoute><VendorPriceMonitoring /></ProtectedRoute> },

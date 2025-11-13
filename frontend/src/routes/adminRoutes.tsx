@@ -33,7 +33,7 @@ const PricingSimulation = lazy(() => import('../pages/admin/PricingSimulation'))
 const VendorPriceMonitoring = lazy(() => import('../pages/admin/VendorPriceMonitoring'));
 const CouponAnalytics = lazy(() => import('../pages/admin/CouponAnalytics'));
 const CampaignCalendar = lazy(() => import('../pages/admin/CampaignCalendar'));
-const ModelTierManagement = lazy(() => import('../pages/admin/ModelTierManagement'));
+const ModelManagement = lazy(() => import('../pages/admin/ModelManagement'));
 const BillingDashboard = lazy(() => import('../pages/admin/BillingDashboard'));
 
 // Plan 131 Phase 2: Admin Settings
@@ -124,7 +124,7 @@ export const adminRoutes: RouteObject[] = [
       // Models (Plan 131)
       {
         path: 'models',
-        element: <ModelTierManagement />,
+        element: <ModelManagement />,
       },
 
       // Profitability (Plan 131)

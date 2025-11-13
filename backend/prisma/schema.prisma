@@ -526,9 +526,7 @@ model Model {
   creditsPer1kTokens         Int?              @map("credits_per_1k_tokens")
   isDeprecated               Boolean?          @default(false) @map("is_deprecated")
   version                    String?           @db.VarChar(50)
-  requiredTier               SubscriptionTier? @default(free) @map("required_tier")
-  tierRestrictionMode        String?           @default("minimum") @map("tier_restriction_mode") @db.VarChar(20)
-  allowedTiers               SubscriptionTier[] @default([free, pro, pro_max, enterprise_pro, enterprise_max]) @map("allowed_tiers")
+  // Tier-related fields removed - now stored in meta JSONB (migration 20251113120000)
 
   // Relations
   usageHistory    UsageHistory[]
@@ -541,8 +539,10 @@ model Model {
   @@index([isArchived])
   @@index([provider])
   @@index([isAvailable, isArchived]) // Common query: active non-archived models
-  // Note: Gin index on meta JSONB will be added via raw SQL in migration
-  // @@index(fields: [meta], type: Gin) - Not supported in Prisma schema syntax
+  // Note: GIN and BTree indexes on meta JSONB added via raw SQL (migration 20251113120000)
+  // - idx_models_meta_gin: GIN index for general JSONB queries
+  // - idx_models_meta_required_tier: BTree index for requiredTier equality checks
+  // - idx_models_meta_capabilities: GIN index for capabilities array queries
   @@map("models")
 }
 
