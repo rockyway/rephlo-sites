@@ -28,6 +28,7 @@ import { RevenueAnalyticsController } from '../controllers/revenue-analytics.con
 import { SettingsController } from '../controllers/admin/settings.controller';
 import { BillingController } from '../controllers/billing.controller';
 import { ProfitabilityController } from '../controllers/admin/profitability.controller';
+import vendorAnalyticsRoutes from './vendor-analytics.routes';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -975,5 +976,28 @@ router.post(
   auditLog({ action: 'update', resourceType: 'profitability' }),
   asyncHandler(profitabilityController.simulatePricing.bind(profitabilityController))
 );
+
+// =============================================================================
+// Vendor Analytics Routes (Plan 180)
+// =============================================================================
+
+/**
+ * Vendor cost and gross margin analytics for Admin Analytics Dashboard
+ *
+ * Endpoints:
+ * - GET  /admin/analytics/gross-margin - Gross margin KPI with tier breakdown
+ * - GET  /admin/analytics/cost-by-provider - Top 5 providers by cost
+ * - GET  /admin/analytics/margin-trend - Time series gross margin data
+ * - GET  /admin/analytics/cost-distribution - Cost histogram with statistics
+ * - POST /admin/analytics/export-csv - Export analytics data as CSV
+ *
+ * Security:
+ * - JWT authentication (handled by parent router)
+ * - Admin role required (handled by parent router)
+ * - Rate limiting: 100 requests per hour (handled by vendor-analytics.routes)
+ *
+ * Reference: docs/plan/180-admin-analytics-dashboard-ui-design.md
+ */
+router.use('/analytics', vendorAnalyticsRoutes);
 
 export default router;
