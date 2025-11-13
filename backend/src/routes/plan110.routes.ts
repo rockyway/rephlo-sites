@@ -25,6 +25,7 @@ import { LicenseManagementController } from '../controllers/license-management.c
 import { VersionUpgradeController } from '../controllers/version-upgrade.controller';
 import { ProrationController } from '../controllers/proration.controller';
 import { MigrationController } from '../controllers/migration.controller';
+import { DeviceActivationManagementController } from '../controllers/device-activation-management.controller';
 
 /**
  * Create Plan 110 router
@@ -38,6 +39,7 @@ export function createPlan110Router(): Router {
   const upgradeController = container.resolve(VersionUpgradeController);
   const prorationController = container.resolve(ProrationController);
   const migrationController = container.resolve(MigrationController);
+  const deviceActivationController = container.resolve(DeviceActivationManagementController);
 
   // =============================================================================
   // Public License Management Routes
@@ -313,6 +315,69 @@ export function createPlan110Router(): Router {
   );
 
   // =============================================================================
+  // Admin Device Activation Management Routes
+  // =============================================================================
+
+  /**
+   * GET /admin/licenses/devices
+   * List all device activations (admin only)
+   * Query params: status, os, suspicious, search, page, limit
+   */
+  router.get(
+    '/admin/licenses/devices',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(deviceActivationController.getAllDeviceActivations.bind(deviceActivationController))
+  );
+
+  /**
+   * GET /admin/licenses/devices/stats
+   * Get device activation statistics (admin only)
+   */
+  router.get(
+    '/admin/licenses/devices/stats',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(deviceActivationController.getDeviceStats.bind(deviceActivationController))
+  );
+
+  /**
+   * POST /admin/licenses/devices/:id/deactivate
+   * Deactivate a device (admin only)
+   */
+  router.post(
+    '/admin/licenses/devices/:id/deactivate',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'update', resourceType: 'device_activation', captureRequestBody: false }),
+    asyncHandler(deviceActivationController.deactivateDevice.bind(deviceActivationController))
+  );
+
+  /**
+   * POST /admin/licenses/devices/:id/revoke
+   * Revoke a device permanently (admin only)
+   */
+  router.post(
+    '/admin/licenses/devices/:id/revoke',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'delete', resourceType: 'device_activation', captureRequestBody: true }),
+    asyncHandler(deviceActivationController.revokeDevice.bind(deviceActivationController))
+  );
+
+  /**
+   * POST /admin/licenses/devices/bulk-action
+   * Perform bulk actions on devices (admin only)
+   */
+  router.post(
+    '/admin/licenses/devices/bulk-action',
+    authMiddleware,
+    requireAdmin,
+    auditLog({ action: 'update', resourceType: 'device_activation', captureRequestBody: true }),
+    asyncHandler(deviceActivationController.bulkAction.bind(deviceActivationController))
+  );
+
+  // =============================================================================
   // Admin Proration Routes
   // =============================================================================
 
@@ -351,6 +416,18 @@ export function createPlan110Router(): Router {
     requireAdmin,
     auditLog({ action: 'update', resourceType: 'proration', captureRequestBody: true, capturePreviousValue: true }),
     asyncHandler(prorationController.reverseProration.bind(prorationController))
+  );
+
+  /**
+   * GET /admin/prorations/:id/calculation
+   * Get calculation breakdown for a proration (admin only)
+   * Requires admin authentication
+   */
+  router.get(
+    '/admin/prorations/:id/calculation',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(prorationController.getCalculationBreakdown.bind(prorationController))
   );
 
   // =============================================================================

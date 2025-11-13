@@ -5,12 +5,12 @@
  * and color coding for UI components.
  */
 
-import type {
+import {
   CouponType,
   CampaignType,
   FraudSeverity,
-  SubscriptionTier,
 } from '@/types/plan111.types';
+import type { SubscriptionTier } from '@/types/plan111.types';
 
 // ===== Coupon Code Formatting & Validation =====
 
@@ -148,14 +148,16 @@ export function getCouponTypeColor(type: CouponType): string {
  */
 export function getCampaignTypeColor(type: CampaignType): string {
   switch (type) {
-    case 'holiday':
+    case CampaignType.SEASONAL:
       return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'marketing':
+    case CampaignType.PROMOTIONAL:
       return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'behavioral':
+    case CampaignType.WIN_BACK:
       return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'referral':
+    case CampaignType.REFERRAL:
       return 'bg-green-100 text-green-800 border-green-200';
+    case CampaignType.EARLY_BIRD:
+      return 'bg-teal-100 text-teal-800 border-teal-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
@@ -210,14 +212,16 @@ export function getCouponTypeLabel(type: CouponType): string {
  */
 export function getCampaignTypeLabel(type: CampaignType): string {
   switch (type) {
-    case 'holiday':
-      return 'Holiday Campaign';
-    case 'marketing':
-      return 'Marketing Campaign';
-    case 'behavioral':
-      return 'Behavioral Campaign';
-    case 'referral':
+    case CampaignType.SEASONAL:
+      return 'Seasonal Campaign';
+    case CampaignType.PROMOTIONAL:
+      return 'Promotional Campaign';
+    case CampaignType.WIN_BACK:
+      return 'Win-Back Campaign';
+    case CampaignType.REFERRAL:
       return 'Referral Program';
+    case CampaignType.EARLY_BIRD:
+      return 'Early Bird Campaign';
     default:
       return type;
   }
@@ -342,8 +346,13 @@ export function formatCurrency(value: number): string {
  * @param value - Numeric value (0-100)
  * @param decimals - Number of decimal places
  * @returns Formatted percentage string
+ * @deprecated Use safeFormatPercentage from @/lib/safeUtils instead
  */
-export function formatPercentage(value: number, decimals = 1): string {
+export function formatPercentage(value: number | undefined | null, decimals = 1): string {
+  // Handle undefined, null, or NaN values
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0.0%';
+  }
   return `${value.toFixed(decimals)}%`;
 }
 
@@ -351,8 +360,14 @@ export function formatPercentage(value: number, decimals = 1): string {
  * Format large numbers with abbreviations (K, M)
  * @param value - Numeric value
  * @returns Formatted string
+ * @deprecated Use safeFormatNumber from @/lib/safeUtils instead
  */
-export function formatNumber(value: number): string {
+export function formatNumber(value: number | undefined | null): string {
+  // Handle undefined, null, or NaN values
+  if (value === undefined || value === null || isNaN(value)) {
+    return '0';
+  }
+
   if (value >= 1000000) {
     return `${(value / 1000000).toFixed(1)}M`;
   }
@@ -370,17 +385,17 @@ export function formatNumber(value: number): string {
  * @returns Tailwind color class
  */
 export function getCouponStatusColor(coupon: {
-  is_active: boolean;
-  valid_from: string;
-  valid_until: string;
+  isActive: boolean;
+  validFrom: string;
+  validUntil: string;
 }): string {
-  if (!coupon.is_active) {
+  if (!coupon.isActive) {
     return 'bg-gray-100 text-gray-800';
   }
 
   const now = new Date();
-  const validFrom = new Date(coupon.valid_from);
-  const validUntil = new Date(coupon.valid_until);
+  const validFrom = new Date(coupon.validFrom);
+  const validUntil = new Date(coupon.validUntil);
 
   if (now < validFrom) {
     return 'bg-blue-100 text-blue-800'; // Upcoming
@@ -399,17 +414,17 @@ export function getCouponStatusColor(coupon: {
  * @returns Status label
  */
 export function getCouponStatusLabel(coupon: {
-  is_active: boolean;
-  valid_from: string;
-  valid_until: string;
+  isActive: boolean;
+  validFrom: string;
+  validUntil: string;
 }): string {
-  if (!coupon.is_active) {
+  if (!coupon.isActive) {
     return 'Inactive';
   }
 
   const now = new Date();
-  const validFrom = new Date(coupon.valid_from);
-  const validUntil = new Date(coupon.valid_until);
+  const validFrom = new Date(coupon.validFrom);
+  const validUntil = new Date(coupon.validUntil);
 
   if (now < validFrom) {
     return 'Upcoming';

@@ -34,9 +34,9 @@ export class OpenAIProvider implements ILLMProvider {
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
     };
   }> {
     if (!this.client) {
@@ -78,9 +78,9 @@ export class OpenAIProvider implements ILLMProvider {
         })),
       },
       usage: {
-        prompt_tokens: completion.usage?.prompt_tokens || 0,
-        completion_tokens: completion.usage?.completion_tokens || 0,
-        total_tokens: completion.usage?.total_tokens || 0,
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        completionTokens: completion.usage?.completion_tokens || 0,
+        totalTokens: completion.usage?.total_tokens || 0,
       },
     };
   }
@@ -146,9 +146,9 @@ export class OpenAIProvider implements ILLMProvider {
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
     };
   }> {
     if (!this.client) {
@@ -185,9 +185,9 @@ export class OpenAIProvider implements ILLMProvider {
         })),
       },
       usage: {
-        prompt_tokens: completion.usage?.prompt_tokens || 0,
-        completion_tokens: completion.usage?.completion_tokens || 0,
-        total_tokens: completion.usage?.total_tokens || 0,
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        completionTokens: completion.usage?.completion_tokens || 0,
+        totalTokens: completion.usage?.total_tokens || 0,
       },
     };
   }

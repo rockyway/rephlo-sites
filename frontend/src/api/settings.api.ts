@@ -31,11 +31,8 @@ export interface CategorySettings {
  * API Response interface
  */
 export interface SettingsResponse<T = any> {
-  success: boolean;
+  status: 'success' | 'error';
   data?: T;
-  message?: string;
-  category?: string;
-  timestamp?: string;
   error?: {
     code: string;
     message: string;
@@ -83,8 +80,8 @@ export const settingsApi = {
   /**
    * Test email configuration
    */
-  testEmailConfig: async (emailConfig: CategorySettings): Promise<SettingsResponse> => {
-    const response = await apiClient.post<SettingsResponse>(
+  testEmailConfig: async (emailConfig: CategorySettings): Promise<SettingsResponse<{ message: string }>> => {
+    const response = await apiClient.post<SettingsResponse<{ message: string }>>(
       '/admin/settings/test-email',
       emailConfig
     );
@@ -94,8 +91,8 @@ export const settingsApi = {
   /**
    * Clear application cache
    */
-  clearCache: async (): Promise<SettingsResponse> => {
-    const response = await apiClient.post<SettingsResponse>(
+  clearCache: async (): Promise<SettingsResponse<{ message: string }>> => {
+    const response = await apiClient.post<SettingsResponse<{ message: string }>>(
       '/admin/settings/clear-cache'
     );
     return response.data;
@@ -104,8 +101,8 @@ export const settingsApi = {
   /**
    * Create database backup
    */
-  runBackup: async (): Promise<SettingsResponse> => {
-    const response = await apiClient.post<SettingsResponse>(
+  runBackup: async (): Promise<SettingsResponse<{ message: string; timestamp: string }>> => {
+    const response = await apiClient.post<SettingsResponse<{ message: string; timestamp: string }>>(
       '/admin/settings/run-backup'
     );
     return response.data;

@@ -57,9 +57,9 @@ export class MockUsageService implements IUsageService {
 
     // Calculate summary
     const summary = {
-      total_credits_used: filtered.reduce((sum, u) => sum + u.creditsUsed, 0),
-      total_requests: filtered.length,
-      total_tokens: filtered.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
+      totalCreditsUsed: filtered.reduce((sum, u) => sum + u.creditsUsed, 0),
+      totalRequests: filtered.length,
+      totalTokens: filtered.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
     };
 
     return {
@@ -68,7 +68,7 @@ export class MockUsageService implements IUsageService {
         limit,
         offset,
         total,
-        has_more: offset + limit < total,
+        hasMore: offset + limit < total,
       },
       summary,
     };
@@ -92,10 +92,10 @@ export class MockUsageService implements IUsageService {
     // Group by specified dimension
     const stats: UsageStatsItem[] = [];
     const total = {
-      credits_used: filtered.reduce((sum, u) => sum + u.creditsUsed, 0),
-      requests_count: filtered.length,
-      tokens_total: filtered.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
-      average_duration_ms:
+      creditsUsed: filtered.reduce((sum, u) => sum + u.creditsUsed, 0),
+      requestsCount: filtered.length,
+      tokensTotal: filtered.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
+      averageDurationMs:
         filtered.length > 0
           ? filtered.reduce((sum, u) => sum + (u.requestDurationMs || 0), 0) / filtered.length
           : 0,

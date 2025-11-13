@@ -69,22 +69,22 @@ export interface SubscriptionItem {
   id: string;
   tier: string;
   status: string;
-  billing_cycle: 'monthly' | 'annual';
-  monthly_credit_allocation: number;
-  started_at: Date;
-  ended_at: Date | null;
-  next_billing_date: Date | null;
-  monthly_price_usd: number;
+  billingCycle: 'monthly' | 'annual';
+  monthlyCreditAllocation: number;
+  startedAt: Date;
+  endedAt: Date | null;
+  nextBillingDate: Date | null;
+  monthlyPriceUsd: number;
 }
 
 export interface ProrationItem {
   id: string;
-  from_tier: string;
-  to_tier: string;
-  from_price_usd: number;
-  to_price_usd: number;
-  proration_amount_usd: number;
-  created_at: Date;
+  fromTier: string;
+  toTier: string;
+  fromPriceUsd: number;
+  toPriceUsd: number;
+  prorationAmountUsd: number;
+  createdAt: Date;
 }
 
 export interface UserSubscriptionsResponse {
@@ -106,30 +106,30 @@ export interface UserLicensesQuery {
 
 export interface DeviceActivation {
   id: string;
-  device_name: string | null;
-  device_id: string;
-  activated_at: Date;
-  last_seen_at: Date | null;
+  deviceName: string | null;
+  deviceId: string;
+  activatedAt: Date;
+  lastSeenAt: Date | null;
   status: 'active' | 'deactivated';
 }
 
 export interface LicenseItem {
   id: string;
-  license_key: string;
+  licenseKey: string;
   status: 'active' | 'pending' | 'revoked';
-  purchase_price_usd: number;
-  purchase_date: Date;
-  activated_at: Date | null;
-  eligible_until_version: string;
-  device_activations: DeviceActivation[];
+  purchasePriceUsd: number;
+  purchaseDate: Date;
+  activatedAt: Date | null;
+  eligibleUntilVersion: string;
+  deviceActivations: DeviceActivation[];
 }
 
 export interface UpgradeItem {
   id: string;
-  from_version: string;
-  to_version: string;
-  upgrade_price_usd: number;
-  upgrade_date: Date;
+  fromVersion: string;
+  toVersion: string;
+  upgradePriceUsd: number;
+  upgradeDate: Date;
 }
 
 export interface UserLicensesResponse {
@@ -155,33 +155,33 @@ export interface CreditAllocationItem {
   amount: number;
   source: 'subscription' | 'bonus' | 'admin_grant' | 'referral' | 'coupon';
   reason: string | null;
-  allocated_at: Date;
+  allocatedAt: Date;
 }
 
 export interface CreditUsageByModel {
   model: string;
-  total_credits: number;
-  request_count: number;
+  totalCredits: number;
+  requestCount: number;
 }
 
 export interface CreditDeductionItem {
   id: string;
   amount: number;
-  model_used: string;
+  modelUsed: string;
   timestamp: Date;
 }
 
 export interface UserCreditsResponse {
   balance: {
     amount: number;
-    last_updated: Date;
+    lastUpdated: Date;
   };
   allocations: CreditAllocationItem[];
   usage: CreditUsageByModel[];
   deductions: CreditDeductionItem[];
-  total_allocations: number;
-  total_usage: number;
-  total_deductions: number;
+  totalAllocations: number;
+  totalUsage: number;
+  totalDeductions: number;
 }
 
 // =============================================================================
@@ -196,25 +196,25 @@ export interface UserCouponsQuery {
 export interface CouponInfo {
   code: string;
   type: string;
-  discount_type: string;
-  discount_value: number;
+  discountType: string;
+  discountValue: number;
 }
 
 export interface CouponRedemptionItem {
   id: string;
   coupon: CouponInfo;
-  redeemed_at: Date;
-  discount_value_usd: number;
-  subscription_tier_granted: string | null;
-  perpetual_license_granted: boolean;
+  redeemedAt: Date;
+  discountValueUsd: number;
+  subscriptionTierGranted: string | null;
+  perpetualLicenseGranted: boolean;
 }
 
 export interface FraudFlagItem {
   id: string;
-  coupon_code: string;
-  flag_reason: string;
+  couponCode: string;
+  flagReason: string;
   severity: 'low' | 'medium' | 'high';
-  flagged_at: Date;
+  flaggedAt: Date;
 }
 
 export interface UserCouponsResponse {
@@ -237,12 +237,12 @@ export interface UserPaymentsQuery {
 
 export interface InvoiceItem {
   id: string;
-  stripe_invoice_id: string | null;
-  amount_usd: number;
+  stripeInvoiceId: string | null;
+  amountUsd: number;
   status: 'paid' | 'pending' | 'failed';
   description: string;
-  created_at: Date;
-  paid_at: Date | null;
+  createdAt: Date;
+  paidAt: Date | null;
 }
 
 export interface PaymentMethod {

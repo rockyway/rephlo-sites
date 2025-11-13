@@ -12,9 +12,9 @@ import {
 
 interface CouponStatusBadgeProps {
   coupon: {
-    is_active: boolean;
-    valid_from: string;
-    valid_until: string;
+    isActive: boolean;
+    validFrom: string;
+    validUntil: string;
   };
   className?: string;
 }

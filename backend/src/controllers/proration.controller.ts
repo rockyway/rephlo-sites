@@ -20,6 +20,7 @@ import { Request, Response } from 'express';
 import { ProrationService } from '../services/proration.service';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
+import { mapProrationEventToApiType } from '../utils/typeMappers';
 
 @injectable()
 export class ProrationController {
@@ -251,44 +252,7 @@ export class ProrationController {
       res.status(200).json({
         status: 'success',
         data: {
-          data: result.data.map((event) => {
-            const subscription = (event as any).subscription;
-            return {
-              id: event.id,
-              userId: event.userId,
-              subscriptionId: event.subscriptionId,
-
-              // Map backend property names to frontend expectations
-              eventType: event.changeType, // Frontend expects eventType
-              fromTier: event.fromTier,
-              toTier: event.toTier,
-
-              // Proration calculation fields - map to frontend names
-              daysInPeriod: event.daysInCycle, // Frontend expects daysInPeriod
-              daysUsed: event.daysInCycle - event.daysRemaining,
-              daysRemaining: event.daysRemaining,
-              unusedCredit: Number(event.unusedCreditValueUsd), // Frontend expects number
-              newTierCost: Number(event.newTierProratedCostUsd),
-              netCharge: Number(event.netChargeUsd),
-
-              // Date fields - map effectiveDate to changeDate
-              periodStart: subscription?.currentPeriodStart?.toISOString() || event.createdAt.toISOString(),
-              periodEnd: subscription?.currentPeriodEnd?.toISOString() || event.createdAt.toISOString(),
-              changeDate: event.effectiveDate.toISOString(), // Frontend expects changeDate
-              effectiveDate: event.effectiveDate.toISOString(),
-              nextBillingDate: subscription?.currentPeriodEnd?.toISOString() || event.effectiveDate.toISOString(),
-
-              status: event.status,
-              stripeInvoiceId: event.stripeInvoiceId,
-
-              // User object matching frontend expectations
-              user: (event as any).user ? {
-                email: (event as any).user.email,
-              } : undefined,
-
-              createdAt: event.createdAt.toISOString(),
-            };
-          }),
+          data: result.data.map((event) => mapProrationEventToApiType(event as any)),
           total: result.total,
           totalPages: result.totalPages,
           page: parseInt((page as string) || '1', 10),
@@ -340,24 +304,92 @@ export class ProrationController {
    */
   async reverseProration(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      res.status(400).json({
+        error: {
+          code: 'validation_error',
+          message: 'Reason is required for proration reversal',
+        },
+      });
+      return;
+    }
 
     try {
-      // This would implement the reversal logic
-      // For now, placeholder
-      res.status(501).json({
-        error: {
-          code: 'not_implemented',
-          message: 'Proration reversal not yet implemented',
+      const adminUserId = (req as any).userId;
+      const reversedEvent = await this.prorationService.reverseProration(id, reason, adminUserId);
+
+      // Standard response format: move message to meta
+      res.status(200).json({
+        status: 'success',
+        data: {
+          id: reversedEvent.id,
+          originalProrationId: id,
+          userId: reversedEvent.userId,
+          subscriptionId: reversedEvent.subscriptionId,
+          fromTier: reversedEvent.fromTier,
+          toTier: reversedEvent.toTier,
+          netCharge: Number(reversedEvent.netChargeUsd),
+          status: reversedEvent.status,
+          effectiveDate: reversedEvent.effectiveDate.toISOString(),
+          reason,
+        },
+        meta: {
+          message: 'Proration reversed successfully',
         },
       });
     } catch (error) {
-      logger.error('Failed to reverse proration', { prorationId: id, error });
-      res.status(500).json({
-        error: {
-          code: 'internal_server_error',
-          message: 'Failed to reverse proration',
-        },
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          error: {
+            code: 'proration_not_found',
+            message: error.message,
+          },
+        });
+      } else {
+        logger.error('Failed to reverse proration', { prorationId: id, error });
+        res.status(500).json({
+          error: {
+            code: 'internal_server_error',
+            message: 'Failed to reverse proration',
+          },
+        });
+      }
+    }
+  }
+
+  /**
+   * GET /admin/prorations/:id/calculation
+   * Get detailed calculation breakdown for a proration event (admin only)
+   */
+  async getCalculationBreakdown(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
+    try {
+      const breakdown = await this.prorationService.getCalculationBreakdown(id);
+
+      res.status(200).json({
+        status: 'success',
+        data: breakdown,
       });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          error: {
+            code: 'proration_not_found',
+            message: error.message,
+          },
+        });
+      } else {
+        logger.error('Failed to get calculation breakdown', { prorationId: id, error });
+        res.status(500).json({
+          error: {
+            code: 'internal_server_error',
+            message: 'Failed to retrieve calculation breakdown',
+          },
+        });
+      }
     }
   }
 }

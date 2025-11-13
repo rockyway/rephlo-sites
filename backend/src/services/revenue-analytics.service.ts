@@ -401,10 +401,32 @@ export class RevenueAnalyticsService {
         parseFloat((upgrades._sum.upgradePriceUsd || 0).toString()) * 100
       );
 
+      // Calculate total and percentages
+      const total = subscriptionRevenue + perpetualRevenue + upgradeRevenue;
+
+      // Format as array of data points with percentages
+      const data = [
+        {
+          name: 'Subscription',
+          value: subscriptionRevenue,
+          percentage: total > 0 ? Math.round((subscriptionRevenue / total) * 100) : 0,
+        },
+        {
+          name: 'Perpetual',
+          value: perpetualRevenue,
+          percentage: total > 0 ? Math.round((perpetualRevenue / total) * 100) : 0,
+        },
+        {
+          name: 'Upgrade',
+          value: upgradeRevenue,
+          percentage: total > 0 ? Math.round((upgradeRevenue / total) * 100) : 0,
+        },
+      ];
+
       return {
-        subscriptionRevenue,
-        perpetualRevenue,
-        upgradeRevenue,
+        data,
+        total,
+        period,
       };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getRevenueMix: Error', {
@@ -549,7 +571,14 @@ export class RevenueAnalyticsService {
           perpetualRevenue: data.perpetualRevenue,
         }));
 
-      return { data: sorted };
+      // Determine granularity string
+      const granularity = isMonthly ? 'monthly' : isWeekly ? 'weekly' : 'daily';
+
+      return {
+        data: sorted,
+        period,
+        granularity,
+      };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getRevenueTrend: Error', {
         period,
@@ -616,29 +645,43 @@ export class RevenueAnalyticsService {
 
       const totalUsers = freeTierUsers + paidSubscriptionUsers + perpetualLicenseUsers;
 
-      return {
-        freeTier: {
+      // Calculate conversion rates
+      const paidConversionRate =
+        freeTierUsers > 0
+          ? Math.round((paidSubscriptionUsers / freeTierUsers) * 100 * 10) / 10
+          : 0;
+
+      const perpetualConversionRate =
+        paidSubscriptionUsers > 0
+          ? Math.round((perpetualLicenseUsers / paidSubscriptionUsers) * 100 * 10) / 10
+          : 0;
+
+      // Format as array of stages matching frontend expectations
+      const stages = [
+        {
+          name: 'Free Tier',
           count: freeTierUsers,
           percentage: totalUsers > 0 ? Math.round((freeTierUsers / totalUsers) * 100) : 0,
         },
-        paidSubscription: {
+        {
+          name: 'Paid Subscription',
           count: paidSubscriptionUsers,
           percentage:
             totalUsers > 0 ? Math.round((paidSubscriptionUsers / totalUsers) * 100) : 0,
-          conversionRate:
-            freeTierUsers > 0
-              ? Math.round((paidSubscriptionUsers / freeTierUsers) * 100 * 10) / 10
-              : 0,
+          conversionRate: paidConversionRate,
         },
-        perpetualLicense: {
+        {
+          name: 'Perpetual License',
           count: perpetualLicenseUsers,
           percentage:
             totalUsers > 0 ? Math.round((perpetualLicenseUsers / totalUsers) * 100) : 0,
-          conversionRate:
-            paidSubscriptionUsers > 0
-              ? Math.round((perpetualLicenseUsers / paidSubscriptionUsers) * 100 * 10) / 10
-              : 0,
+          conversionRate: perpetualConversionRate,
         },
+      ];
+
+      return {
+        stages,
+        period,
       };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getRevenueFunnel: Error', {
@@ -698,12 +741,9 @@ export class RevenueAnalyticsService {
 
       const totalCreditsUsed = totalCredits._sum.creditsUsed || 0;
 
-      // Get total revenue
+      // Get total revenue (using new format)
       const revenueData = await this.getRevenueMix(period);
-      const totalRevenue =
-        revenueData.subscriptionRevenue +
-        revenueData.perpetualRevenue +
-        revenueData.upgradeRevenue;
+      const totalRevenue = revenueData.total;
 
       const data = usageByModel.map((item) => {
         const credits = item._sum.creditsUsed || 0;
@@ -718,11 +758,15 @@ export class RevenueAnalyticsService {
           model: item.modelId,
           credits,
           requests: item._count.id,
-          revenue_contribution: revenueContribution,
+          revenueContribution,
         };
       });
 
-      return { data };
+      return {
+        data,
+        total: totalCreditsUsed,
+        period,
+      };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getCreditUsage: Error', {
         period,
@@ -739,10 +783,23 @@ export class RevenueAnalyticsService {
    */
   async getCouponROI(
     period: string = '30d',
-    limit: number = 10
+    limit: number = 10,
+    offset: number = 0
   ): Promise<CouponROIResponse> {
     try {
       const config = this.getPeriodConfig(period);
+
+      // Get total count of campaigns
+      const totalCount = await this.prisma.couponCampaign.count({
+        where: {
+          startDate: {
+            lte: config.endDate,
+          },
+          endDate: {
+            gte: config.startDate,
+          },
+        },
+      });
 
       // Get campaigns with coupon data
       const campaigns = await this.prisma.couponCampaign.findMany({
@@ -769,6 +826,7 @@ export class RevenueAnalyticsService {
             },
           },
         },
+        skip: offset,
         take: limit,
       });
 
@@ -807,16 +865,26 @@ export class RevenueAnalyticsService {
           : 0;
 
         return {
-          campaign_name: campaign.campaignName,
-          coupons_issued: totalCouponsIssued,
-          coupons_redeemed: totalCouponsRedeemed,
-          discount_value: totalDiscount,
-          revenue_generated: totalRevenueGenerated,
-          roi_percentage: roi,
+          campaignName: campaign.campaignName,
+          couponsIssued: totalCouponsIssued,
+          couponsRedeemed: totalCouponsRedeemed,
+          discountValue: totalDiscount,
+          revenueGenerated: totalRevenueGenerated,
+          roiPercentage: roi,
         };
       });
 
-      return { data };
+      return {
+        data,
+        total: totalCount,
+        period,
+        pagination: {
+          limit,
+          offset,
+          total: totalCount,
+          hasMore: offset + limit < totalCount,
+        },
+      };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getCouponROI: Error', {
         period,

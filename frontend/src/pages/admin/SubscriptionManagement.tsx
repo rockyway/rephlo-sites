@@ -33,10 +33,11 @@ import {
   SubscriptionStatus,
   type Subscription,
   type SubscriptionStats,
-} from '@/types/plan109.types';
+} from '@rephlo/shared-types';
 import { formatCurrency, formatDate, formatNumber, calculateDaysBetween } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 function SubscriptionManagement() {
   // State
@@ -77,8 +78,8 @@ function SubscriptionManagement() {
       // Load subscriptions and stats in parallel
       const [subsResponse, statsData] = await Promise.all([
         subscriptionApi.getAllSubscriptions({
-          tier: filterTier as SubscriptionTier || undefined,
-          status: filterStatus as SubscriptionStatus || undefined,
+          tier: (filterTier || undefined) as SubscriptionTier | undefined,
+          status: (filterStatus || undefined) as SubscriptionStatus | undefined,
           search: searchQuery || undefined,
           page,
           limit,
@@ -86,13 +87,14 @@ function SubscriptionManagement() {
         subscriptionApi.getStats(),
       ]);
 
-      // Backend wraps responses in { success, data }
-      const unwrappedSubs = (subsResponse as any).data || subsResponse;
-      const unwrappedStats = (statsData as any).data || statsData;
+      // Handle both response formats: { data: [...] } or direct array
+      // Some endpoints return { data: {...}, pagination: {...} }, others return unwrapped
+      const subscriptionsData = (subsResponse as any).data || subsResponse;
+      const paginationData = (subsResponse as any).pagination || subsResponse;
 
-      setSubscriptions(unwrappedSubs.data || unwrappedSubs || []);
-      setTotalPages(unwrappedSubs.totalPages || 1);
-      setStats(unwrappedStats);
+      setSubscriptions(safeArray<Subscription>(subscriptionsData));
+      setTotalPages(paginationData.totalPages || 1);
+      setStats((statsData as any).data || statsData);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load subscriptions');
     } finally {
@@ -191,19 +193,20 @@ function SubscriptionManagement() {
           Refresh
         </Button>
       </div>
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
-          </div>
-        )}
+
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-green-600" />
+          <p className="text-body text-green-800">{successMessage}</p>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-body text-red-800">{error}</p>
+        </div>
+      )}
 
         {/* Quick Stats */}
         {stats && (

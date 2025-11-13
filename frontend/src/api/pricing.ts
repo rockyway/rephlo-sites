@@ -1,33 +1,16 @@
 import { apiClient } from '@/services/api';
+import type {
+  // Import shared pricing/credit types
+  PricingConfig,
+} from '@rephlo/shared-types';
+
+// Re-export for backward compatibility
+export type { PricingConfig } from '@rephlo/shared-types';
 
 /**
  * Pricing Configuration Types
+ * PricingConfig is now imported from @rephlo/shared-types
  */
-export interface PricingConfig {
-  id: string;
-  scopeType: 'tier' | 'provider' | 'model' | 'combination';
-  subscriptionTier?: string;
-  providerId?: string;
-  modelId?: string;
-  marginMultiplier: number;
-  targetGrossMarginPercent?: number;
-  effectiveFrom: string;
-  effectiveUntil?: string;
-  reason: string;
-  reasonDetails?: string;
-  previousMultiplier?: number;
-  changePercent?: number;
-  expectedMarginChangeDollars?: number;
-  expectedRevenueImpact?: number;
-  createdBy: string;
-  approvedBy?: string;
-  requiresApproval: boolean;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
-  isActive: boolean;
-  monitored: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface PricingConfigFilters {
   scopeType?: string;

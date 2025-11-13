@@ -81,14 +81,19 @@ export class MigrationController {
         billingCycle || 'monthly'
       );
 
+      // Standard response format
       res.status(200).json({
-        success: result.success,
-        license_id: result.perpetualLicense?.id,
-        license_key: result.perpetualLicense?.licenseKey,
-        trade_in_credit_usd: result.tradeInCredit,
-        target_tier: targetTier,
-        billing_cycle: billingCycle || 'monthly',
-        message: result.message,
+        status: 'success',
+        data: {
+          license_id: result.perpetualLicense?.id,
+          license_key: result.perpetualLicense?.licenseKey,
+          trade_in_credit_usd: result.tradeInCredit,
+          target_tier: targetTier,
+          billing_cycle: billingCycle || 'monthly',
+        },
+        meta: {
+          message: result.message,
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -169,15 +174,20 @@ export class MigrationController {
       // Migrate subscription to perpetual
       await this.migrationService.migrateSubscriptionToPerpetual(userId, subscriptionId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        subscription_id: subscriptionId,
-        refund_amount_usd: refundAmount,
-        message: `Successfully migrated to perpetual license. ${
-          refundAmount > 0
-            ? `$${refundAmount.toFixed(2)} refund will be processed.`
-            : 'No refund available (outside 30-day window).'
-        }`,
+        status: 'success',
+        data: {
+          subscription_id: subscriptionId,
+          refund_amount_usd: refundAmount,
+        },
+        meta: {
+          message: `Successfully migrated to perpetual license. ${
+            refundAmount > 0
+              ? `$${refundAmount.toFixed(2)} refund will be processed.`
+              : 'No refund available (outside 30-day window).'
+          }`,
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {

@@ -28,15 +28,12 @@ import {
   ChevronLeft,
   Flag,
   Download,
-  Upload,
   Settings,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { ConfirmationModal } from '@/components/plan109';
-import { plan111API } from '@/api/plan111';
-import { FraudSeverity, FraudResolution, type FraudDetectionEvent } from '@/types/plan111.types';
+import { FraudSeverity, FraudResolution, FraudDetectionType, type FraudDetectionEvent } from '@/types/plan111.types';
 import { formatDate, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
@@ -96,7 +93,7 @@ function FraudDetection() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Review state
-  const [reviewResolution, setReviewResolution] = useState<FraudResolution>('block_user');
+  const [reviewResolution, setReviewResolution] = useState<FraudResolution>(FraudResolution.CONFIRMED_FRAUD);
   const [reviewNotes, setReviewNotes] = useState('');
 
   // Blacklist state
@@ -105,7 +102,7 @@ function FraudDetection() {
   const [blacklistReason, setBlacklistReason] = useState('');
 
   // Auto-refresh interval
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<number>();
 
   // Load data
   useEffect(() => {
@@ -132,33 +129,37 @@ function FraudDetection() {
       const mockEvents: FraudDetectionEvent[] = [
         {
           id: '1',
-          redemption_id: 'red-1',
-          coupon_id: 'coup-1',
-          user_id: 'user-1',
-          detection_type: 'velocity_abuse',
-          severity: 'high',
-          risk_score: 85,
+          redemptionId: 'red-1',
+          couponId: 'coup-1',
+          userId: 'user-1',
+          detectionType: FraudDetectionType.VELOCITY_ABUSE,
+          severity: FraudSeverity.HIGH,
+          riskScore: 85,
           reasons: ['5+ redemptions in 10 minutes', 'Multiple IP addresses'],
-          status: 'pending',
-          detected_at: new Date().toISOString(),
-          coupon_code: 'SAVE20',
-          user_email: 'suspicious@example.com',
-          ip_address: '192.168.1.1',
+          status: FraudResolution.PENDING,
+          isFlagged: true,
+          detectedAt: new Date().toISOString(),
+          couponCode: 'SAVE20',
+          userEmail: 'suspicious@example.com',
+          ipAddress: '192.168.1.1',
+          createdAt: new Date().toISOString(),
         },
         {
           id: '2',
-          redemption_id: 'red-2',
-          coupon_id: 'coup-2',
-          user_id: 'user-2',
-          detection_type: 'ip_switching',
-          severity: 'medium',
-          risk_score: 65,
+          redemptionId: 'red-2',
+          couponId: 'coup-2',
+          userId: 'user-2',
+          detectionType: FraudDetectionType.IP_SWITCHING,
+          severity: FraudSeverity.MEDIUM,
+          riskScore: 65,
           reasons: ['IP changed 3 times in session'],
-          status: 'pending',
-          detected_at: new Date(Date.now() - 3600000).toISOString(),
-          coupon_code: 'WELCOME10',
-          user_email: 'user2@example.com',
-          ip_address: '10.0.0.1',
+          status: FraudResolution.PENDING,
+          isFlagged: true,
+          detectedAt: new Date(Date.now() - 3600000).toISOString(),
+          couponCode: 'WELCOME10',
+          userEmail: 'user2@example.com',
+          ipAddress: '10.0.0.1',
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
         },
       ];
 
@@ -200,9 +201,9 @@ function FraudDetection() {
         const query = searchQuery.toLowerCase();
         filtered = filtered.filter(
           (e) =>
-            e.user_email?.toLowerCase().includes(query) ||
-            e.coupon_code?.toLowerCase().includes(query) ||
-            e.ip_address?.toLowerCase().includes(query)
+            e.userEmail?.toLowerCase().includes(query) ||
+            e.couponCode?.toLowerCase().includes(query) ||
+            e.ipAddress?.toLowerCase().includes(query)
         );
       }
 
@@ -213,8 +214,8 @@ function FraudDetection() {
 
         switch (sortBy) {
           case 'detected':
-            aVal = new Date(a.detected_at).getTime();
-            bVal = new Date(b.detected_at).getTime();
+            aVal = new Date(a.detectedAt).getTime();
+            bVal = new Date(b.detectedAt).getTime();
             break;
           case 'severity':
             const severityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -222,8 +223,8 @@ function FraudDetection() {
             bVal = severityOrder[b.severity];
             break;
           case 'riskScore':
-            aVal = a.risk_score;
-            bVal = b.risk_score;
+            aVal = a.riskScore ?? 0;
+            bVal = b.riskScore ?? 0;
             break;
         }
 
@@ -305,7 +306,7 @@ function FraudDetection() {
     }
   };
 
-  const handleRemoveFromBlacklist = async (id: string) => {
+  const handleRemoveFromBlacklist = async (_id: string) => {
     setIsProcessing(true);
     setError(null);
 
@@ -326,14 +327,14 @@ function FraudDetection() {
     if (events.length === 0) return;
 
     const exportData = events.map((event) => ({
-      'Detected At': formatDate(event.detected_at, 'long'),
-      'User Email': event.user_email,
-      'Coupon Code': event.coupon_code,
-      'Detection Type': event.detection_type,
+      'Detected At': formatDate(event.detectedAt, 'long'),
+      'User Email': event.userEmail,
+      'Coupon Code': event.couponCode,
+      'Detection Type': event.detectionType,
       Severity: event.severity,
-      'Risk Score': event.risk_score,
-      Reasons: event.reasons.join('; '),
-      'IP Address': event.ip_address,
+      'Risk Score': event.riskScore,
+      Reasons: event.reasons?.join('; ') || '',
+      'IP Address': event.ipAddress,
       Status: event.status,
     }));
 
@@ -358,15 +359,13 @@ function FraudDetection() {
   };
 
   const getStatusBadge = (status: FraudResolution) => {
-    const colors = {
-      pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-      legitimate: 'bg-green-100 text-green-700 border-green-300',
-      block_user: 'bg-red-100 text-red-700 border-red-300',
-      block_coupon: 'bg-orange-100 text-orange-700 border-orange-300',
-      block_ip: 'bg-purple-100 text-purple-700 border-purple-300',
-      false_positive: 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
+    const colors: Record<FraudResolution, string> = {
+      [FraudResolution.PENDING]: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+      [FraudResolution.LEGITIMATE]: 'bg-green-100 text-green-700 border-green-300',
+      [FraudResolution.CONFIRMED_FRAUD]: 'bg-red-100 text-red-700 border-red-300',
+      [FraudResolution.FALSE_POSITIVE]: 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
     };
-    return colors[status] || colors.pending;
+    return colors[status] || colors[FraudResolution.PENDING];
   };
 
   // ============================================================================
@@ -374,39 +373,39 @@ function FraudDetection() {
   // ============================================================================
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
-{/* Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Fraud Detection</h1>
-          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Fraud Detection</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Monitor and prevent coupon abuse
           </p>
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => setShowRulesModal(true)}
           >
             <Settings className="mr-2 h-4 w-4" />
             Rules
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => setShowBlacklistModal(true)}
           >
             <Ban className="mr-2 h-4 w-4" />
             Blacklist
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={events.length === 0}>
+          <Button variant="ghost" onClick={handleExport} disabled={events.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
           <Button
-            variant={autoRefresh ? 'primary' : 'outline'}
+            variant={autoRefresh ? 'primary' : 'ghost'}
             onClick={() => setAutoRefresh(!autoRefresh)}
           >
             <RefreshCw className={cn('mr-2 h-4 w-4', autoRefresh && 'animate-spin')} />
@@ -518,7 +517,7 @@ function FraudDetection() {
           </div>
 
           <div className="flex items-end">
-            <Button variant="outline" onClick={clearFilters} className="w-full">
+            <Button variant="ghost" onClick={clearFilters} className="w-full">
               <XIcon className="mr-2 h-4 w-4" />
               Clear
             </Button>
@@ -653,18 +652,18 @@ function FraudDetection() {
                       )}
                     >
                       <td className="px-4 py-4 text-sm text-deep-navy-500 dark:text-deep-navy-300">
-                        {formatDate(event.detected_at, 'long')}
+                        {formatDate(event.detectedAt, 'long')}
                       </td>
                       <td className="px-4 py-4">
                         <div>
-                          <p className="text-sm font-medium text-deep-navy-800 dark:text-white">{event.user_email}</p>
+                          <p className="text-sm font-medium text-deep-navy-800 dark:text-white">{event.userEmail}</p>
                           <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
-                            Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{event.coupon_code}</code>
+                            Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{event.couponCode}</code>
                           </p>
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white capitalize">
-                        {event.detection_type.replace('_', ' ')}
+                        {event.detectionType.replace('_', ' ')}
                       </td>
                       <td className="px-4 py-4">
                         <span
@@ -678,23 +677,23 @@ function FraudDetection() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-deep-navy-800 dark:text-white">{event.risk_score}</span>
+                          <span className="font-medium text-deep-navy-800 dark:text-white">{event.riskScore}</span>
                           <div className="h-1.5 w-16 overflow-hidden rounded-full bg-deep-navy-200 dark:bg-deep-navy-700">
                             <div
                               className={cn(
                                 'h-full transition-all',
-                                event.risk_score >= 80 ? 'bg-red-500' :
-                                event.risk_score >= 60 ? 'bg-orange-500' :
-                                event.risk_score >= 40 ? 'bg-yellow-500' :
+                                (event.riskScore ?? 0) >= 80 ? 'bg-red-500' :
+                                (event.riskScore ?? 0) >= 60 ? 'bg-orange-500' :
+                                (event.riskScore ?? 0) >= 40 ? 'bg-yellow-500' :
                                 'bg-green-500'
                               )}
-                              style={{ width: `${event.risk_score}%` }}
+                              style={{ width: `${event.riskScore ?? 0}%` }}
                             />
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <code className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-200">{event.ip_address}</code>
+                        <code className="text-sm font-mono text-deep-navy-600 dark:text-deep-navy-200">{event.ipAddress}</code>
                       </td>
                       <td className="px-4 py-4">
                         <span
@@ -709,7 +708,7 @@ function FraudDetection() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedEvent(event);
@@ -746,7 +745,7 @@ function FraudDetection() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
@@ -754,7 +753,7 @@ function FraudDetection() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
@@ -789,18 +788,18 @@ function FraudDetection() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">User Email</p>
-                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.user_email}</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.userEmail}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Coupon Code</p>
                   <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-2 py-1 text-sm text-deep-navy-800 dark:text-white">
-                    {selectedEvent.coupon_code}
+                    {selectedEvent.couponCode}
                   </code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detection Type</p>
                   <p className="text-deep-navy-800 dark:text-white capitalize">
-                    {selectedEvent.detection_type.replace('_', ' ')}
+                    {selectedEvent.detectionType.replace('_', ' ')}
                   </p>
                 </div>
                 <div>
@@ -816,15 +815,15 @@ function FraudDetection() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Risk Score</p>
-                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.risk_score}/100</p>
+                  <p className="text-deep-navy-800 dark:text-white">{selectedEvent.riskScore}/100</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">IP Address</p>
-                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedEvent.ip_address}</code>
+                  <code className="text-sm text-deep-navy-800 dark:text-white">{selectedEvent.ipAddress}</code>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detected At</p>
-                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedEvent.detected_at, 'long')}</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedEvent.detectedAt, 'long')}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Status</p>
@@ -842,7 +841,7 @@ function FraudDetection() {
               <div>
                 <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Detection Reasons</p>
                 <ul className="mt-2 list-inside list-disc space-y-1 text-deep-navy-800 dark:text-white">
-                  {selectedEvent.reasons.map((reason, i) => (
+                  {(selectedEvent.reasons || []).map((reason, i) => (
                     <li key={i}>{reason}</li>
                   ))}
                 </ul>
@@ -861,10 +860,10 @@ function FraudDetection() {
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
-                  User: <strong>{selectedEvent.user_email}</strong>
+                  User: <strong>{selectedEvent.userEmail}</strong>
                 </p>
                 <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">
-                  Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{selectedEvent.coupon_code}</code>
+                  Coupon: <code className="rounded bg-deep-navy-100 dark:bg-deep-navy-800 px-1">{selectedEvent.couponCode}</code>
                 </p>
               </div>
 
@@ -901,7 +900,7 @@ function FraudDetection() {
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowReviewModal(false);
                   setSelectedEvent(null);

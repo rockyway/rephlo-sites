@@ -10,30 +10,40 @@
 
 import { apiClient } from '@/services/api';
 import type {
+  // Import shared coupon types
   Coupon,
   CouponCampaign,
   CouponRedemption,
   FraudDetectionEvent,
-  CouponValidationRequest,
-  CouponValidationResult,
-  CouponRedemptionRequest,
-  CouponCreateRequest,
-  CouponUpdateRequest,
-  CampaignCreateRequest,
-  CampaignUpdateRequest,
-  CampaignPerformanceMetrics,
-  CouponAnalyticsMetrics,
-  RedemptionTrend,
-  TopPerformingCoupon,
-  RedemptionByType,
   CouponListResponse,
   CampaignListResponse,
   RedemptionListResponse,
   FraudEventListResponse,
+  CouponAnalyticsMetrics,
+  TopPerformingCoupon,
+  CreateCouponRequest,
+  UpdateCouponRequest,
+  CreateCampaignRequest,
+  UpdateCampaignRequest,
+} from '@rephlo/shared-types';
+import type {
+  // Keep plan111-specific types that don't exist in shared-types
+  CouponValidationRequest,
+  CouponValidationResult,
+  CouponRedemptionRequest,
+  CampaignPerformanceMetrics,
+  RedemptionTrend,
+  RedemptionByType,
   CouponFilters,
   CampaignFilters,
   FraudEventFilters,
 } from '@/types/plan111.types';
+
+// Type aliases for compatibility with existing code
+type CouponCreateRequest = CreateCouponRequest;
+type CouponUpdateRequest = UpdateCouponRequest;
+type CampaignCreateRequest = CreateCampaignRequest;
+type CampaignUpdateRequest = UpdateCampaignRequest;
 
 /**
  * Plan 111 API Client
@@ -62,11 +72,11 @@ export const plan111API = {
   redeemCoupon: async (
     request: CouponRedemptionRequest
   ): Promise<CouponRedemption> => {
-    const response = await apiClient.post<CouponRedemption>(
+    const response = await apiClient.post<{ status: string; data: CouponRedemption }>(
       '/api/coupons/redeem',
       request
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -297,11 +307,11 @@ export const plan111API = {
     resolution: string,
     notes?: string
   ): Promise<FraudDetectionEvent> => {
-    const response = await apiClient.patch<FraudDetectionEvent>(
+    const response = await apiClient.patch<{ status: string; data: FraudDetectionEvent }>(
       `/admin/fraud-detection/${id}/review`,
       { resolution, notes }
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**

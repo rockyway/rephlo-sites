@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   RefreshCw,
   Search,
   Edit,
@@ -19,9 +17,12 @@ import TierAuditLog from '@/components/admin/TierAuditLog';
 import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
+import type {
+  SubscriptionTier,
+} from '@rephlo/shared-types';
 import type {
   ModelTierInfo,
-  SubscriptionTier,
   TierAuditLogEntry,
   ModelTierUpdateRequest,
 } from '@/types/model-tier';
@@ -81,9 +82,11 @@ function ModelTierManagement() {
         0,
         100
       );
-      // Backend wraps response in { status: "success", data: { models, total } }
-      const data = (response as any).data || response;
-      setModels(data.models || []);
+      // Handle both response formats: { data: { models: [...] } } or { models: [...] } or direct array
+      const models = (response as any).models ||
+                    (response as any).data?.models ||
+                    (response as any).data;
+      setModels(safeArray<ModelTierInfo>(models));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load models');
     } finally {
@@ -133,9 +136,14 @@ function ModelTierManagement() {
     setIsSaving(true);
     try {
       const updatedModel = await adminAPI.updateModelTier(modelId, updates);
+      // Ensure allowedTiers is always an array
+      const modelWithDefaults = {
+        ...updatedModel,
+        allowedTiers: safeArray<SubscriptionTier>(updatedModel.allowedTiers),
+      };
       // Update models list
       setModels((prev) =>
-        prev.map((m) => (m.id === modelId ? updatedModel : m))
+        prev.map((m) => (m.id === modelId ? modelWithDefaults : m))
       );
       setSuccessMessage(`Successfully updated ${updatedModel.displayName}`);
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -218,7 +226,7 @@ function ModelTierManagement() {
     }
   };
 
-  const filteredModels = (models || []).filter((model) => {
+  const filteredModels = safeArray<ModelTierInfo>(models).filter((model) => {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
@@ -231,278 +239,261 @@ function ModelTierManagement() {
   });
 
   return (
-    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
-      <div className="bg-white dark:bg-deep-navy-800 px-4 sm:px-6 lg:px-8 pt-6">
-        <Breadcrumbs />
-      </div>
+      <Breadcrumbs />
 
       {/* Header */}
-      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Link
-                to="/admin"
-                className="inline-flex items-center text-body text-rephlo-blue hover:text-rephlo-blue-600 mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
-              </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
-                Model Tier Management
-              </h1>
-              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                Configure subscription tier requirements for AI models
-              </p>
-            </div>
-            <Button
-              onClick={handleRefresh}
-              disabled={isLoading}
-              variant="ghost"
-            >
-              <RefreshCw
-                className={cn(
-                  'h-4 w-4 mr-2',
-                  isLoading && 'animate-spin'
-                )}
-              />
-              Refresh
-            </Button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
+            Model Tier Management
+          </h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Configure subscription tier requirements for AI models
+          </p>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
-          <h2 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
-            Search & Filters
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="md:col-span-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
-                <Input
-                  placeholder="Search by model name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Provider Filter */}
-            <div>
-              <select
-                value={filterProvider}
-                onChange={(e) => setFilterProvider(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-lg py-md text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan transition-all duration-fast"
-              >
-                <option value="">All Providers</option>
-                {providers.map((provider) => (
-                  <option key={provider} value={provider}>
-                    {provider}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tier Filter */}
-            <div>
-              <TierSelect
-                value={filterTier as SubscriptionTier}
-                onChange={(tier) => setFilterTier(tier)}
-                allowEmpty
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={handleSearch} disabled={isLoading}>
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-          </div>
-        </div>
-
-        {/* Bulk Actions Bar */}
-        {selectedModels.size > 0 && (
-          <div className="bg-rephlo-blue text-white rounded-lg p-4 mb-6 flex items-center justify-between">
-            <span className="font-medium">
-              {selectedModels.size} model(s) selected
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setSelectedModels(new Set())}
-              >
-                <X className="h-4 w-4 mr-1" />
-                Clear
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleBulkUpdate}
-              >
-                Bulk Update
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Models Table */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={
-                        !!(models && models.length > 0 &&
-                        selectedModels.size === models.length)
-                      }
-                      onChange={toggleSelectAll}
-                      className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Model Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Provider
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Required Tier
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Mode
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Allowed Tiers
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
-                {isLoading && filteredModels.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <LoadingSpinner size="lg" />
-                    </td>
-                  </tr>
-                ) : filteredModels.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                        No models found
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredModels.map((model) => (
-                    <tr
-                      key={model.id}
-                      className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedModels.has(model.id)}
-                          onChange={() => toggleModelSelection(model.id)}
-                          className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium text-deep-navy-800 dark:text-white">
-                            {model.displayName}
-                          </p>
-                          <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
-                            {model.name}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                        {model.provider}
-                      </td>
-                      <td className="px-4 py-3">
-                        <TierBadge tier={model.requiredTier} />
-                      </td>
-                      <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                        {model.tierRestrictionMode}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {model.allowedTiers.map((tier) => (
-                            <TierBadge key={tier} tier={tier} size="sm" />
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {model.isAvailable ? (
-                          <span className="text-body-sm text-green-600">
-                            Available
-                          </span>
-                        ) : (
-                          <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">
-                            Unavailable
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditModel(model)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Audit Log Section */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4">
-            Recent Changes
-          </h2>
-          <TierAuditLog
-            logs={auditLogs}
-            isLoading={isLoadingLogs}
-            onRevert={handleRevertChange}
+        <Button
+          onClick={handleRefresh}
+          disabled={isLoading}
+          variant="ghost"
+        >
+          <RefreshCw
+            className={cn(
+              'h-4 w-4 mr-2',
+              isLoading && 'animate-spin'
+            )}
           />
+          Refresh
+        </Button>
+      </div>
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md p-4 flex items-center gap-2">
+          <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+          <p className="text-body text-green-800 dark:text-green-200">{successMessage}</p>
         </div>
-      </main>
+      )}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          <p className="text-body text-red-800 dark:text-red-200">{error}</p>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+        <h2 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
+          Search & Filters
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="md:col-span-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-deep-navy-400 dark:text-deep-navy-500" />
+              <Input
+                placeholder="Search by model name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Provider Filter */}
+          <div>
+            <select
+              value={filterProvider}
+              onChange={(e) => setFilterProvider(e.target.value)}
+              className="flex h-11 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2.5 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan transition-all duration-fast"
+            >
+              <option value="">All Providers</option>
+              {providers.map((provider) => (
+                <option key={provider} value={provider}>
+                  {provider}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tier Filter */}
+          <div>
+            <TierSelect
+              value={filterTier as SubscriptionTier}
+              onChange={(tier) => setFilterTier(tier)}
+              allowEmpty
+            />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button onClick={handleSearch} disabled={isLoading}>
+            <Search className="h-4 w-4 mr-2" />
+            Search
+          </Button>
+        </div>
+      </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedModels.size > 0 && (
+        <div className="bg-rephlo-blue dark:bg-electric-cyan/90 text-white dark:text-deep-navy-900 rounded-lg p-4 flex items-center justify-between">
+          <span className="font-medium">
+            {selectedModels.size} model(s) selected
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSelectedModels(new Set())}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleBulkUpdate}
+            >
+              Bulk Update
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Models Table */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200 dark:border-deep-navy-700">
+              <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={
+                      !!(models && models.length > 0 &&
+                      selectedModels.size === models.length)
+                    }
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Model Name
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Provider
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Required Tier
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Mode
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Allowed Tiers
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
+              {isLoading && filteredModels.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center">
+                    <LoadingSpinner size="lg" />
+                  </td>
+                </tr>
+              ) : filteredModels.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center">
+                    <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                      No models found
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredModels.map((model) => (
+                  <tr
+                    key={model.id}
+                    className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedModels.has(model.id)}
+                        onChange={() => toggleModelSelection(model.id)}
+                        className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-medium text-deep-navy-800 dark:text-white">
+                          {model.displayName}
+                        </p>
+                        <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
+                          {model.name}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
+                      {model.provider}
+                    </td>
+                    <td className="px-4 py-3">
+                      <TierBadge tier={model.requiredTier} />
+                    </td>
+                    <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
+                      {model.tierRestrictionMode}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {safeArray<SubscriptionTier>(model.allowedTiers).map((tier, idx) => (
+                          <TierBadge key={`${model.id}-${tier}-${idx}`} tier={tier} size="sm" />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {model.isAvailable ? (
+                        <span className="text-body-sm text-green-600">
+                          Available
+                        </span>
+                      ) : (
+                        <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">
+                          Unavailable
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditModel(model)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Audit Log Section */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+        <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white mb-4">
+          Recent Changes
+        </h2>
+        <TierAuditLog
+          logs={auditLogs}
+          isLoading={isLoadingLogs}
+          onRevert={handleRevertChange}
+        />
+      </div>
 
       {/* Edit Dialog */}
       <ModelTierEditDialog

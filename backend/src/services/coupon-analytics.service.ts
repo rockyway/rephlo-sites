@@ -16,36 +16,36 @@ import logger from '../utils/logger';
 // =============================================================================
 
 export interface CouponAnalyticsMetrics {
-  total_redemptions: number;
-  total_discount_value: number;
-  average_discount_per_redemption: number;
-  conversion_rate: number;
-  fraud_detection_rate: number;
-  month_over_month_change: {
+  totalRedemptions: number;
+  totalDiscountValue: number;
+  averageDiscountPerRedemption: number;
+  conversionRate: number;
+  fraudDetectionRate: number;
+  monthOverMonthChange: {
     redemptions: number;
-    discount_value: number;
+    discountValue: number;
   };
 }
 
 export interface RedemptionTrend {
   date: string;
   redemptions: number;
-  discount_value: number;
+  discountValue: number;
 }
 
 export interface TopPerformingCoupon {
   code: string;
   redemptions: number;
-  discount_value: number;
-  conversion_rate: number;
-  average_discount: number;
+  discountValue: number;
+  conversionRate: number;
+  averageDiscount: number;
 }
 
 export interface RedemptionByType {
   type: string;
   count: number;
   percentage: number;
-  discount_value: number;
+  discountValue: number;
 }
 
 // =============================================================================
@@ -143,14 +143,14 @@ export class CouponAnalyticsService {
         : 0;
 
       return {
-        total_redemptions: totalRedemptions,
-        total_discount_value: totalDiscountValue,
-        average_discount_per_redemption: averageDiscount,
-        conversion_rate: conversionRate,
-        fraud_detection_rate: fraudRate,
-        month_over_month_change: {
+        totalRedemptions,
+        totalDiscountValue,
+        averageDiscountPerRedemption: averageDiscount,
+        conversionRate,
+        fraudDetectionRate: fraudRate,
+        monthOverMonthChange: {
           redemptions: redemptionChange,
-          discount_value: discountChange,
+          discountValue: discountChange,
         },
       };
     } catch (error) {
@@ -191,7 +191,7 @@ export class CouponAnalyticsService {
       return results.map((row) => ({
         date: new Date(row.date).toISOString().split('T')[0],
         redemptions: Number(row.redemptions),
-        discount_value: Number(row.discount_value),
+        discountValue: Number(row.discount_value),
       }));
     } catch (error) {
       logger.error('CouponAnalyticsService.getRedemptionTrend: Error', { error });
@@ -228,9 +228,9 @@ export class CouponAnalyticsService {
       return results.map((row) => ({
         code: row.code,
         redemptions: Number(row.redemptions),
-        discount_value: Number(row.discount_value),
-        conversion_rate: Number(row.conversion_rate),
-        average_discount: Number(row.average_discount),
+        discountValue: Number(row.discount_value),
+        conversionRate: Number(row.conversion_rate),
+        averageDiscount: Number(row.average_discount),
       }));
     } catch (error) {
       logger.error('CouponAnalyticsService.getTopPerformingCoupons: Error', { error });
@@ -266,7 +266,7 @@ export class CouponAnalyticsService {
         type: row.type,
         count: Number(row.count),
         percentage: total > 0 ? (Number(row.count) / total) * 100 : 0,
-        discount_value: Number(row.discount_value),
+        discountValue: Number(row.discount_value),
       }));
     } catch (error) {
       logger.error('CouponAnalyticsService.getRedemptionsByType: Error', { error });

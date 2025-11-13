@@ -14,10 +14,10 @@ export interface RecordUsageParams {
   modelId: string;
   operation: 'chat' | 'completion';
   usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-    credits_used: number;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    creditsUsed: number;
   };
   durationMs: number;
   requestMetadata?: any;
@@ -50,10 +50,10 @@ export class UsageRecorder {
         creditId: credit.id,
         modelId: params.modelId,
         operation: params.operation,
-        creditsUsed: params.usage.credits_used,
-        inputTokens: params.usage.prompt_tokens,
-        outputTokens: params.usage.completion_tokens,
-        totalTokens: params.usage.total_tokens,
+        creditsUsed: params.usage.creditsUsed,
+        inputTokens: params.usage.promptTokens,
+        outputTokens: params.usage.completionTokens,
+        totalTokens: params.usage.totalTokens,
         requestDurationMs: params.durationMs,
         requestMetadata: params.requestMetadata,
       });
@@ -61,7 +61,7 @@ export class UsageRecorder {
       logger.debug('UsageRecorder: Usage recorded successfully', {
         userId: params.userId,
         modelId: params.modelId,
-        creditsUsed: params.usage.credits_used,
+        creditsUsed: params.usage.creditsUsed,
       });
     } catch (error) {
       logger.error('UsageRecorder: Failed to record usage', {

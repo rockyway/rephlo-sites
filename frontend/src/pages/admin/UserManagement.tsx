@@ -38,8 +38,8 @@ import {
   UserStatus,
   SubscriptionTier,
   type User,
-  type UserDetails,
-} from '@/types/plan109.types';
+} from '@rephlo/shared-types';
+import type { AdminUserDetails } from '@/types/plan109.types';
 import {
   formatDate,
   formatNumber,
@@ -69,7 +69,7 @@ function UserManagement() {
 
   // Modals
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
+  const [userDetails, setUserDetails] = useState<AdminUserDetails | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [showBanModal, setShowBanModal] = useState(false);
@@ -96,7 +96,11 @@ function UserManagement() {
       });
 
       // Map API response to frontend User type
-      const mappedUsers = (response.users || []).map((apiUser: any) => ({
+      // Backend returns { users: [...], pagination: {...} } at the root level
+      const apiUsers = (response as any).users || response.data || [];
+      const apiPagination = (response as any).pagination || response;
+
+      const mappedUsers = apiUsers.map((apiUser: any) => ({
         id: apiUser.id,
         email: apiUser.email,
         name: apiUser.firstName && apiUser.lastName
@@ -104,14 +108,14 @@ function UserManagement() {
           : apiUser.firstName || apiUser.lastName || null,
         status: UserStatus.ACTIVE, // Default to ACTIVE since API doesn't return this in list
         currentTier: apiUser.subscription?.tier || SubscriptionTier.FREE,
-        creditsBalance: 0, // TODO: API doesn't return this in list, needs separate query
+        creditsBalance: apiUser.creditsBalance || 0,
         createdAt: apiUser.createdAt,
         lastActiveAt: apiUser.lastLoginAt,
         subscription: apiUser.subscription,
       }));
 
       setUsers(mappedUsers);
-      setTotalPages(response.pagination?.totalPages || 1);
+      setTotalPages(apiPagination.totalPages || 1);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load users');
     } finally {

@@ -128,6 +128,17 @@ export function createPlan111Router(): Router {
   );
 
   /**
+   * GET /admin/coupons/:id
+   * Get a single coupon by ID (admin only)
+   */
+  router.get(
+    '/admin/coupons/:id',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(async (req, res) => couponController.getSingleCoupon(req, res))
+  );
+
+  /**
    * GET /admin/coupons/:id/redemptions
    * Get redemption history for a coupon (admin only)
    */
@@ -185,6 +196,17 @@ export function createPlan111Router(): Router {
     authMiddleware,
     requireAdmin,
     asyncHandler(async (req, res) => campaignController.listCampaigns(req, res))
+  );
+
+  /**
+   * GET /admin/campaigns/:id
+   * Get a single campaign by ID (admin only)
+   */
+  router.get(
+    '/admin/campaigns/:id',
+    authMiddleware,
+    requireAdmin,
+    asyncHandler(async (req, res) => campaignController.getSingleCampaign(req, res))
   );
 
   /**

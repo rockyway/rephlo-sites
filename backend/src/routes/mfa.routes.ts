@@ -86,11 +86,17 @@ export function createMFARouter(): Router {
 
       // Return QR code and backup codes to user
       // User should save backup codes securely
+      // Standard response format: flat data with optional metadata
       return res.status(200).json({
-        message: 'MFA setup initiated. Scan QR code with authenticator app and verify.',
-        qrCode,
-        backupCodes,
-        secret, // For manual entry if QR code fails
+        status: 'success',
+        data: {
+          qrCode,
+          backupCodes,
+          secret, // For manual entry if QR code fails
+        },
+        meta: {
+          message: 'MFA setup initiated. Scan QR code with authenticator app and verify.',
+        },
       });
     })
   );
@@ -181,9 +187,15 @@ export function createMFARouter(): Router {
 
       logger.info('MFA Verify Setup: MFA enabled successfully', { userId });
 
+      // Standard response format: flat data with optional metadata
       return res.status(200).json({
-        message: 'MFA enabled successfully',
-        success: true,
+        status: 'success',
+        data: {
+          success: true,
+        },
+        meta: {
+          message: 'MFA enabled successfully',
+        },
       });
     })
   );
@@ -265,10 +277,16 @@ export function createMFARouter(): Router {
       logger.info('MFA Login: MFA verification successful', { userId });
 
       // MFA verified - caller should issue final authentication tokens
+      // Standard response format: flat data with optional metadata
       return res.status(200).json({
-        message: 'MFA verification successful',
-        success: true,
-        userId: user.id,
+        status: 'success',
+        data: {
+          success: true,
+          userId: user.id,
+        },
+        meta: {
+          message: 'MFA verification successful',
+        },
       });
     })
   );
@@ -383,9 +401,15 @@ export function createMFARouter(): Router {
 
       logger.info('MFA Disable: MFA disabled successfully', { userId });
 
+      // Standard response format: flat data with optional metadata
       return res.status(200).json({
-        message: 'MFA disabled successfully',
-        success: true,
+        status: 'success',
+        data: {
+          success: true,
+        },
+        meta: {
+          message: 'MFA disabled successfully',
+        },
       });
     })
   );
@@ -508,11 +532,17 @@ export function createMFARouter(): Router {
       });
 
       // Backup code verified - caller should issue final authentication tokens
+      // Standard response format: flat data with optional metadata
       return res.status(200).json({
-        message: 'Backup code verified successfully',
-        success: true,
-        userId: user.id,
-        remainingBackupCodes: updatedBackupCodes.length,
+        status: 'success',
+        data: {
+          success: true,
+          userId: user.id,
+          remainingBackupCodes: updatedBackupCodes.length,
+        },
+        meta: {
+          message: 'Backup code verified successfully',
+        },
       });
     })
   );

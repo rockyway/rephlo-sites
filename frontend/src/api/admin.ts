@@ -6,6 +6,10 @@ import type {
   ModelTierListResponse,
   AuditLogResponse,
 } from '@/types/model-tier';
+import type {
+  User,
+  Subscription,
+} from '@rephlo/shared-types';
 
 // ============================================================================
 // Dashboard Analytics Types
@@ -88,11 +92,11 @@ export const adminAPI = {
       page,
       pageSize,
     };
-    const response = await apiClient.get<ModelTierListResponse>(
+    const response = await apiClient.get<{ status: string; data: ModelTierListResponse }>(
       '/admin/models/tiers',
       { params }
     );
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -100,10 +104,10 @@ export const adminAPI = {
    * @param modelId - Model ID
    */
   getModelTier: async (modelId: string): Promise<ModelTierInfo> => {
-    const response = await apiClient.get<ModelTierInfo>(
+    const response = await apiClient.get<{ status: string; data: ModelTierInfo }>(
       `/admin/models/${modelId}/tier`
     );
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -115,11 +119,16 @@ export const adminAPI = {
     modelId: string,
     data: ModelTierUpdateRequest
   ): Promise<ModelTierInfo> => {
-    const response = await apiClient.patch<ModelTierInfo>(
+    const response = await apiClient.patch<{
+      status: string;
+      data: ModelTierInfo;
+      meta?: { auditLog: any };
+    }>(
       `/admin/models/${modelId}/tier`,
       data
     );
-    return response.data;
+    // Backend returns flat data
+    return response.data.data;
   },
 
   /**
@@ -133,14 +142,14 @@ export const adminAPI = {
     reason?: string
   ): Promise<{ updated: number; models: ModelTierInfo[] }> => {
     const response = await apiClient.post<{
-      updated: number;
-      models: ModelTierInfo[];
+      status: string;
+      data: { updated: number; models: ModelTierInfo[] };
     }>('/admin/models/tiers/bulk', {
       modelIds,
       updates,
       reason,
     });
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -155,11 +164,48 @@ export const adminAPI = {
     page?: number;
     pageSize?: number;
   }): Promise<AuditLogResponse> => {
-    const response = await apiClient.get<AuditLogResponse>(
+    const response = await apiClient.get<{
+      status: string;
+      data: {
+        logs: Array<{
+          id: string;
+          modelId: string;
+          adminUserId: string;
+          adminEmail?: string;
+          changeType: string;
+          previousValue: any;
+          newValue: any;
+          reason?: string;
+          createdAt: string;
+        }>;
+        total: number;
+        limit: number;
+        offset: number;
+      }
+    }>(
       '/admin/models/tiers/audit-logs',
       { params }
     );
-    return response.data;
+
+    // Transform backend response to frontend format (previousValue/newValue -> oldValues/newValues)
+    const backendData = response.data.data;
+    return {
+      logs: backendData.logs.map(log => ({
+        id: log.id,
+        modelId: log.modelId,
+        modelName: '', // Backend doesn't return modelName, will be empty
+        adminUserId: log.adminUserId,
+        adminUserEmail: log.adminEmail,
+        changeType: log.changeType as 'tier_change' | 'restriction_mode_change' | 'allowed_tiers_change',
+        oldValues: log.previousValue || {},
+        newValues: log.newValue || {},
+        reason: log.reason,
+        timestamp: log.createdAt,
+      })),
+      total: backendData.total,
+      page: Math.floor(backendData.offset / backendData.limit),
+      pageSize: backendData.limit,
+    };
   },
 
   /**
@@ -170,10 +216,10 @@ export const adminAPI = {
     auditLogId: string
   ): Promise<{ success: boolean; model: ModelTierInfo }> => {
     const response = await apiClient.post<{
-      success: boolean;
-      model: ModelTierInfo;
+      status: string;
+      data: { success: boolean; model: ModelTierInfo };
     }>(`/admin/models/tiers/revert/${auditLogId}`);
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -336,19 +382,10 @@ export const adminAPI = {
 // ============================================================================
 
 export interface UserOverviewResponse {
-  user: {
-    id: string;
-    email: string;
-    name?: string;
-    createdAt: string;
+  user: Pick<User, 'id' | 'email' | 'name' | 'createdAt' | 'status'> & {
     lastLogin?: string;
-    status: 'active' | 'suspended' | 'banned';
   };
-  currentSubscription?: {
-    id: string;
-    tier: string;
-    status: string;
-    billingCycle: 'monthly' | 'annual';
+  currentSubscription?: Pick<Subscription, 'id' | 'tier' | 'status' | 'billingCycle'> & {
     creditAllocation: number;
     nextBillingDate?: string;
     startedAt: string;
@@ -371,11 +408,7 @@ export interface UserOverviewResponse {
 }
 
 export interface UserSubscriptionsResponse {
-  subscriptions: Array<{
-    id: string;
-    tier: string;
-    status: string;
-    billingCycle: 'monthly' | 'annual';
+  subscriptions: Array<Pick<Subscription, 'id' | 'tier' | 'status' | 'billingCycle'> & {
     startedAt: string;
     endedAt?: string;
     price: number;

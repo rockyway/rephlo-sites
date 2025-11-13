@@ -12,7 +12,11 @@
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
     "build:idp": "npm run build --prefix identity-provider",
-    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend && npm install --prefix identity-provider"
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend && npm install --prefix identity-provider",
+    "analyze:api": "npx tsx scripts/analyze-api-endpoints.ts",
+    "analyze:api:simple": "npx tsx scripts/analyze-api-endpoints.ts -- --format=simple",
+    "analyze:api:full": "npx tsx scripts/analyze-api-endpoints.ts -- --format=full",
+    "analyze:api:with-tests": "npx tsx scripts/analyze-api-endpoints.ts -- --format=simple --include-test=true"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

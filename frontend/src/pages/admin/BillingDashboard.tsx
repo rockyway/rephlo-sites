@@ -12,9 +12,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   RefreshCw,
   DollarSign,
   TrendingUp,
@@ -30,9 +28,11 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { billingApi } from '@/api/plan109';
 import {
   InvoiceStatus,
-  TransactionStatus,
-  type Invoice,
-  type Transaction,
+  PaymentStatus,
+  type BillingInvoice,
+  type PaymentTransaction,
+} from '@rephlo/shared-types';
+import {
   type DunningAttempt,
   type RevenueMetrics,
   type RevenueByTier,
@@ -40,13 +40,14 @@ import {
 import { formatCurrency, formatDate, formatPercentage, getTierDisplayName, getTierColor } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 function BillingDashboard() {
   // State
   const [revenueMetrics, setRevenueMetrics] = useState<RevenueMetrics | null>(null);
   const [revenueByTier, setRevenueByTier] = useState<RevenueByTier[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [dunningAttempts, setDunningAttempts] = useState<DunningAttempt[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +74,12 @@ function BillingDashboard() {
         billingApi.getDunningAttempts(),
       ]);
 
-      setRevenueMetrics(metrics);
-      setRevenueByTier(tierRevenue.tiers);
-      setInvoices(invoiceData.data);
-      setTransactions(transactionData.data);
-      setDunningAttempts(dunningData.attempts);
+      // Handle multiple response formats consistently
+      setRevenueMetrics((metrics as any).data || metrics);
+      setRevenueByTier(safeArray<RevenueByTier>((tierRevenue as any).tiers || (tierRevenue as any).data?.tiers || (tierRevenue as any).data));
+      setInvoices(safeArray<BillingInvoice>((invoiceData as any).data || invoiceData));
+      setTransactions(safeArray<PaymentTransaction>((transactionData as any).data || transactionData));
+      setDunningAttempts(safeArray<DunningAttempt>((dunningData as any).attempts || (dunningData as any).data?.attempts || (dunningData as any).data));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load billing data');
     } finally {
@@ -121,39 +123,26 @@ function BillingDashboard() {
   const activeDunning = dunningAttempts.filter(d => d.status === 'scheduled' || d.status === 'failed');
 
   return (
-    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
-      <div className="bg-white dark:bg-deep-navy-800 px-4 sm:px-6 lg:px-8 pt-6">
-        <Breadcrumbs />
-      </div>
+      <Breadcrumbs />
 
       {/* Header */}
-      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Link
-                to="/admin"
-                className="inline-flex items-center text-body text-rephlo-blue hover:text-rephlo-blue-600 mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
-              </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Billing Dashboard</h1>
-              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                Revenue tracking, invoice management, and payment monitoring
-              </p>
-            </div>
-            <Button onClick={loadData} disabled={isLoading} variant="ghost">
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              Refresh
-            </Button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Billing Dashboard</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Revenue tracking, invoice management, and payment monitoring
+          </p>
         </div>
-      </header>
+        <Button onClick={loadData} disabled={isLoading} variant="ghost">
+          <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+          Refresh
+        </Button>
+      </div>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {/* Success/Error Messages */}
         {successMessage && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
@@ -316,7 +305,7 @@ function BillingDashboard() {
               <AlertCircle className="h-4 w-4 inline-block mr-2" />
               Failed Payments & Dunning
               {activeDunning.length > 0 && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-caption font-medium bg-red-100 text-red-700">
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-caption font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
                   {activeDunning.length}
                 </span>
               )}
@@ -361,7 +350,7 @@ function BillingDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800 dark:text-white">{invoice.user?.email || 'N/A'}</span>
+                              <span className="text-body text-deep-navy-800 dark:text-white">{invoice.userId || 'N/A'}</span>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body font-medium text-deep-navy-800 dark:text-white">
@@ -371,17 +360,17 @@ function BillingDashboard() {
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                invoice.status === InvoiceStatus.PAID && 'bg-green-100 text-green-700 border-green-300',
-                                invoice.status === InvoiceStatus.OPEN && 'bg-blue-100 text-blue-700 border-blue-300',
+                                invoice.status === InvoiceStatus.PAID && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+                                invoice.status === InvoiceStatus.OPEN && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
                                 invoice.status === InvoiceStatus.VOID && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600',
-                                invoice.status === InvoiceStatus.UNCOLLECTIBLE && 'bg-red-100 text-red-700 border-red-300'
+                                invoice.status === InvoiceStatus.UNCOLLECTIBLE && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
                               )}>
                                 {invoice.status}
                               </span>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                                {invoice.dueDate ? formatDate(invoice.dueDate) : '-'}
+                                {invoice.periodEnd ? formatDate(invoice.periodEnd) : '-'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
@@ -391,8 +380,8 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-end gap-2">
-                                {invoice.invoicePdfUrl && (
-                                  <a href={invoice.invoicePdfUrl} target="_blank" rel="noopener noreferrer">
+                                {invoice.invoicePdf && (
+                                  <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer">
                                     <Button size="sm" variant="ghost">
                                       <Download className="h-4 w-4" />
                                     </Button>
@@ -437,7 +426,7 @@ function BillingDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              <span className="text-body text-deep-navy-800 dark:text-white">{transaction.user?.email || 'N/A'}</span>
+                              <span className="text-body text-deep-navy-800 dark:text-white">{transaction.userId || 'N/A'}</span>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body font-medium text-deep-navy-800 dark:text-white">
@@ -446,16 +435,16 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                                {transaction.paymentMethodType || 'N/A'} {transaction.last4 && `****${transaction.last4}`}
+                                {transaction.paymentMethodType || 'N/A'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                transaction.status === TransactionStatus.SUCCEEDED && 'bg-green-100 text-green-700 border-green-300',
-                                transaction.status === TransactionStatus.PENDING && 'bg-blue-100 text-blue-700 border-blue-300',
-                                transaction.status === TransactionStatus.FAILED && 'bg-red-100 text-red-700 border-red-300',
-                                transaction.status === TransactionStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
+                                transaction.status === PaymentStatus.SUCCEEDED && 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700',
+                                transaction.status === PaymentStatus.PENDING && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+                                transaction.status === PaymentStatus.FAILED && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
+                                transaction.status === PaymentStatus.REFUNDED && 'bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-700 dark:text-deep-navy-200 border-deep-navy-300 dark:border-deep-navy-600'
                               )}>
                                 {transaction.status}
                               </span>
@@ -467,7 +456,7 @@ function BillingDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center justify-end gap-2">
-                                {transaction.status === TransactionStatus.SUCCEEDED && (
+                                {transaction.status === PaymentStatus.SUCCEEDED && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -535,9 +524,9 @@ function BillingDashboard() {
                             <td className="px-6 py-4">
                               <span className={cn(
                                 'inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-medium border',
-                                attempt.attemptNumber >= 3 && 'bg-red-100 text-red-700 border-red-300',
-                                attempt.attemptNumber === 2 && 'bg-amber-100 text-amber-700 border-amber-300',
-                                attempt.attemptNumber === 1 && 'bg-blue-100 text-blue-700 border-blue-300'
+                                attempt.attemptNumber >= 3 && 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700',
+                                attempt.attemptNumber === 2 && 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700',
+                                attempt.attemptNumber === 1 && 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
                               )}>
                                 Attempt {attempt.attemptNumber}/3
                               </span>
@@ -569,7 +558,7 @@ function BillingDashboard() {
             )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

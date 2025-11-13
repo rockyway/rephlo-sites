@@ -95,14 +95,14 @@ export class LLMService {
       // 2. Business logic (credit calculation)
       const duration = Date.now() - startTime;
       const creditsUsed = Math.ceil(
-        (usage.total_tokens / 1000) * creditsPer1kTokens
+        (usage.totalTokens / 1000) * creditsPer1kTokens
       );
 
       const finalResponse: ChatCompletionResponse = {
         ...response,
         usage: {
           ...usage,
-          credits_used: creditsUsed,
+          creditsUsed: creditsUsed,
         },
       };
 
@@ -111,7 +111,7 @@ export class LLMService {
         provider: modelProvider,
         userId,
         duration,
-        tokens: usage.total_tokens,
+        tokens: usage.totalTokens,
         credits: creditsUsed,
       });
 
@@ -125,8 +125,8 @@ export class LLMService {
         requestMetadata: {
           provider: modelProvider,
           temperature: request.temperature,
-          max_tokens: request.max_tokens,
-          messages_count: request.messages.length,
+          maxTokens: request.max_tokens,
+          messagesCount: request.messages.length,
         },
       });
 
@@ -186,17 +186,17 @@ export class LLMService {
         modelId: request.model,
         operation: 'chat',
         usage: {
-          prompt_tokens: Math.ceil(totalTokens * 0.3),
-          completion_tokens: Math.ceil(totalTokens * 0.7),
-          total_tokens: totalTokens,
-          credits_used: creditsUsed,
+          promptTokens: Math.ceil(totalTokens * 0.3),
+          completionTokens: Math.ceil(totalTokens * 0.7),
+          totalTokens: totalTokens,
+          creditsUsed: creditsUsed,
         },
         durationMs: duration,
         requestMetadata: {
           provider: modelProvider,
           temperature: request.temperature,
-          max_tokens: request.max_tokens,
-          messages_count: request.messages.length,
+          maxTokens: request.max_tokens,
+          messagesCount: request.messages.length,
           streaming: true,
         },
       });
@@ -242,14 +242,14 @@ export class LLMService {
 
       const duration = Date.now() - startTime;
       const creditsUsed = Math.ceil(
-        (usage.total_tokens / 1000) * creditsPer1kTokens
+        (usage.totalTokens / 1000) * creditsPer1kTokens
       );
 
       const finalResponse: TextCompletionResponse = {
         ...response,
         usage: {
           ...usage,
-          credits_used: creditsUsed,
+          creditsUsed: creditsUsed,
         },
       };
 
@@ -258,7 +258,7 @@ export class LLMService {
         provider: modelProvider,
         userId,
         duration,
-        tokens: usage.total_tokens,
+        tokens: usage.totalTokens,
         credits: creditsUsed,
       });
 
@@ -271,7 +271,7 @@ export class LLMService {
         requestMetadata: {
           provider: modelProvider,
           temperature: request.temperature,
-          max_tokens: request.max_tokens,
+          maxTokens: request.max_tokens,
         },
       });
 
@@ -327,16 +327,16 @@ export class LLMService {
         modelId: request.model,
         operation: 'completion',
         usage: {
-          prompt_tokens: Math.ceil(totalTokens * 0.3),
-          completion_tokens: Math.ceil(totalTokens * 0.7),
-          total_tokens: totalTokens,
-          credits_used: creditsUsed,
+          promptTokens: Math.ceil(totalTokens * 0.3),
+          completionTokens: Math.ceil(totalTokens * 0.7),
+          totalTokens: totalTokens,
+          creditsUsed: creditsUsed,
         },
         durationMs: duration,
         requestMetadata: {
           provider: modelProvider,
           temperature: request.temperature,
-          max_tokens: request.max_tokens,
+          maxTokens: request.max_tokens,
           streaming: true,
         },
       });

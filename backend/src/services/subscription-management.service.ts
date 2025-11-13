@@ -18,28 +18,15 @@ import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { notFoundError, badRequestError } from '../middleware/error.middleware';
+import {
+  Subscription,
+  SubscriptionStats,
+} from '@rephlo/shared-types';
+import { mapSubscriptionToApiType } from '../utils/typeMappers';
 
 // =============================================================================
 // Types and Interfaces
 // =============================================================================
-
-export interface Subscription {
-  id: string;
-  userId: string;
-  tier: string;
-  billingCycle: 'monthly' | 'annual' | 'lifetime';
-  status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
-  basePriceUsd: number;
-  monthlyCreditAllocation: number;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  trialEndsAt: Date | null;
-  cancelledAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface CreditAllocation {
   id: string;
@@ -155,13 +142,28 @@ export class SubscriptionManagementService {
         await this.allocateMonthlyCredits(input.userId, subscription.id);
       }
 
+      // Fetch subscription with user relation for mapper
+      const createdSubscription = await this.prisma.subscriptionMonetization.findUnique({
+        where: { id: subscription.id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
       logger.info('SubscriptionManagementService: Subscription created', {
         subscriptionId: subscription.id,
         tier: input.tier,
         status: initialStatus,
       });
 
-      return this.mapSubscription(subscription);
+      return mapSubscriptionToApiType(createdSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.createSubscription: Error', { error });
       throw error;
@@ -215,7 +217,7 @@ export class SubscriptionManagementService {
           : Number(newTierConfig.monthlyPriceUsd);
 
       // Update subscription
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
@@ -228,13 +230,28 @@ export class SubscriptionManagementService {
       // TODO: Implement proration logic (integration with Plan 110)
       // For now, upgrade takes effect immediately at renewal
 
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
       logger.info('SubscriptionManagementService: Tier upgraded', {
         subscriptionId,
         oldTier: subscription.tier,
         newTier,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.upgradeTier: Error', { error });
       throw error;
@@ -288,7 +305,7 @@ export class SubscriptionManagementService {
           : Number(newTierConfig.monthlyPriceUsd);
 
       // Update subscription (downgrade takes effect at period end)
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
@@ -298,13 +315,28 @@ export class SubscriptionManagementService {
         },
       });
 
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
       logger.info('SubscriptionManagementService: Tier downgraded', {
         subscriptionId,
         oldTier: subscription.tier,
         newTier,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.downgradeTier: Error', { error });
       throw error;
@@ -342,12 +374,27 @@ export class SubscriptionManagementService {
       const now = new Date();
       const newStatus = cancelAtPeriodEnd ? subscription.status : 'cancelled';
 
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           status: newStatus,
           cancelledAt: now,
           updatedAt: now,
+        },
+      });
+
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
       });
 
@@ -357,7 +404,7 @@ export class SubscriptionManagementService {
         effectiveDate: cancelAtPeriodEnd ? subscription.currentPeriodEnd : now,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.cancelSubscription: Error', { error });
       throw error;
@@ -387,7 +434,7 @@ export class SubscriptionManagementService {
         throw badRequestError('Subscription is not cancelled');
       }
 
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscriptionMonetization.update({
         where: { id: subscriptionId },
         data: {
           status: 'active',
@@ -396,11 +443,26 @@ export class SubscriptionManagementService {
         },
       });
 
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
       logger.info('SubscriptionManagementService: Subscription reactivated', {
         subscriptionId,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.reactivateSubscription: Error', { error });
       throw error;
@@ -427,14 +489,21 @@ export class SubscriptionManagementService {
     });
 
     try {
-      // Get subscription
+      // Get subscription (always fetch from Prisma for consistent types)
       let subscription;
       if (subscriptionId) {
         subscription = await this.prisma.subscriptionMonetization.findUnique({
           where: { id: subscriptionId },
         });
       } else {
-        subscription = await this.getActiveSubscription(userId);
+        // Fetch active subscription directly from Prisma (not using mapper)
+        subscription = await this.prisma.subscriptionMonetization.findFirst({
+          where: {
+            userId,
+            status: { in: ['trial', 'active'] },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
       }
 
       if (!subscription) {
@@ -604,9 +673,19 @@ export class SubscriptionManagementService {
           status: { in: ['trial', 'active'] },
         },
         orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       });
 
-      return subscription ? this.mapSubscription(subscription) : null;
+      return subscription ? mapSubscriptionToApiType(subscription) : null;
     } catch (error) {
       logger.error('SubscriptionManagementService.getActiveSubscription: Error', { error });
       return null;
@@ -625,9 +704,19 @@ export class SubscriptionManagementService {
       const subscriptions = await this.prisma.subscriptionMonetization.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       });
 
-      return subscriptions.map((sub) => this.mapSubscription(sub));
+      return subscriptions.map((sub) => mapSubscriptionToApiType(sub));
     } catch (error) {
       logger.error('SubscriptionManagementService.getSubscriptionHistory: Error', { error });
       throw error;
@@ -683,7 +772,7 @@ export class SubscriptionManagementService {
       ]);
 
       return {
-        data: subscriptions.map((sub) => this.mapSubscription(sub)),
+        data: subscriptions.map((sub) => mapSubscriptionToApiType(sub)),
         total,
         page,
         limit,
@@ -696,54 +785,70 @@ export class SubscriptionManagementService {
 
   /**
    * Get subscription statistics for dashboard
-   * @returns Subscription stats (total, by status, by tier)
+   * Uses shared SubscriptionStats type from @rephlo/shared-types
+   * @returns Subscription stats matching shared type interface
    */
-  async getSubscriptionStats(): Promise<{
-    total: number;
-    active: number;
-    trial: number;
-    cancelled: number;
-    expired: number;
-    byTier: Record<string, number>;
-  }> {
+  async getSubscriptionStats(): Promise<SubscriptionStats> {
     logger.debug('SubscriptionManagementService.getSubscriptionStats');
 
     try {
-      const [total, byStatus, byTier] = await Promise.all([
-        this.prisma.subscriptionMonetization.count(),
-        this.prisma.subscriptionMonetization.groupBy({
-          by: ['status'],
-          _count: { id: true },
+      // Calculate date range for current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const [activeCount, pastDueCount, mrrData, trialConversions] = await Promise.all([
+        // Count active subscriptions
+        this.prisma.subscriptionMonetization.count({
+          where: { status: 'active' },
         }),
-        this.prisma.subscriptionMonetization.groupBy({
-          by: ['tier'],
-          _count: { id: true },
+
+        // Count past due subscriptions
+        this.prisma.subscriptionMonetization.count({
+          where: { status: 'past_due' },
+        }),
+
+        // Calculate MRR (Monthly Recurring Revenue)
+        this.prisma.subscriptionMonetization.aggregate({
+          where: {
+            status: 'active',
+            billingCycle: 'monthly',
+          },
+          _sum: { basePriceUsd: true },
+        }),
+
+        // Count trial conversions this month (trials that became active)
+        this.prisma.subscriptionMonetization.count({
+          where: {
+            status: 'active',
+            updatedAt: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+            // Look for subscriptions that were trials before
+            // Note: This is an approximation - ideally we'd have a status history table
+          },
         }),
       ]);
 
-      const statusCounts = byStatus.reduce(
-        (acc, item) => {
-          acc[item.status] = item._count.id;
-          return acc;
+      // Calculate MRR including annual subscriptions (converted to monthly)
+      const annualMrrData = await this.prisma.subscriptionMonetization.aggregate({
+        where: {
+          status: 'active',
+          billingCycle: 'annual',
         },
-        {} as Record<string, number>
-      );
+        _sum: { basePriceUsd: true },
+      });
 
-      const tierCounts = byTier.reduce(
-        (acc, item) => {
-          acc[item.tier] = item._count.id;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
+      const monthlyMrr = Number(mrrData._sum.basePriceUsd) || 0;
+      const annualMrr = (Number(annualMrrData._sum.basePriceUsd) || 0) / 12; // Convert annual to monthly
+      const totalMrr = monthlyMrr + annualMrr;
 
       return {
-        total,
-        active: statusCounts.active || 0,
-        trial: statusCounts.trial || 0,
-        cancelled: statusCounts.cancelled || 0,
-        expired: statusCounts.expired || 0,
-        byTier: tierCounts,
+        totalActive: activeCount,
+        mrr: Math.round(totalMrr * 100) / 100, // Round to 2 decimal places
+        pastDueCount: pastDueCount,
+        trialConversionsThisMonth: trialConversions,
       };
     } catch (error) {
       logger.error('SubscriptionManagementService.getSubscriptionStats: Error', { error });
@@ -754,29 +859,6 @@ export class SubscriptionManagementService {
   // ===========================================================================
   // Private Helper Methods
   // ===========================================================================
-
-  /**
-   * Map Prisma subscription to service interface
-   */
-  private mapSubscription(subscription: any): Subscription {
-    return {
-      id: subscription.id,
-      userId: subscription.userId,
-      tier: subscription.tier,
-      billingCycle: subscription.billingCycle as 'monthly' | 'annual' | 'lifetime',
-      status: subscription.status as 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired',
-      basePriceUsd: Number(subscription.basePriceUsd),
-      monthlyCreditAllocation: subscription.monthlyCreditAllocation,
-      stripeCustomerId: subscription.stripeCustomerId,
-      stripeSubscriptionId: subscription.stripeSubscriptionId,
-      currentPeriodStart: subscription.currentPeriodStart,
-      currentPeriodEnd: subscription.currentPeriodEnd,
-      trialEndsAt: subscription.trialEndsAt,
-      cancelledAt: subscription.cancelledAt,
-      createdAt: subscription.createdAt,
-      updatedAt: subscription.updatedAt,
-    };
-  }
 
   /**
    * Get tier level for comparison (higher number = higher tier)

@@ -115,10 +115,13 @@ export class CreditManagementController {
         subscriptionId
       );
 
+      // Standard response format
       res.status(201).json({
-        success: true,
+        status: 'success',
         data: allocation,
-        message: 'Credits allocated successfully',
+        meta: {
+          message: 'Credits allocated successfully',
+        },
       });
     } catch (error) {
       logger.error('CreditManagementController.allocateSubscriptionCredits: Error', {
@@ -142,10 +145,13 @@ export class CreditManagementController {
     try {
       const summary = await this.creditService.processMonthlyAllocations();
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: summary,
-        message: `Monthly allocations processed: ${summary.totalUsers} users, ${summary.totalAllocated} credits`,
+        meta: {
+          message: `Monthly allocations processed: ${summary.totalUsers} users, ${summary.totalAllocated} credits`,
+        },
       });
     } catch (error) {
       logger.error('CreditManagementController.processMonthlyAllocations: Error', {
@@ -203,10 +209,13 @@ export class CreditManagementController {
         expiresAt
       );
 
+      // Standard response format
       res.status(201).json({
-        success: true,
+        status: 'success',
         data: allocation,
-        message: `${amount} bonus credits granted`,
+        meta: {
+          message: `${amount} bonus credits granted`,
+        },
       });
     } catch (error) {
       logger.error('CreditManagementController.grantBonusCredits: Error', { error });
@@ -252,9 +261,10 @@ export class CreditManagementController {
     try {
       await this.creditService.deductCreditsManually(userId, amount, reason);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: `${amount} credits deducted`,
+        status: 'success',
+        data: { message: `${amount} credits deducted` },
       });
     } catch (error) {
       logger.error('CreditManagementController.deductCreditsManually: Error', { error });
@@ -316,9 +326,10 @@ export class CreditManagementController {
     try {
       await this.creditService.applyRollover(userId, rolloverAmount);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: `Rollover of ${rolloverAmount} credits applied`,
+        status: 'success',
+        data: { message: `Rollover of ${rolloverAmount} credits applied` },
       });
     } catch (error) {
       logger.error('CreditManagementController.applyRollover: Error', { error });
@@ -346,9 +357,10 @@ export class CreditManagementController {
     try {
       await this.creditService.syncWithTokenCreditSystem(userId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: 'Credits synced with token-credit system',
+        status: 'success',
+        data: { message: 'Credits synced with token-credit system' },
       });
     } catch (error) {
       logger.error('CreditManagementController.syncWithTokenCreditSystem: Error', {

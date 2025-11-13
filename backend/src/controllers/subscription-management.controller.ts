@@ -163,10 +163,13 @@ export class SubscriptionManagementController {
     try {
       const subscription = await this.subscriptionService.upgradeTier(subscriptionId, newTier);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: subscription,
-        message: `Subscription upgraded to ${newTier}`,
+        meta: {
+          message: `Subscription upgraded to ${newTier}`,
+        },
       });
     } catch (error) {
       logger.error('SubscriptionManagementController.upgradeTier: Error', { error });
@@ -214,10 +217,13 @@ export class SubscriptionManagementController {
         newTier
       );
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: subscription,
-        message: `Subscription downgraded to ${newTier}`,
+        meta: {
+          message: `Subscription downgraded to ${newTier}`,
+        },
       });
     } catch (error) {
       logger.error('SubscriptionManagementController.downgradeTier: Error', { error });
@@ -265,12 +271,15 @@ export class SubscriptionManagementController {
         cancelAtPeriodEnd
       );
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: subscription,
-        message: cancelAtPeriodEnd
-          ? 'Subscription will be cancelled at period end'
-          : 'Subscription cancelled immediately',
+        meta: {
+          message: cancelAtPeriodEnd
+            ? 'Subscription will be cancelled at period end'
+            : 'Subscription cancelled immediately',
+        },
       });
     } catch (error) {
       logger.error('SubscriptionManagementController.cancelSubscription: Error', { error });
@@ -296,10 +305,13 @@ export class SubscriptionManagementController {
         subscriptionId
       );
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: subscription,
-        message: 'Subscription reactivated successfully',
+        meta: {
+          message: 'Subscription reactivated successfully',
+        },
       });
     } catch (error) {
       logger.error('SubscriptionManagementController.reactivateSubscription: Error', {
@@ -338,10 +350,13 @@ export class SubscriptionManagementController {
         subscriptionId
       );
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: allocation,
-        message: 'Monthly credits allocated successfully',
+        meta: {
+          message: 'Monthly credits allocated successfully',
+        },
       });
     } catch (error) {
       logger.error('SubscriptionManagementController.allocateMonthlyCredits: Error', {
@@ -371,9 +386,10 @@ export class SubscriptionManagementController {
     try {
       await this.subscriptionService.handleRollover(userId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: 'Credit rollover processed successfully',
+        status: 'success',
+        data: { message: 'Credit rollover processed successfully' },
       });
     } catch (error) {
       logger.error('SubscriptionManagementController.handleRollover: Error', { error });

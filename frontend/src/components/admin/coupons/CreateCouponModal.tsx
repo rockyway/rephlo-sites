@@ -7,7 +7,7 @@
  * - Auto-generate coupon code option
  * - Dynamic field visibility based on coupon type
  * - Multi-select for tier eligibility and billing cycles
- * - Date validation (valid_until must be after valid_from)
+ * - Date validation (validUntil must be after validFrom)
  * - Campaign linking support
  * - Client-side validation with clear error messages
  *
@@ -28,12 +28,15 @@ import CouponCodeInput from '@/components/plan111/CouponCodeInput';
 import { plan111API } from '@/api/plan111';
 import { cn } from '@/lib/utils';
 import type {
-  CouponCreateRequest,
+  CreateCouponRequest,
+  CouponCampaign,
+} from '@rephlo/shared-types';
+import {
   CouponType,
+  DiscountType,
   SubscriptionTier,
   BillingCycle,
-  CouponCampaign,
-} from '@/types/plan111.types';
+} from '@rephlo/shared-types';
 
 interface CreateCouponModalProps {
   isOpen: boolean;
@@ -47,44 +50,44 @@ interface FormErrors {
 
 const COUPON_TYPES: { value: CouponType; label: string; description: string }[] = [
   {
-    value: 'percentage',
+    value: CouponType.PERCENTAGE,
     label: 'Percentage Discount',
     description: '% off subscription price',
   },
   {
-    value: 'fixed_amount',
+    value: CouponType.FIXED_AMOUNT,
     label: 'Fixed Amount Discount',
     description: '$ off subscription price',
   },
   {
-    value: 'tier_specific',
+    value: CouponType.TIER_SPECIFIC,
     label: 'Tier Specific',
     description: 'Discount for specific tier upgrades',
   },
   {
-    value: 'duration_bonus',
+    value: CouponType.DURATION_BONUS,
     label: 'Duration Bonus',
     description: 'Free additional months',
   },
   {
-    value: 'perpetual_migration',
+    value: CouponType.PERPETUAL_MIGRATION,
     label: 'BYOK Migration',
     description: 'Perpetual license migration discount',
   },
 ];
 
 const TIERS: { value: SubscriptionTier; label: string }[] = [
-  { value: 'free', label: 'Free' },
-  { value: 'pro', label: 'Pro' },
-  { value: 'pro_max', label: 'Pro Max' },
-  { value: 'enterprise_pro', label: 'Enterprise Pro' },
-  { value: 'enterprise_max', label: 'Enterprise Max' },
-  { value: 'perpetual', label: 'Perpetual' },
+  { value: SubscriptionTier.FREE, label: 'Free' },
+  { value: SubscriptionTier.PRO, label: 'Pro' },
+  { value: SubscriptionTier.PRO_MAX, label: 'Pro Max' },
+  { value: SubscriptionTier.ENTERPRISE_PRO, label: 'Enterprise Pro' },
+  { value: SubscriptionTier.ENTERPRISE_MAX, label: 'Enterprise Max' },
+  { value: SubscriptionTier.PERPETUAL, label: 'Perpetual' },
 ];
 
 const BILLING_CYCLES: { value: BillingCycle; label: string }[] = [
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'annual', label: 'Annual' },
+  { value: BillingCycle.MONTHLY, label: 'Monthly' },
+  { value: BillingCycle.ANNUAL, label: 'Annual' },
 ];
 
 export default function CreateCouponModal({
@@ -92,21 +95,21 @@ export default function CreateCouponModal({
   onClose,
   onSuccess,
 }: CreateCouponModalProps) {
-  // Form state (with local discount_value that maps to API fields)
-  const [formData, setFormData] = useState<Partial<CouponCreateRequest> & { discount_value?: number }>({
+  // Form state (with local discountValue that maps to API fields)
+  const [formData, setFormData] = useState<Partial<CreateCouponRequest> & { discountValue?: number }>({
     code: '',
-    type: 'percentage',
-    discount_value: undefined, // Local field - maps to discount_percentage/discount_amount/bonus_duration_months
-    max_discount_applications: undefined,
-    max_per_customer: 1,
-    applicable_tiers: ['free', 'pro', 'pro_max'],
-    applicable_billing_cycles: ['monthly', 'annual'],
-    valid_from: '',
-    valid_until: '',
-    is_active: true,
-    campaign_id: undefined,
+    type: CouponType.PERCENTAGE,
+    discountValue: undefined, // Local field - maps to discountPercentage/discountAmount/bonusDurationMonths
+    maxUses: undefined,
+    maxUsesPerUser: 1,
+    tierEligibility: [SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX],
+    billingCycles: [BillingCycle.MONTHLY, BillingCycle.ANNUAL],
+    validFrom: '',
+    validUntil: '',
+    isActive: true,
+    campaignId: undefined,
     description: '',
-    internal_notes: '',
+    internalNotes: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -146,7 +149,7 @@ export default function CreateCouponModal({
     setFormData({ ...formData, code });
   };
 
-  const handleChange = (field: keyof CouponCreateRequest | 'discount_value', value: any) => {
+  const handleChange = (field: keyof CreateCouponRequest | 'discountValue', value: any) => {
     setFormData({ ...formData, [field]: value });
     // Clear error for this field when user makes changes
     if (errors[field]) {
@@ -157,19 +160,19 @@ export default function CreateCouponModal({
   };
 
   const handleTierToggle = (tier: SubscriptionTier) => {
-    const currentTiers = formData.applicable_tiers || [];
+    const currentTiers = formData.tierEligibility || [];
     const newTiers = currentTiers.includes(tier)
       ? currentTiers.filter((t) => t !== tier)
       : [...currentTiers, tier];
-    handleChange('applicable_tiers', newTiers);
+    handleChange('tierEligibility', newTiers);
   };
 
   const handleBillingCycleToggle = (cycle: BillingCycle) => {
-    const currentCycles = formData.applicable_billing_cycles || [];
+    const currentCycles = formData.billingCycles || [];
     const newCycles = currentCycles.includes(cycle)
       ? currentCycles.filter((c) => c !== cycle)
       : [...currentCycles, cycle];
-    handleChange('applicable_billing_cycles', newCycles);
+    handleChange('billingCycles', newCycles);
   };
 
   const validateForm = (): boolean => {
@@ -183,34 +186,34 @@ export default function CreateCouponModal({
     }
 
     // Discount value validation
-    if (!formData.discount_value || formData.discount_value <= 0) {
-      newErrors.discount_value = 'Discount value must be greater than 0';
+    if (!formData.discountValue || formData.discountValue <= 0) {
+      newErrors.discountValue = 'Discount value must be greater than 0';
     }
 
     // Percentage discount validation (max 100%)
     if (
-      formData.type === 'percentage' &&
-      formData.discount_value &&
-      formData.discount_value > 100
+      formData.type === CouponType.PERCENTAGE &&
+      formData.discountValue &&
+      formData.discountValue > 100
     ) {
-      newErrors.discount_value = 'Percentage discount cannot exceed 100%';
+      newErrors.discountValue = 'Percentage discount cannot exceed 100%';
     }
 
     // Date validation
-    if (!formData.valid_from) {
-      newErrors.valid_from = 'Valid from date is required';
+    if (!formData.validFrom) {
+      newErrors.validFrom = 'Valid from date is required';
     }
 
-    if (!formData.valid_until) {
-      newErrors.valid_until = 'Valid until date is required';
+    if (!formData.validUntil) {
+      newErrors.validUntil = 'Valid until date is required';
     }
 
-    if (formData.valid_from && formData.valid_until) {
-      const fromDate = new Date(formData.valid_from);
-      const untilDate = new Date(formData.valid_until);
+    if (formData.validFrom && formData.validUntil) {
+      const fromDate = new Date(formData.validFrom);
+      const untilDate = new Date(formData.validUntil);
 
       if (untilDate <= fromDate) {
-        newErrors.valid_until = 'Valid until date must be after valid from date';
+        newErrors.validUntil = 'Valid until date must be after valid from date';
       }
 
       // Warn if start date is in the past
@@ -222,25 +225,25 @@ export default function CreateCouponModal({
     }
 
     // Max uses validation
-    if (formData.max_discount_applications !== null && formData.max_discount_applications !== undefined) {
-      if (formData.max_discount_applications <= 0) {
-        newErrors.max_discount_applications = 'Max uses must be greater than 0 or left empty for unlimited';
+    if (formData.maxUses !== null && formData.maxUses !== undefined) {
+      if (formData.maxUses <= 0) {
+        newErrors.maxUses = 'Max uses must be greater than 0 or left empty for unlimited';
       }
     }
 
     // Max uses per user validation
-    if (!formData.max_per_customer || formData.max_per_customer < 1) {
-      newErrors.max_per_customer = 'Max uses per customer must be at least 1';
+    if (!formData.maxUsesPerUser || formData.maxUsesPerUser < 1) {
+      newErrors.maxUsesPerUser = 'Max uses per customer must be at least 1';
     }
 
     // Tier eligibility validation
-    if (!formData.applicable_tiers || formData.applicable_tiers.length === 0) {
-      newErrors.applicable_tiers = 'At least one tier must be selected';
+    if (!formData.tierEligibility || formData.tierEligibility.length === 0) {
+      newErrors.tierEligibility = 'At least one tier must be selected';
     }
 
     // Billing cycles validation
-    if (!formData.applicable_billing_cycles || formData.applicable_billing_cycles.length === 0) {
-      newErrors.applicable_billing_cycles = 'At least one billing cycle must be selected';
+    if (!formData.billingCycles || formData.billingCycles.length === 0) {
+      newErrors.billingCycles = 'At least one billing cycle must be selected';
     }
 
     setErrors(newErrors);
@@ -259,24 +262,22 @@ export default function CreateCouponModal({
     setIsSubmitting(true);
 
     try {
-      // Prepare request data - map discount_value to appropriate API field based on type
-      const requestData: CouponCreateRequest = {
+      // Prepare request data
+      const requestData: CreateCouponRequest = {
         code: formData.code!.toUpperCase(),
         type: formData.type!,
-        // Map discount_value to the correct field based on coupon type
-        ...(formData.type === 'percentage' && { discount_percentage: formData.discount_value }),
-        ...(formData.type === 'fixed_amount' && { discount_amount: formData.discount_value }),
-        ...(formData.type === 'duration_bonus' && { bonus_duration_months: formData.discount_value }),
-        max_discount_applications: formData.max_discount_applications,
-        max_per_customer: formData.max_per_customer || 1,
-        applicable_tiers: formData.applicable_tiers!,
-        applicable_billing_cycles: formData.applicable_billing_cycles!,
-        valid_from: formData.valid_from!,
-        valid_until: formData.valid_until!,
-        is_active: formData.is_active ?? true,
-        campaign_id: formData.campaign_id || undefined,
+        discountValue: formData.discountValue!,
+        discountType: DiscountType.PERCENTAGE,
+        maxUses: formData.maxUses,
+        maxUsesPerUser: formData.maxUsesPerUser || 1,
+        tierEligibility: formData.tierEligibility!,
+        billingCycles: formData.billingCycles!,
+        validFrom: formData.validFrom!,
+        validUntil: formData.validUntil!,
+        isActive: formData.isActive ?? true,
+        campaignId: formData.campaignId || undefined,
         description: formData.description || undefined,
-        internal_notes: formData.internal_notes || undefined,
+        internalNotes: formData.internalNotes || undefined,
       };
 
       await plan111API.createCoupon(requestData);
@@ -302,18 +303,18 @@ export default function CreateCouponModal({
   const resetForm = () => {
     setFormData({
       code: '',
-      type: 'percentage',
-      discount_value: undefined,
-      max_discount_applications: undefined,
-      max_per_customer: 1,
-      applicable_tiers: ['free', 'pro', 'pro_max'],
-      applicable_billing_cycles: ['monthly', 'annual'],
-      valid_from: '',
-      valid_until: '',
-      is_active: true,
-      campaign_id: undefined,
+      type: CouponType.PERCENTAGE,
+      discountValue: undefined,
+      maxUses: undefined,
+      maxUsesPerUser: 1,
+      tierEligibility: [SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX],
+      billingCycles: [BillingCycle.MONTHLY, BillingCycle.ANNUAL],
+      validFrom: '',
+      validUntil: '',
+      isActive: true,
+      campaignId: undefined,
       description: '',
-      internal_notes: '',
+      internalNotes: '',
     });
     setErrors({});
     setSubmitError(null);
@@ -428,27 +429,27 @@ export default function CreateCouponModal({
               </label>
               <Input
                 type="number"
-                value={formData.discount_value || ''}
-                onChange={(e) => handleChange('discount_value', parseFloat(e.target.value))}
+                value={formData.discountValue || ''}
+                onChange={(e) => handleChange('discountValue', parseFloat(e.target.value))}
                 disabled={isSubmitting}
                 placeholder={
-                  formData.type === 'percentage'
+                  formData.type === CouponType.PERCENTAGE
                     ? 'e.g., 25 (%)'
-                    : formData.type === 'duration_bonus'
+                    : formData.type === CouponType.DURATION_BONUS
                     ? 'e.g., 3 (months)'
                     : 'e.g., 20.00 ($)'
                 }
-                step={formData.type === 'percentage' ? '1' : '0.01'}
+                step={formData.type === CouponType.PERCENTAGE ? '1' : '0.01'}
                 min="0"
-                className={cn(errors.discount_value && 'border-red-300')}
+                className={cn(errors.discountValue && 'border-red-300')}
               />
-              {errors.discount_value && (
-                <p className="mt-1 text-sm text-red-600">{errors.discount_value}</p>
+              {errors.discountValue && (
+                <p className="mt-1 text-sm text-red-600">{errors.discountValue}</p>
               )}
               <p className="mt-1 text-xs text-deep-navy-600 dark:text-deep-navy-300">
-                {formData.type === 'percentage' && 'Enter percentage (0-100)'}
-                {formData.type === 'fixed_amount' && 'Enter dollar amount'}
-                {formData.type === 'duration_bonus' && 'Enter number of free months'}
+                {formData.type === CouponType.PERCENTAGE && 'Enter percentage (0-100)'}
+                {formData.type === CouponType.FIXED_AMOUNT && 'Enter dollar amount'}
+                {formData.type === CouponType.DURATION_BONUS && 'Enter number of free months'}
               </p>
             </div>
 
@@ -465,7 +466,7 @@ export default function CreateCouponModal({
                   >
                     <input
                       type="checkbox"
-                      checked={formData.applicable_tiers?.includes(tier.value) || false}
+                      checked={formData.tierEligibility?.includes(tier.value) || false}
                       onChange={() => handleTierToggle(tier.value)}
                       disabled={isSubmitting}
                       className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
@@ -476,8 +477,8 @@ export default function CreateCouponModal({
                   </label>
                 ))}
               </div>
-              {errors.applicable_tiers && (
-                <p className="mt-1 text-sm text-red-600">{errors.applicable_tiers}</p>
+              {errors.tierEligibility && (
+                <p className="mt-1 text-sm text-red-600">{errors.tierEligibility}</p>
               )}
             </div>
 
@@ -494,7 +495,7 @@ export default function CreateCouponModal({
                   >
                     <input
                       type="checkbox"
-                      checked={formData.applicable_billing_cycles?.includes(cycle.value) || false}
+                      checked={formData.billingCycles?.includes(cycle.value) || false}
                       onChange={() => handleBillingCycleToggle(cycle.value)}
                       disabled={isSubmitting}
                       className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
@@ -505,8 +506,8 @@ export default function CreateCouponModal({
                   </label>
                 ))}
               </div>
-              {errors.applicable_billing_cycles && (
-                <p className="mt-1 text-sm text-red-600">{errors.applicable_billing_cycles}</p>
+              {errors.billingCycles && (
+                <p className="mt-1 text-sm text-red-600">{errors.billingCycles}</p>
               )}
             </div>
 
@@ -518,13 +519,13 @@ export default function CreateCouponModal({
                 </label>
                 <Input
                   type="datetime-local"
-                  value={formData.valid_from}
-                  onChange={(e) => handleChange('valid_from', e.target.value)}
+                  value={formData.validFrom}
+                  onChange={(e) => handleChange('validFrom', e.target.value)}
                   disabled={isSubmitting}
-                  className={cn(errors.valid_from && 'border-red-300')}
+                  className={cn(errors.validFrom && 'border-red-300')}
                 />
-                {errors.valid_from && (
-                  <p className="mt-1 text-sm text-red-600">{errors.valid_from}</p>
+                {errors.validFrom && (
+                  <p className="mt-1 text-sm text-red-600">{errors.validFrom}</p>
                 )}
               </div>
               <div>
@@ -533,13 +534,13 @@ export default function CreateCouponModal({
                 </label>
                 <Input
                   type="datetime-local"
-                  value={formData.valid_until}
-                  onChange={(e) => handleChange('valid_until', e.target.value)}
+                  value={formData.validUntil}
+                  onChange={(e) => handleChange('validUntil', e.target.value)}
                   disabled={isSubmitting}
-                  className={cn(errors.valid_until && 'border-red-300')}
+                  className={cn(errors.validUntil && 'border-red-300')}
                 />
-                {errors.valid_until && (
-                  <p className="mt-1 text-sm text-red-600">{errors.valid_until}</p>
+                {errors.validUntil && (
+                  <p className="mt-1 text-sm text-red-600">{errors.validUntil}</p>
                 )}
               </div>
             </div>
@@ -552,17 +553,17 @@ export default function CreateCouponModal({
                 </label>
                 <Input
                   type="number"
-                  value={formData.max_discount_applications || ''}
+                  value={formData.maxUses || ''}
                   onChange={(e) =>
-                    handleChange('max_discount_applications', e.target.value ? parseInt(e.target.value) : undefined)
+                    handleChange('maxUses', e.target.value ? parseInt(e.target.value) : undefined)
                   }
                   disabled={isSubmitting}
                   placeholder="Leave empty for unlimited"
                   min="1"
-                  className={cn(errors.max_discount_applications && 'border-red-300')}
+                  className={cn(errors.maxUses && 'border-red-300')}
                 />
-                {errors.max_discount_applications && (
-                  <p className="mt-1 text-sm text-red-600">{errors.max_discount_applications}</p>
+                {errors.maxUses && (
+                  <p className="mt-1 text-sm text-red-600">{errors.maxUses}</p>
                 )}
                 <p className="mt-1 text-xs text-deep-navy-600 dark:text-deep-navy-300">
                   Empty = unlimited uses
@@ -574,17 +575,17 @@ export default function CreateCouponModal({
                 </label>
                 <Input
                   type="number"
-                  value={formData.max_per_customer || ''}
+                  value={formData.maxUsesPerUser || ''}
                   onChange={(e) =>
-                    handleChange('max_per_customer', parseInt(e.target.value))
+                    handleChange('maxUsesPerUser', parseInt(e.target.value))
                   }
                   disabled={isSubmitting}
                   placeholder="1"
                   min="1"
-                  className={cn(errors.max_per_customer && 'border-red-300')}
+                  className={cn(errors.maxUsesPerUser && 'border-red-300')}
                 />
-                {errors.max_per_customer && (
-                  <p className="mt-1 text-sm text-red-600">{errors.max_per_customer}</p>
+                {errors.maxUsesPerUser && (
+                  <p className="mt-1 text-sm text-red-600">{errors.maxUsesPerUser}</p>
                 )}
               </div>
             </div>
@@ -600,9 +601,9 @@ export default function CreateCouponModal({
                 </div>
               ) : (
                 <select
-                  value={formData.campaign_id || ''}
+                  value={formData.campaignId || ''}
                   onChange={(e) =>
-                    handleChange('campaign_id', e.target.value || undefined)
+                    handleChange('campaignId', e.target.value || undefined)
                   }
                   disabled={isSubmitting}
                   className="w-full h-10 rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 shadow-sm focus:border-rephlo-blue focus:ring-rephlo-blue dark:focus:border-electric-cyan dark:focus:ring-electric-cyan"
@@ -638,8 +639,8 @@ export default function CreateCouponModal({
                 Internal Notes (Admin Only)
               </label>
               <textarea
-                value={formData.internal_notes || ''}
-                onChange={(e) => handleChange('internal_notes', e.target.value)}
+                value={formData.internalNotes || ''}
+                onChange={(e) => handleChange('internalNotes', e.target.value)}
                 disabled={isSubmitting}
                 placeholder="Optional - for admin reference only"
                 rows={2}
@@ -652,8 +653,8 @@ export default function CreateCouponModal({
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formData.is_active || false}
-                  onChange={(e) => handleChange('is_active', e.target.checked)}
+                  checked={formData.isActive || false}
+                  onChange={(e) => handleChange('isActive', e.target.checked)}
                   disabled={isSubmitting}
                   className="rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
                 />

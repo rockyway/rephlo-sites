@@ -157,9 +157,9 @@ export class ModelTierAdminService {
       model: {
         id: result.updatedModel.id,
         name: result.updatedModel.name,
-        displayName: result.updatedModel.displayName,
+        displayName: result.updatedModel.displayName ?? result.updatedModel.name,
         provider: result.updatedModel.provider,
-        requiredTier: result.updatedModel.requiredTier,
+        requiredTier: result.updatedModel.requiredTier ?? 'free',
         tierRestrictionMode: result.updatedModel
           .tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
         allowedTiers: result.updatedModel.allowedTiers,
@@ -415,9 +415,9 @@ export class ModelTierAdminService {
       models: models.map((model) => ({
         id: model.id,
         name: model.name,
-        displayName: model.displayName,
+        displayName: model.displayName ?? model.name,
         provider: model.provider,
-        requiredTier: model.requiredTier,
+        requiredTier: model.requiredTier ?? 'free',
         tierRestrictionMode: model.tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
         allowedTiers: model.allowedTiers,
         isAvailable: model.isAvailable,

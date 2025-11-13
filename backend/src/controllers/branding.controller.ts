@@ -2,7 +2,6 @@
  * Branding Controller
  *
  * Handles HTTP endpoints for public branding website API.
- * These endpoints maintain backward compatibility with the legacy format.
  *
  * Endpoints:
  * - POST /api/track-download   - Track download events
@@ -10,11 +9,11 @@
  * - GET  /api/version           - Get latest app version
  * - POST /api/diagnostics       - Upload diagnostic files
  *
- * Legacy Response Format (maintained for backward compatibility):
- * Success: { success: true, data: {...} }
- * Error:   { success: false, error: "message" }
+ * Standard Response Format:
+ * Success: { status: 'success', data: {...}, meta?: {...} }
+ * Error:   { status: 'error', error: { code, message, details } }
  *
- * Reference: docs/plan/102-api-consolidation-plan.md
+ * Reference: docs/analysis/080-batch7-branding-standardization-spec.md
  */
 
 import { injectable, inject } from 'tsyringe';
@@ -35,36 +34,9 @@ import { getHashedClientIp } from '../utils/hash';
 import { getDownloadUrl } from '../config/downloads';
 
 // =============================================================================
-// Legacy Response Format Utilities
+// Note: Response format follows standard { status, data, meta } pattern
+// No wrapper utilities needed - return response body directly via res.json()
 // =============================================================================
-
-/**
- * Legacy success response format
- * Maintains backward compatibility with existing branding website
- */
-function legacySuccess<T>(data: T, statusCode: number = 200) {
-  return {
-    statusCode,
-    body: {
-      success: true,
-      data,
-    },
-  };
-}
-
-/**
- * Legacy error response format
- * Maintains backward compatibility with existing branding website
- */
-function legacyError(error: string, statusCode: number = 400) {
-  return {
-    statusCode,
-    body: {
-      success: false,
-      error,
-    },
-  };
-}
 
 // =============================================================================
 // Branding Controller Class
@@ -122,10 +94,13 @@ export class BrandingController {
    *
    * Response 200:
    * {
-   *   "success": true,
+   *   "status": "success",
    *   "data": {
    *     "downloadUrl": "https://...",
    *     "downloadId": "clx..."
+   *   },
+   *   "meta": {
+   *     "message": "Download tracked successfully"
    *   }
    * }
    */
@@ -136,8 +111,13 @@ export class BrandingController {
 
       if (!validationResult.success) {
         const errors = validationResult.error.errors.map(err => err.message);
-        const response = legacyError(`Validation failed: ${errors.join(', ')}`, 400);
-        res.status(response.statusCode).json(response.body);
+        res.status(400).json({
+          status: 'error',
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: `Validation failed: ${errors.join(', ')}`,
+          },
+        });
         return;
       }
 
@@ -166,25 +146,31 @@ export class BrandingController {
         ipHash: ipHash?.substring(0, 8),
       });
 
-      const response = legacySuccess({
-        downloadUrl,
-        downloadId: download.id,
+      res.status(200).json({
+        status: 'success',
+        data: {
+          downloadUrl,
+          downloadId: download.id,
+        },
+        meta: {
+          message: 'Download tracked successfully',
+        },
       });
-
-      res.status(response.statusCode).json(response.body);
     } catch (error) {
       logger.error('BrandingController.trackDownload: Error', {
         error: error instanceof Error ? error.message : String(error),
       });
 
-      const response = legacyError(
-        process.env.NODE_ENV === 'development'
-          ? (error as Error).message
-          : 'Internal server error',
-        500
-      );
-
-      res.status(response.statusCode).json(response.body);
+      res.status(500).json({
+        status: 'error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            process.env.NODE_ENV === 'development'
+              ? (error as Error).message
+              : 'Internal server error',
+        },
+      });
     }
   }
 
@@ -205,9 +191,12 @@ export class BrandingController {
    *
    * Response 201:
    * {
-   *   "success": true,
+   *   "status": "success",
    *   "data": {
    *     "feedbackId": "clx..."
+   *   },
+   *   "meta": {
+   *     "message": "Feedback submitted successfully"
    *   }
    * }
    */
@@ -218,8 +207,13 @@ export class BrandingController {
 
       if (!validationResult.success) {
         const errors = validationResult.error.errors.map(err => err.message);
-        const response = legacyError(`Validation failed: ${errors.join(', ')}`, 400);
-        res.status(response.statusCode).json(response.body);
+        res.status(400).json({
+          status: 'error',
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: `Validation failed: ${errors.join(', ')}`,
+          },
+        });
         return;
       }
 
@@ -241,27 +235,30 @@ export class BrandingController {
         hasEmail: !!email,
       });
 
-      const response = legacySuccess(
-        {
+      res.status(201).json({
+        status: 'success',
+        data: {
           feedbackId: feedback.id,
         },
-        201
-      );
-
-      res.status(response.statusCode).json(response.body);
+        meta: {
+          message: 'Feedback submitted successfully',
+        },
+      });
     } catch (error) {
       logger.error('BrandingController.submitFeedback: Error', {
         error: error instanceof Error ? error.message : String(error),
       });
 
-      const response = legacyError(
-        process.env.NODE_ENV === 'development'
-          ? (error as Error).message
-          : 'Internal server error',
-        500
-      );
-
-      res.status(response.statusCode).json(response.body);
+      res.status(500).json({
+        status: 'error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            process.env.NODE_ENV === 'development'
+              ? (error as Error).message
+              : 'Internal server error',
+        },
+      });
     }
   }
 
@@ -275,12 +272,15 @@ export class BrandingController {
    *
    * Response 200:
    * {
-   *   "success": true,
+   *   "status": "success",
    *   "data": {
    *     "version": "1.2.0",
    *     "releaseDate": "2025-11-03T00:00:00Z",
    *     "downloadUrl": "https://...",
    *     "changelog": "## v1.2.0\n- Features..."
+   *   },
+   *   "meta": {
+   *     "message": "Version information retrieved successfully"
    *   }
    * }
    */
@@ -303,8 +303,13 @@ export class BrandingController {
       });
 
       if (!version) {
-        const response = legacyError('No version information available', 404);
-        res.status(response.statusCode).json(response.body);
+        res.status(404).json({
+          status: 'error',
+          error: {
+            code: 'NOT_FOUND',
+            message: 'No version information available',
+          },
+        });
         return;
       }
 
@@ -313,27 +318,33 @@ export class BrandingController {
         version: version.version,
       });
 
-      const response = legacySuccess({
-        version: version.version,
-        releaseDate: version.releaseDate.toISOString(),
-        downloadUrl: version.downloadUrl,
-        changelog: version.changelog,
+      res.status(200).json({
+        status: 'success',
+        data: {
+          version: version.version,
+          releaseDate: version.releaseDate.toISOString(),
+          downloadUrl: version.downloadUrl,
+          changelog: version.changelog,
+        },
+        meta: {
+          message: 'Version information retrieved successfully',
+        },
       });
-
-      res.status(response.statusCode).json(response.body);
     } catch (error) {
       logger.error('BrandingController.getLatestVersion: Error', {
         error: error instanceof Error ? error.message : String(error),
       });
 
-      const response = legacyError(
-        process.env.NODE_ENV === 'development'
-          ? (error as Error).message
-          : 'Internal server error',
-        500
-      );
-
-      res.status(response.statusCode).json(response.body);
+      res.status(500).json({
+        status: 'error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            process.env.NODE_ENV === 'development'
+              ? (error as Error).message
+              : 'Internal server error',
+        },
+      });
     }
   }
 
@@ -352,10 +363,13 @@ export class BrandingController {
    *
    * Response 201:
    * {
-   *   "success": true,
+   *   "status": "success",
    *   "data": {
    *     "diagnosticId": "clx...",
    *     "fileSize": 12345
+   *   },
+   *   "meta": {
+   *     "message": "Diagnostic file uploaded successfully"
    *   }
    * }
    */
@@ -364,8 +378,13 @@ export class BrandingController {
       // Validate file
       const validation = validateDiagnosticFile(req.file);
       if (!validation.valid) {
-        const response = legacyError(validation.error!, 400);
-        res.status(response.statusCode).json(response.body);
+        res.status(400).json({
+          status: 'error',
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: validation.error!,
+          },
+        });
         return;
       }
 
@@ -397,28 +416,31 @@ export class BrandingController {
       // TODO: In Phase 3 stretch goal, upload to S3 here
       // const s3Key = await uploadToS3(file.buffer, filePath);
 
-      const response = legacySuccess(
-        {
+      res.status(201).json({
+        status: 'success',
+        data: {
           diagnosticId: diagnostic.id,
           fileSize: file.size,
         },
-        201
-      );
-
-      res.status(response.statusCode).json(response.body);
+        meta: {
+          message: 'Diagnostic file uploaded successfully',
+        },
+      });
     } catch (error) {
       logger.error('BrandingController.uploadDiagnostic: Error', {
         error: error instanceof Error ? error.message : String(error),
       });
 
-      const response = legacyError(
-        process.env.NODE_ENV === 'development'
-          ? (error as Error).message
-          : 'Internal server error',
-        500
-      );
-
-      res.status(response.statusCode).json(response.body);
+      res.status(500).json({
+        status: 'error',
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message:
+            process.env.NODE_ENV === 'development'
+              ? (error as Error).message
+              : 'Internal server error',
+        },
+      });
     }
   }
 
@@ -429,18 +451,33 @@ export class BrandingController {
   handleMulterError(err: any, _req: Request, res: Response, next: any): void {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
-        const response = legacyError('File size exceeds 5MB limit', 413);
-        res.status(response.statusCode).json(response.body);
+        res.status(413).json({
+          status: 'error',
+          error: {
+            code: 'FILE_SIZE_EXCEEDED',
+            message: 'File size exceeds 5MB limit',
+          },
+        });
         return;
       }
-      const response = legacyError(`File upload error: ${err.message}`, 400);
-      res.status(response.statusCode).json(response.body);
+      res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'FILE_UPLOAD_ERROR',
+          message: `File upload error: ${err.message}`,
+        },
+      });
       return;
     }
 
     if (err) {
-      const response = legacyError(err.message, 400);
-      res.status(response.statusCode).json(response.body);
+      res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'FILE_UPLOAD_ERROR',
+          message: err.message,
+        },
+      });
       return;
     }
 

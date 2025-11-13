@@ -126,15 +126,19 @@ export class VersionUpgradeController {
         paymentIntentId
       );
 
+      // Standard response format
       res.status(201).json({
-        upgrade_id: upgrade.id,
-        license_id: license.id,
-        from_version: upgrade.fromVersion,
-        to_version: upgrade.toVersion,
-        upgrade_price_usd: upgrade.upgradePriceUsd,
-        pricing_breakdown: pricing,
-        status: upgrade.status,
-        purchased_at: upgrade.purchasedAt.toISOString(),
+        status: 'success',
+        data: {
+          upgrade_id: upgrade.id,
+          license_id: license.id,
+          from_version: upgrade.fromVersion,
+          to_version: upgrade.toVersion,
+          upgrade_price_usd: upgrade.upgradePriceUsd,
+          pricing_breakdown: pricing,
+          status: upgrade.status,
+          purchased_at: upgrade.purchasedAt.toISOString(),
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {

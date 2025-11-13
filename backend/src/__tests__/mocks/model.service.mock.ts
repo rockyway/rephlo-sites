@@ -141,8 +141,63 @@ export class MockModelService implements IModelService {
     models.forEach((model) => this.models.set(model.id, model));
   }
 
-  addModel(model: any) {
+  async addModel(data: any, _adminUserId: string): Promise<any> {
+    const model = { ...data, ...data.meta };
     this.models.set(model.id, model);
+    return this.getModelDetails(model.id);
+  }
+
+  async markAsLegacy(modelId: string, options: any, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isLegacy = true;
+      model.legacyReplacementModelId = options.replacementModelId;
+      model.deprecationNotice = options.deprecationNotice;
+      model.sunsetDate = options.sunsetDate;
+    }
+  }
+
+  async unmarkLegacy(modelId: string, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isLegacy = false;
+      delete model.legacyReplacementModelId;
+      delete model.deprecationNotice;
+      delete model.sunsetDate;
+    }
+  }
+
+  async archive(modelId: string, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isArchived = true;
+      model.isAvailable = false;
+    }
+  }
+
+  async unarchive(modelId: string, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isArchived = false;
+      model.isAvailable = true;
+    }
+  }
+
+  async updateModelMeta(modelId: string, metaUpdates: any, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      Object.assign(model, metaUpdates);
+    }
+  }
+
+  async getLegacyModels(): Promise<any> {
+    const legacy = Array.from(this.models.values()).filter(m => m.isLegacy);
+    return { models: legacy, total: legacy.length };
+  }
+
+  async getArchivedModels(): Promise<any> {
+    const archived = Array.from(this.models.values()).filter(m => m.isArchived);
+    return { models: archived, total: archived.length };
   }
 
   removeModel(modelId: string) {

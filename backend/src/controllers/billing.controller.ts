@@ -26,6 +26,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import logger from '../utils/logger';
 import { BillingPaymentsService } from '../services/billing-payments.service';
+import { successResponse } from '../utils/responses';
 import {
   badRequestError,
   validationError,
@@ -104,9 +105,10 @@ export class BillingController {
     try {
       await this.billingService.addPaymentMethod(userId, paymentMethodId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: 'Payment method added successfully',
+        status: 'success',
+        data: { message: 'Payment method added successfully' },
       });
     } catch (error) {
       logger.error('BillingController.addPaymentMethod: Error', { error });
@@ -188,10 +190,13 @@ export class BillingController {
     try {
       const invoice = await this.billingService.createInvoice(subscriptionId);
 
+      // Standard response format
       res.status(201).json({
-        success: true,
+        status: 'success',
         data: invoice,
-        message: 'Invoice created successfully',
+        meta: {
+          message: 'Invoice created successfully',
+        },
       });
     } catch (error) {
       logger.error('BillingController.createInvoice: Error', { error });
@@ -270,16 +275,14 @@ export class BillingController {
 
       const result = await this.billingService.listAllInvoices(page, limit);
 
-      res.status(200).json({
-        success: true,
-        data: result.data,
-        meta: {
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: result.totalPages,
-        },
-      });
+      // Use modern response format
+      res.status(200).json(successResponse(result.data, {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+        hasMore: result.page * result.limit + result.data.length < result.total
+      }));
     } catch (error) {
       logger.error('BillingController.listInvoices: Error', { error });
       throw error;
@@ -436,10 +439,13 @@ export class BillingController {
     try {
       const transaction = await this.billingService.retryFailedPayment(attemptId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: transaction,
-        message: 'Payment retry initiated',
+        meta: {
+          message: 'Payment retry initiated',
+        },
       });
     } catch (error) {
       logger.error('BillingController.retryFailedPayment: Error', { error });

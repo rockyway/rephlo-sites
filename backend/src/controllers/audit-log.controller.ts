@@ -11,6 +11,7 @@ import { Request, Response } from 'express';
 import { injectable } from 'tsyringe';
 import { AuditLogService } from '../services/audit-log.service';
 import logger from '../utils/logger';
+import { successResponse } from '../utils/responses';
 
 @injectable()
 export class AuditLogController {
@@ -46,16 +47,13 @@ export class AuditLogController {
         this.auditLogService.getLogCount(filters)
       ]);
 
-      res.status(200).json({
-        success: true,
-        data: logs,
-        meta: {
-          total,
-          limit: filters.limit,
-          offset: filters.offset,
-          has_more: filters.offset + logs.length < total
-        }
-      });
+      res.status(200).json(successResponse(logs, {
+        total,
+        page: Math.floor(filters.offset / filters.limit),
+        limit: filters.limit,
+        totalPages: Math.ceil(total / filters.limit),
+        hasMore: filters.offset + logs.length < total
+      }));
     } catch (error) {
       logger.error('[AuditLogController] Get audit logs error:', error);
       res.status(500).json({
@@ -90,15 +88,12 @@ export class AuditLogController {
         limit
       );
 
-      res.status(200).json({
-        success: true,
-        data: logs,
-        meta: {
-          resource_type: resourceType,
-          resource_id: resourceId,
-          count: logs.length
-        }
-      });
+      res.status(200).json(successResponse({
+        logs,
+        resource_type: resourceType,
+        resource_id: resourceId,
+        count: logs.length
+      }));
     } catch (error) {
       logger.error('[AuditLogController] Get resource logs error:', error);
       res.status(500).json({
@@ -131,14 +126,11 @@ export class AuditLogController {
         limit
       );
 
-      res.status(200).json({
-        success: true,
-        data: logs,
-        meta: {
-          admin_user_id: adminUserId,
-          count: logs.length
-        }
-      });
+      res.status(200).json(successResponse({
+        logs,
+        admin_user_id: adminUserId,
+        count: logs.length
+      }));
     } catch (error) {
       logger.error('[AuditLogController] Get admin logs error:', error);
       res.status(500).json({

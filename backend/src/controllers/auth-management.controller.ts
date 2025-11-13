@@ -46,13 +46,6 @@ const BCRYPT_SALT_ROUNDS = 12;
 // =============================================================================
 
 /**
- * Standard success response format
- */
-function successResponse(data: any, statusCode: number = 200) {
-  return { statusCode, body: data };
-}
-
-/**
  * Standard error response format
  */
 function errorResponse(code: string, message: string, statusCode: number = 400, details?: any) {
@@ -205,18 +198,18 @@ export class AuthManagementController {
       await this.emailService.sendVerificationEmail(email, token, username);
 
       // 10. Return success response (201 Created)
-      const response = successResponse(
-        {
+      // Standard response format: flat data with optional metadata
+      res.status(201).json({
+        status: 'success',
+        data: {
           id: user.id,
           email: user.email,
           emailVerified: user.emailVerified,
-          message:
-            'Registration successful. Please check your email to verify your account.',
         },
-        201
-      );
-
-      res.status(response.statusCode).json(response.body);
+        meta: {
+          message: 'Registration successful. Please check your email to verify your account.',
+        },
+      });
     } catch (error) {
       logger.error('AuthManagementController.register: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -353,12 +346,16 @@ export class AuthManagementController {
       });
 
       // 9. Return success response
-      const response = successResponse({
-        success: true,
-        message: 'Email verified successfully. You can now log in.',
+      // Standard response format: flat data with optional metadata
+      res.status(200).json({
+        status: 'success',
+        data: {
+          success: true,
+        },
+        meta: {
+          message: 'Email verified successfully. You can now log in.',
+        },
       });
-
-      res.status(response.statusCode).json(response.body);
     } catch (error) {
       logger.error('AuthManagementController.verifyEmail: Error', {
         error: error instanceof Error ? error.message : String(error),
@@ -458,13 +455,16 @@ export class AuthManagementController {
       }
 
       // 4. Always return generic success message (prevent email enumeration)
-      const response = successResponse({
-        success: true,
-        message:
-          'If an account exists with this email, a password reset link has been sent.',
+      // Standard response format: flat data with optional metadata
+      res.status(200).json({
+        status: 'success',
+        data: {
+          success: true,
+        },
+        meta: {
+          message: 'If an account exists with this email, a password reset link has been sent.',
+        },
       });
-
-      res.status(response.statusCode).json(response.body);
 
       // Note: Rate limiting should be implemented at route level
       // to prevent abuse (e.g., 3 requests per hour per email)
@@ -616,12 +616,16 @@ export class AuthManagementController {
       // TODO: Optionally invalidate all existing sessions/tokens for this user
 
       // 11. Return success response
-      const response = successResponse({
-        success: true,
-        message: 'Password reset successfully. Please log in with your new password.',
+      // Standard response format: flat data with optional metadata
+      res.status(200).json({
+        status: 'success',
+        data: {
+          success: true,
+        },
+        meta: {
+          message: 'Password reset successfully. Please log in with your new password.',
+        },
       });
-
-      res.status(response.statusCode).json(response.body);
     } catch (error) {
       logger.error('AuthManagementController.resetPassword: Error', {
         error: error instanceof Error ? error.message : String(error),

@@ -34,9 +34,9 @@ export class GoogleProvider implements ILLMProvider {
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
     };
   }> {
     if (!this.client) {
@@ -86,9 +86,9 @@ export class GoogleProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: promptTokens,
-        completion_tokens: completionTokens,
-        total_tokens: promptTokens + completionTokens,
+        promptTokens: promptTokens,
+        completionTokens: completionTokens,
+        totalTokens: promptTokens + completionTokens,
       },
     };
   }
@@ -152,9 +152,9 @@ export class GoogleProvider implements ILLMProvider {
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
     };
   }> {
     if (!this.client) {
@@ -184,9 +184,9 @@ export class GoogleProvider implements ILLMProvider {
         ],
       },
       usage: {
-        prompt_tokens: promptTokens,
-        completion_tokens: completionTokens,
-        total_tokens: promptTokens + completionTokens,
+        promptTokens: promptTokens,
+        completionTokens: completionTokens,
+        totalTokens: promptTokens + completionTokens,
       },
     };
   }

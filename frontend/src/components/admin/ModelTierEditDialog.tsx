@@ -9,9 +9,9 @@ import Textarea from '@/components/common/Textarea';
 import { cn } from '@/lib/utils';
 import type {
   ModelTierInfo,
-  SubscriptionTier,
   TierRestrictionMode,
 } from '@/types/model-tier';
+import { SubscriptionTier } from '@rephlo/shared-types';
 
 interface ModelTierEditDialogProps {
   model: ModelTierInfo | null;
@@ -42,11 +42,11 @@ function ModelTierEditDialog({
   onSave,
   isSaving = false,
 }: ModelTierEditDialogProps) {
-  const [requiredTier, setRequiredTier] = useState<SubscriptionTier>('free');
+  const [requiredTier, setRequiredTier] = useState<SubscriptionTier>(SubscriptionTier.FREE);
   const [restrictionMode, setRestrictionMode] =
     useState<TierRestrictionMode>('minimum');
   const [allowedTiers, setAllowedTiers] = useState<Set<SubscriptionTier>>(
-    new Set(['free', 'pro', 'enterprise'])
+    new Set([SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX, SubscriptionTier.ENTERPRISE_PRO, SubscriptionTier.ENTERPRISE_MAX])
   );
   const [reason, setReason] = useState('');
 
@@ -115,24 +115,24 @@ function ModelTierEditDialog({
         <Dialog.Content
           className={cn(
             'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-            'bg-white rounded-lg shadow-xl z-50',
+            'bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl z-50',
             'w-full max-w-2xl max-h-[90vh] overflow-y-auto',
             'animate-scale-in'
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-deep-navy-200">
+          <div className="flex items-center justify-between p-6 border-b border-deep-navy-200 dark:border-deep-navy-700">
             <div>
-              <Dialog.Title className="text-h3 font-semibold text-deep-navy-800">
+              <Dialog.Title className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
                 Edit Model Tier
               </Dialog.Title>
-              <p className="text-body-sm text-deep-navy-700 mt-1">
+              <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
                 {model.displayName} ({model.provider})
               </p>
             </div>
             <Dialog.Close asChild>
               <button
-                className="text-deep-navy-400 hover:text-deep-navy-600 transition-colors"
+                className="text-deep-navy-400 dark:text-deep-navy-500 hover:text-deep-navy-600 dark:hover:text-deep-navy-300 transition-colors"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -143,28 +143,28 @@ function ModelTierEditDialog({
           {/* Content */}
           <div className="p-6 space-y-6">
             {/* Previous Values Reference */}
-            <div className="bg-deep-navy-50 rounded-md p-4 space-y-2">
-              <p className="text-body-sm font-medium text-deep-navy-700">
+            <div className="bg-deep-navy-50 dark:bg-deep-navy-900 rounded-md p-4 space-y-2">
+              <p className="text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
                 Current Configuration:
               </p>
               <div className="grid grid-cols-3 gap-4 text-body-sm">
                 <div>
-                  <span className="text-deep-navy-700">Required Tier:</span>
+                  <span className="text-deep-navy-700 dark:text-deep-navy-300">Required Tier:</span>
                   <div className="mt-1">
                     <TierBadge tier={model.requiredTier} size="sm" />
                   </div>
                 </div>
                 <div>
-                  <span className="text-deep-navy-700">Mode:</span>
-                  <p className="mt-1 font-medium text-deep-navy-800">
+                  <span className="text-deep-navy-700 dark:text-deep-navy-300">Mode:</span>
+                  <p className="mt-1 font-medium text-deep-navy-800 dark:text-white">
                     {model.tierRestrictionMode}
                   </p>
                 </div>
                 <div>
-                  <span className="text-deep-navy-700">Allowed Tiers:</span>
+                  <span className="text-deep-navy-700 dark:text-deep-navy-300">Allowed Tiers:</span>
                   <div className="mt-1 flex gap-1 flex-wrap">
-                    {model.allowedTiers.map((tier) => (
-                      <TierBadge key={tier} tier={tier} size="sm" />
+                    {model.allowedTiers.map((tier, idx) => (
+                      <TierBadge key={`${model.id}-current-${tier}-${idx}`} tier={tier} size="sm" />
                     ))}
                   </div>
                 </div>
@@ -191,11 +191,11 @@ function ModelTierEditDialog({
 
             {/* Allowed Tiers (for whitelist mode) */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-2">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Allowed Tiers (for whitelist mode)
               </label>
-              <div className="flex gap-3">
-                {(['free', 'pro', 'enterprise'] as SubscriptionTier[]).map(
+              <div className="flex gap-3 flex-wrap">
+                {(['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'] as SubscriptionTier[]).map(
                   (tier) => (
                     <label
                       key={tier}
@@ -205,7 +205,7 @@ function ModelTierEditDialog({
                         type="checkbox"
                         checked={allowedTiers.has(tier)}
                         onChange={() => toggleAllowedTier(tier)}
-                        className="h-4 w-4 rounded border-deep-navy-300 text-rephlo-blue focus:ring-rephlo-blue"
+                        className="h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                       />
                       <TierBadge tier={tier} size="sm" />
                     </label>
@@ -213,7 +213,7 @@ function ModelTierEditDialog({
                 )}
               </div>
               {restrictionMode === 'whitelist' && allowedTiers.size === 0 && (
-                <p className="mt-1 text-caption text-red-600">
+                <p className="mt-1 text-caption text-red-600 dark:text-red-400">
                   At least one tier must be selected for whitelist mode
                 </p>
               )}
@@ -221,7 +221,7 @@ function ModelTierEditDialog({
 
             {/* Reason */}
             <div>
-              <label className="block text-body-sm font-medium text-deep-navy-700 mb-1">
+              <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
                 Reason for Change (optional)
               </label>
               <Textarea
@@ -234,7 +234,7 @@ function ModelTierEditDialog({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-deep-navy-200">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-deep-navy-200 dark:border-deep-navy-700">
             <Button variant="ghost" onClick={onClose} disabled={isSaving}>
               Cancel
             </Button>
