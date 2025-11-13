@@ -14,6 +14,11 @@ import TierBadge from '@/components/admin/TierBadge';
 import TierSelect from '@/components/admin/TierSelect';
 import ModelTierEditDialog from '@/components/admin/ModelTierEditDialog';
 import TierAuditLog from '@/components/admin/TierAuditLog';
+import ModelStatusBadge from '@/components/admin/ModelStatusBadge';
+import LifecycleActionMenu from '@/components/admin/LifecycleActionMenu';
+import MarkLegacyDialog from '@/components/admin/MarkLegacyDialog';
+import ArchiveDialog from '@/components/admin/ArchiveDialog';
+import UnarchiveDialog from '@/components/admin/UnarchiveDialog';
 import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
@@ -26,18 +31,20 @@ import type {
   TierAuditLogEntry,
   ModelTierUpdateRequest,
 } from '@/types/model-tier';
+import type { ModelInfo, MarkLegacyRequest } from '@/types/model';
 
 /**
- * ModelTierManagement Page
+ * ModelManagement Page
  *
- * Admin interface for managing model tier configurations.
+ * Unified admin interface for managing model tier configurations and lifecycle.
  * Features:
  * - Table view with search/filter
  * - Bulk selection and updates
  * - Individual model editing
+ * - Lifecycle management (mark legacy, archive, unarchive)
  * - Audit log viewing
  */
-function ModelTierManagement() {
+function ModelManagement() {
   // Data state
   const [models, setModels] = useState<ModelTierInfo[]>([]);
   const [auditLogs, setAuditLogs] = useState<TierAuditLogEntry[]>([]);
@@ -53,6 +60,7 @@ function ModelTierManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProvider, setFilterProvider] = useState<string>('');
   const [filterTier, setFilterTier] = useState<SubscriptionTier | ''>('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'legacy' | 'archived'>('all');
 
   // Selection state
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
@@ -61,6 +69,12 @@ function ModelTierManagement() {
   const [editingModel, setEditingModel] = useState<ModelTierInfo | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Lifecycle dialog state
+  const [markLegacyDialogOpen, setMarkLegacyDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [unarchiveDialogOpen, setUnarchiveDialogOpen] = useState(false);
+  const [lifecycleTargetModel, setLifecycleTargetModel] = useState<ModelInfo | null>(null);
 
   // Load data
   useEffect(() => {
@@ -208,6 +222,64 @@ function ModelTierManagement() {
     }
   };
 
+  const handleUnmarkLegacy = async (modelId: string) => {
+    try {
+      await adminAPI.unmarkModelLegacy(modelId);
+      setSuccessMessage('Successfully removed legacy status');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      loadModels();
+      loadAuditLogs();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to unmark legacy');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleMarkLegacyConfirm = async (data: MarkLegacyRequest) => {
+    if (!lifecycleTargetModel) return;
+    try {
+      await adminAPI.markModelAsLegacy(lifecycleTargetModel.id, data);
+      setSuccessMessage(`Successfully marked ${lifecycleTargetModel.meta?.displayName || lifecycleTargetModel.name} as legacy`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setMarkLegacyDialogOpen(false);
+      loadModels();
+      loadAuditLogs();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to mark as legacy');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleArchiveConfirm = async (reason: string) => {
+    if (!lifecycleTargetModel) return;
+    try {
+      await adminAPI.archiveModel(lifecycleTargetModel.id, reason);
+      setSuccessMessage(`Successfully archived ${lifecycleTargetModel.meta?.displayName || lifecycleTargetModel.name}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setArchiveDialogOpen(false);
+      loadModels();
+      loadAuditLogs();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to archive model');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleUnarchiveConfirm = async () => {
+    if (!lifecycleTargetModel) return;
+    try {
+      await adminAPI.unarchiveModel(lifecycleTargetModel.id);
+      setSuccessMessage(`Successfully unarchived ${lifecycleTargetModel.meta?.displayName || lifecycleTargetModel.name}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setUnarchiveDialogOpen(false);
+      loadModels();
+      loadAuditLogs();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to unarchive model');
+      setTimeout(() => setError(null), 5000);
+    }
+  };
+
   const toggleModelSelection = (modelId: string) => {
     const newSet = new Set(selectedModels);
     if (newSet.has(modelId)) {
@@ -247,10 +319,10 @@ function ModelTierManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
-            Model Tier Management
+            Model Management
           </h1>
           <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-            Configure subscription tier requirements for AI models
+            Configure models, tier access, and lifecycle management
           </p>
         </div>
         <Button
@@ -286,7 +358,7 @@ function ModelTierManagement() {
         <h2 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
           Search & Filters
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
@@ -324,6 +396,20 @@ function ModelTierManagement() {
               onChange={(tier) => setFilterTier(tier)}
               allowEmpty
             />
+          </div>
+
+          {/* Status Filter (NEW) */}
+          <div>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="flex h-11 w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2.5 text-body focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rephlo-blue/20 dark:focus-visible:ring-electric-cyan/20 focus-visible:border-rephlo-blue dark:focus-visible:border-electric-cyan transition-all duration-fast"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="legacy">Legacy</option>
+              <option value="archived">Archived</option>
+            </select>
           </div>
         </div>
         <div className="mt-4 flex justify-end">
@@ -384,6 +470,9 @@ function ModelTierManagement() {
                   Provider
                 </th>
                 <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                   Required Tier
                 </th>
                 <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
@@ -393,7 +482,7 @@ function ModelTierManagement() {
                   Allowed Tiers
                 </th>
                 <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                  Status
+                  Availability
                 </th>
                 <th className="px-4 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
                   Actions
@@ -443,6 +532,13 @@ function ModelTierManagement() {
                       {model.provider}
                     </td>
                     <td className="px-4 py-3">
+                      <ModelStatusBadge
+                        isLegacy={(model as any).isLegacy || false}
+                        isArchived={(model as any).isArchived || false}
+                        size="sm"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
                       <TierBadge tier={model.requiredTier} />
                     </td>
                     <td className="px-4 py-3 text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
@@ -467,13 +563,27 @@ function ModelTierManagement() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditModel(model)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <LifecycleActionMenu
+                        model={model as any as ModelInfo}
+                        onMarkLegacy={() => {
+                          setLifecycleTargetModel(model as any as ModelInfo);
+                          setMarkLegacyDialogOpen(true);
+                        }}
+                        onUnmarkLegacy={() => handleUnmarkLegacy(model.id)}
+                        onArchive={() => {
+                          setLifecycleTargetModel(model as any as ModelInfo);
+                          setArchiveDialogOpen(true);
+                        }}
+                        onUnarchive={() => {
+                          setLifecycleTargetModel(model as any as ModelInfo);
+                          setUnarchiveDialogOpen(true);
+                        }}
+                        onEditMeta={() => handleEditModel(model)}
+                        permissions={{
+                          canManageLifecycle: true,
+                          canEditMeta: true,
+                        }}
+                      />
                     </td>
                   </tr>
                 ))
@@ -503,8 +613,34 @@ function ModelTierManagement() {
         onSave={handleSaveModel}
         isSaving={isSaving}
       />
+
+      {/* Lifecycle Dialogs */}
+      <MarkLegacyDialog
+        isOpen={markLegacyDialogOpen}
+        model={lifecycleTargetModel}
+        availableModels={models.filter(m => m.id !== lifecycleTargetModel?.id) as any[]}
+        onConfirm={handleMarkLegacyConfirm}
+        onCancel={() => setMarkLegacyDialogOpen(false)}
+        isSaving={isSaving}
+      />
+
+      <ArchiveDialog
+        isOpen={archiveDialogOpen}
+        model={lifecycleTargetModel}
+        onConfirm={handleArchiveConfirm}
+        onCancel={() => setArchiveDialogOpen(false)}
+        isSaving={isSaving}
+      />
+
+      <UnarchiveDialog
+        isOpen={unarchiveDialogOpen}
+        model={lifecycleTargetModel}
+        onConfirm={handleUnarchiveConfirm}
+        onCancel={() => setUnarchiveDialogOpen(false)}
+        isSaving={isSaving}
+      />
     </div>
   );
 }
 
-export default ModelTierManagement;
+export default ModelManagement;

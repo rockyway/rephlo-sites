@@ -79,3 +79,25 @@ export interface LegacyMetrics {
   feedbackCount: number;
   diagnosticsCount: number;
 }
+
+// Re-export model lifecycle types
+export type {
+  ModelInfo,
+  ModelMeta,
+  LifecycleEvent,
+  CreateModelRequest,
+  MarkLegacyRequest,
+  ArchiveRequest,
+  LifecycleHistoryResponse,
+  LegacyModelsResponse,
+  ArchivedModelsResponse,
+  ModelStatusFilter,
+  LifecycleAction,
+  MarkLegacyDialogProps,
+  ArchiveDialogProps,
+  MetaJsonEditorProps,
+  ModelCreationFormProps,
+  LifecycleHistoryPanelProps,
+  ModelStatusBadgeProps,
+  LifecycleActionMenuProps,
+} from './model-lifecycle';
