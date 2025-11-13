@@ -1490,8 +1490,12 @@ function main() {
     }
   }
 
-  const outputFile = path.join(docsAnalysisDir, `${String(nextNumber).padStart(3, '0')}-api-endpoints-analysis.md`);
+  // Store at root for easy to navigate
+  const outputFile = path.join(ROOT_DIR, `api-endpoints-index.md`);
+  const outputFileWithNumber = path.join(ROOT_DIR, `api-endpoints-index-v${String(nextNumber).padStart(3,'0')}.md`);
+  // const outputFile = path.join(docsAnalysisDir, `${String(nextNumber).padStart(3, '0')}-api-endpoints-analysis.md`);
   fs.writeFileSync(outputFile, markdown, 'utf-8');
+  fs.writeFileSync(outputFileWithNumber, markdown, 'utf-8');
 
   console.log(`\n✅ Report generated: ${path.relative(ROOT_DIR, outputFile)}`);
   console.log(`   Total projects analyzed: ${projects.length}`);

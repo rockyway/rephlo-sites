@@ -7,14 +7,14 @@
 -- =============================================================================
 
 -- GIN index for general JSONB queries (supports @>, ?, ?&, ?| operators)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_models_meta_gin ON models USING gin(meta);
+CREATE INDEX IF NOT EXISTS idx_models_meta_gin ON models USING gin(meta);
 
 -- BTree index for specific requiredTier queries (fastest for equality checks)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_models_meta_required_tier
+CREATE INDEX IF NOT EXISTS idx_models_meta_required_tier
   ON models USING btree((meta->>'requiredTier'));
 
 -- GIN index for capabilities array queries (supports @>, ?, ?&, ?| operators)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_models_meta_capabilities
+CREATE INDEX IF NOT EXISTS idx_models_meta_capabilities
   ON models USING gin((meta->'capabilities'));
 
 -- =============================================================================
