@@ -240,19 +240,19 @@ export const api = {
   // Download tracking
   trackDownload: async (os: 'windows' | 'macos' | 'linux') => {
     const response = await apiClient.post('/api/track-download', { os });
-    return response.data;
+    return response.data.data; // Unwrap standardized response
   },
 
   // Feedback submission
   submitFeedback: async (data: { message: string; email?: string; userId?: string }) => {
     const response = await apiClient.post('/api/feedback', data);
-    return response.data;
+    return response.data.data; // Unwrap standardized response
   },
 
   // Version check
   getVersion: async () => {
     const response = await apiClient.get('/api/version');
-    return response.data;
+    return response.data.data; // Unwrap standardized response
   },
 
   // Admin metrics

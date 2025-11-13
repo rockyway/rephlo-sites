@@ -179,8 +179,10 @@ export class SettingsController {
       const result = await this.settingsService.testEmailConfig(emailConfig);
 
       res.json({
-        success: result.success,
-        message: result.message,
+        status: result.success ? 'success' : 'error',
+        data: {
+          message: result.message,
+        },
       });
     } catch (error: any) {
       console.error('Error testing email config:', error);
@@ -203,8 +205,10 @@ export class SettingsController {
       const result = await this.settingsService.clearCache();
 
       res.json({
-        success: result.success,
-        message: result.message,
+        status: result.success ? 'success' : 'error',
+        data: {
+          message: result.message,
+        },
       });
     } catch (error: any) {
       console.error('Error clearing cache:', error);
@@ -227,9 +231,11 @@ export class SettingsController {
       const result = await this.settingsService.createBackup();
 
       res.json({
-        success: result.success,
-        message: result.message,
-        timestamp: result.timestamp,
+        status: result.success ? 'success' : 'error',
+        data: {
+          message: result.message,
+          timestamp: result.timestamp,
+        },
       });
     } catch (error: any) {
       console.error('Error running backup:', error);

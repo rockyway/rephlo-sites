@@ -370,7 +370,7 @@ export class ProfitabilityController {
       const result = await this.profitabilityService.simulatePricing(simulationInput);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: result,
       });
     } catch (error) {

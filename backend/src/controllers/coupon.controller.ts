@@ -131,11 +131,15 @@ export class CouponController {
         userAgent: req.headers['user-agent'],
       });
 
+      // Standard response format: flat data
       res.json({
-        redemption_id: redemption.id,
-        discount_applied: parseFloat(redemption.discountAppliedUsd.toString()),
-        final_amount: parseFloat(redemption.finalAmountUsd.toString()),
-        status: redemption.redemptionStatus,
+        status: 'success',
+        data: {
+          redemptionId: redemption.id,
+          discountApplied: parseFloat(redemption.discountAppliedUsd.toString()),
+          finalAmount: parseFloat(redemption.finalAmountUsd.toString()),
+          redemptionStatus: redemption.redemptionStatus,
+        }
       });
     } catch (error: any) {
       logger.error('Failed to redeem coupon', { userId, error });

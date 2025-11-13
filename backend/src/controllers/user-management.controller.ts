@@ -279,9 +279,11 @@ export class UserManagementController {
       const user = await this.userManagementService.editUserProfile(userId, updates);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: user,
-        message: 'User profile updated successfully',
+        meta: {
+          message: 'User profile updated successfully',
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.editUserProfile: Error', { error });
@@ -331,11 +333,13 @@ export class UserManagementController {
       const user = await this.userManagementService.suspendUser(userId, reason, duration);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: user,
-        message: duration
-          ? `User suspended for ${duration} days`
-          : 'User suspended indefinitely',
+        meta: {
+          message: duration
+            ? `User suspended for ${duration} days`
+            : 'User suspended indefinitely',
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.suspendUser: Error', { error });
@@ -360,9 +364,11 @@ export class UserManagementController {
       const user = await this.userManagementService.unsuspendUser(userId);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: user,
-        message: 'User unsuspended successfully',
+        meta: {
+          message: 'User unsuspended successfully',
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.unsuspendUser: Error', { error });
@@ -408,9 +414,11 @@ export class UserManagementController {
       const user = await this.userManagementService.banUser(userId, reason, permanent);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: user,
-        message: permanent ? 'User permanently banned' : 'User temporarily banned',
+        meta: {
+          message: permanent ? 'User permanently banned' : 'User temporarily banned',
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.banUser: Error', { error });
@@ -435,9 +443,11 @@ export class UserManagementController {
       const user = await this.userManagementService.unbanUser(userId);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: user,
-        message: 'User unbanned successfully',
+        meta: {
+          message: 'User unbanned successfully',
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.unbanUser: Error', { error });
@@ -487,9 +497,11 @@ export class UserManagementController {
       const result = await this.userManagementService.bulkUpdateUsers(userIds, updates);
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: result,
-        message: `Bulk update completed: ${result.success} succeeded, ${result.failed} failed`,
+        meta: {
+          message: `Bulk update completed: ${result.success} succeeded, ${result.failed} failed`,
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.bulkUpdateUsers: Error', { error });
@@ -543,9 +555,11 @@ export class UserManagementController {
       );
 
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: adjustment,
-        message: `Credits ${amount > 0 ? 'added' : 'deducted'} successfully`,
+        meta: {
+          message: `Credits ${amount > 0 ? 'added' : 'deducted'} successfully`,
+        },
       });
     } catch (error) {
       logger.error('UserManagementController.adjustUserCredits: Error', { error });

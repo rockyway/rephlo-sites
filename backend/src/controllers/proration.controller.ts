@@ -320,6 +320,7 @@ export class ProrationController {
       const adminUserId = (req as any).userId;
       const reversedEvent = await this.prorationService.reverseProration(id, reason, adminUserId);
 
+      // Standard response format: move message to meta
       res.status(200).json({
         status: 'success',
         data: {
@@ -333,6 +334,8 @@ export class ProrationController {
           status: reversedEvent.status,
           effectiveDate: reversedEvent.effectiveDate.toISOString(),
           reason,
+        },
+        meta: {
           message: 'Proration reversed successfully',
         },
       });

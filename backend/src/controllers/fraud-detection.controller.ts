@@ -93,11 +93,15 @@ export class FraudDetectionController {
 
       const event = await this.fraudService.reviewFraudEvent(id, reviewerId, data.resolution);
 
+      // Standard response format: flat data with camelCase
       res.json({
-        id: event.id,
-        resolution: data.resolution,
-        reviewed_at: event.reviewedAt?.toISOString(),
-        is_flagged: event.isFlagged,
+        status: 'success',
+        data: {
+          id: event.id,
+          resolution: data.resolution,
+          reviewedAt: event.reviewedAt?.toISOString(),
+          isFlagged: event.isFlagged,
+        }
       });
     } catch (error: any) {
       logger.error('Failed to review fraud event', { id, error });

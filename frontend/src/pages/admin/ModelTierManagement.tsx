@@ -450,8 +450,8 @@ function ModelTierManagement() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 flex-wrap">
-                        {safeArray<SubscriptionTier>(model.allowedTiers).map((tier) => (
-                          <TierBadge key={tier} tier={tier} size="sm" />
+                        {safeArray<SubscriptionTier>(model.allowedTiers).map((tier, idx) => (
+                          <TierBadge key={`${model.id}-${tier}-${idx}`} tier={tier} size="sm" />
                         ))}
                       </div>
                     </td>

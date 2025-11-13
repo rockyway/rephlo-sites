@@ -72,11 +72,11 @@ export const plan111API = {
   redeemCoupon: async (
     request: CouponRedemptionRequest
   ): Promise<CouponRedemption> => {
-    const response = await apiClient.post<CouponRedemption>(
+    const response = await apiClient.post<{ status: string; data: CouponRedemption }>(
       '/api/coupons/redeem',
       request
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -307,11 +307,11 @@ export const plan111API = {
     resolution: string,
     notes?: string
   ): Promise<FraudDetectionEvent> => {
-    const response = await apiClient.patch<FraudDetectionEvent>(
+    const response = await apiClient.patch<{ status: string; data: FraudDetectionEvent }>(
       `/admin/fraud-detection/${id}/review`,
       { resolution, notes }
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**

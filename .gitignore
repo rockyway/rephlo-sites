@@ -191,3 +191,4 @@ nul
 .claude/*.json
 .claude/settings.json
 temp_*.*
+temp-*.txt

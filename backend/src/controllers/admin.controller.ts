@@ -265,6 +265,7 @@ export class AdminController {
           lastName: true,
           createdAt: true,
           lastLoginAt: true,
+          credit_balance: true,
           subscriptions: {
             where: {
               status: 'active',
@@ -306,6 +307,7 @@ export class AdminController {
             lastName: user.lastName,
             createdAt: user.createdAt.toISOString(),
             lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+            creditsBalance: user.credit_balance?.amount || 0,
             subscription: activeSubscription
               ? {
                   tier: activeSubscription.tier,

@@ -664,23 +664,36 @@ export class UserManagementService {
         throw notFoundError('User');
       }
 
-      // Create credit allocation record
-      const allocation = await this.prisma.creditAllocation.create({
-        data: {
-          userId,
-          amount: Math.abs(amount),
-          source: amount > 0 ? 'admin_grant' : 'admin_grant', // TODO: Add 'admin_deduction' source
-          allocationPeriodStart: new Date(),
-          allocationPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        },
-      });
-
-      // TODO: Update Plan 112's user_credit_balance
+      // Create credit allocation record and update user's credit balance atomically
+      const [allocation, updatedBalance] = await this.prisma.$transaction([
+        this.prisma.creditAllocation.create({
+          data: {
+            userId,
+            amount: Math.abs(amount),
+            source: amount > 0 ? 'admin_grant' : 'admin_grant', // TODO: Add 'admin_deduction' source
+            allocationPeriodStart: new Date(),
+            allocationPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+          },
+        }),
+        this.prisma.userCreditBalance.upsert({
+          where: { userId },
+          create: {
+            userId,
+            amount: Math.max(0, amount), // Ensure non-negative
+          },
+          update: {
+            amount: {
+              increment: amount, // Positive = add, negative = deduct
+            },
+          },
+        }),
+      ]);
 
       logger.info('UserManagementService: Credits adjusted', {
         userId,
         amount,
         allocationId: allocation.id,
+        newBalance: updatedBalance.amount,
       });
 
       return {

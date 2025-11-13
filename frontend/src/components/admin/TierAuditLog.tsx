@@ -144,8 +144,8 @@ function TierAuditLog({
                             Old allowed:{' '}
                           </span>
                           <div className="inline-flex gap-1">
-                            {log.oldValues.allowedTiers.map((tier) => (
-                              <TierBadge key={tier} tier={tier} size="sm" />
+                            {log.oldValues.allowedTiers.map((tier, idx) => (
+                              <TierBadge key={`old-${tier}-${idx}`} tier={tier} size="sm" />
                             ))}
                           </div>
                         </div>
@@ -154,8 +154,8 @@ function TierAuditLog({
                             New allowed:{' '}
                           </span>
                           <div className="inline-flex gap-1">
-                            {log.newValues.allowedTiers.map((tier) => (
-                              <TierBadge key={tier} tier={tier} size="sm" />
+                            {log.newValues.allowedTiers.map((tier, idx) => (
+                              <TierBadge key={`new-${tier}-${idx}`} tier={tier} size="sm" />
                             ))}
                           </div>
                         </div>

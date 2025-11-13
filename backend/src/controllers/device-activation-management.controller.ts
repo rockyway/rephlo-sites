@@ -97,9 +97,12 @@ export class DeviceActivationManagementController {
     try {
       await this.deviceActivationService.deactivateDevice(id);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: 'Device deactivated successfully',
+        status: 'success',
+        data: {
+          message: 'Device deactivated successfully',
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -142,9 +145,12 @@ export class DeviceActivationManagementController {
     try {
       await this.deviceActivationService.revokeDevice(id, reason);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: 'Device revoked successfully',
+        status: 'success',
+        data: {
+          message: 'Device revoked successfully',
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -207,10 +213,15 @@ export class DeviceActivationManagementController {
     try {
       const result = await this.deviceActivationService.bulkAction(deviceIds, action, reason);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        affectedCount: result.affectedCount,
-        message: `Bulk ${action} completed successfully`,
+        status: 'success',
+        data: {
+          affectedCount: result.affectedCount,
+        },
+        meta: {
+          message: `Bulk ${action} completed successfully`,
+        },
       });
     } catch (error) {
       logger.error('Failed to perform bulk action', { deviceIds, action, error });

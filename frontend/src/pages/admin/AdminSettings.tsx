@@ -157,10 +157,10 @@ function AdminSettings() {
 
     try {
       const result = await settingsApi.testEmailConfig(formData);
-      if (result.success) {
-        setSuccessMessage(result.message || 'Email test successful');
+      if (result.status === 'success') {
+        setSuccessMessage(result.data?.message || 'Email test successful');
       } else {
-        setError(result.message || 'Email test failed');
+        setError(result.data?.message || 'Email test failed');
       }
       setTimeout(() => {
         setSuccessMessage(null);
@@ -185,10 +185,10 @@ function AdminSettings() {
 
     try {
       const result = await settingsApi.clearCache();
-      if (result.success) {
-        setSuccessMessage(result.message || 'Cache cleared successfully');
+      if (result.status === 'success') {
+        setSuccessMessage(result.data?.message || 'Cache cleared successfully');
       } else {
-        setError(result.message || 'Failed to clear cache');
+        setError(result.data?.message || 'Failed to clear cache');
       }
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
@@ -210,12 +210,12 @@ function AdminSettings() {
 
     try {
       const result = await settingsApi.runBackup();
-      if (result.success) {
-        setSuccessMessage(result.message || 'Backup created successfully');
+      if (result.status === 'success') {
+        setSuccessMessage(result.data?.message || 'Backup created successfully');
         // Reload settings to update last_backup timestamp
         loadAllSettings();
       } else {
-        setError(result.message || 'Failed to create backup');
+        setError(result.data?.message || 'Failed to create backup');
       }
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {

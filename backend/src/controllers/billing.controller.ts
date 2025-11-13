@@ -105,9 +105,10 @@ export class BillingController {
     try {
       await this.billingService.addPaymentMethod(userId, paymentMethodId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
-        message: 'Payment method added successfully',
+        status: 'success',
+        data: { message: 'Payment method added successfully' },
       });
     } catch (error) {
       logger.error('BillingController.addPaymentMethod: Error', { error });
@@ -189,10 +190,13 @@ export class BillingController {
     try {
       const invoice = await this.billingService.createInvoice(subscriptionId);
 
+      // Standard response format
       res.status(201).json({
-        success: true,
+        status: 'success',
         data: invoice,
-        message: 'Invoice created successfully',
+        meta: {
+          message: 'Invoice created successfully',
+        },
       });
     } catch (error) {
       logger.error('BillingController.createInvoice: Error', { error });
@@ -435,10 +439,13 @@ export class BillingController {
     try {
       const transaction = await this.billingService.retryFailedPayment(attemptId);
 
+      // Standard response format
       res.status(200).json({
-        success: true,
+        status: 'success',
         data: transaction,
-        message: 'Payment retry initiated',
+        meta: {
+          message: 'Payment retry initiated',
+        },
       });
     } catch (error) {
       logger.error('BillingController.retryFailedPayment: Error', { error });

@@ -656,12 +656,15 @@ router.patch(
     const user = await userManagementService.viewUserDetails(id);
 
     return res.json({
-      message: 'User role updated successfully. All sessions have been terminated.',
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
+      status: 'success',
+      data: {
+        message: 'User role updated successfully. All sessions have been terminated.',
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+        },
       },
     });
   })

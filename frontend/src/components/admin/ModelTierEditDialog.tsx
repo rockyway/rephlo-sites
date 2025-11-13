@@ -163,8 +163,8 @@ function ModelTierEditDialog({
                 <div>
                   <span className="text-deep-navy-700 dark:text-deep-navy-300">Allowed Tiers:</span>
                   <div className="mt-1 flex gap-1 flex-wrap">
-                    {model.allowedTiers.map((tier) => (
-                      <TierBadge key={tier} tier={tier} size="sm" />
+                    {model.allowedTiers.map((tier, idx) => (
+                      <TierBadge key={`${model.id}-current-${tier}-${idx}`} tier={tier} size="sm" />
                     ))}
                   </div>
                 </div>

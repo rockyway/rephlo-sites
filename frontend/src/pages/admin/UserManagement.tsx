@@ -108,7 +108,7 @@ function UserManagement() {
           : apiUser.firstName || apiUser.lastName || null,
         status: UserStatus.ACTIVE, // Default to ACTIVE since API doesn't return this in list
         currentTier: apiUser.subscription?.tier || SubscriptionTier.FREE,
-        creditsBalance: 0, // TODO: API doesn't return this in list, needs separate query
+        creditsBalance: apiUser.creditsBalance || 0,
         createdAt: apiUser.createdAt,
         lastActiveAt: apiUser.lastLoginAt,
         subscription: apiUser.subscription,

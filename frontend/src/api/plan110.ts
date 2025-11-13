@@ -85,33 +85,33 @@ export const licenseApi = {
    * Purchase a new perpetual license
    */
   purchaseLicense: async (data: PurchaseLicenseRequest) => {
-    const response = await apiClient.post<PerpetualLicense>(
+    const response = await apiClient.post<{ status: string; data: PerpetualLicense }>(
       '/api/licenses/purchase',
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Suspend a license (admin only)
    */
   suspendLicense: async (licenseId: string, data: SuspendLicenseRequest) => {
-    const response = await apiClient.post<PerpetualLicense>(
+    const response = await apiClient.post<{ status: string; data: PerpetualLicense; meta?: any }>(
       `/admin/licenses/${licenseId}/suspend`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Revoke a license (admin only)
    */
   revokeLicense: async (licenseId: string, data: RevokeLicenseRequest) => {
-    const response = await apiClient.post<PerpetualLicense>(
+    const response = await apiClient.post<{ status: string; data: PerpetualLicense; meta?: any }>(
       `/admin/licenses/${licenseId}/revoke`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -144,11 +144,11 @@ export const activationApi = {
    * Activate a device
    */
   activateDevice: async (data: ActivateDeviceRequest) => {
-    const response = await apiClient.post<LicenseActivation>(
+    const response = await apiClient.post<{ status: string; data: LicenseActivation }>(
       '/api/licenses/activate',
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -165,11 +165,11 @@ export const activationApi = {
    * Replace a device
    */
   replaceDevice: async (activationId: string, data: ReplaceDeviceRequest) => {
-    const response = await apiClient.patch<LicenseActivation>(
+    const response = await apiClient.patch<{ status: string; data: LicenseActivation }>(
       `/api/licenses/activations/${activationId}/replace`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -212,11 +212,11 @@ export const upgradeApi = {
    * Purchase a version upgrade
    */
   purchaseUpgrade: async (licenseKey: string, targetVersion: string) => {
-    const response = await apiClient.post<VersionUpgrade>(
+    const response = await apiClient.post<{ status: string; data: VersionUpgrade }>(
       `/api/licenses/${licenseKey}/upgrade`,
       { targetVersion }
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -303,11 +303,11 @@ export const prorationApi = {
    * Reverse a proration (admin only)
    */
   reverseProration: async (prorationId: string, data: ReverseProrationRequest) => {
-    const response = await apiClient.post<ProrationEvent>(
+    const response = await apiClient.post<{ status: string; data: ProrationEvent; meta?: any }>(
       `/admin/prorations/${prorationId}/reverse`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -360,22 +360,22 @@ export const migrationApi = {
    * Migrate from perpetual to subscription
    */
   migratePerpetualToSubscription: async (licenseId: string, targetTier: string) => {
-    const response = await apiClient.post<MigrationHistory>(
+    const response = await apiClient.post<{ status: string; data: MigrationHistory; meta?: any }>(
       '/api/migrations/perpetual-to-subscription',
       { licenseId, targetTier }
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Migrate from subscription to perpetual
    */
   migrateSubscriptionToPerpetual: async (subscriptionId: string) => {
-    const response = await apiClient.post<MigrationHistory>(
+    const response = await apiClient.post<{ status: string; data: MigrationHistory; meta?: any }>(
       '/api/migrations/subscription-to-perpetual',
       { subscriptionId }
     );
-    return response.data;
+    return response.data.data;
   },
 };
 
