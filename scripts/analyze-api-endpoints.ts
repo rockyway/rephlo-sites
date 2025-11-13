@@ -122,6 +122,21 @@ function extractExpressRoutes(filePath: string): EndpointDefinition[] {
   const lines = content.split('\n');
   const endpoints: EndpointDefinition[] = [];
 
+  // Extract global middleware from router.use() calls
+  const globalMiddleware: string[] = [];
+  const routerUsePattern = /^\s*(router|app)\s*\.\s*use\s*\(/;
+
+  for (let lineIdx = 0; lineIdx < Math.min(lines.length, 100); lineIdx++) {
+    const line = lines[lineIdx];
+    if (routerUsePattern.test(line)) {
+      // Found router.use() - extract middleware
+      if (line.includes('authMiddleware')) globalMiddleware.push('authMiddleware');
+      if (line.includes('requireAdmin')) globalMiddleware.push('requireAdmin');
+      if (line.includes('authenticate(')) globalMiddleware.push('authenticate');
+      if (line.includes('auditLog(')) globalMiddleware.push('auditLog');
+    }
+  }
+
   // Parse line-by-line to build route definitions
   let i = 0;
   while (i < lines.length) {
@@ -171,25 +186,29 @@ function extractExpressRoutes(filePath: string): EndpointDefinition[] {
       if (pathMatch) {
         const routePath = pathMatch[1];
 
-        // Extract middleware
-        const middleware: string[] = [];
-        if (routeCode.match(/authMiddleware|authenticate\(\)/)) middleware.push('authenticate');
-        if (routeCode.match(/requireAdmin\(\)/)) middleware.push('requireAdmin');
+        // Extract route-specific middleware
+        const routeMiddleware: string[] = [];
+        if (routeCode.match(/authMiddleware/)) routeMiddleware.push('authMiddleware');
+        if (routeCode.match(/authenticate\(\)/)) routeMiddleware.push('authenticate');
+        if (routeCode.match(/requireAdmin/)) routeMiddleware.push('requireAdmin');
         if (routeCode.match(/requireScopes\(\[([^\]]+)\]\)/)) {
           const scopeMatch = routeCode.match(/requireScopes\(\[([^\]]+)\]\)/);
-          if (scopeMatch) middleware.push(`requireScopes(${scopeMatch[1]})`);
+          if (scopeMatch) routeMiddleware.push(`requireScopes(${scopeMatch[1]})`);
         }
         if (routeCode.match(/requireRoles?\(\[([^\]]+)\]\)/)) {
           const roleMatch = routeCode.match(/requireRoles?\(\[([^\]]+)\]\)/);
-          if (roleMatch) middleware.push(`requireRole(${roleMatch[1]})`);
+          if (roleMatch) routeMiddleware.push(`requireRole(${roleMatch[1]})`);
         }
-        if (routeCode.match(/auditLog\(/)) middleware.push('auditLog');
+        if (routeCode.match(/auditLog\(/)) routeMiddleware.push('auditLog');
+
+        // Combine global and route-specific middleware (remove duplicates)
+        const middleware = Array.from(new Set([...globalMiddleware, ...routeMiddleware]));
 
         // Extract handler name - support multiple patterns
         let handler: string | undefined = undefined;
 
-        // Pattern 1: asyncHandler(controller.method.bind(...))
-        const bindMatch = routeCode.match(/asyncHandler\(([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\.bind/);
+        // Pattern 1: asyncHandler(controller.method.bind(...)) - handle optional whitespace after asyncHandler(
+        const bindMatch = routeCode.match(/asyncHandler\(\s*([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)\.bind/);
         if (bindMatch) {
           handler = `${bindMatch[1]}.${bindMatch[2]}`;
         } else {
@@ -341,6 +360,97 @@ function extractTypeDefinition(typeName: string, searchDirs: string[]): SchemaDe
 }
 
 /**
+ * Extract service method return type from service files
+ * @param serviceName - Service name (e.g., couponAnalyticsService)
+ * @param serviceMethod - Method name (e.g., getAnalyticsMetrics)
+ * @returns Type name (e.g., CouponAnalyticsMetrics) or undefined
+ */
+function extractServiceMethodType(
+  serviceName: string,
+  serviceMethod: string,
+  schemasMap?: Map<string, SchemaDefinition>
+): string | undefined {
+  // Convert camelCase to kebab-case for file lookup
+  const kebabName = serviceName
+    .replace(/([A-Z])/g, '-$1')
+    .toLowerCase()
+    .replace(/^-/, '')
+    .replace(/-service$/, '');
+
+  // Try multiple file patterns
+  const serviceFilePatterns = [
+    path.join(BACKEND_DIR, 'src', 'services', `${kebabName}.service.ts`),
+    path.join(BACKEND_DIR, 'src', 'services', `${serviceName}.ts`),
+    path.join(IDP_DIR, 'src', 'services', `${kebabName}.service.ts`),
+    path.join(IDP_DIR, 'src', 'services', `${serviceName}.ts`),
+  ];
+
+  let serviceFile: string | undefined;
+  for (const pattern of serviceFilePatterns) {
+    if (fs.existsSync(pattern)) {
+      serviceFile = pattern;
+      break;
+    }
+  }
+
+  // If not found, try partial matching
+  if (!serviceFile) {
+    const serviceDirs = [
+      path.join(BACKEND_DIR, 'src', 'services'),
+      path.join(IDP_DIR, 'src', 'services'),
+    ];
+
+    for (const dir of serviceDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      const files = fs.readdirSync(dir).filter(f => f.endsWith('.service.ts') || f.endsWith('.ts'));
+      const candidates = files.filter(f => f.startsWith(kebabName) || f.includes(kebabName));
+
+      if (candidates.length > 1) {
+        // Multiple matches - check which one contains the method
+        for (const candidate of candidates) {
+          const candidatePath = path.join(dir, candidate);
+          const candidateContent = fs.readFileSync(candidatePath, 'utf-8');
+
+          // Check if this file contains the method we're looking for
+          if (candidateContent.match(new RegExp(`async\\s+${serviceMethod}\\s*\\(`))) {
+            serviceFile = candidatePath;
+            break;
+          }
+        }
+      } else if (candidates.length === 1) {
+        serviceFile = path.join(dir, candidates[0]);
+      }
+
+      if (serviceFile) break;
+    }
+  }
+
+  if (!serviceFile) {
+    return undefined;
+  }
+
+  const serviceContent = fs.readFileSync(serviceFile, 'utf-8');
+
+  // Try to match Promise<TypeName>
+  const namedTypeMatch = serviceContent.match(
+    new RegExp(`async\\s+${serviceMethod}\\s*\\([^)]*\\)\\s*:\\s*Promise<([^>]+)>`)
+  );
+
+  if (namedTypeMatch) {
+    const typeName = namedTypeMatch[1].trim();
+
+    // Filter out internal/primitive types
+    const ignoredTypes = ['any | null', 'null', 'void', 'boolean', 'string', 'number'];
+    if (!ignoredTypes.includes(typeName)) {
+      return typeName;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Extract response and error schemas from controller method
  */
 function extractSchemas(
@@ -384,19 +494,79 @@ function extractSchemas(
   let controllerFile: string | undefined;
   for (const pattern of controllerPatterns) {
     if (pattern.includes('**')) {
-      // Handle glob pattern
+          // Handle glob pattern
       const baseDir = pattern.split('**')[0];
       if (fs.existsSync(baseDir)) {
         const files = getAllFiles(baseDir, ['.ts']);
-        const found = files.find(f => f.endsWith(`${controllerName}.ts`));
+        // Extract expected filename from pattern (after the **)
+        const patternParts = pattern.split('**');
+        const expectedFilename = patternParts.length > 1 ? patternParts[1].replace(/^[\/\\]/, '') : `${controllerName}.ts`;
+
+        // Look for files matching the expected filename
+        const found = files.find(f => f.endsWith(expectedFilename) || f.endsWith(`${controllerName}.ts`));
         if (found) {
-          controllerFile = found;
-          break;
+          // Verify the found file contains the method
+          const content = fs.readFileSync(found, 'utf-8');
+          if (content.includes(`${methodName}`) &&
+              (content.includes(`async ${methodName}(`) ||
+               content.includes(`${methodName} =`) ||
+               content.includes(`${methodName}(`))) {
+            controllerFile = found;
+            break;
+          }
         }
       }
     } else if (fs.existsSync(pattern)) {
-      controllerFile = pattern;
-      break;
+      // Verify the found file contains the method
+      const content = fs.readFileSync(pattern, 'utf-8');
+      if (content.includes(`${methodName}`) &&
+          (content.includes(`async ${methodName}(`) ||
+           content.includes(`${methodName} =`) ||
+           content.includes(`${methodName}(`))) {
+        controllerFile = pattern;
+        break;
+      }
+    }
+  }
+
+  // If not found, try partial matching (e.g., creditController -> credit-management.controller.ts)
+  if (!controllerFile) {
+    const controllerDirs = [
+      path.join(BACKEND_DIR, 'src', 'controllers'),
+      path.join(IDP_DIR, 'src', 'controllers'),
+    ];
+
+    for (const dir of controllerDirs) {
+      if (!fs.existsSync(dir)) continue;
+
+      // Use getAllFiles to recursively search subdirectories (e.g., backend/src/controllers/admin/)
+      const allFiles = getAllFiles(dir, ['.ts']);
+      const files = allFiles.map(f => path.basename(f)).filter(f => f.endsWith('.controller.ts') || f.endsWith('.ts'));
+      const filePathsMap = new Map(allFiles.map(f => [path.basename(f), f]));
+
+      // Strategy 1: Look for files that contain the kebab name
+      const candidates = files.filter(f => f.startsWith(kebabName) || f.includes(kebabName));
+
+      if (candidates.length > 1) {
+        // Multiple matches - check which one contains the method
+        for (const candidate of candidates) {
+          const candidatePath = filePathsMap.get(candidate)!;
+          const candidateContent = fs.readFileSync(candidatePath, 'utf-8');
+
+          // Check if this file contains the method we're looking for
+          if (candidateContent.includes(`${methodName}`) &&
+              (candidateContent.includes(`async ${methodName}(`) ||
+               candidateContent.includes(`${methodName} =`) ||
+               candidateContent.includes(`${methodName}(`))) {
+            controllerFile = candidatePath;
+            break;
+          }
+        }
+      } else if (candidates.length === 1) {
+        controllerFile = filePathsMap.get(candidates[0])!;
+      }
+
+      if (controllerFile) break;
     }
   }
 
@@ -413,9 +583,10 @@ function extractSchemas(
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Match method declaration: async methodName(
+    // Match method declaration: async methodName( OR methodName(...): Promise OR methodName = async (
     if (line.match(new RegExp(`async\\s+${methodName}\\s*\\(`)) ||
-        line.match(new RegExp(`${methodName}\\s*\\([^)]*\\)\\s*:\\s*Promise`))) {
+        line.match(new RegExp(`${methodName}\\s*\\([^)]*\\)\\s*:\\s*Promise`)) ||
+        line.match(new RegExp(`${methodName}\\s*=\\s*async\\s*\\(`))) {
       methodStartLine = i;
 
       // Find method end (closing brace at same indentation level)
@@ -465,7 +636,7 @@ function extractSchemas(
       .replace(/^-/, '')
       .replace(/-service$/, '');
 
-    // Try multiple file patterns
+    // Try multiple file patterns and also glob for partial matches
     const serviceFilePatterns = [
       path.join(BACKEND_DIR, 'src', 'services', `${kebabName}.service.ts`),
       path.join(BACKEND_DIR, 'src', 'services', `${serviceName}.ts`),
@@ -481,21 +652,86 @@ function extractSchemas(
       }
     }
 
+    // If not found, try glob pattern for partial matches (e.g., campaign-management.service.ts)
+    if (!serviceFile) {
+      const serviceDirs = [
+        path.join(BACKEND_DIR, 'src', 'services'),
+        path.join(IDP_DIR, 'src', 'services'),
+      ];
+
+      for (const dir of serviceDirs) {
+        if (!fs.existsSync(dir)) continue;
+
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.service.ts') || f.endsWith('.ts'));
+        // Look for files that start with the kebab prefix
+        const match = files.find(f => f.startsWith(kebabName) || f.includes(kebabName));
+        if (match) {
+          serviceFile = path.join(dir, match);
+          break;
+        }
+      }
+    }
+
     if (serviceFile) {
       const serviceContent = fs.readFileSync(serviceFile, 'utf-8');
-      const serviceMethodMatch = serviceContent.match(
-        new RegExp(`async\\s+${serviceMethod}\\s*\\([^)]*\\)\\s*:\\s*Promise<([^>]+)>`)
+
+      // First, try to match inline object types Promise<{ ... }>
+      const inlineTypeMatch = serviceContent.match(
+        new RegExp(`async\\s+${serviceMethod}\\s*\\([^)]*\\)\\s*:\\s*Promise<(\\{[\\s\\S]*?\\})>`, 'm')
       );
+
+      // If not inline, try to match named types Promise<TypeName>
+      const namedTypeMatch = !inlineTypeMatch ? serviceContent.match(
+        new RegExp(`async\\s+${serviceMethod}\\s*\\([^)]*\\)\\s*:\\s*Promise<([^>]+)>`)
+      ) : null;
+
+      const serviceMethodMatch = inlineTypeMatch || namedTypeMatch;
+
       if (serviceMethodMatch) {
-        const typeName = serviceMethodMatch[1].trim();
-        // Extract type definition and store in schemas map
-        if (!schemasMap.has(typeName)) {
-          const typeDef = extractTypeDefinition(typeName, []);
-          if (typeDef) {
-            schemasMap.set(typeName, typeDef);
+        let typeName = serviceMethodMatch[1].trim();
+
+        // Check if this is an inline anonymous type (starts with '{')
+        if (typeName.startsWith('{')) {
+          // Inline anonymous type - create a named schema
+          const schemaName = `${serviceMethod.charAt(0).toUpperCase()}${serviceMethod.slice(1)}_Response`;
+          if (!schemasMap.has(schemaName)) {
+            // Find the actual line number of the method
+            const methodLineMatch = serviceContent.split('\n').findIndex(line =>
+              line.includes(`async ${serviceMethod}(`) || line.includes(`async ${serviceMethod} (`)
+            );
+            const actualLine = methodLineMatch !== -1 ? methodLineMatch + 1 : undefined;
+
+            schemasMap.set(schemaName, {
+              name: schemaName,
+              definition: `// Service method return type from ${path.basename(serviceFile)}\ntype ${schemaName} = ${typeName}`,
+              file: path.relative(ROOT_DIR, serviceFile),
+              line: actualLine,
+            });
+          }
+          responseSchema = schemaName;
+        } else {
+          // Named type - continue with existing logic
+          // Filter out internal cache/utility types - these are not API responses
+          const ignoredTypes = ['any | null', 'null', 'void', 'boolean', 'string', 'number'];
+          const isInternalType = ignoredTypes.includes(typeName) ||
+                                 typeName.endsWith(' | null') && !typeName.includes('interface') &&
+                                 !typeName.includes('export');
+
+          if (!isInternalType) {
+            // Extract type definition and store in schemas map
+            if (!schemasMap.has(typeName)) {
+              const typeDef = extractTypeDefinition(typeName, []);
+              if (typeDef) {
+                // Additional check: if definition is from cache.get(), skip it
+                if (!typeDef.definition.includes('cache.get(') &&
+                    !typeDef.definition.includes('this.cache')) {
+                  schemasMap.set(typeName, typeDef);
+                }
+              }
+            }
+            responseSchema = typeName;
           }
         }
-        responseSchema = typeName;
       }
     }
   }
@@ -505,28 +741,205 @@ function extractSchemas(
     // Pattern 1: res.status(2xx).json(successResponse(...)) OR res.json(successResponse(...))
     const successResponseMatch = methodCode.match(/res\.(status\(2\d{2}\)\.)?json\(successResponse\(/);
     if (successResponseMatch) {
-      // Check if it has pagination metadata as second argument to successResponse()
-      // Simpler approach: Check if pagination keywords appear in object literal after successResponse call
+      // Extract the object inside successResponse()
       const successResponseIndex = methodCode.indexOf('successResponse(');
-      const afterSuccessResponse = methodCode.substring(successResponseIndex);
-      // Look for pagination keywords in object literal (both shorthand and full syntax)
-      // Matches: { total: ... } or { total, ... } or { total } (shorthand)
-      const hasPagination = /\{\s*(total|page|limit|totalPages|hasMore)\s*[,:}]/s.test(afterSuccessResponse) &&
-                           // But exclude if it's nested data (like feedback: { total: ... })
-                           !/successResponse\(\s*\{[^}]*(total|page|limit)/s.test(afterSuccessResponse);
-      responseSchema = hasPagination
-        ? '{ status: "success", data: T, meta: PaginationMeta }'
-        : '{ status: "success", data: T }';
+      const afterSuccessResponse = methodCode.substring(successResponseIndex + 'successResponse('.length);
+
+      // Find the complete object inside successResponse()
+      let braceCount = 0;
+      let inObject = false;
+      let objectContent = '';
+      let endIndex = 0;
+
+      for (let i = 0; i < afterSuccessResponse.length; i++) {
+        const char = afterSuccessResponse[i];
+        if (char === '{') {
+          braceCount++;
+          inObject = true;
+        }
+        if (inObject) {
+          objectContent += char;
+        }
+        if (char === '}') {
+          braceCount--;
+          if (braceCount === 0 && inObject) {
+            endIndex = i;
+            break;
+          }
+        }
+      }
+
+      // Check if the object is multi-line and complex
+      if (objectContent && objectContent.split('\n').length > 3) {
+        // Create a named schema for this complex response
+        const schemaName = `${endpoint.handler?.replace(/\./g, '_') || 'SuccessResponse'}_Data`;
+        if (!schemasMap.has(schemaName)) {
+          schemasMap.set(schemaName, {
+            name: schemaName,
+            definition: `// Controller response data from ${endpoint.file}:${endpoint.line}\ntype ${schemaName} = ${objectContent}`,
+            file: endpoint.file,
+            line: endpoint.line,
+          });
+        }
+        responseSchema = `{ status: "success", data: ${schemaName} }`;
+      } else {
+        // Simple response or no object literal - use generic T
+        const hasPagination = /\{\s*(total|page|limit|totalPages|hasMore)\s*[,:}]/s.test(afterSuccessResponse) &&
+                             !/successResponse\(\s*\{[^}]*(total|page|limit)/s.test(afterSuccessResponse);
+        responseSchema = hasPagination
+          ? '{ status: "success", data: T, meta: PaginationMeta }'
+          : '{ status: "success", data: T }';
+      }
     } else {
       // Pattern 2: res.status(2xx).json(paginatedResponse(...)) OR res.json(paginatedResponse(...))
       const paginatedMatch = methodCode.match(/res\.(status\(2\d{2}\)\.)?json\(paginatedResponse\(/);
       if (paginatedMatch) {
         responseSchema = '{ status: "success", data: T[], meta: PaginationMeta }';
       } else {
-        // Pattern 3: res.status(2xx).json({ ... }) OR res.json({ ... })
+        // Pattern 2.5: res.status(2xx).json(mapperFunction(...)) - e.g., mapCouponToApiType(), mapUserToApiType()
+        const mapperMatch = methodCode.match(/res\.status\(2\d{2}\)\.json\(map([A-Z][a-zA-Z0-9]*)ToApiType\(/);
+        if (mapperMatch) {
+          // Extract type name from mapper function (e.g., mapCouponToApiType -> Coupon)
+          responseSchema = mapperMatch[1];
+        } else {
+          // Check for other common mapper patterns
+          const genericMapperMatch = methodCode.match(/res\.status\(2\d{2}\)\.json\(([a-zA-Z0-9_]+Mapper|to[A-Z][a-zA-Z0-9]*)\(/);
+          if (genericMapperMatch) {
+            // Try to infer type from mapper name (e.g., userMapper -> User, toDTO -> DTO)
+            const mapperName = genericMapperMatch[1];
+            if (mapperName.endsWith('Mapper')) {
+              const typeName = mapperName.replace(/Mapper$/, '');
+              responseSchema = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+            } else if (mapperName.startsWith('to')) {
+              responseSchema = mapperName.substring(2);
+            }
+          }
+        }
+      }
+
+      if (!responseSchema) {
+        // Pattern 2.6: sendPaginatedResponse(res, data, ...) helper function
+        const sendPaginatedMatch = methodCode.match(/sendPaginatedResponse\(res,\s*([a-zA-Z_][a-zA-Z0-9_]*)/);
+        if (sendPaginatedMatch) {
+          responseSchema = 'PaginatedResponse<T>'; // Generic paginated type
+        }
+      }
+
+      if (!responseSchema) {
+        // Pattern 2.7: res.redirect(...) - redirect-only endpoint
+        const redirectMatch = methodCode.match(/res\.redirect\(/);
+        if (redirectMatch) {
+          responseSchema = 'Redirect'; // Special marker for redirects
+        }
+      }
+
+      if (!responseSchema) {
+        // Pattern 3: Wrapped response with data field - res.json({ success/status: ..., data: variable })
+        // Matches: res.json({ success: true, data: variable }) OR res.status(200).json({ status: 'success', data: variable })
+        const wrappedMatch = methodCode.match(/res\.(status\(\d{3}\)\.)?json\(\s*\{\s*(?:success|status):\s*['"true success'",]+\s*,\s*data:\s*([a-zA-Z_][a-zA-Z0-9_]*)/);
+        if (wrappedMatch) {
+          const dataVariable = wrappedMatch[2];
+
+          // Trace the data variable to its source
+          // Pattern 3a: const dataVariable = await service.method(...)
+          const serviceCallPattern = new RegExp(`const\\s+${dataVariable}\\s*=\\s*await\\s+this\\.([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)\\(`, 'm');
+          const serviceCallMatch = methodCode.match(serviceCallPattern);
+
+          if (serviceCallMatch) {
+            const [, serviceName, serviceMethod] = serviceCallMatch;
+            const serviceType = extractServiceMethodType(serviceName, serviceMethod);
+
+            if (serviceType) {
+              // Wrap the extracted type in the response wrapper
+              responseSchema = `{ success: true, data: ${serviceType} }`;
+            }
+          } else {
+            // Pattern 3b: const dataVariable = inline object/array construction
+            // Use generic wrapper
+            responseSchema = '{ success: true, data: T }';
+          }
+        }
+      }
+
+      if (!responseSchema) {
+        // Pattern 3.5: res.status(2xx).json(variableName) - variable passed to json()
+        // Check this BEFORE Pattern 4 (direct object literal) to prioritize variable tracing
+        const variableMatch = methodCode.match(/res\.status\(2\d{2}\)\.json\(([a-zA-Z_][a-zA-Z0-9_]*)\)/);
+
+        if (variableMatch) {
+          const variableName = variableMatch[1];
+
+          // Look for variable assignment: const variableName = await service.method(...)
+          const assignmentPattern = new RegExp(`const\\s+${variableName}\\s*=\\s*await\\s+this\\.([a-zA-Z0-9_]+)\\.([a-zA-Z0-9_]+)\\(`, 'm');
+          const assignmentMatch = methodCode.match(assignmentPattern);
+
+          if (assignmentMatch) {
+            const [, serviceName, serviceMethod] = assignmentMatch;
+
+            // Use existing service type extraction logic
+            const serviceType = extractServiceMethodType(serviceName, serviceMethod);
+
+            if (serviceType) {
+              responseSchema = serviceType;
+            }
+          }
+        }
+      }
+
+      if (!responseSchema) {
+        // Pattern 4: res.status(2xx).json({ ... }) OR res.json({ ... })
         const directJsonMatch = methodCode.match(/res\.(status\(2\d{2}\)\.)?json\(\s*\{/);
         if (directJsonMatch) {
-          responseSchema = 'Object';
+          // Extract the inline object literal
+          // Prefer success responses (status 2xx) over error responses
+          const successJsonMatch = methodCode.match(/res\.status\(2\d{2}\)\.json\(\s*\{/);
+          const anyJsonMatch = methodCode.match(/res\.json\(\s*\{/);
+
+          let jsonStartIndex = -1;
+          if (successJsonMatch) {
+            jsonStartIndex = methodCode.indexOf(successJsonMatch[0]);
+          } else if (anyJsonMatch) {
+            jsonStartIndex = methodCode.indexOf(anyJsonMatch[0]);
+          }
+
+          if (jsonStartIndex !== -1) {
+            const startIndex = methodCode.indexOf('{', jsonStartIndex);
+            let braceCount = 0;
+            let endIndex = startIndex;
+            for (let i = startIndex; i < methodCode.length; i++) {
+              if (methodCode[i] === '{') braceCount++;
+              if (methodCode[i] === '}') braceCount--;
+              if (braceCount === 0) {
+                endIndex = i;
+                break;
+              }
+            }
+
+            const objectLiteral = methodCode.substring(startIndex, endIndex + 1);
+
+            // Skip if this is an error object (contains error: { code: ... })
+            if (objectLiteral.includes('error:') && objectLiteral.includes('code:')) {
+              // Don't extract error responses as schemas
+              responseSchema = undefined;
+            } else if (objectLiteral.split('\n').length > 3) {
+              // Multi-line object - create a named schema
+              const schemaName = `${endpoint.handler?.replace(/\./g, '_') || 'Inline'}_Response`;
+              if (!schemasMap.has(schemaName)) {
+                schemasMap.set(schemaName, {
+                  name: schemaName,
+                  definition: `// Inline response from ${endpoint.file}:${endpoint.line}\ntype ${schemaName} = ${objectLiteral}`,
+                  file: endpoint.file,
+                  line: endpoint.line,
+                });
+              }
+              responseSchema = schemaName;
+            } else {
+              // Simple single-line object - keep as inline
+              responseSchema = objectLiteral.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+            }
+          } else {
+            responseSchema = 'Object';
+          }
         }
       }
     }
@@ -585,7 +998,8 @@ function findEndpointUsages(endpoint: EndpointDefinition, searchDirs: string[]):
   // Common patterns for API calls
   const patterns = [
     new RegExp(`['"\`](/[^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
-    new RegExp(`axios\\.(${endpoint.method.toLowerCase()}|request)\\s*\\([^)]*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
+    new RegExp(`axios\\.(${endpoint.method.toLowerCase()}|request)(<[^>]+>)?\\s*\\([^)]*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
+    new RegExp(`apiClient\\.(${endpoint.method.toLowerCase()}|request)(<[^>]+>)?\\s*\\([^)]*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
     new RegExp(`fetch\\s*\\([^)]*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
     new RegExp(`(action|href)\\s*=\\s*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
     new RegExp(`location\\.href\\s*=\\s*['"\`]([^'"\`]*${pathPattern.replace(/^\//, '')}[^'"\`]*)['"\`]`, 'gi'),
@@ -794,7 +1208,10 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
   projects.forEach(project => {
     markdown += `## ${project.projectName}\n\n`;
     markdown += `**Base URL:** \`${project.baseUrl}\`\n\n`;
-    markdown += `**Total Endpoints:** ${project.endpoints.length}\n\n`;
+
+    // Count endpoints excluding root endpoint
+    const displayedEndpoints = project.endpoints.filter(e => e.path !== '/');
+    markdown += `**Total Endpoints:** ${displayedEndpoints.length}\n\n`;
 
     // Sort endpoints by path (ascending)
     const sortedEndpoints = [...project.endpoints].sort((a, b) => {
@@ -818,20 +1235,51 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
       const endpointPath = endpoint.path;
       const file = `${endpoint.file} L:${endpoint.line}`;
       const handler = endpoint.handler || '-';
-      const responseSchema = endpoint.responseSchema ? `\`${endpoint.responseSchema}\`` : '-';
+
+      // Format response schema - if it contains newlines, it's already been extracted to schemas
+      // Only wrap in backticks if it's a single-line value
+      let responseSchemaCell = '-';
+      if (endpoint.responseSchema) {
+        if (endpoint.responseSchema.includes('\n')) {
+          // Multi-line schema should have been converted to a named reference
+          // This shouldn't happen, but if it does, sanitize it
+          responseSchemaCell = `\`${endpoint.responseSchema.split('\n')[0]}...\``;
+        } else {
+          responseSchemaCell = `\`${endpoint.responseSchema}\``;
+        }
+      }
+
       const errorSchemas = endpoint.errorSchemas && endpoint.errorSchemas.length > 0
         ? endpoint.errorSchemas.map(e => `\`${e}\``).join('<br>')
         : '-';
       const middleware = endpoint.middleware ? endpoint.middleware.join(', ') : '-';
 
-      // Get usages - format with <br> tags for line breaks
+      // Get usages - consolidate duplicate files with semicolon-separated line numbers
       const key = `${endpoint.method} ${endpoint.path}`;
       const usages = project.usages.get(key);
-      const usageStr = usages && usages.length > 0
-        ? usages.map(u => `${u.file} L:${u.line}`).join('<br>')
-        : '-';
+      let usageStr = '-';
 
-      markdown += `| ${method} | \`${endpointPath}\` | \`${file}\` | \`${handler}\` | ${responseSchema} | ${errorSchemas} | \`${middleware}\` | ${usageStr} |\n`;
+      if (usages && usages.length > 0) {
+        // Group usages by file path
+        const fileMap = new Map<string, number[]>();
+        usages.forEach(u => {
+          if (!fileMap.has(u.file)) {
+            fileMap.set(u.file, []);
+          }
+          fileMap.get(u.file)!.push(u.line);
+        });
+
+        // Format as "file L:line1;line2;line3"
+        const consolidatedUsages = Array.from(fileMap.entries()).map(([file, lines]) => {
+          // Sort line numbers numerically
+          const sortedLines = lines.sort((a, b) => a - b);
+          return `${file} L:${sortedLines.join(';')}`;
+        });
+
+        usageStr = consolidatedUsages.join('<br>');
+      }
+
+      markdown += `| ${method} | \`${endpointPath}\` | \`${file}\` | \`${handler}\` | ${responseSchemaCell} | ${errorSchemas} | \`${middleware}\` | ${usageStr} |\n`;
     });
 
     markdown += `\n---\n\n`;
@@ -904,11 +1352,19 @@ function generateMarkdownReport(projects: ProjectEndpoints[]): string {
   projects.forEach(project => {
     markdown += `## ${project.projectName}\n\n`;
     markdown += `**Base URL:** \`${project.baseUrl}\`\n\n`;
-    markdown += `**Total Endpoints:** ${project.endpoints.length}\n\n`;
 
-    // Group by HTTP method
+    // Count endpoints excluding root endpoint
+    const displayedEndpoints = project.endpoints.filter(e => e.path !== '/');
+    markdown += `**Total Endpoints:** ${displayedEndpoints.length}\n\n`;
+
+    // Group by HTTP method (exclude root endpoint)
     const methodGroups = new Map<string, EndpointDefinition[]>();
     project.endpoints.forEach(endpoint => {
+      // Skip root endpoint (any method) - floods the document with usages
+      if (endpoint.path === '/') {
+        return;
+      }
+
       const method = endpoint.method;
       if (!methodGroups.has(method)) {
         methodGroups.set(method, []);
@@ -935,6 +1391,14 @@ function generateMarkdownReport(projects: ProjectEndpoints[]): string {
 
         if (endpoint.middleware && endpoint.middleware.length > 0) {
           markdown += `- **Middleware:** ${endpoint.middleware.map(m => `\`${m}\``).join(', ')}\n`;
+        }
+
+        if (endpoint.responseSchema) {
+          markdown += `- **Response Schema:** \`${endpoint.responseSchema}\`\n`;
+        }
+
+        if (endpoint.errorSchemas && endpoint.errorSchemas.length > 0) {
+          markdown += `- **Error Schemas:** ${endpoint.errorSchemas.map(e => `\`${e}\``).join(', ')}\n`;
         }
 
         markdown += `\n`;
