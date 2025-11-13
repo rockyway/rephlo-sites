@@ -17,7 +17,8 @@
 
 import { injectable, inject, container as diContainer } from 'tsyringe';
 import { Response } from 'express';
-import { ILLMProvider } from '../interfaces';
+import { PrismaClient } from '@prisma/client';
+import { ILLMProvider, ICostCalculationService, IPricingConfigService } from '../interfaces';
 import {
   TextCompletionRequest,
   ChatCompletionRequest,
@@ -32,7 +33,10 @@ export class LLMService {
   private providerMap: Map<string, ILLMProvider>;
 
   constructor(
-    @inject(UsageRecorder) private usageRecorder: UsageRecorder
+    @inject(UsageRecorder) private usageRecorder: UsageRecorder,
+    @inject('ICostCalculationService') private costCalculationService: ICostCalculationService,
+    @inject('IPricingConfigService') private pricingConfigService: IPricingConfigService,
+    @inject('PrismaClient') private prisma: PrismaClient
   ) {
     // Manually resolve providers to handle the case when none are registered
     let allProviders: ILLMProvider[] = [];
@@ -68,6 +72,88 @@ export class LLMService {
     return provider;
   }
 
+  /**
+   * Calculate credit cost using provider pricing system (Plan 161)
+   * Formula: credits = ceil(vendorCost × marginMultiplier × 100)
+   * Where 100 is the conversion factor (1 credit = $0.01)
+   *
+   * @param userId - User ID for tier lookup
+   * @param modelId - Model identifier
+   * @param providerName - Provider name (e.g., 'openai', 'anthropic')
+   * @param inputTokens - Number of input tokens
+   * @param outputTokens - Number of output tokens
+   * @param cachedInputTokens - Number of cached input tokens (optional, for Anthropic/Google)
+   * @returns Calculated credits to deduct
+   */
+  private async calculateCreditsFromVendorCost(
+    userId: string,
+    modelId: string,
+    providerName: string,
+    inputTokens: number,
+    outputTokens: number,
+    cachedInputTokens?: number
+  ): Promise<number> {
+    try {
+      // Step 1: Look up provider UUID from provider name
+      const provider = await this.prisma.provider.findUnique({
+        where: { name: providerName },
+        select: { id: true },
+      });
+
+      if (!provider) {
+        logger.warn('LLMService: Provider not found in database, using fallback calculation', {
+          providerName,
+          modelId,
+        });
+        // Fallback: Use simple calculation (this should not happen in production)
+        return Math.ceil(((inputTokens + outputTokens) / 1000) * 10); // Assume $0.01 per 1k tokens
+      }
+
+      // Step 2: Calculate vendor cost
+      const costCalculation = await this.costCalculationService.calculateVendorCost({
+        inputTokens,
+        outputTokens,
+        modelId,
+        providerId: provider.id,
+        cachedInputTokens,
+      });
+
+      // Step 3: Get margin multiplier for this user's tier
+      const marginMultiplier = await this.pricingConfigService.getApplicableMultiplier(
+        userId,
+        provider.id,
+        modelId
+      );
+
+      // Step 4: Apply formula: credits = ceil(vendorCost × marginMultiplier × 100)
+      // Where × 100 converts USD to credits (1 credit = $0.01)
+      const credits = Math.ceil(costCalculation.vendorCost * marginMultiplier * 100);
+
+      logger.debug('LLMService: Credits calculated from vendor cost', {
+        userId,
+        modelId,
+        providerName,
+        inputTokens,
+        outputTokens,
+        cachedInputTokens,
+        vendorCost: costCalculation.vendorCost,
+        marginMultiplier,
+        credits,
+      });
+
+      return credits;
+    } catch (error) {
+      logger.error('LLMService: Error calculating credits from vendor cost', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        modelId,
+        providerName,
+      });
+      // Fallback: Use simple calculation
+      return Math.ceil(((inputTokens + outputTokens) / 1000) * 10);
+    }
+  }
+
   // ============================================================================
   // Chat Completion Operations
   // ============================================================================
@@ -75,7 +161,6 @@ export class LLMService {
   async chatCompletion(
     request: ChatCompletionRequest,
     modelProvider: string,
-    creditsPer1kTokens: number,
     userId: string
   ): Promise<ChatCompletionResponse> {
     logger.debug('LLMService: Chat completion request', {
@@ -92,10 +177,15 @@ export class LLMService {
       // 1. Delegate to provider (Strategy Pattern)
       const { response, usage } = await provider.chatCompletion(request);
 
-      // 2. Business logic (credit calculation)
+      // 2. Business logic (credit calculation using Plan 161 provider pricing)
       const duration = Date.now() - startTime;
-      const creditsUsed = Math.ceil(
-        (usage.totalTokens / 1000) * creditsPer1kTokens
+      const creditsUsed = await this.calculateCreditsFromVendorCost(
+        userId,
+        request.model,
+        modelProvider,
+        usage.promptTokens,
+        usage.completionTokens,
+        usage.cachedTokens
       );
 
       const finalResponse: ChatCompletionResponse = {
@@ -145,7 +235,6 @@ export class LLMService {
   async streamChatCompletion(
     request: ChatCompletionRequest,
     modelProvider: string,
-    creditsPer1kTokens: number,
     userId: string,
     res: Response
   ): Promise<void> {
@@ -167,9 +256,20 @@ export class LLMService {
       // 1. Delegate to provider
       const totalTokens = await provider.streamChatCompletion(request, res);
 
-      // 2. Business logic
+      // 2. Business logic (credit calculation using Plan 161 provider pricing)
+      // Note: Streaming providers only return totalTokens, so we estimate the breakdown
+      // Assume 30% are prompt tokens, 70% are completion tokens (typical for chat)
       const duration = Date.now() - startTime;
-      const creditsUsed = Math.ceil((totalTokens / 1000) * creditsPer1kTokens);
+      const estimatedPromptTokens = Math.ceil(totalTokens * 0.3);
+      const estimatedCompletionTokens = Math.ceil(totalTokens * 0.7);
+
+      const creditsUsed = await this.calculateCreditsFromVendorCost(
+        userId,
+        request.model,
+        modelProvider,
+        estimatedPromptTokens,
+        estimatedCompletionTokens
+      );
 
       logger.info('LLMService: Streaming chat completion successful', {
         model: request.model,
@@ -225,7 +325,6 @@ export class LLMService {
   async textCompletion(
     request: TextCompletionRequest,
     modelProvider: string,
-    creditsPer1kTokens: number,
     userId: string
   ): Promise<TextCompletionResponse> {
     logger.debug('LLMService: Text completion request', {
@@ -241,8 +340,13 @@ export class LLMService {
       const { response, usage } = await provider.textCompletion(request);
 
       const duration = Date.now() - startTime;
-      const creditsUsed = Math.ceil(
-        (usage.totalTokens / 1000) * creditsPer1kTokens
+      const creditsUsed = await this.calculateCreditsFromVendorCost(
+        userId,
+        request.model,
+        modelProvider,
+        usage.promptTokens,
+        usage.completionTokens,
+        usage.cachedTokens
       );
 
       const finalResponse: TextCompletionResponse = {
@@ -290,7 +394,6 @@ export class LLMService {
   async streamTextCompletion(
     request: TextCompletionRequest,
     modelProvider: string,
-    creditsPer1kTokens: number,
     userId: string,
     res: Response
   ): Promise<void> {
@@ -310,8 +413,19 @@ export class LLMService {
     try {
       const totalTokens = await provider.streamTextCompletion(request, res);
 
+      // Note: Streaming providers only return totalTokens, so we estimate the breakdown
+      // Assume 30% are prompt tokens, 70% are completion tokens
       const duration = Date.now() - startTime;
-      const creditsUsed = Math.ceil((totalTokens / 1000) * creditsPer1kTokens);
+      const estimatedPromptTokens = Math.ceil(totalTokens * 0.3);
+      const estimatedCompletionTokens = Math.ceil(totalTokens * 0.7);
+
+      const creditsUsed = await this.calculateCreditsFromVendorCost(
+        userId,
+        request.model,
+        modelProvider,
+        estimatedPromptTokens,
+        estimatedCompletionTokens
+      );
 
       logger.info('LLMService: Streaming text completion successful', {
         model: request.model,

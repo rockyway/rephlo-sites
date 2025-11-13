@@ -1150,6 +1150,723 @@ async function seedProrations(users: any[], subscriptions: any[]) {
   return createdProrations;
 }
 
+// ============================================================================
+// PROVIDER PRICING SYSTEM (Plan 161)
+// ============================================================================
+
+/**
+ * Seed AI providers (OpenAI, Anthropic, Google, Mistral, Azure OpenAI)
+ * Part of Plan 161: Provider Pricing System Activation
+ * Reference: docs/research/005-vendor-pricing-november-2025.md
+ */
+async function seedProviders() {
+  console.log('Creating AI provider records...');
+
+  const providers = await Promise.all([
+    // OpenAI
+    prisma.provider.upsert({
+      where: { name: 'openai' },
+      update: {
+        apiType: 'openai-compatible',
+        isEnabled: true,
+      },
+      create: {
+        name: 'openai',
+        apiType: 'openai-compatible',
+        isEnabled: true,
+      },
+    }),
+
+    // Anthropic
+    prisma.provider.upsert({
+      where: { name: 'anthropic' },
+      update: {
+        apiType: 'anthropic-sdk',
+        isEnabled: true,
+      },
+      create: {
+        name: 'anthropic',
+        apiType: 'anthropic-sdk',
+        isEnabled: true,
+      },
+    }),
+
+    // Google AI
+    prisma.provider.upsert({
+      where: { name: 'google' },
+      update: {
+        apiType: 'google-generative-ai',
+        isEnabled: true,
+      },
+      create: {
+        name: 'google',
+        apiType: 'google-generative-ai',
+        isEnabled: true,
+      },
+    }),
+
+    // Mistral AI
+    prisma.provider.upsert({
+      where: { name: 'mistral' },
+      update: {
+        apiType: 'openai-compatible',
+        isEnabled: true,
+      },
+      create: {
+        name: 'mistral',
+        apiType: 'openai-compatible',
+        isEnabled: true,
+      },
+    }),
+
+    // Azure OpenAI (uses same API as OpenAI)
+    prisma.provider.upsert({
+      where: { name: 'azure-openai' },
+      update: {
+        apiType: 'openai-compatible',
+        isEnabled: true,
+      },
+      create: {
+        name: 'azure-openai',
+        apiType: 'openai-compatible',
+        isEnabled: true,
+      },
+    }),
+  ]);
+
+  console.log(`✓ Created/Updated ${providers.length} provider records\n`);
+  return providers;
+}
+
+/**
+ * Seed model pricing from vendor research (November 2025)
+ * Prices are per 1,000 tokens (database format)
+ * Part of Plan 161: Provider Pricing System Activation
+ * Reference: docs/research/005-vendor-pricing-november-2025.md
+ */
+async function seedModelPricing(providers: any[]) {
+  console.log('Creating model pricing records...');
+
+  const effectiveFrom = new Date('2025-11-13');
+  const providerMap = Object.fromEntries(providers.map((p) => [p.name, p.id]));
+
+  const pricing = await Promise.all([
+    // ========================================================================
+    // OpenAI Models
+    // ========================================================================
+
+    // GPT-4o ($5.00/$15.00 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'gpt-4o',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'gpt-4o',
+        inputPricePer1k: 0.005, // $5.00 per 1M / 1000
+        outputPricePer1k: 0.015, // $15.00 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // GPT-4o-mini ($0.15/$0.60 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'gpt-4o-mini',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'gpt-4o-mini',
+        inputPricePer1k: 0.00015, // $0.15 per 1M / 1000
+        outputPricePer1k: 0.0006, // $0.60 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // GPT-5 (use GPT-4o pricing as placeholder until official release)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'gpt-5',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'gpt-5',
+        inputPricePer1k: 0.005, // Same as GPT-4o
+        outputPricePer1k: 0.015,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // GPT-5 Mini (use GPT-4o-mini pricing as placeholder)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'gpt-5-mini',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'gpt-5-mini',
+        inputPricePer1k: 0.00015, // Same as gpt-4o-mini
+        outputPricePer1k: 0.0006,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // GPT-5 Nano (estimated $0.05/$0.20 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'gpt-5-nano',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'gpt-5-nano',
+        inputPricePer1k: 0.00005, // $0.05 per 1M / 1000
+        outputPricePer1k: 0.0002, // $0.20 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // o1 ($15.00/$60.00 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'o1',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'o1',
+        inputPricePer1k: 0.015, // $15.00 per 1M / 1000
+        outputPricePer1k: 0.06, // $60.00 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // o1-mini ($1.10/$4.40 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'o1-mini',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'o1-mini',
+        inputPricePer1k: 0.0011, // $1.10 per 1M / 1000
+        outputPricePer1k: 0.0044, // $4.40 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // o3-mini ($1.10/$4.40 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['openai'],
+          modelName: 'o3-mini',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['openai'],
+        modelName: 'o3-mini',
+        inputPricePer1k: 0.0011, // $1.10 per 1M / 1000
+        outputPricePer1k: 0.0044, // $4.40 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // ========================================================================
+    // Anthropic Models (with prompt caching)
+    // ========================================================================
+
+    // Claude Opus 4.1 ($15/$75 per 1M tokens)
+    // Cache Write (5m): $18.75, Cache Hit: $1.50 per 1M tokens
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['anthropic'],
+          modelName: 'claude-opus-4.1',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['anthropic'],
+        modelName: 'claude-opus-4.1',
+        inputPricePer1k: 0.015, // $15 per 1M / 1000
+        outputPricePer1k: 0.075, // $75 per 1M / 1000
+        cacheInputPricePer1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
+        cacheHitPricePer1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Claude Sonnet 4.5 ($3/$15 per 1M tokens)
+    // Cache Write (5m): $3.75, Cache Hit: $0.30 per 1M tokens
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['anthropic'],
+          modelName: 'claude-sonnet-4.5',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['anthropic'],
+        modelName: 'claude-sonnet-4.5',
+        inputPricePer1k: 0.003, // $3 per 1M / 1000
+        outputPricePer1k: 0.015, // $15 per 1M / 1000
+        cacheInputPricePer1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
+        cacheHitPricePer1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Claude 3.5 Sonnet (use Sonnet 4.5 pricing)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['anthropic'],
+          modelName: 'claude-3-5-sonnet',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['anthropic'],
+        modelName: 'claude-3-5-sonnet',
+        inputPricePer1k: 0.003,
+        outputPricePer1k: 0.015,
+        cacheInputPricePer1k: 0.00375,
+        cacheHitPricePer1k: 0.0003,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Claude Haiku 4.5 ($1/$5 per 1M tokens)
+    // Cache Write (5m): $1.25, Cache Hit: $0.10 per 1M tokens
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['anthropic'],
+          modelName: 'claude-haiku-4.5',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['anthropic'],
+        modelName: 'claude-haiku-4.5',
+        inputPricePer1k: 0.001, // $1 per 1M / 1000
+        outputPricePer1k: 0.005, // $5 per 1M / 1000
+        cacheInputPricePer1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
+        cacheHitPricePer1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // ========================================================================
+    // Google Gemini Models (text/image/video pricing only, audio excluded)
+    // ========================================================================
+
+    // Gemini 2.5 Pro (≤200K context: $1.25/$10 per 1M tokens)
+    // Cache Write: $0.125, Cache storage not tracked in this table
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['google'],
+          modelName: 'gemini-2-5-pro',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['google'],
+        modelName: 'gemini-2-5-pro',
+        inputPricePer1k: 0.00125, // $1.25 per 1M / 1000
+        outputPricePer1k: 0.01, // $10 per 1M / 1000
+        cacheInputPricePer1k: 0.000125, // $0.125 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Gemini 2.5 Flash (text/image/video: $0.30/$2.50 per 1M tokens)
+    // Cache Write: $0.03 per 1M tokens
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['google'],
+          modelName: 'gemini-2-5-flash',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['google'],
+        modelName: 'gemini-2-5-flash',
+        inputPricePer1k: 0.0003, // $0.30 per 1M / 1000
+        outputPricePer1k: 0.0025, // $2.50 per 1M / 1000
+        cacheInputPricePer1k: 0.00003, // $0.03 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Gemini 2.0 Flash (use 2.5 Flash pricing)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['google'],
+          modelName: 'gemini-2-0-flash',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['google'],
+        modelName: 'gemini-2-0-flash',
+        inputPricePer1k: 0.0003, // Same as 2.5 Flash
+        outputPricePer1k: 0.0025,
+        cacheInputPricePer1k: 0.00003,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Gemini 2.5 Flash-Lite (text/image/video: $0.10/$0.40 per 1M tokens)
+    // Cache Write: $0.01 per 1M tokens
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['google'],
+          modelName: 'gemini-2-5-flash-lite',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['google'],
+        modelName: 'gemini-2-5-flash-lite',
+        inputPricePer1k: 0.0001, // $0.10 per 1M / 1000
+        outputPricePer1k: 0.0004, // $0.40 per 1M / 1000
+        cacheInputPricePer1k: 0.00001, // $0.01 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Gemini 2.0 Flash-Lite (use 2.5 Flash-Lite pricing)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['google'],
+          modelName: 'gemini-2-0-flash-lite',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['google'],
+        modelName: 'gemini-2-0-flash-lite',
+        inputPricePer1k: 0.0001, // Same as 2.5 Flash-Lite
+        outputPricePer1k: 0.0004,
+        cacheInputPricePer1k: 0.00001,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // ========================================================================
+    // Mistral AI Models
+    // ========================================================================
+
+    // Mistral Large 2 ($2.00/$6.00 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['mistral'],
+          modelName: 'mistral-large-2',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['mistral'],
+        modelName: 'mistral-large-2',
+        inputPricePer1k: 0.002, // $2.00 per 1M / 1000
+        outputPricePer1k: 0.006, // $6.00 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // Mistral Medium 3 ($0.40/$2.00 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['mistral'],
+          modelName: 'mistral-medium-3',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['mistral'],
+        modelName: 'mistral-medium-3',
+        inputPricePer1k: 0.0004, // $0.40 per 1M / 1000
+        outputPricePer1k: 0.002, // $2.00 per 1M / 1000
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // ========================================================================
+    // Azure OpenAI (same pricing as OpenAI direct)
+    // ========================================================================
+
+    // GPT-4o via Azure ($5.00/$15.00 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['azure-openai'],
+          modelName: 'gpt-4o',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['azure-openai'],
+        modelName: 'gpt-4o',
+        inputPricePer1k: 0.005, // Same as OpenAI direct
+        outputPricePer1k: 0.015,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+
+    // GPT-4o-mini via Azure ($0.15/$0.60 per 1M tokens)
+    prisma.modelProviderPricing.upsert({
+      where: {
+        providerId_modelName_effectiveFrom: {
+          providerId: providerMap['azure-openai'],
+          modelName: 'gpt-4o-mini',
+          effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        providerId: providerMap['azure-openai'],
+        modelName: 'gpt-4o-mini',
+        inputPricePer1k: 0.00015, // Same as OpenAI direct
+        outputPricePer1k: 0.0006,
+        effectiveFrom,
+        isActive: true,
+      },
+    }),
+  ]);
+
+  console.log(`✓ Created/Updated ${pricing.length} model pricing records\n`);
+  return pricing;
+}
+
+/**
+ * Seed pricing configuration with tier-based margin multipliers
+ * Part of Plan 161: Provider Pricing System Activation
+ * Reference: docs/plan/161-provider-pricing-system-activation.md
+ *
+ * Note: Uses find-or-create pattern since there's no unique constraint
+ */
+async function seedPricingConfigs(providers: any[]) {
+  console.log('Creating pricing configuration records...');
+
+  const providerMap = Object.fromEntries(providers.map((p) => [p.name, p.id]));
+
+  // Get admin user to use as creator (admin.test@rephlo.ai from seed data)
+  const adminUser = await prisma.user.findFirst({
+    where: {
+      email: 'admin.test@rephlo.ai'
+    }
+  });
+
+  if (!adminUser) {
+    console.log('⚠️  No admin user found - skipping pricing configs');
+    return [];
+  }
+
+  const effectiveFrom = new Date('2025-11-13');
+
+  // Helper function to find-or-create pricing config
+  const findOrCreateConfig = async (data: any) => {
+    const existing = await prisma.pricingConfig.findFirst({
+      where: {
+        scopeType: data.scopeType,
+        subscriptionTier: data.subscriptionTier,
+        providerId: data.providerId || null,
+        isActive: true,
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return await prisma.pricingConfig.create({ data });
+  };
+
+  // Global tier configs (apply to all providers unless overridden)
+  const globalConfigs = await Promise.all([
+    // Free tier: 50% margin (1.50× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'free',
+      marginMultiplier: 1.5,
+      targetGrossMarginPercent: 50.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Pro tier: 30% margin (1.30× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'pro',
+      marginMultiplier: 1.3,
+      targetGrossMarginPercent: 30.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Pro Max tier: 25% margin (1.25× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'pro_max',
+      marginMultiplier: 1.25,
+      targetGrossMarginPercent: 25.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Enterprise Pro tier: 15% margin (1.15× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'enterprise_pro',
+      marginMultiplier: 1.15,
+      targetGrossMarginPercent: 15.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Enterprise Max tier: 10% margin (1.10× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'enterprise_max',
+      marginMultiplier: 1.1,
+      targetGrossMarginPercent: 10.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+  ]);
+
+  console.log(`✓ Created/Found ${globalConfigs.length} global tier pricing configs\n`);
+
+  // Provider-specific configs (optional - can override global for specific providers)
+  // Example: Higher margin for OpenAI on Free tier
+  const providerConfigs = await Promise.all([
+    // OpenAI Free tier: 60% margin (higher than global 50%)
+    findOrCreateConfig({
+      scopeType: 'provider',
+      subscriptionTier: 'free',
+      providerId: providerMap['openai'],
+      marginMultiplier: 1.6,
+      targetGrossMarginPercent: 60.0,
+      effectiveFrom,
+      reason: 'tier_optimization',
+      reasonDetails: 'Higher margin for OpenAI models on Free tier due to premium positioning',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+  ]);
+
+  console.log(`✓ Created/Found ${providerConfigs.length} provider-specific pricing configs\n`);
+
+  const totalConfigs = globalConfigs.length + providerConfigs.length;
+  console.log(`✓ Total pricing configurations: ${totalConfigs}\n`);
+
+  return [...globalConfigs, ...providerConfigs];
+}
+
 async function main() {
   console.log('🌱 Starting comprehensive database seed...\n');
 
@@ -1163,6 +1880,9 @@ async function main() {
   let subscriptions: any[] = [];
   let credits: any[] = [];
   let models: any[] = [];
+  let providers: any[] = [];
+  let modelPricing: any[] = [];
+  let pricingConfigs: any[] = [];
 
   try {
     subscriptions = await seedSubscriptions(users);
@@ -1171,6 +1891,21 @@ async function main() {
     await seedProrations(users, subscriptions);
   } catch (err: any) {
     console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping');
+    console.log('Error details:', err.message);
+    console.log('');
+  }
+
+  // ========================================================================
+  // SEED DATA - PROVIDER PRICING SYSTEM (Plan 161)
+  // ========================================================================
+
+  try {
+    console.log('\n📊 PROVIDER PRICING SYSTEM (Plan 161):\n');
+    providers = await seedProviders();
+    modelPricing = await seedModelPricing(providers);
+    pricingConfigs = await seedPricingConfigs(providers);
+  } catch (err: any) {
+    console.log('⚠️  Provider pricing tables not available - skipping');
     console.log('Error details:', err.message);
     console.log('');
   }
@@ -1657,6 +2392,11 @@ Download and run the installer for your platform.`,
   console.log(`   Roles:         ${roles.length}`);
   console.log(`   RBAC Users:    ${rbacTeamUsers.length}`);
   console.log(`   Role Assignments: ${roleAssignments.length}`);
+
+  console.log('\n💰 Provider Pricing System (Plan 161):');
+  console.log(`   Providers:     ${providers.length} (OpenAI, Anthropic, Google, Mistral, Azure)`);
+  console.log(`   Model Pricing: ${modelPricing.length} pricing records`);
+  console.log(`   Pricing Configs: ${pricingConfigs.length} margin configurations`);
 
   console.log('\n═══════════════════════════════════════════════════════════════\n');
 

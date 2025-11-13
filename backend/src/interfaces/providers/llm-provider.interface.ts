@@ -28,6 +28,7 @@ export interface ILLMProvider {
       promptTokens: number;
       completionTokens: number;
       totalTokens: number;
+      cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
     };
   }>;
 
@@ -47,6 +48,7 @@ export interface ILLMProvider {
       promptTokens: number;
       completionTokens: number;
       totalTokens: number;
+      cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
     };
   }>;
 

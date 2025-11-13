@@ -272,6 +272,7 @@ export interface CompletionUsage {
   completionTokens: number;
   totalTokens: number;
   creditsUsed: number;
+  cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
 }
 
 export interface TextCompletionResponse {

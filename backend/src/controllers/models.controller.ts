@@ -265,7 +265,6 @@ export class ModelsController {
         await this.llmService.streamTextCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId,
           res
         );
@@ -274,7 +273,6 @@ export class ModelsController {
         const result = await this.llmService.textCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId
         );
 
@@ -418,7 +416,6 @@ export class ModelsController {
         await this.llmService.streamChatCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId,
           res
         );
@@ -427,7 +424,6 @@ export class ModelsController {
         const result = await this.llmService.chatCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId
         );
 

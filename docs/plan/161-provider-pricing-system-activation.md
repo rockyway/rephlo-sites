@@ -1,15 +1,20 @@
 # Plan 161: Provider Pricing System Activation
 
 **Document ID**: 161-provider-pricing-system-activation.md
-**Version**: 1.0
+**Version**: 1.1
 **Status**: Approved
 **Created**: 2025-11-13
+**Revised**: 2025-11-13 (Updated credit conversion factor from × 1000 to × 100)
 **Target Completion**: 2025-11-15
 **Scope**: Activate dormant provider pricing infrastructure with seed data, LLM integration, and admin endpoints
 **Dependencies**:
 - Plan 112: Token-to-Credit Conversion Mechanism (schema exists)
 - Analysis 081: Providers Table Architecture Analysis
 **Owner**: Platform Revenue & Profitability Team
+
+**Revision History**:
+- v1.1 (2025-11-13): Changed credit conversion from × 1000 to × 100 (1 credit = $0.01 instead of $0.001) based on user feedback to reduce large credit numbers for small requests
+- v1.0 (2025-11-13): Initial plan creation
 
 ---
 
@@ -50,6 +55,11 @@ The Provider Pricing System was architected in Plan 112 (Token-to-Credit Convers
 - **Analytics**: Track gross margin per tier/provider/model
 
 **Timeline**: 3-5 days (includes research, implementation, testing)
+
+**Credit Conversion Factor**: × 100 (1 credit = $0.01)
+- User-friendly small numbers (3 credits vs 30 credits per request)
+- Easy mental math (100 credits = $1.00)
+- Aligned with subscription tiers (200 credits/month Free = $2.00 value)
 
 ---
 
@@ -200,8 +210,9 @@ User (Free tier) makes request to GPT-4o:
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │ Credit Deduction Calculation                                    │
-│ creditsToDeduct = ceil(vendorCost × marginMultiplier × 1000)    │
+│ creditsToDeduct = ceil(vendorCost × marginMultiplier × 100)     │
 │ grossMargin = vendorCost × (marginMultiplier - 1)               │
+│ Note: × 100 conversion (1 credit = $0.01)                       │
 └────────────────────────┬────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -246,11 +257,11 @@ Step 4: Get Margin Multiplier
 - Result: marginMultiplier = 1.30 (30% margin)
 
 Step 5: Calculate Credits
-- creditsToDeduct = ceil($0.0225 × 1.30 × 1000) = 30 credits
+- creditsToDeduct = ceil($0.0225 × 1.30 × 100) = 3 credits
 - grossMargin = $0.0225 × 0.30 = $0.00675
 
 Step 6: Deduct Credits
-- User balance: 20,000 credits → 19,970 credits
+- User balance: 2,000 credits → 1,997 credits
 
 Step 7: Log to Ledger
 {
@@ -261,7 +272,7 @@ Step 7: Log to Ledger
   outputTokens: 1000,
   vendorCostUsd: 0.0225,
   marginMultiplier: 1.30,
-  creditsDeducted: 30,
+  creditsDeducted: 3,
   grossMarginUsd: 0.00675,
   grossMarginPercent: 30.0
 }
@@ -751,8 +762,9 @@ async generateCompletion(request: CompletionRequest): Promise<CompletionResponse
       request.model
     );
 
-    // 6. Calculate credit deduction
-    const creditsToDeduct = Math.ceil(cost.vendorCost * marginMultiplier * 1000);
+    // 6. Calculate credit deduction (× 100 conversion: 1 credit = $0.01)
+    const CREDITS_PER_DOLLAR = 100; // 1 credit = $0.01 (one cent)
+    const creditsToDeduct = Math.ceil(cost.vendorCost * marginMultiplier * CREDITS_PER_DOLLAR);
     const grossMargin = cost.vendorCost * (marginMultiplier - 1);
     const grossMarginPercent = ((marginMultiplier - 1) / marginMultiplier) * 100;
 
