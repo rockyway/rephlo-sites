@@ -39,6 +39,9 @@ const BillingDashboard = lazy(() => import('../pages/admin/BillingDashboard'));
 // Plan 131 Phase 2: Admin Settings
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 
+// Plan 180: Analytics Dashboard
+const AnalyticsDashboard = lazy(() => import('../pages/admin/AnalyticsDashboard'));
+
 // Admin route configuration
 export const adminRoutes: RouteObject[] = [
   {
@@ -114,6 +117,10 @@ export const adminRoutes: RouteObject[] = [
       // Analytics
       {
         path: 'analytics',
+        element: <AnalyticsDashboard />,
+      },
+      {
+        path: 'analytics/platform',
         element: <PlatformAnalytics />,
       },
       {
