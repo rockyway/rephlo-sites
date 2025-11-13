@@ -26,10 +26,10 @@ export const CostHistogramChart: React.FC<CostHistogramChartProps> = ({ filters 
   });
 
   const chartData = useMemo(() => {
-    if (!data) return [];
+    if (!data || !data.buckets) return [];
     return data.buckets.map((bucket) => ({
-      range: `$${bucket.rangeMin.toFixed(2)}-$${bucket.rangeMax.toFixed(2)}`,
-      count: bucket.requestCount,
+      range: `$${(bucket.rangeMin ?? 0).toFixed(2)}-$${(bucket.rangeMax ?? 0).toFixed(2)}`,
+      count: bucket.requestCount ?? 0,
       isAnomaly: false, // Buckets themselves aren't anomalies
     }));
   }, [data]);
@@ -55,38 +55,40 @@ export const CostHistogramChart: React.FC<CostHistogramChartProps> = ({ filters 
       </h2>
 
       {/* Statistics Panel */}
-      <div className="grid grid-cols-5 gap-4 mb-4 p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg">
-        <div>
-          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">Mean</span>
-          <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
-            {formatCurrency(data.statistics.mean)}
-          </span>
+      {data.statistics && (
+        <div className="grid grid-cols-5 gap-4 mb-4 p-4 bg-deep-navy-50 dark:bg-deep-navy-900 rounded-lg">
+          <div>
+            <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">Mean</span>
+            <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
+              {formatCurrency(data.statistics.mean ?? 0)}
+            </span>
+          </div>
+          <div>
+            <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">Median</span>
+            <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
+              {formatCurrency(data.statistics.median ?? 0)}
+            </span>
+          </div>
+          <div>
+            <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">Std Dev</span>
+            <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
+              {formatCurrency(data.statistics.stdDev ?? 0)}
+            </span>
+          </div>
+          <div>
+            <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">P95</span>
+            <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
+              {formatCurrency(data.statistics.p95 ?? 0)}
+            </span>
+          </div>
+          <div>
+            <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">P99</span>
+            <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
+              {formatCurrency(data.statistics.p99 ?? 0)}
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">Median</span>
-          <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
-            {formatCurrency(data.statistics.median)}
-          </span>
-        </div>
-        <div>
-          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">Std Dev</span>
-          <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
-            {formatCurrency(data.statistics.stdDev)}
-          </span>
-        </div>
-        <div>
-          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">P95</span>
-          <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
-            {formatCurrency(data.statistics.p95)}
-          </span>
-        </div>
-        <div>
-          <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-300 block">P99</span>
-          <span className="text-body font-semibold text-deep-navy-800 dark:text-white">
-            {formatCurrency(data.statistics.p99)}
-          </span>
-        </div>
-      </div>
+      )}
 
       <Suspense fallback={<div className="h-[300px] bg-deep-navy-100 dark:bg-deep-navy-900 rounded animate-pulse"></div>}>
         <ResponsiveContainer width="100%" height={300}>
