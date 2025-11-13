@@ -514,19 +514,8 @@ model Model {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // OLD FIELDS (Deprecated - Keep during transition, will be removed after migration)
-  // TODO: Remove these fields after verifying meta JSONB migration is successful
-  displayName                String?           @map("display_name") @db.VarChar(255)
-  description                String?           @db.Text
-  capabilities               ModelCapability[]
-  contextLength              Int?              @map("context_length")
-  maxOutputTokens            Int?              @map("max_output_tokens")
-  inputCostPerMillionTokens  Int?              @map("input_cost_per_million_tokens")
-  outputCostPerMillionTokens Int?              @map("output_cost_per_million_tokens")
-  creditsPer1kTokens         Int?              @map("credits_per_1k_tokens")
-  isDeprecated               Boolean?          @default(false) @map("is_deprecated")
-  version                    String?           @db.VarChar(50)
-  // Tier-related fields removed - now stored in meta JSONB (migration 20251113120000)
+  // All legacy fields removed in migration 20251113130000_drop_all_legacy_model_columns
+  // Data migrated to meta JSONB in previous migrations
 
   // Relations
   usageHistory    UsageHistory[]

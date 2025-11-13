@@ -757,3 +757,26 @@ res.status(200).json(metrics);
 3. Test other lifecycle actions (Archive Model, Edit Metadata)
 4. Verify audit log captures lifecycle changes
 
+
+## 2025-11-13: Corrected Model Tier Architecture to JSONB-Only Storage
+
+**Issue**: Initial implementation incorrectly used dual-storage (root columns + meta JSONB) for tier fields, violating Phase 4 of architecture plan (docs/plan/156-model-lifecycle-jsonb-refactor-architecture.md).
+
+**Root Cause**: Misunderstood architecture - implemented denormalization pattern instead of JSONB consolidation pattern.
+
+**Correction Applied**:
+1. Reverted dual-storage changes in backend services (model.service.ts, model-tier-admin.service.ts)
+2. Created migration to drop legacy tier columns (required_tier, tier_restriction_mode, allowed_tiers)
+3. Added GIN and BTree indexes on meta JSONB for query performance
+4. Updated Prisma schema to remove tier field definitions
+5. Verified test model "test-tier-fix-v2" shows correct "Pro" tier from meta JSONB
+
+**Architecture Benefits**:
+- Single source of truth (meta JSONB only)
+- Schema flexibility (add fields without migrations)
+- Query performance (GIN indexes on JSONB)
+- No data synchronization issues
+
+**Verification**: All tier fields now accessed exclusively via meta JSONB queries (meta->>'requiredTier'), legacy columns dropped, indexes created, backend running successfully.
+
+**Commits**: ffb370a (refactor: Implement correct JSONB-only architecture)
