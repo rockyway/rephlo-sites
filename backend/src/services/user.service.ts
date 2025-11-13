@@ -340,8 +340,8 @@ export class UserService implements IUserService {
       where: { id: modelId },
       select: {
         id: true,
-        displayName: true,
-        capabilities: true,
+        name: true,
+        meta: true,
         isAvailable: true,
       },
     });
@@ -355,6 +355,11 @@ export class UserService implements IUserService {
       logger.warn('UserService: Model is not available', { userId, modelId });
       throw new Error(`Model '${modelId}' is not available`);
     }
+
+    // Extract from meta JSONB
+    const meta = model.meta as any;
+    const displayName = meta?.displayName ?? model.name;
+    const capabilities = meta?.capabilities ?? [];
 
     // Ensure user preferences record exists
     await this.ensurePreferencesExist(userId);
@@ -374,8 +379,8 @@ export class UserService implements IUserService {
       defaultModelId: modelId,
       model: {
         id: model.id,
-        name: model.displayName ?? model.id,
-        capabilities: model.capabilities,
+        name: displayName,
+        capabilities: capabilities,
       },
     };
   }
@@ -395,8 +400,8 @@ export class UserService implements IUserService {
         defaultModel: {
           select: {
             id: true,
-            displayName: true,
-            capabilities: true,
+            name: true,
+            meta: true,
           },
         },
       },
@@ -415,15 +420,20 @@ export class UserService implements IUserService {
       modelId: preferences.defaultModelId,
     });
 
+    // Extract from meta JSONB
+    let modelInfo = null;
+    if (preferences.defaultModel) {
+      const meta = preferences.defaultModel.meta as any;
+      modelInfo = {
+        id: preferences.defaultModel.id,
+        name: meta?.displayName ?? preferences.defaultModel.name,
+        capabilities: meta?.capabilities ?? [],
+      };
+    }
+
     return {
       defaultModelId: preferences.defaultModelId,
-      model: preferences.defaultModel
-        ? {
-            id: preferences.defaultModel.id,
-            name: preferences.defaultModel.displayName ?? preferences.defaultModel.id,
-            capabilities: preferences.defaultModel.capabilities,
-          }
-        : null,
+      model: modelInfo,
     };
   }
 
