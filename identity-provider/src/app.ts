@@ -15,6 +15,7 @@ import { PrismaClient } from '@prisma/client';
 import { createOIDCProvider } from './config/oidc';
 import { AuthController } from './controllers/auth.controller';
 import { errorHandler } from './middleware/error.middleware';
+import { createSessionValidator } from './middleware/session-validator';
 import logger from './utils/logger';
 
 export async function createApp(prisma: PrismaClient) {
@@ -62,6 +63,11 @@ export async function createApp(prisma: PrismaClient) {
 
   // Logout route - clears OIDC session
   app.get('/logout', authController.logout);
+
+  // CRITICAL: Session validation middleware (must run BEFORE oidcProvider)
+  // Validates that sessions reference existing, active users
+  // Destroys invalid sessions to prevent errors in OIDC authorization flow
+  app.use(createSessionValidator(oidcProvider, prisma));
 
   // OIDC provider middleware (handles all OAuth endpoints)
   app.use('/', oidcProvider.callback());

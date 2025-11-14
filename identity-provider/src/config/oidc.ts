@@ -311,64 +311,129 @@ export async function createOIDCProvider(
     },
 
     // Find user account by ID
+    // CRITICAL: This function is called by oidc-provider during authorization flow
+    // If it returns undefined, the provider may fail when trying to call methods
+    // on the undefined account (e.g., getOIDCScopeFiltered)
     findAccount: async (_ctx: any, sub: string) => {
-      return authService.findAccount(sub);
+      logger.debug('OIDC: findAccount called', { sub });
+
+      const account = await authService.findAccount(sub);
+
+      if (!account) {
+        logger.warn('OIDC: findAccount returned undefined - user not found', {
+          sub,
+          contextPath: _ctx?.path,
+          contextMethod: _ctx?.method,
+        });
+      } else {
+        logger.debug('OIDC: findAccount found user', { sub });
+      }
+
+      return account;
     },
 
     // Load existing grant to check if consent can be skipped
     // For clients with skipConsentScreen: true, we auto-grant consent after login
     loadExistingGrant: async (ctx: KoaContextWithOIDC) => {
-      // Only check for existing grants if there's an active session
-      if (!ctx.oidc.session?.accountId) {
-        return undefined;
-      }
-
-      const { client } = ctx.oidc;
-      if (!client) {
-        return undefined;
-      }
-
-      // Check if client has skipConsentScreen configured
-      const dbClient = await prisma.oAuthClient.findUnique({
-        where: { clientId: client.clientId },
-      });
-
-      if (dbClient?.config && typeof dbClient.config === 'object') {
-        const config = dbClient.config as any;
-        if (config.skipConsentScreen === true) {
-          // For clients with skipConsentScreen, automatically create and save a grant
-          // This will skip the consent prompt entirely
-          const grant = new ctx.oidc.provider.Grant({
-            clientId: client.clientId,
-            accountId: ctx.oidc.session.accountId,
-          });
-
-          // Add all requested scopes and resources to the grant
-          if (ctx.oidc.params?.scope) {
-            grant.addOIDCScope(ctx.oidc.params.scope as string);
-          }
-          if (ctx.oidc.params?.resource) {
-            grant.addResourceScope(
-              ctx.oidc.params.resource as string,
-              ctx.oidc.params.scope as string
-            );
-          }
-
-          // Save the grant to the database
-          await grant.save();
-
-          return grant;
+      try {
+        // Only check for existing grants if there's an active session
+        if (!ctx.oidc.session?.accountId) {
+          logger.debug('OIDC: loadExistingGrant - no session or accountId');
+          return undefined;
         }
-      }
 
-      // For other clients, check if there's an existing grant in the database
-      // This allows users who have previously consented to skip re-consenting
-      const grantId = ctx.oidc.session?.grantIdFor(client.clientId);
-      if (grantId) {
-        return ctx.oidc.provider.Grant.find(grantId);
-      }
+        const { client } = ctx.oidc;
+        if (!client) {
+          logger.debug('OIDC: loadExistingGrant - no client');
+          return undefined;
+        }
 
-      return undefined;
+        const accountId = ctx.oidc.session.accountId;
+
+        // DEFENSIVE: Verify that the account exists before creating a grant
+        // This prevents errors when the session references a deleted user
+        const account = await authService.findAccount(accountId);
+        if (!account) {
+          logger.warn('OIDC: loadExistingGrant - account not found, clearing session', {
+            accountId,
+            clientId: client.clientId,
+          });
+          // Clear the session to force re-authentication
+          await ctx.oidc.session.destroy();
+          return undefined;
+        }
+
+        // Check if client has skipConsentScreen configured
+        const dbClient = await prisma.oAuthClient.findUnique({
+          where: { clientId: client.clientId },
+        });
+
+        if (dbClient?.config && typeof dbClient.config === 'object') {
+          const config = dbClient.config as any;
+          if (config.skipConsentScreen === true) {
+            logger.debug('OIDC: Auto-granting consent for skipConsentScreen client', {
+              clientId: client.clientId,
+              accountId,
+            });
+
+            // For clients with skipConsentScreen, automatically create and save a grant
+            // This will skip the consent prompt entirely
+            const grant = new ctx.oidc.provider.Grant({
+              clientId: client.clientId,
+              accountId: accountId,
+            });
+
+            // Add all requested scopes and resources to the grant
+            if (ctx.oidc.params?.scope) {
+              grant.addOIDCScope(ctx.oidc.params.scope as string);
+            }
+            if (ctx.oidc.params?.resource) {
+              grant.addResourceScope(
+                ctx.oidc.params.resource as string,
+                ctx.oidc.params.scope as string
+              );
+            }
+
+            // Save the grant to the database
+            await grant.save();
+
+            logger.info('OIDC: Auto-grant created for skipConsentScreen client', {
+              clientId: client.clientId,
+              accountId,
+              grantId: grant.jti,
+            });
+
+            return grant;
+          }
+        }
+
+        // For other clients, check if there's an existing grant in the database
+        // This allows users who have previously consented to skip re-consenting
+        const grantId = ctx.oidc.session?.grantIdFor(client.clientId);
+        if (grantId) {
+          logger.debug('OIDC: Found existing grant', {
+            grantId,
+            clientId: client.clientId,
+            accountId,
+          });
+          return ctx.oidc.provider.Grant.find(grantId);
+        }
+
+        logger.debug('OIDC: No existing grant found', {
+          clientId: client.clientId,
+          accountId,
+        });
+        return undefined;
+      } catch (error) {
+        logger.error('OIDC: loadExistingGrant error', {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          clientId: ctx.oidc.client?.clientId,
+          accountId: ctx.oidc.session?.accountId,
+        });
+        // Return undefined to force consent/login flow
+        return undefined;
+      }
     },
 
     // Interaction URL for login/consent
@@ -668,18 +733,54 @@ async function loadClients(prisma: PrismaClient): Promise<any[]> {
       where: { isActive: true },
     });
 
-    return clients.map((client) => ({
-      client_id: client.clientId,
-      client_name: client.clientName,
-      client_secret: client.clientSecretHash || undefined,
-      redirect_uris: client.redirectUris,
-      grant_types: client.grantTypes,
-      response_types: client.responseTypes,
-      scope: client.scope || undefined,
-      token_endpoint_auth_method: client.clientSecretHash
-        ? 'client_secret_basic'
-        : 'none',
-    }));
+    return clients.map((client) => {
+      // Determine application_type based on redirect URIs
+      // NOTE: oidc-provider is VERY strict about application types and redirect URIs
+      //
+      // For 'web' apps:
+      // - Only allows http:// and https:// URIs on standard ports (80/443) or localhost
+      //
+      // For 'native' apps:
+      // - Allows localhost with custom ports
+      // - Custom URI schemes MUST follow reverse domain notation (e.g., com.rephlo.app://)
+      // - oidc-provider validates ALL redirect_uris in the client config
+      //
+      // Detection Logic:
+      // - Has custom scheme (non-http/https) → 'native'
+      // - Has localhost with custom port → 'native'
+      // - Otherwise → 'web'
+
+      const hasCustomScheme = client.redirectUris.some((uri: string) =>
+        !uri.startsWith('http://') && !uri.startsWith('https://')
+      );
+      const hasCustomPort = client.redirectUris.some((uri: string) => {
+        const match = uri.match(/http:\/\/localhost:(\d+)/);
+        return match && match[1] !== '80' && match[1] !== '443';
+      });
+      const applicationType = hasCustomScheme || hasCustomPort ? 'native' : 'web';
+
+      logger.debug('OIDC: Loading client', {
+        clientId: client.clientId,
+        applicationType,
+        hasCustomScheme,
+        hasCustomPort,
+        redirectUris: client.redirectUris,
+      });
+
+      return {
+        client_id: client.clientId,
+        client_name: client.clientName,
+        client_secret: client.clientSecretHash || undefined,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
+        scope: client.scope || undefined,
+        token_endpoint_auth_method: client.clientSecretHash
+          ? 'client_secret_basic'
+          : 'none',
+        application_type: applicationType,
+      };
+    });
   } catch (error) {
     logger.error('Failed to load OAuth clients', {
       error: error instanceof Error ? error.message : String(error),
