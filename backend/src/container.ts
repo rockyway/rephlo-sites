@@ -314,6 +314,7 @@ import { AdminController } from './controllers/admin.controller';
 import { BrandingController } from './controllers/branding.controller';
 import { AuthManagementController } from './controllers/auth-management.controller';
 import { SocialAuthController } from './controllers/social-auth.controller';
+import { UsageController } from './controllers/usage.controller';
 
 // Plan 109: Subscription Monetization Controllers
 import { SubscriptionManagementController } from './controllers/subscription-management.controller';
@@ -346,6 +347,7 @@ container.registerSingleton(AdminController);
 container.registerSingleton(BrandingController);
 container.registerSingleton(AuthManagementController);
 container.registerSingleton(SocialAuthController);
+container.registerSingleton(UsageController);
 
 // Register Plan 109 controllers
 container.registerSingleton(SubscriptionManagementController);

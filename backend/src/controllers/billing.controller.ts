@@ -491,4 +491,60 @@ export class BillingController {
       throw error;
     }
   }
+
+  // ===========================================================================
+  // User Endpoints: Invoice List (Desktop App Integration - Plan 182)
+  // ===========================================================================
+
+  /**
+   * GET /api/user/invoices
+   *
+   * Get invoices for the authenticated user (Desktop App endpoint)
+   *
+   * ⚠️ Response Format: Flat response (NOT { status, data, meta })
+   * Desktop App endpoints use flat format like V1 API endpoints.
+   * See "Response Format Strategy" section in Plan 182.
+   *
+   * Query Parameters:
+   * - limit (optional): Number of invoices to return (default: 10, max: 50)
+   *
+   * Requires: Authentication, user.info scope
+   *
+   * Response 200:
+   * {
+   *   "invoices": [
+   *     {
+   *       "id": "in_xxx",
+   *       "date": "2025-11-01T00:00:00.000Z",
+   *       "amount": 2900,
+   *       "currency": "usd",
+   *       "status": "paid",
+   *       "invoiceUrl": "https://invoice.stripe.com/...",
+   *       "pdfUrl": "https://invoice.stripe.com/.../pdf",
+   *       "description": "Subscription renewal - Pro Plan"
+   *     }
+   *   ],
+   *   "hasMore": false,
+   *   "count": 2
+   * }
+   */
+  async getInvoices(req: Request, res: Response): Promise<void> {
+    const userId = req.user!.sub;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    logger.info('BillingController.getInvoices', {
+      userId,
+      limit,
+    });
+
+    try {
+      const invoices = await this.billingService.getInvoices(userId, limit);
+
+      // Return flat response directly (DO NOT wrap in { status, data, meta })
+      res.json(invoices);
+    } catch (error) {
+      logger.error('BillingController.getInvoices: Error', { error, userId });
+      throw error;
+    }
+  }
 }

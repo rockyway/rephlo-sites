@@ -25,7 +25,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, RequestType, RequestStatus } from '@prisma/client';
 import { createApp } from '../../src/app';
 import { getTestDatabase, cleanDatabase, seedTestData } from '../setup/database';
 import { createVerifiedUser } from '../helpers/auth-fixtures';
@@ -94,7 +94,8 @@ describe('Vendor Analytics API Integration Tests (Plan 180)', () => {
 
     for (let i = 0; i < count; i++) {
       const daysAgo = Math.floor(i / 10); // Spread over multiple days
-      const createdAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      const requestStartedAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      const requestCompletedAt = new Date(requestStartedAt.getTime() + 1000 + i * 10); // 1-2 seconds later
 
       data.push({
         userId: regularUser.id,
@@ -107,11 +108,14 @@ describe('Vendor Analytics API Integration Tests (Plan 180)', () => {
         creditsDeducted: 50 + (i % 50),
         grossMarginUsd: 0.075 + (i % 10) * 0.015,
         userTierAtRequest: tiers[i % 3],
-        status: 'success',
-        createdAt,
+        status: RequestStatus.success,
         inputTokens: 100,
         outputTokens: 50,
-        totalTokens: 150,
+        cachedInputTokens: 0,
+        requestType: RequestType.completion,
+        requestStartedAt,
+        requestCompletedAt,
+        processingTimeMs: 1000 + i * 10,
         requestId: `req-${i}`,
       });
     }
@@ -383,6 +387,9 @@ describe('Vendor Analytics API Integration Tests (Plan 180)', () => {
 
     it('should identify anomalies (>3 std dev)', async () => {
       // Create an anomalous data point
+      const anomalyStartTime = new Date();
+      const anomalyEndTime = new Date(anomalyStartTime.getTime() + 2000);
+
       await prisma.tokenUsageLedger.create({
         data: {
           userId: regularUser.id,
@@ -395,11 +402,14 @@ describe('Vendor Analytics API Integration Tests (Plan 180)', () => {
           creditsDeducted: 5000,
           grossMarginUsd: 7.5,
           userTierAtRequest: 'enterprise',
-          status: 'success',
-          createdAt: new Date(),
+          status: RequestStatus.success,
           inputTokens: 10000,
           outputTokens: 5000,
-          totalTokens: 15000,
+          cachedInputTokens: 0,
+          requestType: RequestType.completion,
+          requestStartedAt: anomalyStartTime,
+          requestCompletedAt: anomalyEndTime,
+          processingTimeMs: 2000,
           requestId: 'anomaly-req-1',
         },
       });

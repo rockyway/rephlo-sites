@@ -818,4 +818,89 @@ export class BillingPaymentsService {
       throw error;
     }
   }
+
+  // ===========================================================================
+  // User Endpoints: Invoice List (Desktop App Integration - Plan 182)
+  // ===========================================================================
+
+  /**
+   * Get invoices for a user (Desktop App endpoint)
+   * @param userId - User ID
+   * @param limit - Number of invoices to return (default: 10, max: 50)
+   * @returns Invoice list response
+   */
+  async getInvoices(userId: string, limit: number = 10): Promise<{
+    invoices: Array<{
+      id: string;
+      date: string;
+      amount: number;
+      currency: string;
+      status: string;
+      invoiceUrl: string;
+      pdfUrl: string;
+      description: string;
+    }>;
+    hasMore: boolean;
+    count: number;
+  }> {
+    logger.info('BillingPaymentsService.getInvoices', { userId, limit });
+
+    try {
+      // Get user's Stripe customer ID
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          subscriptionMonetization: {
+            select: {
+              stripeCustomerId: true,
+            },
+            take: 1,
+            orderBy: {
+              createdAt: 'desc',
+            }
+          }
+        },
+      });
+
+      // Return empty array if user has no Stripe customer
+      const stripeCustomerId = user?.subscriptionMonetization?.[0]?.stripeCustomerId;
+      if (!stripeCustomerId) {
+        logger.debug('BillingPaymentsService.getInvoices: User has no Stripe customer', { userId });
+        return { invoices: [], hasMore: false, count: 0 };
+      }
+
+      // Fetch invoices from Stripe
+      const stripeInvoices = await this.stripe.invoices.list({
+        customer: stripeCustomerId,
+        limit: Math.min(limit, 50), // Enforce max limit of 50
+      });
+
+      // Transform Stripe response to camelCase format
+      const invoices = stripeInvoices.data.map((inv) => ({
+        id: inv.id,
+        date: new Date(inv.created * 1000).toISOString(),
+        amount: inv.amount_paid, // Amount in cents (Stripe standard)
+        currency: inv.currency,
+        status: inv.status || 'unknown',
+        invoiceUrl: inv.hosted_invoice_url || '',
+        pdfUrl: inv.invoice_pdf || '',
+        description: inv.lines.data[0]?.description || 'Subscription',
+      }));
+
+      logger.info('BillingPaymentsService.getInvoices: Success', {
+        userId,
+        invoiceCount: invoices.length,
+        hasMore: stripeInvoices.has_more,
+      });
+
+      return {
+        invoices,
+        hasMore: stripeInvoices.has_more,
+        count: invoices.length,
+      };
+    } catch (error) {
+      logger.error('BillingPaymentsService.getInvoices: Error', { error, userId });
+      throw error;
+    }
+  }
 }

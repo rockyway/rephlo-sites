@@ -35,6 +35,8 @@ const AnalyticsDashboard: React.FC = () => {
       return {
         period: urlPeriod,
         tier: (searchParams.get('tier') as SubscriptionTier) || undefined,
+        startDate: searchParams.get('startDate') || undefined,
+        endDate: searchParams.get('endDate') || undefined,
         providers: searchParams.getAll('provider'),
         models: searchParams.getAll('model'),
       };
@@ -59,6 +61,8 @@ const AnalyticsDashboard: React.FC = () => {
     const params = new URLSearchParams();
     params.set('period', filters.period);
     if (filters.tier) params.set('tier', filters.tier);
+    if (filters.startDate) params.set('startDate', filters.startDate);
+    if (filters.endDate) params.set('endDate', filters.endDate);
     filters.providers?.forEach(p => params.append('provider', p));
     filters.models?.forEach(m => params.append('model', m));
 

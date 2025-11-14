@@ -414,14 +414,14 @@ export class UsageService {
       if (endDate) where.createdAt.lte = endDate;
     }
 
-    const result = await this.prisma.usageHistory.aggregate({
+    const result = await this.prisma.tokenUsageLedger.aggregate({
       where,
       _sum: {
-        creditsUsed: true,
+        creditsDeducted: true,
       },
     });
 
-    return result._sum.creditsUsed || 0;
+    return result._sum?.creditsDeducted || 0;
   }
 
   /**
@@ -521,4 +521,227 @@ export class UsageService {
       ((currentUsage - previousUsage) / previousUsage) * 100;
     return Math.round(percentageChange * 100) / 100; // Round to 2 decimals
   }
+
+  /**
+   * Get monthly usage summary for Desktop App
+   * Aggregates usage data from token_usage_ledger table
+   *
+   * Implementation Reference: docs/plan/182-desktop-app-api-backend-requirements.md
+   *
+   * @param userId - User ID
+   * @param period - "current_month" or "YYYY-MM" format
+   * @returns Monthly usage summary with camelCase fields
+   */
+  async getMonthlySummary(userId: string, period: string = 'current_month'): Promise<UsageSummaryResponse> {
+    logger.debug('UsageService: Getting monthly summary', {
+      userId,
+      period,
+    });
+
+    // Parse period
+    const { startDate, endDate } = this.parsePeriod(period);
+
+    // Aggregate from token_usage_ledger table (Prisma client uses camelCase)
+    const usageRecords = await this.prisma.tokenUsageLedger.findMany({
+      where: {
+        userId,
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        provider: true, // Include provider details (camelCase relation name)
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Handle empty usage case
+    if (usageRecords.length === 0) {
+      return {
+        period: period === 'current_month' ? this.formatPeriod(startDate) : period,
+        periodStart: startDate.toISOString(),
+        periodEnd: endDate.toISOString(),
+        summary: {
+          creditsUsed: 0,
+          apiRequests: 0,
+          totalTokens: 0,
+          averageTokensPerRequest: 0,
+          mostUsedModel: 'N/A',
+          mostUsedModelPercentage: 0,
+        },
+        creditBreakdown: await this.getCreditBreakdown(userId, startDate, endDate),
+        modelBreakdown: [],
+      };
+    }
+
+    // Aggregate totals (Prisma returns camelCase fields)
+    const summary = {
+      creditsUsed: usageRecords.reduce((sum, r) => sum + r.creditsDeducted, 0),
+      apiRequests: usageRecords.length,
+      totalTokens: usageRecords.reduce((sum, r) => sum + (r.inputTokens + r.outputTokens), 0),
+      averageTokensPerRequest: 0,
+      mostUsedModel: '',
+      mostUsedModelPercentage: 0,
+    };
+
+    summary.averageTokensPerRequest = summary.totalTokens > 0
+      ? Math.round(summary.totalTokens / summary.apiRequests)
+      : 0;
+
+    // Model breakdown
+    const modelCounts = usageRecords.reduce((acc, r) => {
+      const key = r.modelId;
+      if (!acc[key]) {
+        acc[key] = {
+          requests: 0,
+          tokens: 0,
+          credits: 0,
+          provider: r.provider.name, // Get provider name from joined table
+        };
+      }
+      acc[key].requests++;
+      acc[key].tokens += r.inputTokens + r.outputTokens;
+      acc[key].credits += r.creditsDeducted;
+      return acc;
+    }, {} as Record<string, { requests: number; tokens: number; credits: number; provider: string }>);
+
+    const modelBreakdown = Object.entries(modelCounts)
+      .map(([model, stats]) => ({
+        model,
+        provider: stats.provider,
+        requests: stats.requests,
+        tokens: stats.tokens,
+        credits: stats.credits,
+        percentage: Math.round((stats.requests / summary.apiRequests) * 100),
+      }))
+      .sort((a, b) => b.requests - a.requests);
+
+    // Most used model
+    const mostUsedModel = modelBreakdown[0]?.model || 'N/A';
+    const mostUsedModelPercentage = modelBreakdown[0]?.percentage || 0;
+
+    summary.mostUsedModel = mostUsedModel;
+    summary.mostUsedModelPercentage = mostUsedModelPercentage;
+
+    logger.info('UsageService: Monthly summary retrieved', {
+      userId,
+      period,
+      creditsUsed: summary.creditsUsed,
+      apiRequests: summary.apiRequests,
+    });
+
+    return {
+      period: period === 'current_month' ? this.formatPeriod(startDate) : period,
+      periodStart: startDate.toISOString(),
+      periodEnd: endDate.toISOString(),
+      summary,
+      creditBreakdown: await this.getCreditBreakdown(userId, startDate, endDate),
+      modelBreakdown,
+    };
+  }
+
+  /**
+   * Parse period string to start and end dates
+   * @param period - "current_month" or "YYYY-MM" format
+   * @returns Start and end dates
+   */
+  private parsePeriod(period: string): { startDate: Date; endDate: Date } {
+    if (period === 'current_month') {
+      const now = new Date();
+      return {
+        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+      };
+    }
+
+    // Parse YYYY-MM format
+    const [year, month] = period.split('-').map(Number);
+    return {
+      startDate: new Date(year, month - 1, 1),
+      endDate: new Date(year, month, 0, 23, 59, 59, 999),
+    };
+  }
+
+  /**
+   * Format date to YYYY-MM
+   * @param date - Date to format
+   * @returns Formatted string
+   */
+  private formatPeriod(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
+  /**
+   * Get credit breakdown for a period
+   * Note: This is a simplified version - actual implementation would query credit ledger
+   * @param userId - User ID
+   * @param startDate - Period start
+   * @param endDate - Period end
+   * @returns Credit breakdown
+   */
+  private async getCreditBreakdown(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<CreditBreakdown> {
+    // Get subscription to check tier
+    const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      where: {
+        userId,
+        status: 'active',
+      },
+    });
+
+    const freeCreditsLimit = subscription?.tier === 'free' ? 10000 : 0;
+
+    // Calculate total credits used in period
+    const totalCreditsUsed = await this.getTotalCreditsUsed(userId, startDate, endDate);
+
+    // For now, we'll return a simplified breakdown
+    // In production, this would query the credit ledger to see which credit buckets were used
+    return {
+      freeCreditsUsed: 0,
+      freeCreditsLimit,
+      proCreditsUsed: totalCreditsUsed,
+      purchasedCreditsUsed: 0,
+    };
+  }
+}
+
+/**
+ * Type definitions for monthly usage summary
+ */
+export interface UsageSummaryResponse {
+  period: string;
+  periodStart: string;
+  periodEnd: string;
+  summary: {
+    creditsUsed: number;
+    apiRequests: number;
+    totalTokens: number;
+    averageTokensPerRequest: number;
+    mostUsedModel: string;
+    mostUsedModelPercentage: number;
+  };
+  creditBreakdown: CreditBreakdown;
+  modelBreakdown: ModelBreakdownItem[];
+}
+
+export interface CreditBreakdown {
+  freeCreditsUsed: number;
+  freeCreditsLimit: number;
+  proCreditsUsed: number;
+  purchasedCreditsUsed: number;
+}
+
+export interface ModelBreakdownItem {
+  model: string;
+  provider: string;
+  requests: number;
+  tokens: number;
+  credits: number;
+  percentage: number;
 }

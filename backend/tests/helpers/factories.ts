@@ -1,6 +1,6 @@
-import { faker } from '@faker-js/faker';
 import { PrismaClient, User, Subscription, SubscriptionTier, SubscriptionStatus } from '@prisma/client';
-import { hashPassword } from '../../src/utils/hash';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 /**
  * Factory function to create test users
@@ -9,18 +9,19 @@ export const createTestUser = async (
   prisma: PrismaClient,
   overrides: Partial<User> = {}
 ): Promise<User> => {
-  const email = overrides.email || faker.internet.email();
-  const passwordHash = await hashPassword('password123');
+  const randomId = crypto.randomBytes(4).toString('hex');
+  const email = overrides.email || `test-${randomId}@example.com`;
+  const passwordHash = await bcrypt.hash('password123', 10);
 
   return prisma.user.create({
     data: {
       email,
       emailVerified: true,
-      username: overrides.username || faker.internet.username(),
+      username: overrides.username || `testuser${randomId}`,
       passwordHash,
-      firstName: overrides.firstName || faker.person.firstName(),
-      lastName: overrides.lastName || faker.person.lastName(),
-      profilePictureUrl: overrides.profilePictureUrl || faker.image.avatar(),
+      firstName: overrides.firstName || 'Test',
+      lastName: overrides.lastName || 'User',
+      profilePictureUrl: overrides.profilePictureUrl || 'https://example.com/avatar.jpg',
       isActive: overrides.isActive ?? true,
       ...overrides,
     },
@@ -75,7 +76,7 @@ export const createTestCredits = async (
   const billingPeriodStart = overrides.billingPeriodStart || new Date();
   const billingPeriodEnd = overrides.billingPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  return prisma.credits.create({
+  return prisma.credit.create({
     data: {
       userId,
       subscriptionId,
@@ -90,27 +91,54 @@ export const createTestCredits = async (
 };
 
 /**
- * Factory function to create usage history
+ * Factory function to create token usage ledger record
+ * Maps to the actual token_usage_ledger table
  */
 export const createTestUsageHistory = async (
   prisma: PrismaClient,
   userId: string,
-  creditId: string,
+  providerId: string, // Changed from creditId to providerId
   overrides: Partial<any> = {}
 ) => {
-  return prisma.usageHistory.create({
+  const requestStartedAt = overrides.createdAt || new Date();
+  const requestCompletedAt = new Date(requestStartedAt.getTime() + (overrides.requestDurationMs || 1000));
+
+  // Generate a pseudo-random UUID v4 for requestId if not provided
+  const generateUuid = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
+  return prisma.tokenUsageLedger.create({
     data: {
       userId,
-      creditId,
+      providerId,
       modelId: overrides.modelId || 'gpt-5',
-      operation: overrides.operation || 'chat',
-      creditsUsed: overrides.creditsUsed || 2,
-      inputTokens: overrides.inputTokens || 100,
-      outputTokens: overrides.outputTokens || 50,
-      totalTokens: overrides.totalTokens || 150,
-      requestDurationMs: overrides.requestDurationMs || 1000,
-      requestMetadata: overrides.requestMetadata || {},
-      ...overrides,
+      inputTokens: overrides.inputTokens || overrides.promptTokens || 100,
+      outputTokens: overrides.outputTokens || overrides.completionTokens || 50,
+      cachedInputTokens: overrides.cachedInputTokens || 0,
+      creditsDeducted: overrides.creditsUsed || overrides.creditsDeducted || 2,
+      vendorCost: overrides.vendorCost || 0.001,
+      marginMultiplier: overrides.marginMultiplier || 2.5,
+      creditValueUsd: overrides.creditValueUsd || 0.001,
+      grossMarginUsd: overrides.grossMarginUsd || 0.0015,
+      requestType: overrides.requestType || 'completion',
+      requestStartedAt,
+      requestCompletedAt,
+      processingTimeMs: overrides.requestDurationMs || 1000,
+      requestId: overrides.requestId || generateUuid(),
+      status: overrides.status || 'success',
+      userTierAtRequest: overrides.userTierAtRequest || 'pro',
+      subscriptionId: overrides.subscriptionId || null,
+      streamingSegments: overrides.streamingSegments || null,
+      errorMessage: overrides.errorMessage || null,
+      isStreamingComplete: overrides.isStreamingComplete !== undefined ? overrides.isStreamingComplete : true,
+      region: overrides.region || null,
+      deductionRecordId: overrides.deductionRecordId || null,
+      createdAt: overrides.createdAt || requestStartedAt,
     },
   });
 };
@@ -123,7 +151,7 @@ export const createTestUserPreferences = async (
   userId: string,
   overrides: Partial<any> = {}
 ) => {
-  return prisma.userPreferences.create({
+  return prisma.userPreference.create({
     data: {
       userId,
       defaultModelId: overrides.defaultModelId || 'gpt-5',
@@ -144,12 +172,12 @@ export const createTestWebhookConfig = async (
   userId: string,
   overrides: Partial<any> = {}
 ) => {
-  return prisma.webhookConfiguration.create({
+  const randomId = crypto.randomBytes(4).toString('hex');
+  return prisma.webhookConfig.create({
     data: {
       userId,
-      url: overrides.url || faker.internet.url(),
-      events: overrides.events || ['subscription.created', 'credits.depleted'],
-      secret: overrides.secret || faker.string.alphanumeric(32),
+      webhookUrl: overrides.webhookUrl || `https://example.com/webhook/${randomId}`,
+      webhookSecret: overrides.webhookSecret || crypto.randomBytes(16).toString('hex'),
       isActive: overrides.isActive ?? true,
       ...overrides,
     },

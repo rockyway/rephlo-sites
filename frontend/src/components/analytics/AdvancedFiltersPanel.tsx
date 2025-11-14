@@ -17,7 +17,27 @@ export const AdvancedFiltersPanel: React.FC<AdvancedFiltersPanelProps> = ({ filt
   const providers = ['openai', 'anthropic', 'google', 'azure', 'mistral'];
 
   const handlePeriodChange = (period: PeriodType) => {
-    onChange({ period });
+    // When switching to custom, set default date range (last 30 days)
+    if (period === 'custom' && !filters.startDate && !filters.endDate) {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+
+      onChange({
+        period,
+        startDate: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+        endDate: endDate.toISOString().split('T')[0],
+      });
+    } else if (period !== 'custom') {
+      // Clear custom dates when switching to preset periods
+      onChange({ period, startDate: undefined, endDate: undefined });
+    } else {
+      onChange({ period });
+    }
+  };
+
+  const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    onChange({ [field]: value });
   };
 
   const handleTierChange = (tier: SubscriptionTier | 'all') => {
@@ -57,6 +77,45 @@ export const AdvancedFiltersPanel: React.FC<AdvancedFiltersPanelProps> = ({ filt
             </button>
           ))}
         </div>
+
+        {/* Custom Date Range Pickers */}
+        {filters.period === 'custom' && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="start-date"
+                className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2"
+              >
+                Start Date
+              </label>
+              <input
+                id="start-date"
+                type="date"
+                value={filters.startDate || ''}
+                onChange={(e) => handleDateChange('startDate', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-900 text-deep-navy-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rephlo-blue"
+                max={filters.endDate || undefined}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="end-date"
+                className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2"
+              >
+                End Date
+              </label>
+              <input
+                id="end-date"
+                type="date"
+                value={filters.endDate || ''}
+                onChange={(e) => handleDateChange('endDate', e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-900 text-deep-navy-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rephlo-blue"
+                min={filters.startDate || undefined}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tier Selector */}

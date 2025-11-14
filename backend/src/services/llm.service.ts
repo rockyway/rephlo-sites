@@ -18,24 +18,29 @@
 import { injectable, inject, container as diContainer } from 'tsyringe';
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { ILLMProvider, ICostCalculationService, IPricingConfigService } from '../interfaces';
+import {
+  ILLMProvider,
+  ICostCalculationService,
+  IPricingConfigService,
+  ICreditDeductionService
+} from '../interfaces';
 import {
   TextCompletionRequest,
   ChatCompletionRequest,
   TextCompletionResponse,
   ChatCompletionResponse,
 } from '../types/model-validation';
-import { UsageRecorder } from './llm/usage-recorder';
 import logger from '../utils/logger';
+import { randomUUID } from 'crypto';
 
 @injectable()
 export class LLMService {
   private providerMap: Map<string, ILLMProvider>;
 
   constructor(
-    @inject(UsageRecorder) private usageRecorder: UsageRecorder,
     @inject('ICostCalculationService') private costCalculationService: ICostCalculationService,
     @inject('IPricingConfigService') private pricingConfigService: IPricingConfigService,
+    @inject('ICreditDeductionService') private creditDeductionService: ICreditDeductionService,
     @inject('PrismaClient') private prisma: PrismaClient
   ) {
     // Manually resolve providers to handle the case when none are registered
@@ -73,7 +78,7 @@ export class LLMService {
   }
 
   /**
-   * Calculate credit cost using provider pricing system (Plan 161)
+   * Calculate credit cost and gather all pricing metadata for deduction and tracking
    * Formula: credits = ceil(vendorCost × marginMultiplier × 100)
    * Where 100 is the conversion factor (1 credit = $0.01)
    *
@@ -83,7 +88,7 @@ export class LLMService {
    * @param inputTokens - Number of input tokens
    * @param outputTokens - Number of output tokens
    * @param cachedInputTokens - Number of cached input tokens (optional, for Anthropic/Google)
-   * @returns Calculated credits to deduct
+   * @returns Object containing credits, providerId, vendorCost, marginMultiplier, and grossMargin
    */
   private async calculateCreditsFromVendorCost(
     userId: string,
@@ -92,7 +97,13 @@ export class LLMService {
     inputTokens: number,
     outputTokens: number,
     cachedInputTokens?: number
-  ): Promise<number> {
+  ): Promise<{
+    credits: number;
+    providerId: string;
+    vendorCost: number;
+    marginMultiplier: number;
+    grossMargin: number;
+  }> {
     try {
       // Step 1: Look up provider UUID from provider name
       const provider = await this.prisma.provider.findUnique({
@@ -106,7 +117,14 @@ export class LLMService {
           modelId,
         });
         // Fallback: Use simple calculation (this should not happen in production)
-        return Math.ceil(((inputTokens + outputTokens) / 1000) * 10); // Assume $0.01 per 1k tokens
+        const fallbackCredits = Math.ceil(((inputTokens + outputTokens) / 1000) * 10);
+        return {
+          credits: fallbackCredits,
+          providerId: '00000000-0000-0000-0000-000000000000', // Placeholder UUID
+          vendorCost: fallbackCredits * 0.01, // Estimate
+          marginMultiplier: 1.0,
+          grossMargin: 0,
+        };
       }
 
       // Step 2: Calculate vendor cost
@@ -129,6 +147,10 @@ export class LLMService {
       // Where × 100 converts USD to credits (1 credit = $0.01)
       const credits = Math.ceil(costCalculation.vendorCost * marginMultiplier * 100);
 
+      // Step 5: Calculate gross margin (revenue - cost)
+      const creditValueUsd = credits * 0.01; // Convert credits to USD
+      const grossMargin = creditValueUsd - costCalculation.vendorCost;
+
       logger.debug('LLMService: Credits calculated from vendor cost', {
         userId,
         modelId,
@@ -139,9 +161,16 @@ export class LLMService {
         vendorCost: costCalculation.vendorCost,
         marginMultiplier,
         credits,
+        grossMargin,
       });
 
-      return credits;
+      return {
+        credits,
+        providerId: provider.id,
+        vendorCost: costCalculation.vendorCost,
+        marginMultiplier,
+        grossMargin,
+      };
     } catch (error) {
       logger.error('LLMService: Error calculating credits from vendor cost', {
         error: error instanceof Error ? error.message : String(error),
@@ -150,7 +179,14 @@ export class LLMService {
         providerName,
       });
       // Fallback: Use simple calculation
-      return Math.ceil(((inputTokens + outputTokens) / 1000) * 10);
+      const fallbackCredits = Math.ceil(((inputTokens + outputTokens) / 1000) * 10);
+      return {
+        credits: fallbackCredits,
+        providerId: '00000000-0000-0000-0000-000000000000', // Placeholder UUID
+        vendorCost: fallbackCredits * 0.01, // Estimate
+        marginMultiplier: 1.0,
+        grossMargin: 0,
+      };
     }
   }
 
@@ -172,6 +208,7 @@ export class LLMService {
 
     const provider = this.getProvider(modelProvider);
     const startTime = Date.now();
+    const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
       // 1. Delegate to provider (Strategy Pattern)
@@ -179,7 +216,7 @@ export class LLMService {
 
       // 2. Business logic (credit calculation using Plan 161 provider pricing)
       const duration = Date.now() - startTime;
-      const creditsUsed = await this.calculateCreditsFromVendorCost(
+      const pricingData = await this.calculateCreditsFromVendorCost(
         userId,
         request.model,
         modelProvider,
@@ -188,11 +225,43 @@ export class LLMService {
         usage.cachedTokens
       );
 
+      // 3. Deduct credits atomically with token usage record
+      const requestStartedAt = new Date(startTime);
+      const requestCompletedAt = new Date();
+
+      const tokenUsageRecord = {
+        requestId,
+        userId,
+        modelId: request.model,
+        providerId: pricingData.providerId,
+        inputTokens: usage.promptTokens,
+        outputTokens: usage.completionTokens,
+        cachedInputTokens: usage.cachedTokens || 0,
+        totalTokens: usage.totalTokens,
+        vendorCost: pricingData.vendorCost,
+        creditDeducted: pricingData.credits,
+        marginMultiplier: pricingData.marginMultiplier,
+        grossMargin: pricingData.grossMargin,
+        requestType: 'completion' as const,
+        requestStartedAt,
+        requestCompletedAt,
+        processingTime: duration,
+        status: 'success' as const,
+        createdAt: requestCompletedAt,
+      };
+
+      await this.creditDeductionService.deductCreditsAtomically(
+        userId,
+        pricingData.credits,
+        requestId,
+        tokenUsageRecord
+      );
+
       const finalResponse: ChatCompletionResponse = {
         ...response,
         usage: {
           ...usage,
-          creditsUsed: creditsUsed,
+          creditsUsed: pricingData.credits,
         },
       };
 
@@ -202,23 +271,13 @@ export class LLMService {
         userId,
         duration,
         tokens: usage.totalTokens,
-        credits: creditsUsed,
+        credits: pricingData.credits,
+        vendorCost: pricingData.vendorCost,
+        grossMargin: pricingData.grossMargin,
       });
 
-      // 3. Cross-cutting concerns (usage recording)
-      await this.usageRecorder.recordUsage({
-        userId,
-        modelId: request.model,
-        operation: 'chat',
-        usage: finalResponse.usage,
-        durationMs: duration,
-        requestMetadata: {
-          provider: modelProvider,
-          temperature: request.temperature,
-          maxTokens: request.max_tokens,
-          messagesCount: request.messages.length,
-        },
-      });
+      // Note: Usage recording now handled by CreditDeductionService → TokenTrackingService
+      // The atomic deduction call above already wrote to token_usage_ledger
 
       return finalResponse;
     } catch (error) {
@@ -251,6 +310,7 @@ export class LLMService {
 
     const provider = this.getProvider(modelProvider);
     const startTime = Date.now();
+    const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
       // 1. Delegate to provider
@@ -263,12 +323,44 @@ export class LLMService {
       const estimatedPromptTokens = Math.ceil(totalTokens * 0.3);
       const estimatedCompletionTokens = Math.ceil(totalTokens * 0.7);
 
-      const creditsUsed = await this.calculateCreditsFromVendorCost(
+      const pricingData = await this.calculateCreditsFromVendorCost(
         userId,
         request.model,
         modelProvider,
         estimatedPromptTokens,
         estimatedCompletionTokens
+      );
+
+      // 3. Deduct credits atomically with token usage record
+      const requestStartedAt = new Date(startTime);
+      const requestCompletedAt = new Date();
+
+      const tokenUsageRecord = {
+        requestId,
+        userId,
+        modelId: request.model,
+        providerId: pricingData.providerId,
+        inputTokens: estimatedPromptTokens,
+        outputTokens: estimatedCompletionTokens,
+        cachedInputTokens: 0,
+        totalTokens: totalTokens,
+        vendorCost: pricingData.vendorCost,
+        creditDeducted: pricingData.credits,
+        marginMultiplier: pricingData.marginMultiplier,
+        grossMargin: pricingData.grossMargin,
+        requestType: 'streaming' as const,
+        requestStartedAt,
+        requestCompletedAt,
+        processingTime: duration,
+        status: 'success' as const,
+        createdAt: requestCompletedAt,
+      };
+
+      await this.creditDeductionService.deductCreditsAtomically(
+        userId,
+        pricingData.credits,
+        requestId,
+        tokenUsageRecord
       );
 
       logger.info('LLMService: Streaming chat completion successful', {
@@ -277,29 +369,13 @@ export class LLMService {
         userId,
         duration,
         tokens: totalTokens,
-        credits: creditsUsed,
+        credits: pricingData.credits,
+        vendorCost: pricingData.vendorCost,
+        grossMargin: pricingData.grossMargin,
       });
 
-      // 3. Cross-cutting concerns
-      await this.usageRecorder.recordUsage({
-        userId,
-        modelId: request.model,
-        operation: 'chat',
-        usage: {
-          promptTokens: Math.ceil(totalTokens * 0.3),
-          completionTokens: Math.ceil(totalTokens * 0.7),
-          totalTokens: totalTokens,
-          creditsUsed: creditsUsed,
-        },
-        durationMs: duration,
-        requestMetadata: {
-          provider: modelProvider,
-          temperature: request.temperature,
-          maxTokens: request.max_tokens,
-          messagesCount: request.messages.length,
-          streaming: true,
-        },
-      });
+      // Note: Usage recording now handled by CreditDeductionService → TokenTrackingService
+      // The atomic deduction call above already wrote to token_usage_ledger
 
       // Send [DONE] marker
       res.write('data: [DONE]\n\n');
@@ -335,12 +411,13 @@ export class LLMService {
 
     const provider = this.getProvider(modelProvider);
     const startTime = Date.now();
+    const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
       const { response, usage } = await provider.textCompletion(request);
 
       const duration = Date.now() - startTime;
-      const creditsUsed = await this.calculateCreditsFromVendorCost(
+      const pricingData = await this.calculateCreditsFromVendorCost(
         userId,
         request.model,
         modelProvider,
@@ -349,11 +426,43 @@ export class LLMService {
         usage.cachedTokens
       );
 
+      // Deduct credits atomically with token usage record
+      const requestStartedAt = new Date(startTime);
+      const requestCompletedAt = new Date();
+
+      const tokenUsageRecord = {
+        requestId,
+        userId,
+        modelId: request.model,
+        providerId: pricingData.providerId,
+        inputTokens: usage.promptTokens,
+        outputTokens: usage.completionTokens,
+        cachedInputTokens: usage.cachedTokens || 0,
+        totalTokens: usage.totalTokens,
+        vendorCost: pricingData.vendorCost,
+        creditDeducted: pricingData.credits,
+        marginMultiplier: pricingData.marginMultiplier,
+        grossMargin: pricingData.grossMargin,
+        requestType: 'completion' as const,
+        requestStartedAt,
+        requestCompletedAt,
+        processingTime: duration,
+        status: 'success' as const,
+        createdAt: requestCompletedAt,
+      };
+
+      await this.creditDeductionService.deductCreditsAtomically(
+        userId,
+        pricingData.credits,
+        requestId,
+        tokenUsageRecord
+      );
+
       const finalResponse: TextCompletionResponse = {
         ...response,
         usage: {
           ...usage,
-          creditsUsed: creditsUsed,
+          creditsUsed: pricingData.credits,
         },
       };
 
@@ -363,21 +472,13 @@ export class LLMService {
         userId,
         duration,
         tokens: usage.totalTokens,
-        credits: creditsUsed,
+        credits: pricingData.credits,
+        vendorCost: pricingData.vendorCost,
+        grossMargin: pricingData.grossMargin,
       });
 
-      await this.usageRecorder.recordUsage({
-        userId,
-        modelId: request.model,
-        operation: 'completion',
-        usage: finalResponse.usage,
-        durationMs: duration,
-        requestMetadata: {
-          provider: modelProvider,
-          temperature: request.temperature,
-          maxTokens: request.max_tokens,
-        },
-      });
+      // Note: Usage recording now handled by CreditDeductionService → TokenTrackingService
+      // The atomic deduction call above already wrote to token_usage_ledger
 
       return finalResponse;
     } catch (error) {
@@ -409,6 +510,7 @@ export class LLMService {
 
     const provider = this.getProvider(modelProvider);
     const startTime = Date.now();
+    const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
       const totalTokens = await provider.streamTextCompletion(request, res);
@@ -419,12 +521,44 @@ export class LLMService {
       const estimatedPromptTokens = Math.ceil(totalTokens * 0.3);
       const estimatedCompletionTokens = Math.ceil(totalTokens * 0.7);
 
-      const creditsUsed = await this.calculateCreditsFromVendorCost(
+      const pricingData = await this.calculateCreditsFromVendorCost(
         userId,
         request.model,
         modelProvider,
         estimatedPromptTokens,
         estimatedCompletionTokens
+      );
+
+      // Deduct credits atomically with token usage record
+      const requestStartedAt = new Date(startTime);
+      const requestCompletedAt = new Date();
+
+      const tokenUsageRecord = {
+        requestId,
+        userId,
+        modelId: request.model,
+        providerId: pricingData.providerId,
+        inputTokens: estimatedPromptTokens,
+        outputTokens: estimatedCompletionTokens,
+        cachedInputTokens: 0,
+        totalTokens: totalTokens,
+        vendorCost: pricingData.vendorCost,
+        creditDeducted: pricingData.credits,
+        marginMultiplier: pricingData.marginMultiplier,
+        grossMargin: pricingData.grossMargin,
+        requestType: 'streaming' as const,
+        requestStartedAt,
+        requestCompletedAt,
+        processingTime: duration,
+        status: 'success' as const,
+        createdAt: requestCompletedAt,
+      };
+
+      await this.creditDeductionService.deductCreditsAtomically(
+        userId,
+        pricingData.credits,
+        requestId,
+        tokenUsageRecord
       );
 
       logger.info('LLMService: Streaming text completion successful', {
@@ -433,27 +567,13 @@ export class LLMService {
         userId,
         duration,
         tokens: totalTokens,
-        credits: creditsUsed,
+        credits: pricingData.credits,
+        vendorCost: pricingData.vendorCost,
+        grossMargin: pricingData.grossMargin,
       });
 
-      await this.usageRecorder.recordUsage({
-        userId,
-        modelId: request.model,
-        operation: 'completion',
-        usage: {
-          promptTokens: Math.ceil(totalTokens * 0.3),
-          completionTokens: Math.ceil(totalTokens * 0.7),
-          totalTokens: totalTokens,
-          creditsUsed: creditsUsed,
-        },
-        durationMs: duration,
-        requestMetadata: {
-          provider: modelProvider,
-          temperature: request.temperature,
-          maxTokens: request.max_tokens,
-          streaming: true,
-        },
-      });
+      // Note: Usage recording now handled by CreditDeductionService → TokenTrackingService
+      // The atomic deduction call above already wrote to token_usage_ledger
 
       res.write('data: [DONE]\n\n');
       res.end();

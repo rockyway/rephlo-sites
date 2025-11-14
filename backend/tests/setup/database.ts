@@ -29,13 +29,21 @@ export const cleanDatabase = async (): Promise<void> => {
   const db = getTestDatabase();
 
   // Delete in order to respect foreign key constraints
-  await db.usageHistory.deleteMany();
   await db.credit.deleteMany();
   await db.subscription.deleteMany();
   await db.userPreference.deleteMany();
   await db.webhookConfig.deleteMany();
+
+  // Delete audit logs and ledger tables
+  await db.$executeRawUnsafe('DELETE FROM model_tier_audit_logs');
+  await db.$executeRawUnsafe('DELETE FROM token_usage_ledger');
+  await db.$executeRawUnsafe('DELETE FROM credit_deduction_ledger');
+  await db.$executeRawUnsafe('DELETE FROM token_usage_daily_summary');
+  await db.$executeRawUnsafe('DELETE FROM user_credit_balance');
+  await db.$executeRawUnsafe('DELETE FROM pricing_configs');
+
   await db.user.deleteMany();
-  // Don't delete models and oauth_clients as they are seeded
+  // Don't delete models, oauth_clients, providers, or model_provider_pricing as they are seeded
 };
 
 /**
@@ -67,10 +75,37 @@ export const runMigrations = async (): Promise<void> => {
 };
 
 /**
- * Seed test data (models and oauth clients)
+ * Seed test data (providers, models, and oauth clients)
  */
 export const seedTestData = async (): Promise<void> => {
   const db = getTestDatabase();
+
+  // Seed providers first (required for token_usage_ledger foreign key)
+  const providerCount = await db.provider.count();
+  if (providerCount === 0) {
+    await db.provider.createMany({
+      data: [
+        {
+          name: 'openai',
+          apiType: 'openai',
+          isEnabled: true,
+          updatedAt: new Date(),
+        },
+        {
+          name: 'anthropic',
+          apiType: 'anthropic',
+          isEnabled: true,
+          updatedAt: new Date(),
+        },
+        {
+          name: 'google',
+          apiType: 'gemini',
+          isEnabled: true,
+          updatedAt: new Date(),
+        },
+      ],
+    });
+  }
 
   // Check if oauth_clients exist
   const clientCount = await db.oAuthClient.count();

@@ -780,3 +780,73 @@ res.status(200).json(metrics);
 **Verification**: All tier fields now accessed exclusively via meta JSONB queries (meta->>'requiredTier'), legacy columns dropped, indexes created, backend running successfully.
 
 **Commits**: ffb370a (refactor: Implement correct JSONB-only architecture)
+2025-11-13 11:45:50 - Plan 161 Implementation Complete: Provider pricing & credit deduction system fully integrated. Added grossMarginUsd tracking, removed legacy UsageRecorder, atomic credit deduction across all 4 LLM methods. Report: docs/progress/179-provider-pricing-credit-system-implementation-completion.md
+2025-11-13 12:03:14 - Admin Analytics Dashboard UI design plan created (docs/plan/180). Integration tests fixed and compilation passes. Ready for implementation phase.
+2025-11-13 12:32:13 - Admin Analytics Dashboard UI Design Plan completed: docs/plan/180-admin-analytics-dashboard-ui-design.md (388 lines). Includes 6 component specs, API endpoints, wireframes, 61h implementation breakdown.
+2025-11-13 12:53:18 - Completed comprehensive expansion of Plan 180 Admin Analytics Dashboard UI Design document from 388 lines to 3,503 lines (~903% expansion). Added detailed specifications for all 6 components with TypeScript interfaces, API endpoints, backend pseudocode, and implementation notes. Expanded wireframes for desktop/tablet/mobile, implementation task breakdown with 61 hours of detailed subtasks, technical considerations (performance, accessibility, security, data integrity), success metrics (functional, business, technical health), and comprehensive appendices (color palette, dependencies, file structure, error examples, database indexes, deployment checklist, future enhancements). Document now ready for implementation and QA verification.
+
+
+## 2025-11-13 13:57:17 - Refactored Plan 180 Document Structure
+
+**Summary:** Successfully refactored Plan 180 from a monolithic 3,503-line document to a clean, high-level 627-line plan with technical details extracted into 4 separate architecture documents.
+
+**Documents Created:**
+- `docs/reference/181-analytics-backend-architecture.md` (1,148 lines) - Complete backend API specifications, service layer implementation, database queries, security, performance optimization
+- `docs/reference/182-analytics-frontend-architecture.md` (961 lines) - React component hierarchy, custom hooks, API client, state management, performance optimization, accessibility
+- `docs/reference/183-analytics-database-schema.md` (532 lines) - Database schema, indexes, query optimization, performance benchmarks, data integrity
+- `docs/reference/184-analytics-security-compliance.md` (780 lines) - Authentication/authorization, rate limiting, data privacy, SQL injection prevention, WCAG 2.1 AA compliance
+
+**Plan 180 Refactoring:**
+- Reduced from 3,503 lines to 627 lines (82% reduction)
+- Kept high-level requirements, component specs, wireframes, and implementation tasks
+- Removed all technical implementation details (TypeScript code, SQL queries, config examples)
+- Added clear references to architecture documents in each implementation phase
+- Improved readability and maintainability for QA verification
+
+**Document Distribution:**
+- Plan (high-level): 627 lines
+- Architecture docs (technical): 3,421 lines
+- Total: 4,048 lines (vs original 3,503 lines)
+
+**Benefits:**
+- Cleaner separation of concerns (business requirements vs technical implementation)
+- Easier for stakeholders to review plan without technical noise
+- QA agents can reference architecture docs for detailed verification
+- Implementation teams have comprehensive technical specs in dedicated documents
+
+**Status:** All refactoring tasks completed. Plan 180 ready for implementation with complete architecture documentation.
+
+## 2025-11-13 - Fixed OIDC Account Interface Error
+Added missing getOIDCScopeFiltered() method to Account object in AuthService. Error: 'Cannot read properties of undefined (reading getOIDCScopeFiltered)'. Fix: Implemented method to filter OIDC scopes (openid, email, profile, offline_access) during consent flow. Cleared 2 stale sessions from database. **INCIDENT:** User table was empty after session clear (unclear cause - no cascade relationship exists between oidc_models and users). Restored 8 users via seed script. File: identity-provider/src/services/auth.service.ts:161-170
+
+## 2025-11-13: Desktop App Integration Analysis & Implementation Plan
+- Analyzed Desktop App codebase (D:\sources\demo\text-assistant) for API integration readiness
+- Created comprehensive gap analysis (docs/analysis/083-desktop-app-api-integration-gap-analysis.md)
+- Created detailed 4-phase implementation plan (docs/plan/181-desktop-app-integration-gaps-implementation-plan.md)
+- Key findings: OAuth/API integration 75% complete, missing upgrade flows and subscription UI (P0 blockers)
+- Plan addresses: Upgrade dialogs, Settings redesign (Billing/Usage/Privacy/Account), Model tier filtering
+- Estimated timeline: 3-4 weeks, 120-160 person-hours to production-ready state
+
+## 2025-11-13: Desktop App Implementation Plan Updates (Privacy-First Architecture)
+- Updated Plan 181 to reflect privacy-first architecture: conversation content NEVER stored on server
+- Clarified: Backend API only stores usage metadata (timestamps, model, tokens) for billing
+- Added Optional Cloud Sync feature (P2) with user consent and encryption
+- Created Plan 182: Backend API Requirements for Desktop App support
+- Plan 182 includes: Monthly usage summary endpoint, Invoice list endpoint, Enhanced profile endpoint
+- Estimated 2-3 days for Backend API team implementation
+
+## 2025-11-13: API Standards Compliance Update (Plan 182)
+- Added comprehensive API Standards Compliance section to Plan 182
+- Emphasized camelCase for JSON responses, snake_case for query parameters
+- Added database-to-API transformation requirements with code examples
+- Included code review checklist (10 items) and common pitfalls to avoid
+- Updated all code examples to show proper Prisma field transformation (snake_case → camelCase)
+- Referenced docs/reference/156-api-standards.md throughout the plan
+
+## 2025-11-13 20:36 - API Standardization Compliance Verification (Plan 182)
+- Verified Plan 182 Desktop App endpoints against latest API standardization (docs/progress/172)
+- Desktop App endpoints (/api/user/*) use flat response format (NOT {status,data,meta})
+- Rationale: User-facing endpoints excluded like V1 API (OpenAI compatibility)
+- Added 'Response Format Strategy' section with comparison table and examples
+- Updated controller code examples with explicit comments about flat response format
+- All endpoints (usage summary, invoices, cloud sync) confirmed compliant

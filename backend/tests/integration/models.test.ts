@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
-import { app } from '../../src/app';
+import app from '../../src/app';
 import { getTestDatabase, cleanDatabase, seedTestData } from '../setup/database';
 import { createTestUser } from '../helpers/factories';
 import { generateTestAccessToken } from '../helpers/tokens';
@@ -10,7 +10,6 @@ import { mockOpenAICompletion, cleanMocks } from '../helpers/mocks';
 describe('Models API Integration Tests', () => {
   let prisma: PrismaClient;
   let authToken: string;
-  let userId: string;
 
   beforeAll(async () => {
     prisma = getTestDatabase();
@@ -19,7 +18,6 @@ describe('Models API Integration Tests', () => {
 
     // Create test user and token
     const user = await createTestUser(prisma);
-    userId = user.id;
     authToken = await generateTestAccessToken(user);
   });
 

@@ -787,4 +787,9 @@ If delegating tasks to Claude Code agents:
 ---
 
 ## When testing API
+
 - use temporary raw access token in the text file in `temp_token.txt`
+
+## Working Protocol
+
+- Must read the [[working-protocol.md]]

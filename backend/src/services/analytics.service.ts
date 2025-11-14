@@ -622,8 +622,21 @@ export class AnalyticsService {
         endDate = now;
         break;
       case 'custom':
+        if (!params.startDate || !params.endDate) {
+          throw new Error('Custom period requires both startDate and endDate');
+        }
         startDate = new Date(params.startDate);
         endDate = new Date(params.endDate);
+
+        // Validate that dates are valid
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error('Invalid date format. Use YYYY-MM-DD');
+        }
+
+        // Validate date range
+        if (startDate > endDate) {
+          throw new Error('Start date must be before end date');
+        }
         break;
       default:
         throw new Error('Invalid period');

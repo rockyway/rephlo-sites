@@ -6,10 +6,22 @@ import { asyncHandler } from '../middleware/error.middleware';
 import logger from '../utils/logger';
 
 // Zod validation schemas
+// Date string validator that accepts both YYYY-MM-DD and ISO datetime formats
+const flexibleDateSchema = z.string().refine(
+  (val) => {
+    // Accept YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return true;
+    // Accept ISO datetime format
+    if (/^\d{4}-\d{2}-\d{2}T/.test(val)) return true;
+    return false;
+  },
+  { message: 'Date must be in YYYY-MM-DD or ISO datetime format' }
+);
+
 const analyticsQuerySchema = z.object({
   period: z.enum(['last_7_days', 'last_30_days', 'last_90_days', 'custom']).optional().default('last_30_days'),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: flexibleDateSchema.optional(),
+  endDate: flexibleDateSchema.optional(),
   tier: z.enum(['free', 'pro', 'enterprise']).optional(),
   providerId: z.string().uuid().optional(),
   modelId: z.string().uuid().optional(),
