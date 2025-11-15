@@ -285,6 +285,47 @@
       border-top: 1px solid #4d4d4f;
     }
 
+    .model-selector-wrapper {
+      max-width: 800px;
+      margin: 0 auto 12px auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .model-label {
+      color: #8e8ea0;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .model-select {
+      flex: 1;
+      padding: 10px 12px;
+      background: #40414f;
+      border: 1px solid #565869;
+      border-radius: 8px;
+      color: #ececf1;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .model-select:hover {
+      border-color: #8e8ea0;
+    }
+
+    .model-select:focus {
+      outline: none;
+      border-color: #19c37d;
+    }
+
+    .model-select option {
+      background: #40414f;
+      color: #ececf1;
+    }
+
     .input-wrapper {
       max-width: 800px;
       margin: 0 auto;
@@ -474,6 +515,12 @@
       </div>
 
       <div class="input-container">
+        <div class="model-selector-wrapper">
+          <label for="modelSelect" class="model-label">Model:</label>
+          <select id="modelSelect" class="model-select">
+            <option value="">Loading models...</option>
+          </select>
+        </div>
         <div class="input-wrapper">
           <textarea
             id="messageInput"

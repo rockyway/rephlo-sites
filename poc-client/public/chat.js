@@ -14,6 +14,8 @@ let currentUserId = null;
 let currentUserEmail = null;
 let currentConversationId = null;
 let isStreaming = false;
+let selectedModel = 'gpt-4o-mini'; // Default model
+let availableModels = [];
 
 // DOM Elements
 const messagesContainer = document.getElementById('messagesContainer');
@@ -27,6 +29,7 @@ const emptyState = document.getElementById('emptyState');
 const chatTitle = document.getElementById('chatTitle');
 const headerUserInfo = document.getElementById('headerUserInfo');
 const sidebarUserInfo = document.getElementById('sidebarUserInfo');
+const modelSelect = document.getElementById('modelSelect');
 
 /**
  * Initialize app on page load
@@ -70,6 +73,9 @@ window.addEventListener('load', async () => {
   // Update UI with user info
   headerUserInfo.textContent = currentUserEmail;
   sidebarUserInfo.textContent = `Logged in as ${currentUserEmail}`;
+
+  // Load available models
+  await loadModels();
 
   // Load conversations
   await loadConversations();
@@ -119,6 +125,69 @@ function setupEventListeners() {
 
   // Logout button
   logoutBtn.addEventListener('click', logout);
+
+  // Model selection change
+  modelSelect.addEventListener('change', (e) => {
+    selectedModel = e.target.value;
+    console.log('Selected model:', selectedModel);
+  });
+}
+
+/**
+ * Load available models from backend API
+ */
+async function loadModels() {
+  try {
+    const RESOURCE_API_URL = 'http://localhost:7150';
+    const response = await fetch(`${RESOURCE_API_URL}/v1/models`, {
+      headers: {
+        Authorization: `Bearer ${currentToken}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to load models');
+    }
+
+    availableModels = data.models || [];
+
+    // Populate model selector
+    modelSelect.innerHTML = '';
+
+    if (availableModels.length === 0) {
+      modelSelect.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (default)</option>';
+      return;
+    }
+
+    // Filter only available models and sort by name
+    const usableModels = availableModels
+      .filter(m => m.is_available && !m.is_deprecated)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    usableModels.forEach((model) => {
+      const option = document.createElement('option');
+      option.value = model.id;
+      option.textContent = `${model.display_name || model.name} (${model.provider})`;
+
+      // Set default selection
+      if (model.id === selectedModel || model.id === 'gpt-4o-mini') {
+        option.selected = true;
+        selectedModel = model.id;
+      }
+
+      modelSelect.appendChild(option);
+    });
+
+    console.log(`Loaded ${usableModels.length} available models`);
+  } catch (error) {
+    console.error('Load models error:', error);
+    showError('Failed to load models: ' + error.message);
+
+    // Fallback to default model
+    modelSelect.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (default)</option>';
+  }
 }
 
 /**
@@ -342,7 +411,7 @@ async function streamChatCompletion(message, assistantMessageId) {
     const requestBody = {
       message,
       conversationId: currentConversationId,
-      model: 'gpt-4o-mini',
+      model: selectedModel,
       stream: true,
     };
 
