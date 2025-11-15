@@ -1121,3 +1121,64 @@ Added comprehensive ChatGPT-like chat interface to POC client with streaming sup
 - Voice input
 - Multi-modal support (images)
 - Virtual scrolling for long conversations
+
+## 2025-11-15 - Created Inference Flow Architecture Documentation
+Created comprehensive technical reference document (188-inference-flow-architecture.md) covering the complete LLM inference request flow from client to provider API and back, including middleware pipeline, provider routing strategy, credit calculation, and atomic deduction process.
+
+## 2025-11-15 - POC Chat UI: Model Selection Feature
+
+### Summary
+Added dynamic model selection dropdown to the POC chat interface, allowing users to choose from available AI models fetched from the backend `/v1/models` API endpoint.
+
+### Changes Made
+
+**Frontend (poc-client/public/):**
+- **chat.html**:
+  - Added model selector dropdown above message input area
+  - Implemented CSS styling matching the dark theme aesthetic
+  - Positioned selector in a wrapper with proper spacing and layout
+  
+- **chat.js**:
+  - Added global state variables: `selectedModel`, `availableModels`
+  - Created `loadModels()` function to fetch models from `/v1/models` endpoint
+  - Filtered models to show only available and non-deprecated options
+  - Sorted models alphabetically by name for better UX
+  - Added event listener for model selection changes
+  - Updated `streamChatCompletion()` to use selected model instead of hardcoded 'gpt-4o-mini'
+  - Implemented graceful fallback to default model on API errors
+
+### Technical Details
+
+**API Integration:**
+- Endpoint: `GET http://localhost:7150/v1/models`
+- Authentication: Bearer token from OAuth flow
+- Response filtering: `is_available === true && is_deprecated === false`
+- Model display format: `display_name (provider)`
+
+**Default Behavior:**
+- Default model: `gpt-4o-mini`
+- Auto-selects gpt-4o-mini if available in model list
+- Falls back to default on API failure
+
+### User Experience
+
+Users can now:
+1. View all available AI models in a dropdown selector
+2. See model names and providers (e.g., "GPT-4o Mini (openai)")
+3. Switch models mid-conversation
+4. See selected model reflected in console logs for debugging
+
+### Files Modified
+- `poc-client/public/chat.html` (added 7 lines HTML + 40 lines CSS)
+- `poc-client/public/chat.js` (added 58 lines JavaScript)
+
+### Testing
+- ✅ Build successful (TypeScript compilation clean)
+- ✅ Server running without errors
+- ✅ Static files served correctly from public/ directory
+
+### Commit
+- Hash: 421d9a3
+- Message: "feat: Add model selection to POC chat UI"
+
+---
