@@ -14,7 +14,7 @@ let currentUserId = null;
 let currentUserEmail = null;
 let currentConversationId = null;
 let isStreaming = false;
-let selectedModel = 'gpt-4o-mini'; // Default model
+let selectedModel = 'gpt-5-mini'; // Default model
 let availableModels = [];
 
 // DOM Elements
@@ -157,7 +157,7 @@ async function loadModels() {
     modelSelect.innerHTML = '';
 
     if (availableModels.length === 0) {
-      modelSelect.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (default)</option>';
+      modelSelect.innerHTML = '<option value="gpt-5-mini">gpt-5-mini (default)</option>';
       return;
     }
 
@@ -171,8 +171,8 @@ async function loadModels() {
       option.value = model.id;
       option.textContent = `${model.display_name || model.name} (${model.provider})`;
 
-      // Set default selection to gpt-4o-mini
-      if (model.id === 'gpt-4o-mini') {
+      // Set default selection to gpt-5-mini
+      if (model.id === 'gpt-5-mini') {
         option.selected = true;
         selectedModel = model.id;
       }
@@ -186,7 +186,7 @@ async function loadModels() {
     showError('Failed to load models: ' + error.message);
 
     // Fallback to default model
-    modelSelect.innerHTML = '<option value="gpt-4o-mini">gpt-4o-mini (default)</option>';
+    modelSelect.innerHTML = '<option value="gpt-5-mini">gpt-5-mini (default)</option>';
   }
 }
 
