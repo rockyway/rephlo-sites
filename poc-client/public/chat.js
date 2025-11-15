@@ -171,8 +171,8 @@ async function loadModels() {
       option.value = model.id;
       option.textContent = `${model.display_name || model.name} (${model.provider})`;
 
-      // Set default selection
-      if (model.id === selectedModel || model.id === 'gpt-4o-mini') {
+      // Set default selection to gpt-4o-mini
+      if (model.id === 'gpt-4o-mini') {
         option.selected = true;
         selectedModel = model.id;
       }
