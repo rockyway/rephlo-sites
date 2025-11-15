@@ -1016,3 +1016,25 @@ Re-ran seed script to restore test users:
 **Documentation:** docs/troubleshooting/011-users-table-empty-investigation.md
 
 **Status:** ✅ Resolved. Users restored. Cleanup script cleared of blame.
+
+## 2025-11-14 - Backend Server Fix and /v1/models Endpoint Investigation
+
+**Issue**: POC-client reported  endpoint returning empty
+**Root Cause**: Backend server was crashed due to TypeScript compilation error (UsageController)
+**Fix**: Restored UsageController import and registration in DI container (commit a5049cf)
+**Status**: Backend server now running successfully on port 7150, serving analytics endpoints
+**Endpoint Implementation**:  returns 19 seeded models with tier metadata (required_tier, tier_restriction_mode, allowed_tiers, access_status)
+**Note**: Testing token in temp_token.txt has expired, unable to verify endpoint response directly
+
+## 2025-11-14 - Backend Server Fix and /v1/models Endpoint Investigation
+
+**Issue**: POC-client reported `/v1/models` endpoint returning empty
+**Root Cause**: Backend server was crashed due to TypeScript compilation error (UsageController)
+**Fix**: Restored UsageController import and registration in DI container (commit a5049cf)
+**Status**: Backend server now running successfully on port 7150, serving analytics endpoints
+**Endpoint Implementation**: `/v1/models` returns 19 seeded models with tier metadata (required_tier, tier_restriction_mode, allowed_tiers, access_status)
+**Note**: Testing token in temp_token.txt has expired, unable to verify endpoint response directly
+
+
+## 2025-11-14 - Fixed /v1/models Empty Response Bug
+Fixed two critical bugs causing endpoint to return empty array: (1) Zod transform defaulting undefined to false, (2) Invalid Prisma capability filter. Endpoint now returns all 18 models correctly with working query filters.

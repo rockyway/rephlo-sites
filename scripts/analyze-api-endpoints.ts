@@ -14,6 +14,8 @@
  *   npm run analyze:api -- --include-test=true
  *   npm run analyze:api -- --format=simple
  *   npm run analyze:api -- --format=simple --include-test=true
+ *   npm run analyze:api -- --format=simple --exclude-admin
+ *   npm run analyze:api:simple:public (shortcut for --format=simple --exclude-admin)
  */
 
 import * as fs from 'fs';
@@ -26,6 +28,7 @@ const formatArg = args.find(arg => arg.startsWith('--format='));
 const format = formatArg ? formatArg.split('=')[1] : 'full'; // 'simple' or 'full'
 const limitArg = args.find(arg => arg.startsWith('--limit='));
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : undefined; // Limit number of endpoints to analyze
+const excludeAdmin = args.some(arg => arg === '--exclude-admin'); // Filter out /admin routes
 
 if (!['simple', 'full'].includes(format)) {
   console.error(`Invalid format: ${format}. Must be 'simple' or 'full'.`);
@@ -1134,6 +1137,13 @@ function analyzeBackend(): ProjectEndpoints {
     endpoints.push(...serverEndpoints);
   }
 
+  // Filter out admin routes if requested
+  if (excludeAdmin) {
+    const beforeCount = endpoints.length;
+    endpoints = endpoints.filter(endpoint => !endpoint.path.includes('/admin'));
+    console.log(`Filtered out ${beforeCount - endpoints.length} admin endpoints`);
+  }
+
   // Extract schemas for each endpoint
   console.log('Extracting schemas...');
   const schemasMap = new Map<string, SchemaDefinition>();
@@ -1246,7 +1256,8 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
   let markdown = `# API Endpoints Analysis Report (Simple Format)\n\n`;
   markdown += `**Generated:** ${now}\n`;
   markdown += `**Format:** Simple\n`;
-  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n\n`;
+  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n`;
+  markdown += `**Exclude Admin Routes:** ${excludeAdmin ? 'Yes' : 'No'}\n\n`;
   markdown += `**Projects Analyzed:**\n`;
   projects.forEach(p => {
     markdown += `- ${p.projectName} (${p.baseUrl})\n`;
@@ -1390,7 +1401,8 @@ function generateMarkdownReport(projects: ProjectEndpoints[]): string {
   let markdown = `# API Endpoints Analysis Report (Full Format)\n\n`;
   markdown += `**Generated:** ${now}\n`;
   markdown += `**Format:** Full\n`;
-  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n\n`;
+  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n`;
+  markdown += `**Exclude Admin Routes:** ${excludeAdmin ? 'Yes' : 'No'}\n\n`;
   markdown += `**Projects Analyzed:**\n`;
   projects.forEach(p => {
     markdown += `- ${p.projectName} (${p.baseUrl})\n`;
@@ -1500,6 +1512,7 @@ function main() {
   console.log('Starting API endpoint analysis...');
   console.log(`Format: ${format}`);
   console.log(`Include Tests: ${includeTest}`);
+  console.log(`Exclude Admin Routes: ${excludeAdmin}`);
   if (limit) {
     console.log(`Limit: ${limit} endpoints (POC mode)`);
   }
@@ -1539,8 +1552,10 @@ function main() {
   }
 
   // Store at root for easy to navigate
-  const outputFile = path.join(ROOT_DIR, `api-endpoints-index.md`);
-  const outputFileWithNumber = path.join(ROOT_DIR, `api-endpoints-index-v${String(nextNumber).padStart(3,'0')}.md`);
+  // Use different filename for public API (exclude-admin) exports
+  const baseFilename = excludeAdmin ? 'api-public-endpoints-index' : 'api-endpoints-index';
+  const outputFile = path.join(ROOT_DIR, `${baseFilename}.md`);
+  const outputFileWithNumber = path.join(ROOT_DIR, `${baseFilename}-v${String(nextNumber).padStart(3,'0')}.md`);
   // const outputFile = path.join(docsAnalysisDir, `${String(nextNumber).padStart(3, '0')}-api-endpoints-analysis.md`);
   fs.writeFileSync(outputFile, markdown, 'utf-8');
   fs.writeFileSync(outputFileWithNumber, markdown, 'utf-8');

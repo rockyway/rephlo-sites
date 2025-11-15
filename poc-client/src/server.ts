@@ -12,6 +12,9 @@ import express, { Request, Response } from 'express';
 import axios from 'axios';
 import crypto from 'crypto';
 import path from 'path';
+import cookieParser from 'cookie-parser';
+import chatRoutes from './routes/chat';
+import { getDatabase, closeDatabase } from './db/database';
 
 const app = express();
 const PORT = 8080;
@@ -33,7 +36,14 @@ const sessions = new Map<string, {
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Initialize database on startup
+getDatabase();
+
+// Register chat routes
+app.use('/api/chat', chatRoutes);
 
 /**
  * Helper: Generate PKCE code challenge
@@ -186,7 +196,92 @@ app.get('/api/session/:sessionId', (req: Request, res: Response) => {
     success: true,
     hasToken: !!session.token,
     tokenPayload: session.tokenPayload,
+    hasRefreshToken: !!(session as any).refreshToken,
   });
+});
+
+/**
+ * Refresh access token using refresh token
+ * POST /api/refresh-token
+ * Body: { sessionId: string }
+ */
+app.post('/api/refresh-token', async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+
+    const session = sessions.get(sessionId);
+
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+
+    const refreshToken = (session as any).refreshToken;
+
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, error: 'No refresh token available' });
+    }
+
+    // Exchange refresh token for new access token
+    // For public clients with PKCE, we only send client_id (no authentication)
+    const tokenData = new URLSearchParams();
+    tokenData.append('grant_type', 'refresh_token');
+    tokenData.append('client_id', CLIENT_ID);
+    tokenData.append('refresh_token', refreshToken);
+    // Include resource parameter to ensure JWT format
+    tokenData.append('resource', 'https://api.textassistant.local');
+
+    console.log('\n=== REFRESH TOKEN REQUEST ===');
+    console.log('Refresh Token:', refreshToken);
+    console.log('Client ID:', CLIENT_ID);
+    console.log('Using Basic Auth: No (public client with PKCE)');
+    console.log('============================\n');
+
+    const tokenResponse = await axios.post(
+      `${IDENTITY_PROVIDER_URL}/oauth/token`,
+      tokenData,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
+    );
+
+    console.log('\n=== REFRESHED TOKEN RESPONSE ===');
+    console.log(JSON.stringify(tokenResponse.data, null, 2));
+    console.log('================================\n');
+
+    const newAccessToken = tokenResponse.data.access_token;
+    const newTokenPayload = decodeJWT(newAccessToken);
+
+    // Update session with new tokens
+    session.token = newAccessToken;
+    session.tokenPayload = newTokenPayload;
+
+    // Update refresh token if a new one was issued (rotation)
+    if (tokenResponse.data.refresh_token) {
+      (session as any).refreshToken = tokenResponse.data.refresh_token;
+    }
+
+    res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      access_token: newAccessToken,
+      tokenPayload: newTokenPayload,
+      expires_in: tokenResponse.data.expires_in,
+      token_type: tokenResponse.data.token_type,
+    });
+  } catch (error: any) {
+    console.error('Token refresh error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: 'Token refresh failed',
+      details: error.response?.data || error.message,
+    });
+  }
 });
 
 /**
@@ -460,7 +555,7 @@ app.post('/api/test/inference', async (req: Request, res: Response) => {
 /**
  * Start server
  */
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n✅ POC Client running on http://localhost:${PORT}`);
   console.log(`\nOAuth Flow:`);
   console.log(`  1. Click "Login" button to start OAuth flow`);
@@ -469,6 +564,30 @@ app.listen(PORT, () => {
   console.log(`  4. You will be redirected back with an auth code`);
   console.log(`  5. Token will be exchanged automatically`);
   console.log(`  6. Use the token to call API endpoints`);
+  console.log(`\nChat UI:`);
+  console.log(`  - Navigate to /chat.html for ChatGPT-like interface`);
+  console.log(`  - Supports streaming responses and conversation history`);
   console.log(`\nIdentity Provider: ${IDENTITY_PROVIDER_URL}`);
   console.log(`Resource API: ${RESOURCE_API_URL}`);
+});
+
+/**
+ * Graceful shutdown
+ */
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down gracefully...');
+  server.close(() => {
+    closeDatabase();
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🛑 Shutting down gracefully...');
+  server.close(() => {
+    closeDatabase();
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });

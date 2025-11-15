@@ -1,8 +1,9 @@
 # API Endpoints Analysis Report (Simple Format)
 
-**Generated:** 2025-11-14T02:50:41.486Z
+**Generated:** 2025-11-15T00:30:58.637Z
 **Format:** Simple
 **Include Tests:** No
+**Exclude Admin Routes:** No
 
 **Projects Analyzed:**
 - Backend API (http://localhost:7150)
@@ -250,13 +251,13 @@
 | Method | Endpoint | File | Handler | Response Schema | Error Schemas | Middleware | Usages |
 |--------|----------|------|---------|-----------------|---------------|------------|--------|
 | GET | `/.well-known/openid-configuration` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
-| GET | `/health` | `identity-provider\src\app.ts L:48` | `-` | - | - | `-` | frontend\src\services\api.ts L:236 |
-| GET | `/interaction/:uid` | `identity-provider\src\app.ts L:57` | `authController.interaction` | - | - | `-` | identity-provider\src\views\consent.html L:294;358;374<br>identity-provider\src\views\login.html L:233;270;277 |
-| GET | `/interaction/:uid/abort` | `identity-provider\src\app.ts L:60` | `authController.abort` | - | - | `-` | identity-provider\src\views\consent.html L:374<br>identity-provider\src\views\login.html L:277 |
-| POST | `/interaction/:uid/consent` | `identity-provider\src\app.ts L:59` | `authController.consent` | - | - | `-` | identity-provider\src\views\consent.html L:358 |
-| GET | `/interaction/:uid/data` | `identity-provider\src\app.ts L:61` | `authController.getInteractionData` | `authController_getInteractionData_Response` | - | `-` | identity-provider\src\views\consent.html L:294<br>identity-provider\src\views\login.html L:233 |
-| POST | `/interaction/:uid/login` | `identity-provider\src\app.ts L:58` | `authController.login` | - | - | `-` | identity-provider\src\views\login.html L:270 |
-| GET | `/logout` | `identity-provider\src\app.ts L:64` | `authController.logout` | `Redirect` | - | `-` | - |
+| GET | `/health` | `identity-provider\src\app.ts L:49` | `-` | - | - | `-` | frontend\src\services\api.ts L:236 |
+| GET | `/interaction/:uid` | `identity-provider\src\app.ts L:58` | `authController.interaction` | - | - | `-` | identity-provider\src\views\consent.html L:294;358;374<br>identity-provider\src\views\login.html L:233;270;277 |
+| GET | `/interaction/:uid/abort` | `identity-provider\src\app.ts L:61` | `authController.abort` | - | - | `-` | identity-provider\src\views\consent.html L:374<br>identity-provider\src\views\login.html L:277 |
+| POST | `/interaction/:uid/consent` | `identity-provider\src\app.ts L:60` | `authController.consent` | - | - | `-` | identity-provider\src\views\consent.html L:358 |
+| GET | `/interaction/:uid/data` | `identity-provider\src\app.ts L:62` | `authController.getInteractionData` | `authController_getInteractionData_Response` | - | `-` | identity-provider\src\views\consent.html L:294<br>identity-provider\src\views\login.html L:233 |
+| POST | `/interaction/:uid/login` | `identity-provider\src\app.ts L:59` | `authController.login` | - | - | `-` | identity-provider\src\views\login.html L:270 |
+| GET | `/logout` | `identity-provider\src\app.ts L:65` | `authController.logout` | `Redirect` | - | `-` | - |
 | GET | `/oauth/authorize` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
 | POST | `/oauth/introspect` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
 | GET | `/oauth/jwks` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | backend\src\services\token-introspection.service.ts L:126 |
@@ -577,10 +578,10 @@ type auditLogController_getAuditLogs_Data = {
 
 ### authController_getInteractionData_Response
 
-**Source:** `identity-provider\src\app.ts` (Line 61)
+**Source:** `identity-provider\src\app.ts` (Line 62)
 
 ```typescript
-// Inline response from identity-provider\src\app.ts:61
+// Inline response from identity-provider\src\app.ts:62
 type authController_getInteractionData_Response = {
         uid,
         prompt: prompt.name,
@@ -1260,7 +1261,7 @@ type GetMigrationHistory_Response = {
 
 ### GetModelForInference_Response
 
-**Source:** `backend\src\services\model.service.ts` (Line 387)
+**Source:** `backend\src\services\model.service.ts` (Line 411)
 
 ```typescript
 // Service method return type from model.service.ts

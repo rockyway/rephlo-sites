@@ -30,26 +30,28 @@ const OAUTH_CLIENTS_CONFIG = [
   {
     clientId: 'desktop-app-test',
     clientName: 'Rephlo Desktop App (Test)',
-    clientSecret: 'test-secret-desktop-app-12345',
+    clientSecret: null, // Public client using PKCE - desktop apps cannot securely store secrets
     redirectUris: [
       'http://localhost:8327/callback',
       'http://localhost:8329/callback',
-      'rephlo://callback',
+      'ai.rephlo.desktop:/callback', // Reverse domain name based custom URI scheme
+      'http://127.0.0.1:8327/callback', // Loopback IP for native apps
+      'http://127.0.0.1:8329/callback',
     ],
     grantTypes: ['authorization_code', 'refresh_token'],
     responseTypes: ['code'],
     scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
-      description: 'Official Rephlo Desktop Application',
-      tags: ['desktop', 'official', 'test'],
-      allowedOrigins: ['http://localhost:8327', 'http://localhost:8329', 'rephlo://'],
+      description: 'Official Rephlo Desktop Application - Public client with PKCE and refresh tokens',
+      tags: ['desktop', 'official', 'test', 'public'],
+      allowedOrigins: ['http://localhost:8327', 'http://localhost:8329', 'http://127.0.0.1:8327', 'http://127.0.0.1:8329'],
     },
   },
   {
     clientId: 'poc-client-test',
     clientName: 'POC Client (Test)',
-    clientSecret: null, // Public client using PKCE - no secret
+    clientSecret: null, // Public client using PKCE - no secret needed
     redirectUris: [
       'http://localhost:8080/callback',
       'http://localhost:8080/oauth/callback',
@@ -59,7 +61,7 @@ const OAUTH_CLIENTS_CONFIG = [
     scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
-      description: 'Proof of Concept Client for Testing - Public client using PKCE',
+      description: 'Proof of Concept Client for Testing - Public client with PKCE and refresh tokens',
       tags: ['poc', 'test', 'public'],
       allowedOrigins: ['http://localhost:8080'],
     },

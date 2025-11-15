@@ -21,7 +21,7 @@ export const listModelsQuerySchema = z.object({
   available: z
     .string()
     .optional()
-    .transform((val) => val === 'true')
+    .transform((val) => val === undefined ? undefined : val === 'true')
     .pipe(z.boolean().optional()),
   capability: z
     .string()

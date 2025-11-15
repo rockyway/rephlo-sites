@@ -14,7 +14,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, ModelCapability, SubscriptionTier } from '@prisma/client';
+import { PrismaClient, SubscriptionTier } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   ModelListResponse,
@@ -128,18 +128,21 @@ export class ModelService implements IModelService {
       where.isArchived = false;
     }
 
-    if (filters?.capability && filters.capability.length > 0) {
-      // Filter models that have ANY of the specified capabilities
-      where.capabilities = {
-        hasSome: filters.capability as ModelCapability[],
-      };
-    }
+    // TODO: Capability filtering requires querying meta JSONB field
+    // For now, capability filtering is done in-memory after fetching
+    // This can be optimized later with Prisma JSON filtering or raw SQL
 
     if (filters?.provider) {
       where.provider = filters.provider;
     }
 
     // Query database - only select meta JSONB (not deprecated root columns)
+    logger.debug('ModelService.listModels: Executing Prisma query', {
+      where: JSON.stringify(where),
+      filters,
+      userTier,
+    });
+
     const models = await this.prisma.model.findMany({
       where,
       select: {
@@ -151,8 +154,29 @@ export class ModelService implements IModelService {
       orderBy: [{ isAvailable: 'desc' }, { name: 'asc' }],
     });
 
+    logger.debug('ModelService.listModels: Query returned', {
+      count: models.length,
+      ids: models.map(m => m.id),
+    });
+
+    // Apply in-memory capability filtering if specified
+    let filteredModels = models;
+    if (filters?.capability && filters.capability.length > 0) {
+      filteredModels = models.filter((model) => {
+        const meta = model.meta as any;
+        const modelCapabilities = meta?.capabilities ?? [];
+        // Check if model has ANY of the requested capabilities
+        return filters.capability!.some(cap => modelCapabilities.includes(cap));
+      });
+      logger.debug('ModelService.listModels: Applied capability filter', {
+        requestedCapabilities: filters.capability,
+        beforeCount: models.length,
+        afterCount: filteredModels.length,
+      });
+    }
+
     const response: ModelListResponse = {
-      models: models.map((model) => {
+      models: filteredModels.map((model) => {
         const meta = model.meta as any;
 
         // Calculate tier access status if userTier provided
@@ -184,7 +208,7 @@ export class ModelService implements IModelService {
           access_status: accessStatus,
         };
       }),
-      total: models.length,
+      total: filteredModels.length,
       user_tier: userTier,
     };
 
@@ -192,7 +216,7 @@ export class ModelService implements IModelService {
     modelCache.set(cacheKey, response);
 
     logger.info('ModelService: Models listed', {
-      total: models.length,
+      total: filteredModels.length,
       filters,
     });
 
