@@ -525,7 +525,7 @@ export class AnalyticsService {
 
             const batch = await prisma.token_usage_ledger.findMany({
               where: whereClause,
-              include: { provider: { select: { name: true } } },
+              include: { providers: { select: { name: true } } },
               skip: offset,
               take: batchSize,
               orderBy: { created_at: 'asc' },
@@ -550,11 +550,11 @@ export class AnalyticsService {
 
             batch.forEach((row) => {
               const date = row.created_at.toISOString().split('T')[0];
-              const key = `${date}-${row.user_tier_at_request}-${row.provider.name}-${row.model_id}`;
+              const key = `${date}-${row.user_tier_at_request}-${row.providers.name}-${row.model_id}`;
               const existing = grouped.get(key) || {
                 date,
                 tier: row.user_tier_at_request || 'unknown',
-                provider: row.provider.name,
+                provider: row.providers.name,
                 model: row.model_id,
                 requestCount: 0,
                 totalCost: 0,

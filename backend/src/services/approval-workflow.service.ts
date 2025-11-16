@@ -122,7 +122,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
               email: true,
             },
           },
-          reviewer: {
+          users_approval_requests_reviewed_byTousers: {
             select: {
               id: true,
               email: true,
@@ -157,7 +157,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
               email: true,
             },
           },
-          reviewer: {
+          users_approval_requests_reviewed_byTousers: {
             select: {
               id: true,
               email: true,
@@ -380,7 +380,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
               email: true,
             },
           },
-          reviewer: {
+          users_approval_requests_reviewed_byTousers: {
             select: {
               id: true,
               email: true,

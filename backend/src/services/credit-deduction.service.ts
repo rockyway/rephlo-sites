@@ -70,17 +70,17 @@ export class CreditDeductionService implements ICreditDeductionService {
       const user = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptions: {
+          subscription_monetization: {
             where: { status: 'active' },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
             take: 1,
           },
         },
       });
 
-      if (user?.subscriptions[0]?.tier === 'free') {
+      if (user?.subscription_monetization[0]?.tier === 'free') {
         suggestions.push('Upgrade to Pro tier for 20,000 credits/month ($19/month)');
-      } else if (user?.subscriptions[0]?.tier === 'pro') {
+      } else if (user?.subscription_monetization[0]?.tier === 'pro') {
         suggestions.push('Upgrade to Pro Max for 60,000 credits/month ($49/month)');
       }
 

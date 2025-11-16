@@ -265,14 +265,14 @@ export class LicenseManagementController {
         status: license.status,
         purchased_at: license.purchased_at.toISOString(),
         activated_at: license.activated_at?.toISOString() || null,
-        activations: license.activations?.map((a: any) => ({
+        activations: license.license_activation?.map((a: any) => ({
           id: a.id,
           device_name: a.device_name,
           os_type: a.os_type,
           status: a.status,
           activated_at: a.activated_at.toISOString(),
         })),
-        version_upgrades: license.versionUpgrades?.map((u: any) => ({
+        version_upgrades: license.version_upgrade?.map((u: any) => ({
           id: u.id,
           from_version: u.fromVersion,
           to_version: u.toVersion,

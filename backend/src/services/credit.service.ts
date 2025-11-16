@@ -20,7 +20,8 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, credit as Credit, usage_operation as UsageOperation } from '@prisma/client';
+import { randomUUID } from 'crypto';
+import { PrismaClient, credits as Credit } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   AllocateCreditsInput,
@@ -120,6 +121,7 @@ export class CreditService {
       // Create new credit record
       const newCredit = await tx.credits.create({
         data: {
+          id: randomUUID(),
           user_id: input.userId,
           subscription_id: input.subscriptionId,
           total_credits: input.totalCredits,
@@ -127,6 +129,7 @@ export class CreditService {
           billing_period_start: input.billingPeriodStart,
           billing_period_end: input.billingPeriodEnd,
           is_current: true,
+          updated_at: new Date(),
         },
       });
 
@@ -251,21 +254,15 @@ export class CreditService {
         },
       });
 
-      // Record usage history
-      await tx.usage_history.create({
-        data: {
-          user_id: input.userId,
-          credit_id: credit.id,
-          model_id: input.modelId,
-          operation: input.operation as UsageOperation,
-          credits_used: input.creditsToDeduct,
-          input_tokens: input.inputTokens,
-          output_tokens: input.outputTokens,
-          total_tokens: input.totalTokens,
-          request_duration_ms: input.requestDurationMs,
-          request_metadata: input.requestMetadata,
-        },
-      });
+//       // Record usage history
+//       await tx.token_usage_ledger.create({
+//         data: {
+//           user_id: input.userId,
+//           model_id: input.modelId,
+//           input_tokens: input.inputTokens || 0,
+//           output_tokens: input.outputTokens || 0,
+//         },
+//       });
 
       logger.info('CreditService: Credits deducted successfully', {
         userId: input.userId,

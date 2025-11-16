@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * Social Authentication Controller
  *
@@ -294,6 +295,7 @@ export class SocialAuthController {
 
       user = await this.prisma.users.create({
         data: {
+          id: randomUUID(),
           email: profile.email.toLowerCase(),
           email_verified: true, // Trust Google's verification
           username: username,
@@ -306,6 +308,7 @@ export class SocialAuthController {
           // No password needed for Google users
           // Generate random placeholder to satisfy NOT NULL constraint
           password_hash: crypto.randomBytes(32).toString('hex'),
+          updated_at: new Date(),
           is_active: true,
         },
       });

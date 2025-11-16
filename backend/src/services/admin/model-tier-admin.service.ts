@@ -135,7 +135,6 @@ export class ModelTierAdminService {
           new_value: changes,
           reason: tierData.reason || null,
           ip_address: ipAddress || null,
-          updated_at: new Date(),
         },
         include: {
           users: {
@@ -175,7 +174,7 @@ export class ModelTierAdminService {
         id: result.auditLog.id,
         modelId: result.auditLog.model_id,
         adminUserId: result.auditLog.admin_user_id,
-        adminEmail: result.auditLog.admin.email,
+        adminEmail: result.auditLog.users.email,
         changeType: result.auditLog.change_type,
         previousValue: result.auditLog.previous_value as Record<string, any> | null,
         newValue: result.auditLog.new_value as Record<string, any>,
@@ -311,7 +310,7 @@ export class ModelTierAdminService {
         id: log.id,
         modelId: log.model_id,
         adminUserId: log.admin_user_id,
-        adminEmail: log.admin.email,
+        adminEmail: log.users.email,
         changeType: log.change_type,
         previousValue: log.previous_value as Record<string, any> | null,
         newValue: log.new_value as Record<string, any>,

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * Audit Log Service
  *
@@ -59,6 +60,7 @@ export class AuditLogService {
     try {
       await this.prisma.admin_audit_log.create({
         data: {
+          id: randomUUID(),
           admin_user_id: entry.adminUserId,
           action: entry.action,
           resource_type: entry.resourceType,
@@ -72,7 +74,7 @@ export class AuditLogService {
           new_value: entry.newValue || null,
           status_code: entry.statusCode,
           error_message: entry.errorMessage,
-          timestamp: new Date()
+          timestamp: new Date(),
         }
       });
 
@@ -112,12 +114,12 @@ export class AuditLogService {
       take: filters.limit || 100,
       skip: filters.offset || 0,
       include: {
-        admin_user: {
+        users: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true
+            first_name: true,
+            last_name: true
           }
         }
       }
@@ -169,12 +171,12 @@ export class AuditLogService {
       orderBy: { timestamp: 'desc' },
       take: limit,
       include: {
-        admin_user: {
+        users: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true
+            first_name: true,
+            last_name: true
           }
         }
       }

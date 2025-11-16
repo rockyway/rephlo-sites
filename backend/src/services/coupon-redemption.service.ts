@@ -85,7 +85,6 @@ export class CouponRedemptionService {
             user_tier_after: context.tierAfter || null,
             billing_cycle_before: context.billingCycleBefore || null,
             billing_cycle_after: context.billingCycleAfter || null,
-            updated_at: new Date(),
           },
         });
 
@@ -157,7 +156,6 @@ export class CouponRedemptionService {
         redemption_status: 'success',
         ip_address: metadata.ipAddress || null,
         user_agent: metadata.userAgent || null,
-        updated_at: new Date(),
       },
     });
   }

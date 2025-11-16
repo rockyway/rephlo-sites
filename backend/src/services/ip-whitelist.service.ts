@@ -62,9 +62,10 @@ export class IPWhitelistService implements IIPWhitelistService {
           ip_address: ipAddress,
           description: description || null,
           is_active: true,
+          updated_at: new Date(),
         },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -105,7 +106,7 @@ export class IPWhitelistService implements IIPWhitelistService {
       const existing = await this.prisma.ip_whitelists.findUnique({
         where: { id: entryId },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -154,7 +155,7 @@ export class IPWhitelistService implements IIPWhitelistService {
       const entries = await this.prisma.ip_whitelists.findMany({
         where: { user_id: userId },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -186,7 +187,7 @@ export class IPWhitelistService implements IIPWhitelistService {
           is_active: true,
         },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -302,7 +303,7 @@ export class IPWhitelistService implements IIPWhitelistService {
         where: { id: entryId },
         data: { description },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -385,7 +386,7 @@ export class IPWhitelistService implements IIPWhitelistService {
         where: { id: entryId },
         data: { is_active: isActive },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,

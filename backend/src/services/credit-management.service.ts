@@ -116,6 +116,7 @@ export class CreditManagementService {
         // Create credit allocation record
         const allocation = await tx.credit_allocation.create({
           data: {
+            id: randomUUID(),
             user_id: userId,
             subscription_id: subscriptionId,
             amount: monthlyAllocation,
@@ -145,7 +146,7 @@ export class CreditManagementService {
           amount: allocation.amount,
         });
 
-        return allocation as CreditAllocation;
+        return allocation as unknown as CreditAllocation;
       }, { isolationLevel: 'Serializable' });
     } catch (error) {
       logger.error('CreditManagementService.allocateSubscriptionCredits: Error', { error });
@@ -224,6 +225,7 @@ export class CreditManagementService {
         // Create bonus allocation record
         const allocation = await tx.credit_allocation.create({
           data: {
+            id: randomUUID(),
             user_id: userId,
             amount,
             allocation_period_start: now,
@@ -253,7 +255,7 @@ export class CreditManagementService {
           expiresAt: expiresAt || defaultExpiry,
         });
 
-        return allocation as CreditAllocation;
+        return allocation as unknown as CreditAllocation;
       }, { isolationLevel: 'Serializable' });
     } catch (error) {
       logger.error('CreditManagementService.grantBonusCredits: Error', { error });
@@ -533,7 +535,7 @@ export class CreditManagementService {
         count: allocations.length,
       });
 
-      return allocations as CreditAllocation[];
+      return allocations as unknown as CreditAllocation[];
     } catch (error) {
       logger.error('CreditManagementService.getCreditAllocationHistory: Error', { error });
       throw error;

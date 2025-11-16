@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * Migration Service (Plan 110)
  *
@@ -172,6 +173,7 @@ export class MigrationService {
     // For now, we'll create a credit allocation record
     await this.prisma.credit_allocation.create({
       data: {
+        id: randomUUID(),
         user_id: userId,
         amount: Math.round(tradeInValue * 1000), // Convert to credits (assuming $1 = 1000 credits)
         source: 'perpetual_migration',

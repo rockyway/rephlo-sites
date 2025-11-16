@@ -108,7 +108,7 @@ export class DeviceActivationManagementService {
           },
         },
         {
-          user: {
+          users: {
             email: {
               contains: filters.search,
               mode: 'insensitive',
@@ -132,7 +132,7 @@ export class DeviceActivationManagementService {
       this.prisma.license_activation.findMany({
         where,
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -144,8 +144,8 @@ export class DeviceActivationManagementService {
             select: {
               id: true,
               license_key: true,
-              max_license_activation: true,
-              current_license_activation: true,
+              max_activations: true,
+              current_activations: true,
             },
           },
         },
@@ -220,8 +220,8 @@ export class DeviceActivationManagementService {
       }),
       this.prisma.perpetual_license.findMany({
         select: {
-          max_license_activation: true,
-          current_license_activation: true,
+          max_activations: true,
+          current_activations: true,
         },
       }),
     ]);
@@ -265,7 +265,7 @@ export class DeviceActivationManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: activation.license_id },
       data: {
-        current_license_activation: {
+        current_activations: {
           decrement: 1,
         },
       },
@@ -309,7 +309,7 @@ export class DeviceActivationManagementService {
       await this.prisma.perpetual_license.update({
         where: { id: activation.license_id },
         data: {
-          current_license_activation: {
+          current_activations: {
             decrement: 1,
           },
         },

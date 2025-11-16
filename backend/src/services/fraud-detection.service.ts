@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * Fraud Detection Service
  *
@@ -141,6 +142,7 @@ export class FraudDetectionService {
 
     return await this.prisma.coupon_fraud_detection.create({
       data: {
+        id: randomUUID(),
         coupon_id: data.couponId,
         user_id: data.userId,
         detection_type: data.detectionType,

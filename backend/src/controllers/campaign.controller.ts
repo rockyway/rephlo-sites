@@ -35,14 +35,14 @@ export class CampaignController {
       const data = safeValidateRequest(createCampaignRequestSchema, req.body);
 
       const campaign = await this.campaignService.createCampaign({
-        campaign_name: data.campaign_name as string,
-        campaign_type: data.campaign_type as any,
-        start_date: new Date(data.start_date as string | Date),
-        end_date: new Date(data.end_date as string | Date),
-        budget_limit_usd: data.budget_limit_usd as number,
-        target_tier: (data.target_tier as string) || undefined,
-        is_active: (data.is_active as boolean) ?? true,
-        created_by: adminUserId,
+        campaignName: data.campaign_name as string,
+        campaignType: data.campaign_type as any,
+        startDate: new Date(data.start_date as string | Date),
+        endDate: new Date(data.end_date as string | Date),
+        budgetLimitUsd: data.budget_limit_usd as number,
+        targetTier: (data.target_tier as string) || undefined,
+        isActive: (data.is_active as boolean) ?? true,
+        createdBy: adminUserId,
       });
 
       // Calculate status from dates (same as getSingleCampaign)

@@ -161,9 +161,9 @@ export class CouponValidationService {
     const coupon = await this.prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
       include: {
-        campaign: true,
-        usage_limits: true,
-        validation_rules: { where: { is_active: true } },
+        coupon_campaign: true,
+        coupon_usage_limit: true,
+        coupon_validation_rule: { where: { is_active: true } },
       },
     });
 
@@ -415,7 +415,6 @@ export class CouponValidationService {
             timeWindow: '1 hour',
           },
           is_flagged: true,
-          updated_at: new Date(),
         },
       });
 
@@ -469,7 +468,6 @@ export class CouponValidationService {
             previousIPs: userFingerprints.map((r) => r.ip_address),
           },
           is_flagged: false, // Don't block, just log
-          updated_at: new Date(),
         },
       });
     }

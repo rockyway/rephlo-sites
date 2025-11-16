@@ -38,7 +38,7 @@ export interface Invoice {
   period_start: Date;
   period_end: Date;
   invoice_pdf: string | null;
-  hostedInvoiceUrl: string | null;
+  hosted_invoice_url: string | null;
   createdAt: Date;
   paid_at: Date | null;
 }
@@ -60,13 +60,13 @@ export interface PaymentTransaction {
 
 export interface DunningAttempt {
   id: string;
-  user_id: string;
-  invoice_id: string;
-  attempt_number: number;
-  scheduled_at: Date;
-  attempted_at: Date | null;
+  userId: string;
+  invoiceId: string;
+  attemptNumber: number;
+  scheduledAt: Date;
+  attemptedAt: Date | null;
   result: 'success' | 'failed' | 'pending' | 'skipped' | null;
-  failure_reason: string | null;
+  failureReason: string | null;
   nextRetryAt: Date | null;
 }
 
@@ -241,6 +241,7 @@ export class BillingPaymentsService {
       // Create invoice record in database
       const invoice = await this.prisma.billing_invoice.create({
         data: {
+          id: randomUUID(),
           user_id: subscription.user_id,
           subscription_id: subscription.id,
           stripe_invoice_id: stripeInvoice.id,
@@ -251,7 +252,7 @@ export class BillingPaymentsService {
           period_start: new Date(stripeInvoice.period_start * 1000),
           period_end: new Date(stripeInvoice.period_end * 1000),
           invoice_pdf: stripeInvoice.invoice_pdf,
-          hostedInvoiceUrl: stripeInvoice.hosted_invoice_url,
+          hosted_invoice_url: stripeInvoice.hosted_invoice_url,
         },
       });
 
@@ -307,7 +308,6 @@ export class BillingPaymentsService {
           status: 'succeeded',
           payment_method_type: 'card', // TODO: Get actual payment method type
           completed_at: new Date(),
-          updated_at: new Date(),
         },
       });
 
@@ -413,6 +413,7 @@ export class BillingPaymentsService {
         },
         create: {
           user_id: invoice.customer_email || '', // TODO: Get userId from customer metadata
+          id: randomUUID(),
           stripe_invoice_id: invoice.id,
           amount_due: invoice.amount_due / 100,
           amount_paid: invoice.amount_paid / 100,
@@ -421,7 +422,7 @@ export class BillingPaymentsService {
           period_start: new Date(invoice.period_start * 1000),
           period_end: new Date(invoice.period_end * 1000),
           invoice_pdf: invoice.invoice_pdf,
-          hostedInvoiceUrl: invoice.hosted_invoice_url,
+          hosted_invoice_url: invoice.hosted_invoice_url,
           paid_at: new Date(),
         },
       });
@@ -484,7 +485,6 @@ export class BillingPaymentsService {
           status: subscription.status as any,
           current_period_start: new Date(subscription.current_period_start * 1000),
           current_period_end: new Date(subscription.current_period_end * 1000),
-          updated_at: new Date(),
         },
       });
 
@@ -510,7 +510,6 @@ export class BillingPaymentsService {
         data: {
           status: 'cancelled',
           cancelled_at: new Date(),
-          updated_at: new Date(),
         },
       });
 
@@ -584,7 +583,6 @@ export class BillingPaymentsService {
             scheduled_at: scheduledAt,
             result: 'pending',
             next_retry_at: nextRetryAt,
-            updated_at: new Date(),
           },
         });
 
@@ -673,7 +671,7 @@ export class BillingPaymentsService {
       period_start: invoice.periodStart,
       period_end: invoice.periodEnd,
       invoice_pdf: invoice.invoicePdf,
-      hostedInvoiceUrl: invoice.hostedInvoiceUrl,
+      hosted_invoice_url: invoice.hostedInvoiceUrl,
       createdAt: invoice.createdAt,
       paid_at: invoice.paidAt,
     };
@@ -705,14 +703,14 @@ export class BillingPaymentsService {
   private mapDunningAttempt(attempt: any): DunningAttempt {
     return {
       id: attempt.id,
-      user_id: attempt.user_id,
-      invoice_id: attempt.invoice_id,
-      attempt_number: attempt.attemptNumber,
-      scheduled_at: attempt.scheduledAt,
-      attempted_at: attempt.attemptedAt,
+      userId: attempt.user_id,
+      invoiceId: attempt.invoice_id,
+      attemptNumber: attempt.attempt_number,
+      scheduledAt: attempt.scheduled_at,
+      attemptedAt: attempt.attempted_at,
       result: attempt.result,
-      failure_reason: attempt.failureReason,
-      next_retry_at: attempt.nextRetryAt,
+      failureReason: attempt.failure_reason,
+      nextRetryAt: attempt.next_retry_at,
     };
   }
 

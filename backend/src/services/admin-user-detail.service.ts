@@ -101,8 +101,8 @@ export class AdminUserDetailService {
           license_key: true,
           status: true,
           activated_at: true,
-          current_license_activation: true,
-          max_license_activation: true,
+          current_activations: true,
+          max_activations: true,
         },
       });
 
@@ -371,7 +371,7 @@ export class AdminUserDetailService {
           purchaseDate: license.purchased_at,
           activatedAt: license.activated_at,
           eligibleUntilVersion: license.eligible_until_version,
-          deviceActivations: license.activations.map((activation) => ({
+          deviceActivations: license.license_activation.map((activation: any) => ({
             id: activation.id,
             deviceName: activation.device_name,
             deviceId: activation.machine_fingerprint,
@@ -656,7 +656,7 @@ export class AdminUserDetailService {
           },
           redeemedAt: redemption.redemption_date,
           discountValueUsd: Number(redemption.discount_applied_usd),
-          subscriptionTierGranted: redemption.subscription?.tier || null,
+          subscriptionTierGranted: redemption.subscription_monetization?.tier || null,
           perpetualLicenseGranted: false, // Not tracked in current schema
         })),
         fraudFlags: fraudFlags.map((flag) => ({

@@ -106,7 +106,7 @@ export class LLMService {
   }> {
     try {
       // Step 1: Look up provider UUID from provider name
-      const provider = await this.prisma.provider.findUnique({
+      const provider = await this.prisma.providers.findUnique({
         where: { name: providerName },
         select: { id: true },
       });
