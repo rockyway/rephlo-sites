@@ -757,7 +757,7 @@ export class RevenueAnalyticsService {
         return {
           model: item.model_id,
           credits,
-          requests: item._count,
+          requests: item._count.id,
           revenueContribution,
         };
       });
@@ -814,7 +814,7 @@ export class RevenueAnalyticsService {
         include: {
           coupon: {
             include: {
-              redemptions: {
+              coupon_redemption: {
                 where: {
                   redemption_date: {
                     gte: config.startDate,
@@ -837,8 +837,8 @@ export class RevenueAnalyticsService {
         let totalRevenueGenerated = 0;
 
         campaign.coupon.forEach((coupon: any) => {
-          totalCouponsRedeemed += coupon.redemptions.length;
-          coupon.redemptions.forEach((redemption: any) => {
+          totalCouponsRedeemed += coupon.coupon_redemption.length;
+          coupon.coupon_redemption.forEach((redemption: any) => {
             // Use discount_applied_usd from the actual field
             totalDiscount += Math.round(
               parseFloat(redemption.discount_applied_usd.toString()) * 100
@@ -852,11 +852,11 @@ export class RevenueAnalyticsService {
 
         // Count total coupons issued (sum of max_uses or estimate from created count)
         campaign.coupon.forEach((coupon: any) => {
-          if (coupon.maxUses) {
-            totalCouponsIssued += coupon.maxUses;
+          if (coupon.max_uses) {
+            totalCouponsIssued += coupon.max_uses;
           } else {
             // If unlimited, use redemption count as proxy
-            totalCouponsIssued += coupon.redemptions.length;
+            totalCouponsIssued += coupon.coupon_redemption.length;
           }
         });
 
@@ -865,7 +865,7 @@ export class RevenueAnalyticsService {
           : 0;
 
         return {
-          campaign_name: campaign.campaign_name,
+          campaignName: campaign.campaign_name,
           couponsIssued: totalCouponsIssued,
           couponsRedeemed: totalCouponsRedeemed,
           discountValue: totalDiscount,

@@ -63,7 +63,7 @@ export class PricingConfigService implements IPricingConfigService {
               status: 'active',
             },
             orderBy: {
-              createdAt: 'desc',
+              created_at: 'desc',
             },
             take: 1,
           },

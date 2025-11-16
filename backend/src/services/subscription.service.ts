@@ -17,6 +17,7 @@
  */
 
 import { PrismaClient, subscription_status as SubscriptionStatus, subscription_tier as SubscriptionTier } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   createOrGetCustomer,
   createStripeSubscription,
@@ -164,6 +165,7 @@ export async function createSubscription(
     // Create subscription in database
     const subscription = await prisma.subscriptions.create({
       data: {
+        id: randomUUID(),
         user_id: userId,
         tier: planId as SubscriptionTier,
         status: SubscriptionStatus.active,
@@ -175,6 +177,8 @@ export async function createSubscription(
         stripe_customer_id: stripeCustomerId,
         current_period_start: now,
         current_period_end: periodEnd,
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     });
 

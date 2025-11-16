@@ -484,7 +484,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, pris
   try {
     // Find and mark subscription as cancelled
     const dbSubscription = await prisma.subscriptions.findFirst({
-      where: { stripeSubscriptionId: subscription.id },
+      where: { stripe_subscription_id: subscription.id },
     });
 
     if (dbSubscription) {
@@ -492,8 +492,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, pris
         where: { id: dbSubscription.id },
         data: {
           status: 'cancelled',
-          cancelledAt: new Date(),
-          updatedAt: new Date(),
+          cancelled_at: new Date(),
+          updated_at: new Date(),
         },
       });
       logger.info('Subscription marked as cancelled in database', {
@@ -528,7 +528,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
     if (invoice.subscription && typeof invoice.subscription === 'string') {
       // Find subscription in database
       const dbSubscription = await prisma.subscriptions.findFirst({
-        where: { stripeSubscriptionId: invoice.subscription },
+        where: { stripe_subscription_id: invoice.subscription },
       });
 
       if (dbSubscription) {
@@ -539,9 +539,9 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
         const periodEnd = new Date(invoice.period_end * 1000);
 
         await creditService.allocateCredits({
-          userId: dbSubscription.userId,
+          userId: dbSubscription.user_id,
           subscriptionId: dbSubscription.id,
-          totalCredits: dbSubscription.creditsPerMonth,
+          totalCredits: dbSubscription.credits_per_month,
           billingPeriodStart: periodStart,
           billingPeriodEnd: periodEnd,
         });
@@ -549,8 +549,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
         logger.info('Credits allocated for successful payment', {
           invoiceId: invoice.id,
           subscriptionId: dbSubscription.id,
-          userId: dbSubscription.userId,
-          credits: dbSubscription.creditsPerMonth,
+          userId: dbSubscription.user_id,
+          credits: dbSubscription.credits_per_month,
         });
       } else {
         logger.warn('Subscription not found for invoice', {
@@ -581,7 +581,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: Prism
     // Suspend subscription on payment failure
     if (invoice.subscription && typeof invoice.subscription === 'string') {
       const dbSubscription = await prisma.subscriptions.findFirst({
-        where: { stripeSubscriptionId: invoice.subscription },
+        where: { stripe_subscription_id: invoice.subscription },
       });
 
       if (dbSubscription) {
@@ -589,14 +589,14 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: Prism
           where: { id: dbSubscription.id },
           data: {
             status: 'suspended',
-            updatedAt: new Date(),
+            updated_at: new Date(),
           },
         });
 
         logger.info('Subscription suspended due to payment failure', {
           invoiceId: invoice.id,
           subscriptionId: dbSubscription.id,
-          userId: dbSubscription.userId,
+          userId: dbSubscription.user_id,
         });
       } else {
         logger.warn('Subscription not found for failed payment', {

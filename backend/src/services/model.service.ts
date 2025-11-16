@@ -151,7 +151,7 @@ export class ModelService implements IModelService {
         is_available: true,
         meta: true,
       },
-      orderBy: [{ is_available: 'desc' }, { name: 'asc' }],
+      orderBy: { is_available: 'desc' },
     });
 
     logger.debug('ModelService.listModels: Query returned', {
@@ -209,7 +209,7 @@ export class ModelService implements IModelService {
         };
       }),
       total: filteredModels.length,
-      user_tier: userTier,
+      user_tier: userTier as 'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual' | undefined,
     };
 
     // Cache result
@@ -251,11 +251,11 @@ export class ModelService implements IModelService {
         id: true,
         name: true,
         provider: true,
-        isAvailable: true,
-        isLegacy: true,
+        is_available: true,
+        is_legacy: true,
         meta: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 
@@ -300,10 +300,10 @@ export class ModelService implements IModelService {
       output_cost_per_million_tokens: meta?.outputCostPerMillionTokens ?? 0,
       credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
       is_available: model.is_available,
-      is_deprecated: model.isLegacy, // Use isLegacy instead of deprecated isDeprecated
+      is_deprecated: model.is_legacy, // Use is_legacy instead of deprecated isDeprecated
       version: meta?.version ?? '',
-      created_at: model.createdAt.toISOString(),
-      updated_at: model.updatedAt.toISOString(),
+      created_at: model.created_at.toISOString(),
+      updated_at: model.updated_at.toISOString(),
       // Tier access fields from meta JSONB
       required_tier: meta?.requiredTier ?? 'free',
       tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
@@ -384,9 +384,9 @@ export class ModelService implements IModelService {
     const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
       },
     });
 
@@ -421,9 +421,9 @@ export class ModelService implements IModelService {
       select: {
         id: true,
         provider: true,
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
         meta: true,
       },
     });
@@ -477,7 +477,7 @@ export class ModelService implements IModelService {
 
       // Pre-load individual model details for available models
       const models = await this.prisma.models.findMany({
-        where: { isAvailable: true },
+        where: { is_available: true },
         select: { id: true },
       });
 
@@ -519,26 +519,27 @@ export class ModelService implements IModelService {
     const where: any = {};
 
     if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = startDate;
-      if (endDate) where.createdAt.lte = endDate;
+      where.created_at = {};
+      if (startDate) where.created_at.gte = startDate;
+      if (endDate) where.created_at.lte = endDate;
     }
 
-    const stats = await this.prisma.usageHistory.groupBy({
-      by: ['modelId'],
+    const stats = await this.prisma.token_usage_ledger.groupBy({
+      by: ['model_id'],
       where,
       _count: {
         id: true,
       },
       _sum: {
-        totalTokens: true,
+        input_tokens: true,
+        output_tokens: true,
       },
     });
 
     return stats.map((stat) => ({
-      modelId: stat.modelId,
+      modelId: stat.model_id,
       requestCount: stat._count.id,
-      totalTokens: stat._sum.totalTokens || 0,
+      totalTokens: (stat._sum.input_tokens || 0) + (stat._sum.output_tokens || 0),
     }));
   }
 
@@ -598,10 +599,12 @@ export class ModelService implements IModelService {
         id: data.id,
         name: data.name,
         provider: data.provider,
-        isAvailable: true,
-        isLegacy: false,
-        isArchived: false,
+        is_available: true,
+        is_legacy: false,
+        is_archived: false,
         meta: validatedMeta as any, // Prisma JsonValue - contains all tier fields
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -673,8 +676,9 @@ export class ModelService implements IModelService {
     await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isLegacy: true,
+        is_legacy: true,
         meta: updatedMeta as any,
+        updated_at: new Date(),
       },
     });
 
@@ -728,8 +732,9 @@ export class ModelService implements IModelService {
     await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isLegacy: false,
+        is_legacy: false,
         meta: updatedMeta as any,
+        updated_at: new Date(),
       },
     });
 
@@ -763,8 +768,9 @@ export class ModelService implements IModelService {
     await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isArchived: true,
-        isAvailable: false,
+        is_archived: true,
+        is_available: false,
+        updated_at: new Date(),
       },
     });
 
@@ -798,8 +804,9 @@ export class ModelService implements IModelService {
     await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isArchived: false,
-        isAvailable: true,
+        is_archived: false,
+        is_available: true,
+        updated_at: new Date(),
       },
     });
 
@@ -855,6 +862,7 @@ export class ModelService implements IModelService {
       where: { id: modelId },
       data: {
         meta: validatedMeta as any,
+        updated_at: new Date(),
       },
     });
 
@@ -874,14 +882,14 @@ export class ModelService implements IModelService {
     logger.debug('ModelService: Getting legacy models');
 
     const models = await this.prisma.models.findMany({
-      where: { isLegacy: true },
+      where: { is_legacy: true },
       select: {
         id: true,
         name: true,
         provider: true,
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
         meta: true,
       },
       orderBy: { name: 'asc' },
@@ -900,7 +908,7 @@ export class ModelService implements IModelService {
           max_output_tokens: meta?.maxOutputTokens ?? 0,
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
           is_available: model.is_available,
-          is_legacy: model.isLegacy,
+          is_legacy: model.is_legacy,
           is_archived: model.is_archived,
           version: meta?.version ?? '',
           required_tier: meta?.requiredTier ?? 'free',
@@ -926,14 +934,14 @@ export class ModelService implements IModelService {
     logger.debug('ModelService: Getting archived models');
 
     const models = await this.prisma.models.findMany({
-      where: { isArchived: true },
+      where: { is_archived: true },
       select: {
         id: true,
         name: true,
         provider: true,
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
         meta: true,
       },
       orderBy: { name: 'asc' },
@@ -952,7 +960,7 @@ export class ModelService implements IModelService {
           max_output_tokens: meta?.maxOutputTokens ?? 0,
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
           is_available: model.is_available,
-          is_legacy: model.isLegacy,
+          is_legacy: model.is_legacy,
           is_archived: model.is_archived,
           version: meta?.version ?? '',
           required_tier: meta?.requiredTier ?? 'free',

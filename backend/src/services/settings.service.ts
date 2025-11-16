@@ -269,10 +269,12 @@ export class SettingsService {
           key,
           value: processedValue,
           is_encrypted: shouldEncrypt,
+          updated_at: new Date(),
         },
         update: {
           value: processedValue,
           is_encrypted: shouldEncrypt,
+          updated_at: new Date(),
         },
       });
     }
@@ -444,6 +446,7 @@ export class SettingsService {
               key,
               value: processedValue,
               is_encrypted: shouldEncrypt,
+              updated_at: new Date(),
             },
           });
         }
