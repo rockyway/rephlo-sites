@@ -74,7 +74,7 @@ export class RevenueAnalyticsService {
     previousStartDate.setDate(previousStartDate.getDate() - days);
     previousStartDate.setHours(0, 0, 0, 0);
 
-    return { start_date, end_date, previousStartDate, previousEndDate };
+    return { startDate: start_date, endDate: end_date, previousStartDate, previousEndDate };
   }
 
   /**
@@ -109,11 +109,11 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Calculate MRR from subscriptions
-      const currentSubscriptions = await this.prisma.subscription_monetizations.findMany({
+      const currentSubscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
           current_period_end: {
-            gte: config.start_date,
+            gte: config.startDate,
           },
         },
         select: {
@@ -131,7 +131,7 @@ export class RevenueAnalyticsService {
         return sum + Math.round(monthlyRate * 100); // cents
       }, 0);
 
-      const previousSubscriptions = await this.prisma.subscription_monetizations.findMany({
+      const previousSubscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
           current_period_end: {
@@ -157,8 +157,8 @@ export class RevenueAnalyticsService {
       const perpetualRevenue = await this.prisma.perpetual_license.aggregate({
         where: {
           purchased_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
         },
         _sum: {
@@ -190,8 +190,8 @@ export class RevenueAnalyticsService {
       const upgradeRevenue = await this.prisma.version_upgrade.aggregate({
         where: {
           purchased_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
           status: { in: ['completed'] },
         },
@@ -234,17 +234,17 @@ export class RevenueAnalyticsService {
                 some: {
                   status: 'active',
                   current_period_end: {
-                    gte: config.start_date,
+                    gte: config.startDate,
                   },
                 },
               },
             },
             {
-              perpetualLicenses: {
+              perpetual_license: {
                 some: {
                   purchased_at: {
-                    gte: config.start_date,
-                    lte: config.end_date,
+                    gte: config.startDate,
+                    lte: config.endDate,
                   },
                 },
               },
@@ -269,7 +269,7 @@ export class RevenueAnalyticsService {
               },
             },
             {
-              perpetualLicenses: {
+              perpetual_license: {
                 some: {
                   purchased_at: {
                     gte: config.previousStartDate,
@@ -291,8 +291,8 @@ export class RevenueAnalyticsService {
       const couponDiscount = await this.prisma.coupon_redemption.aggregate({
         where: {
           redemption_date: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
           redemption_status: 'success',
         },
@@ -345,11 +345,11 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Subscription revenue (MRR)
-      const subscriptions = await this.prisma.subscription_monetizations.findMany({
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
           current_period_end: {
-            gte: config.start_date,
+            gte: config.startDate,
           },
         },
         select: {
@@ -370,8 +370,8 @@ export class RevenueAnalyticsService {
       const perpetual = await this.prisma.perpetual_license.aggregate({
         where: {
           purchased_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
         },
         _sum: {
@@ -387,8 +387,8 @@ export class RevenueAnalyticsService {
       const upgrades = await this.prisma.version_upgrade.aggregate({
         where: {
           purchased_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
           status: { in: ['completed'] },
         },
@@ -451,11 +451,11 @@ export class RevenueAnalyticsService {
       const isMonthly = period === '1y';
 
       // Get subscription data
-      const subscriptions = await this.prisma.subscription_monetizations.findMany({
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           created_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
         },
         select: {
@@ -469,8 +469,8 @@ export class RevenueAnalyticsService {
       const perpetuals = await this.prisma.perpetual_license.findMany({
         where: {
           purchased_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
         },
         select: {
@@ -483,8 +483,8 @@ export class RevenueAnalyticsService {
       const upgrades = await this.prisma.version_upgrade.findMany({
         where: {
           purchased_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
           status: { in: ['completed'] },
         },
@@ -600,15 +600,15 @@ export class RevenueAnalyticsService {
       const freeTierUsers = await this.prisma.users.count({
         where: {
           created_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
           subscriptions: {
             none: {
               status: 'active',
             },
           },
-          perpetualLicenses: {
+          perpetual_license: {
             none: {},
           },
         },
@@ -621,8 +621,8 @@ export class RevenueAnalyticsService {
             some: {
               status: 'active',
               created_at: {
-                gte: config.start_date,
-                lte: config.end_date,
+                gte: config.startDate,
+                lte: config.endDate,
               },
             },
           },
@@ -632,11 +632,11 @@ export class RevenueAnalyticsService {
       // Perpetual license users
       const perpetualLicenseUsers = await this.prisma.users.count({
         where: {
-          perpetualLicenses: {
+          perpetual_license: {
             some: {
               purchased_at: {
-                gte: config.start_date,
-                lte: config.end_date,
+                gte: config.startDate,
+                lte: config.endDate,
               },
             },
           },
@@ -704,49 +704,49 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Get credit usage by model
-      const usageByModel = await this.prisma.usage_history.groupBy({
+      const usageByModel = await this.prisma.token_usage_ledger.groupBy({
         by: ['model_id'],
         where: {
           created_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
         },
         _sum: {
-          credits_used: true,
+          credits_deducted: true,
         },
         _count: {
           id: true,
         },
         orderBy: {
           _sum: {
-            credits_used: 'desc',
+            credits_deducted: 'desc',
           },
         },
         take: limit,
       });
 
       // Get total credits for percentage
-      const totalCredits = await this.prisma.usage_history.aggregate({
+      const totalCredits = await this.prisma.token_usage_ledger.aggregate({
         where: {
           created_at: {
-            gte: config.start_date,
-            lte: config.end_date,
+            gte: config.startDate,
+            lte: config.endDate,
           },
         },
         _sum: {
-          credits_used: true,
+          credits_deducted: true,
         },
       });
 
-      const totalCreditsUsed = totalCredits._sum.credits_used || 0;
+      const totalCreditsUsed = totalCredits._sum.credits_deducted || 0;
 
       // Get total revenue (using new format)
       const revenueData = await this.getRevenueMix(period);
       const totalRevenue = revenueData.total;
 
       const data = usageByModel.map((item) => {
-        const credits = item._sum.credits_used || 0;
+        const credits = item._sum.credits_deducted || 0;
         const creditPercentage = totalCreditsUsed > 0 ? (credits / totalCreditsUsed) * 100 : 0;
         const revenueContribution = Math.round(
           totalRevenue > 0
@@ -757,7 +757,7 @@ export class RevenueAnalyticsService {
         return {
           model: item.model_id,
           credits,
-          requests: item._count.id,
+          requests: item._count,
           revenueContribution,
         };
       });
@@ -790,35 +790,35 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Get total count of campaigns
-      const totalCount = await this.prisma.coupon_campaigns.count({
+      const totalCount = await this.prisma.coupon_campaign.count({
         where: {
           start_date: {
-            lte: config.end_date,
+            lte: config.endDate,
           },
           end_date: {
-            gte: config.start_date,
+            gte: config.startDate,
           },
         },
       });
 
       // Get campaigns with coupon data
-      const campaigns = await this.prisma.coupon_campaigns.findMany({
+      const campaigns = await this.prisma.coupon_campaign.findMany({
         where: {
           start_date: {
-            lte: config.end_date,
+            lte: config.endDate,
           },
           end_date: {
-            gte: config.start_date,
+            gte: config.startDate,
           },
         },
         include: {
-          coupons: {
+          coupon: {
             include: {
               redemptions: {
                 where: {
                   redemption_date: {
-                    gte: config.start_date,
-                    lte: config.end_date,
+                    gte: config.startDate,
+                    lte: config.endDate,
                   },
                   redemption_status: 'success',
                 },
@@ -836,7 +836,7 @@ export class RevenueAnalyticsService {
         let totalDiscount = 0;
         let totalRevenueGenerated = 0;
 
-        campaign.coupons.forEach((coupon: any) => {
+        campaign.coupon.forEach((coupon: any) => {
           totalCouponsRedeemed += coupon.redemptions.length;
           coupon.redemptions.forEach((redemption: any) => {
             // Use discount_applied_usd from the actual field
@@ -851,7 +851,7 @@ export class RevenueAnalyticsService {
         });
 
         // Count total coupons issued (sum of max_uses or estimate from created count)
-        campaign.coupons.forEach((coupon: any) => {
+        campaign.coupon.forEach((coupon: any) => {
           if (coupon.maxUses) {
             totalCouponsIssued += coupon.maxUses;
           } else {
