@@ -18,7 +18,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, usage_history as UsageHistory, usage_operation as UsageOperation } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   RecordUsageInput,

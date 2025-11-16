@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { subscription_tier } from '@prisma/client';
+import { subscription_tier, subscription_tier as SubscriptionTier } from '@prisma/client';
 
 // =============================================================================
 // Request Validation Schemas

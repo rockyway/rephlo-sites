@@ -11,6 +11,9 @@
 import { injectable, inject } from 'tsyringe';
 import {
   PrismaClient,
+  perpetual_license as PerpetualLicense,
+  license_activation as LicenseActivation,
+  version_upgrade as VersionUpgrade
 } from '@prisma/client';
 import crypto from 'crypto';
 import logger from '../utils/logger';

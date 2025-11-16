@@ -8,7 +8,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, fraud_detection_type as FraudDetectionType, fraud_severity as FraudSeverity, coupon_fraud_detection as CouponFraudDetection } from '@prisma/client';
 import { FraudDetectionResult } from '../types/coupon-validation';
 import logger from '../utils/logger';
 

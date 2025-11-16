@@ -102,7 +102,7 @@ export class BillingPaymentsService {
    * @param email - User email
    * @returns Stripe customer ID
    */
-  async createStripeCustomer(user_id: string, email: string): Promise<string> {
+  async createStripeCustomer(userId: string, email: string): Promise<string> {
     logger.info('BillingPaymentsService.createStripeCustomer', { userId, email });
 
     try {
@@ -128,7 +128,7 @@ export class BillingPaymentsService {
    * @param userId - User ID
    * @param paymentMethodId - Stripe payment method ID
    */
-  async addPaymentMethod(user_id: string, paymentMethodId: string): Promise<void> {
+  async addPaymentMethod(userId: string, paymentMethodId: string): Promise<void> {
     logger.info('BillingPaymentsService.addPaymentMethod', { userId, paymentMethodId });
 
     try {
@@ -162,7 +162,7 @@ export class BillingPaymentsService {
    * @param userId - User ID
    * @param paymentMethodId - Stripe payment method ID
    */
-  async setDefaultPaymentMethod(user_id: string, paymentMethodId: string): Promise<void> {
+  async setDefaultPaymentMethod(userId: string, paymentMethodId: string): Promise<void> {
     logger.info('BillingPaymentsService.setDefaultPaymentMethod', { userId, paymentMethodId });
 
     try {
@@ -214,7 +214,7 @@ export class BillingPaymentsService {
    * @param subscriptionId - Subscription ID
    * @returns Created invoice
    */
-  async createInvoice(subscription_id: string): Promise<Invoice> {
+  async createInvoice(subscriptionId: string): Promise<Invoice> {
     logger.info('BillingPaymentsService.createInvoice', { subscriptionId });
 
     try {
@@ -268,7 +268,7 @@ export class BillingPaymentsService {
    * @param invoiceId - Invoice ID
    * @returns Payment transaction
    */
-  async payInvoice(invoice_id: string): Promise<PaymentTransaction> {
+  async payInvoice(invoiceId: string): Promise<PaymentTransaction> {
     logger.info('BillingPaymentsService.payInvoice', { invoiceId });
 
     try {
@@ -322,7 +322,7 @@ export class BillingPaymentsService {
    * @param invoiceId - Invoice ID
    * @returns Updated invoice
    */
-  async voidInvoice(invoice_id: string): Promise<Invoice> {
+  async voidInvoice(invoiceId: string): Promise<Invoice> {
     logger.info('BillingPaymentsService.voidInvoice', { invoiceId });
 
     try {
@@ -526,7 +526,7 @@ export class BillingPaymentsService {
    * Handle failed payment and initiate dunning
    * @param invoiceId - Invoice ID
    */
-  async handleFailedPayment(invoice_id: string): Promise<void> {
+  async handleFailedPayment(invoiceId: string): Promise<void> {
     logger.info('BillingPaymentsService.handleFailedPayment', { invoiceId });
 
     try {
@@ -545,7 +545,7 @@ export class BillingPaymentsService {
    * @param invoiceId - Invoice ID
    * @returns Array of dunning attempts
    */
-  async scheduleDunningAttempts(invoice_id: string): Promise<DunningAttempt[]> {
+  async scheduleDunningAttempts(invoiceId: string): Promise<DunningAttempt[]> {
     logger.info('BillingPaymentsService.scheduleDunningAttempts', { invoiceId });
 
     try {
@@ -829,7 +829,7 @@ export class BillingPaymentsService {
    * @param limit - Number of invoices to return (default: 10, max: 50)
    * @returns Invoice list response
    */
-  async getInvoices(user_id: string, limit: number = 10): Promise<{
+  async getInvoices(userId: string, limit: number = 10): Promise<{
     invoices: Array<{
       id: string;
       date: string;

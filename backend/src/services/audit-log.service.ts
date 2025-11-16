@@ -14,7 +14,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, admin_audit_log as AdminAuditLog } from '@prisma/client';
 import logger from '../utils/logger';
 
 export interface AuditLogEntry {

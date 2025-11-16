@@ -7,7 +7,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, campaign_type as CampaignType, coupon_campaign as CouponCampaign, coupon as Coupon } from '@prisma/client';
 import logger from '../utils/logger';
 
 @injectable()

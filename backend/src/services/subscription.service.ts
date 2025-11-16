@@ -16,7 +16,7 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (Subscription APIs)
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, subscription_status as SubscriptionStatus, subscription_tier as SubscriptionTier } from '@prisma/client';
 import {
   createOrGetCustomer,
   createStripeSubscription,

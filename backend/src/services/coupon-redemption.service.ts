@@ -16,7 +16,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, coupon_redemption as CouponRedemption, coupon as Coupon } from '@prisma/client';
 import { CouponValidationService } from './coupon-validation.service';
 import {
   RedemptionContext,

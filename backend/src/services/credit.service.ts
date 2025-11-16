@@ -20,7 +20,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, credit as Credit, usage_operation as UsageOperation } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   AllocateCreditsInput,
