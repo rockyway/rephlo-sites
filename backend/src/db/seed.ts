@@ -16,6 +16,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -166,33 +167,34 @@ async function seedOAuthClients() {
     const clientSecretHash = await hashPassword(client.clientSecret);
 
     const oauthClient = await prisma.oauth_clients.upsert({
-      where: { clientId: client.clientId },
+      where: { client_id: client.clientId },
       update: {
-        clientName: client.clientName,
-        clientSecretHash,
-        redirectUris: client.redirectUris,
-        grantTypes: client.grantTypes,
-        responseTypes: client.responseTypes,
+        client_name: client.clientName,
+        client_secret_hash: clientSecretHash,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
         scope: client.scope,
-        isActive: true,
+        is_active: true,
         config: client.config,
       },
       create: {
-        clientId: client.clientId,
-        clientName: client.clientName,
-        clientSecretHash,
-        redirectUris: client.redirectUris,
-        grantTypes: client.grantTypes,
-        responseTypes: client.responseTypes,
+        client_id: client.clientId,
+        client_name: client.clientName,
+        client_secret_hash: clientSecretHash,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
         scope: client.scope,
-        isActive: true,
+        is_active: true,
         config: client.config,
+        updated_at: new Date(),
       },
     });
 
     createdClients.push({
-      clientId: oauthClient.clientId,
-      clientName: oauthClient.clientName,
+      clientId: oauthClient.client_id,
+      clientName: oauthClient.client_name,
       secret: client.clientSecret, // Display secret only on creation
     });
   }
@@ -233,30 +235,32 @@ async function seedUserPersonas() {
     const user = await prisma.users.upsert({
       where: { email: persona.email },
       update: {
-        firstName: persona.firstName,
-        lastName: persona.lastName,
-        emailVerified: persona.emailVerified,
-        authProvider: persona.authProvider,
+        first_name: persona.firstName,
+        last_name: persona.lastName,
+        email_verified: persona.emailVerified,
+        auth_provider: persona.authProvider,
         role: persona.role,
-        mfaEnabled: persona.mfaEnabled,
-        mfaSecret,
-        mfaVerifiedAt: persona.mfaEnabled ? new Date() : null,
-        isActive: true,
+        mfa_enabled: persona.mfaEnabled,
+        mfa_secret: mfaSecret,
+        mfa_verified_at: persona.mfaEnabled ? new Date() : null,
+        is_active: true,
       },
       create: {
+        id: randomUUID(),
         email: persona.email,
-        firstName: persona.firstName,
-        lastName: persona.lastName,
+        first_name: persona.firstName,
+        last_name: persona.lastName,
         username: persona.username,
-        passwordHash,
-        emailVerified: persona.emailVerified,
-        authProvider: persona.authProvider,
-        googleId: persona.googleId,
+        password_hash: passwordHash,
+        email_verified: persona.emailVerified,
+        auth_provider: persona.authProvider,
+        google_id: persona.googleId,
         role: persona.role,
-        mfaEnabled: persona.mfaEnabled,
-        mfaSecret,
-        mfaVerifiedAt: persona.mfaEnabled ? new Date() : null,
-        isActive: true,
+        mfa_enabled: persona.mfaEnabled,
+        mfa_secret: mfaSecret,
+        mfa_verified_at: persona.mfaEnabled ? new Date() : null,
+        is_active: true,
+        updated_at: new Date(),
       },
     });
 
@@ -264,7 +268,7 @@ async function seedUserPersonas() {
       userId: user.id,
       email: user.email,
       role: user.role,
-      mfaEnabled: user.mfaEnabled,
+      mfaEnabled: user.mfa_enabled,
       description: persona.description,
     });
   }
@@ -312,28 +316,30 @@ async function seedSubscriptions(users: any[]) {
 
     // Delete existing subscription for this user to avoid conflicts
     await prisma.subscriptions.deleteMany({
-      where: { userId: user.userId },
+      where: { user_id: user.userId },
     });
 
     const subscription = await prisma.subscriptions.create({
       data: {
-        userId: user.userId,
+        id: randomUUID(),
+        user_id: user.userId,
         tier,
         status: 'active',
-        creditsPerMonth: config.creditsPerMonth,
-        priceCents: config.priceCents,
-        billingInterval: config.billingInterval,
-        currentPeriodStart: now,
-        currentPeriodEnd: endOfMonth,
-        creditsRollover: false,
+        credits_per_month: config.creditsPerMonth,
+        price_cents: config.priceCents,
+        billing_interval: config.billingInterval,
+        current_period_start: now,
+        current_period_end: endOfMonth,
+        credits_rollover: false,
+        updated_at: new Date(),
       },
     });
 
     createdSubscriptions.push({
       subscriptionId: subscription.id,
-      userId: subscription.userId,
+      userId: subscription.user_id,
       tier: subscription.tier,
-      creditsPerMonth: subscription.creditsPerMonth,
+      creditsPerMonth: subscription.credits_per_month,
     });
   }
 
@@ -366,29 +372,31 @@ async function seedCredits(users: any[]) {
 
     // Delete existing credit for this user to start fresh
     await prisma.credits.deleteMany({
-      where: { userId: user.userId },
+      where: { user_id: user.userId },
     });
 
     // Create new credit allocation
     const credit = await prisma.credits.create({
       data: {
-        userId: user.userId,
-        totalCredits: monthlyAllocation,
-        usedCredits: 0,
-        creditType,
-        monthlyAllocation,
-        billingPeriodStart: now,
-        billingPeriodEnd: endOfMonth,
-        isCurrent: true,
-        resetDayOfMonth: 1,
+        id: randomUUID(),
+        user_id: user.userId,
+        total_credits: monthlyAllocation,
+        used_credits: 0,
+        credit_type: creditType,
+        monthly_allocation: monthlyAllocation,
+        billing_period_start: now,
+        billing_period_end: endOfMonth,
+        is_current: true,
+        reset_day_of_month: 1,
+        updated_at: new Date(),
       },
     });
 
     createdCredits.push({
       creditId: credit.id,
-      userId: credit.userId,
-      creditType: credit.creditType,
-      monthlyAllocation: credit.monthlyAllocation,
+      userId: credit.user_id,
+      creditType: credit.credit_type,
+      monthlyAllocation: credit.monthly_allocation,
     });
   }
 
@@ -418,6 +426,7 @@ async function main() {
   const downloads = await Promise.all([
     prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'windows',
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
@@ -425,6 +434,7 @@ async function main() {
     }),
     prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'macos',
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
@@ -432,6 +442,7 @@ async function main() {
     }),
     prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'linux',
         userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
@@ -439,6 +450,7 @@ async function main() {
     }),
     prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'windows',
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
@@ -446,6 +458,7 @@ async function main() {
     }),
     prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'macos',
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
@@ -458,6 +471,7 @@ async function main() {
   const feedbacks = await Promise.all([
     prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         userId: 'user_' + Math.random().toString(36).substring(7),
         message: 'Love the app! The AI rewriting feature is incredibly helpful for my daily writing tasks.',
         email: 'user1@example.com',
@@ -465,6 +479,7 @@ async function main() {
     }),
     prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         userId: 'user_' + Math.random().toString(36).substring(7),
         message: 'Great tool, but would love to see more customization options for the rewriting styles.',
         email: 'user2@example.com',
@@ -472,11 +487,13 @@ async function main() {
     }),
     prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         message: 'Anonymous feedback: The interface is clean and intuitive. Keep up the good work!',
       },
     }),
     prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         userId: 'user_' + Math.random().toString(36).substring(7),
         message: 'Found a bug with the clipboard integration on Linux. Submitted diagnostic logs.',
         email: 'user3@example.com',
@@ -484,6 +501,7 @@ async function main() {
     }),
     prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         message: 'This has transformed my workflow! Thank you for creating such an amazing tool.',
         email: 'user4@example.com',
       },
@@ -495,6 +513,7 @@ async function main() {
   const diagnostics = await Promise.all([
     prisma.diagnostics.create({
       data: {
+        id: randomUUID(),
         userId: 'user_' + Math.random().toString(36).substring(7),
         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
         fileSize: 15240, // ~15KB
@@ -502,6 +521,7 @@ async function main() {
     }),
     prisma.diagnostics.create({
       data: {
+        id: randomUUID(),
         userId: 'user_' + Math.random().toString(36).substring(7),
         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
         fileSize: 28900, // ~29KB
@@ -509,6 +529,7 @@ async function main() {
     }),
     prisma.diagnostics.create({
       data: {
+        id: randomUUID(),
         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
         fileSize: 45120, // ~45KB
       },
@@ -520,6 +541,7 @@ async function main() {
   const versions = await Promise.all([
     prisma.app_versions.create({
       data: {
+        id: randomUUID(),
         version: '1.0.0',
         releaseDate: new Date('2025-10-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.0.0/rephlo-setup.exe',
@@ -542,6 +564,7 @@ Download and run the installer for your platform.`,
     }),
     prisma.app_versions.create({
       data: {
+        id: randomUUID(),
         version: '1.1.0',
         releaseDate: new Date('2025-10-15'),
         downloadUrl: 'https://releases.rephlo.ai/v1.1.0/rephlo-setup.exe',
@@ -563,6 +586,7 @@ Download and run the installer for your platform.`,
     }),
     prisma.app_versions.create({
       data: {
+        id: randomUUID(),
         version: '1.2.0',
         releaseDate: new Date('2025-11-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.2.0/rephlo-setup.exe',
@@ -601,10 +625,10 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'super_admin',
-        displayName: 'Super Administrator',
+        display_name: 'Super Administrator',
         description: 'Full system access with all permissions',
         hierarchy: 1,
-        defaultPermissions: JSON.stringify([
+        default_permissions: JSON.stringify([
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -614,7 +638,8 @@ Download and run the installer for your platform.`,
           'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ]),
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -622,10 +647,10 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'admin',
-        displayName: 'Administrator',
+        display_name: 'Administrator',
         description: 'Administrative access with most permissions except role management',
         hierarchy: 2,
-        defaultPermissions: JSON.stringify([
+        default_permissions: JSON.stringify([
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -635,7 +660,8 @@ Download and run the installer for your platform.`,
           'roles.view', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ]),
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -643,10 +669,10 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'ops',
-        displayName: 'Operations',
+        display_name: 'Operations',
         description: 'Operational tasks for subscriptions, licenses, and coupons',
         hierarchy: 3,
-        defaultPermissions: JSON.stringify([
+        default_permissions: JSON.stringify([
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate',
           'coupons.view', 'coupons.create', 'coupons.edit',
@@ -654,7 +680,8 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend',
           'analytics.view_dashboard'
         ]),
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -662,17 +689,18 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'support',
-        displayName: 'Support',
+        display_name: 'Support',
         description: 'Customer support agent with limited access to user and coupon data',
         hierarchy: 4,
-        defaultPermissions: JSON.stringify([
+        default_permissions: JSON.stringify([
           'users.view', 'users.edit_profile',
           'subscriptions.view',
           'coupons.view', 'coupons.approve_redemption',
           'credits.view_balance', 'credits.view_history', 'credits.grant',
           'licenses.view'
         ]),
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -680,14 +708,15 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'analyst',
-        displayName: 'Analyst',
+        display_name: 'Analyst',
         description: 'Analytics access for reporting and insights',
         hierarchy: 5,
-        defaultPermissions: JSON.stringify([
+        default_permissions: JSON.stringify([
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data',
           'subscriptions.view', 'coupons.view', 'users.view', 'credits.view_history'
         ]),
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -695,13 +724,14 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'auditor',
-        displayName: 'Auditor',
+        display_name: 'Auditor',
         description: 'Read-only access for audit and compliance purposes',
         hierarchy: 6,
-        defaultPermissions: JSON.stringify([
+        default_permissions: JSON.stringify([
           'roles.view_audit_log', 'users.view', 'subscriptions.view', 'coupons.view', 'analytics.view_dashboard'
         ]),
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -751,21 +781,23 @@ Download and run the installer for your platform.`,
     const user = await prisma.users.upsert({
       where: { email: rbacUser.email },
       update: {
-        firstName: rbacUser.firstName,
-        lastName: rbacUser.lastName,
-        emailVerified: true,
-        isActive: true,
+        first_name: rbacUser.firstName,
+        last_name: rbacUser.lastName,
+        email_verified: true,
+        is_active: true,
       },
       create: {
+        id: randomUUID(),
         email: rbacUser.email,
-        firstName: rbacUser.firstName,
-        lastName: rbacUser.lastName,
+        first_name: rbacUser.firstName,
+        last_name: rbacUser.lastName,
         username: rbacUser.username,
-        passwordHash,
-        emailVerified: true,
-        authProvider: 'local',
+        password_hash: passwordHash,
+        email_verified: true,
+        auth_provider: 'local',
         role: 'user',
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     });
 
@@ -774,22 +806,24 @@ Download and run the installer for your platform.`,
     if (role) {
       const assignment = await prisma.user_role_assignment.upsert({
         where: {
-          userId_roleId: {
-            userId: user.id,
-            roleId: role.id,
+          user_id_role_id: {
+            user_id: user.id,
+            role_id: role.id,
           },
         },
         update: {
-          assignedAt: new Date(),
-          isActive: true,
+          assigned_at: new Date(),
+          is_active: true,
         },
         create: {
-          userId: user.id,
-          roleId: role.id,
-          assignedBy: users[2].userId, // Assign by admin user
-          assignedAt: new Date(),
-          expiresAt: null, // Permanent assignment
-          isActive: true,
+          id: randomUUID(),
+          user_id: user.id,
+          role_id: role.id,
+          assigned_by: users[2].userId, // Assign by admin user
+          assigned_at: new Date(),
+          expires_at: null, // Permanent assignment
+          is_active: true,
+          updated_at: new Date(),
         },
       });
       roleAssignments.push(assignment);
@@ -801,19 +835,21 @@ Download and run the installer for your platform.`,
   if (superAdminRole && users[2]) {
     await prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: users[2].userId,
-          roleId: superAdminRole.id,
+        user_id_role_id: {
+          user_id: users[2].userId,
+          role_id: superAdminRole.id,
         },
       },
-      update: { isActive: true },
+      update: { is_active: true },
       create: {
-        userId: users[2].userId,
-        roleId: superAdminRole.id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
-        expiresAt: null,
-        isActive: true,
+        id: randomUUID(),
+        user_id: users[2].userId,
+        role_id: superAdminRole.id,
+        assigned_by: users[2].userId,
+        assigned_at: new Date(),
+        expires_at: null,
+        is_active: true,
+        updated_at: new Date(),
       },
     });
   }
@@ -829,14 +865,16 @@ Download and run the installer for your platform.`,
     if (opsRole) {
       const override = await prisma.permission_override.create({
         data: {
-          userId: users[2].userId, // Using admin user for example
+          id: randomUUID(),
+          user_id: users[2].userId, // Using admin user for example
           permission: 'licenses.revoke',
           action: 'grant',
-          grantedBy: users[2].userId,
-          grantedAt: new Date(),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          granted_by: users[2].userId,
+          granted_at: new Date(),
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
           reason: 'Emergency fraud investigation - temporary access grant',
-          isActive: true,
+          is_active: true,
+          updated_at: new Date(),
         },
       });
       overrides.push(override);
