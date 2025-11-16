@@ -240,7 +240,7 @@ export class AdminUserDetailService {
       });
 
       // Get proration events for this user
-      const prorations = await this.prisma.proration_events.findMany({
+      const prorations = await this.prisma.proration_event.findMany({
         where: { user_id: userId },
         orderBy: { created_at: 'desc' },
         take: safeLimit,

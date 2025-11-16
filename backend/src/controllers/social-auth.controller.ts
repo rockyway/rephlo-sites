@@ -253,7 +253,7 @@ export class SocialAuthController {
         // Update last login timestamp
         await this.prisma.users.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+          data: { last_login_at: new Date() },
         });
 
         return user;
@@ -270,10 +270,10 @@ export class SocialAuthController {
           where: { id: user.id },
           data: {
             google_id: profile.id,
-            googleProfileUrl: profile.picture,
-            authProvider: 'google',
-            emailVerified: true, // Trust Google's verification
-            lastLoginAt: new Date(),
+            google_profile_url: profile.picture,
+            auth_provider: 'google',
+            email_verified: true, // Trust Google's verification
+            last_login_at: new Date(),
           },
         });
 
@@ -295,18 +295,18 @@ export class SocialAuthController {
       user = await this.prisma.users.create({
         data: {
           email: profile.email.toLowerCase(),
-          emailVerified: true, // Trust Google's verification
+          email_verified: true, // Trust Google's verification
           username: username,
-          firstName: profile.given_name || '',
-          lastName: profile.family_name || '',
-          profilePictureUrl: profile.picture,
+          first_name: profile.given_name || '',
+          last_name: profile.family_name || '',
+          profile_picture_url: profile.picture,
           google_id: profile.id,
-          googleProfileUrl: profile.picture,
-          authProvider: 'google',
+          google_profile_url: profile.picture,
+          auth_provider: 'google',
           // No password needed for Google users
           // Generate random placeholder to satisfy NOT NULL constraint
-          passwordHash: crypto.randomBytes(32).toString('hex'),
-          isActive: true,
+          password_hash: crypto.randomBytes(32).toString('hex'),
+          is_active: true,
         },
       });
 

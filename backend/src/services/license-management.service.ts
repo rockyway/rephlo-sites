@@ -15,6 +15,7 @@ import {
   license_activation as LicenseActivation,
   version_upgrade as VersionUpgrade
 } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 import { NotFoundError, ValidationError } from '../utils/errors';
@@ -82,6 +83,7 @@ export class LicenseManagementService {
 
     const license = await this.prisma.perpetual_license.create({
       data: {
+        id: randomUUID(),
         user_id: userId,
         license_key: licenseKey,
         purchase_price_usd: purchasePrice,
@@ -90,6 +92,7 @@ export class LicenseManagementService {
         status: 'pending', // Will become 'active' after first activation
         max_activations: 3, // Default 3 devices
         current_activations: 0,
+        updated_at: new Date(),
       },
     });
 
@@ -186,8 +189,8 @@ export class LicenseManagementService {
     }
 
     // Check if this device is already activated
-    const existingActivation = license.activations.find(
-      (a) => a.machine_fingerprint === deviceInfo.fingerprint
+    const existingActivation = license.license_activation.find(
+      (a: LicenseActivation) => a.machine_fingerprint === deviceInfo.fingerprint
     );
 
     if (existingActivation) {
@@ -209,7 +212,7 @@ export class LicenseManagementService {
     }
 
     // Check activation limit
-    if (license.activations.length >= license.max_activations) {
+    if (license.license_activation.length >= license.max_activations) {
       throw new ValidationError(
         `Activation limit reached (${license.max_activations} devices max). Please deactivate a device first.`
       );
@@ -218,6 +221,7 @@ export class LicenseManagementService {
     // Create new activation
     const activation = await this.prisma.license_activation.create({
       data: {
+        id: randomUUID(),
         license_id: license.id,
         user_id: license.user_id,
         machine_fingerprint: deviceInfo.fingerprint,
@@ -226,6 +230,8 @@ export class LicenseManagementService {
         os_version: deviceInfo.osVersion,
         cpu_info: deviceInfo.cpuInfo,
         status: 'active',
+        last_seen_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -233,7 +239,7 @@ export class LicenseManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: license.id },
       data: {
-        current_license_activation: { increment: 1 },
+        current_activations: { increment: 1 },
         status: 'active',
         activated_at: license.activated_at || new Date(),
       },
@@ -284,7 +290,7 @@ export class LicenseManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: activation.license_id },
       data: {
-        current_license_activation: { decrement: 1 },
+        current_activations: { decrement: 1 },
       },
     });
 
@@ -331,11 +337,11 @@ export class LicenseManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: oldActivation.license_id },
       data: {
-        current_license_activation: { decrement: 1 },
+        current_activations: { decrement: 1 },
       },
     });
 
-    const result = await this.activateDevice(oldActivation.license.license_key, newDeviceInfo);
+    const result = await this.activateDevice(oldActivation.perpetual_license.license_key, newDeviceInfo);
 
     logger.info('LicenseManagementService: Device replaced successfully', {
       oldActivationId,
@@ -419,7 +425,7 @@ export class LicenseManagementService {
       throw new NotFoundError('License not found');
     }
 
-    return license.activations.length >= license.max_activations;
+    return license.license_activation.length >= license.max_activations;
   }
 
   /**
@@ -568,8 +574,8 @@ export class LicenseManagementService {
     licenseKey: string
   ): Promise<
     | (PerpetualLicense & {
-        activations: LicenseActivation[];
-        versionUpgrades: VersionUpgrade[];
+        license_activation: LicenseActivation[];
+        version_upgrade: VersionUpgrade[];
       })
     | null
   > {
@@ -577,7 +583,7 @@ export class LicenseManagementService {
       where: { license_key: licenseKey },
       include: {
         license_activation: true,
-        version_upgrades: true,
+        version_upgrade: true,
       },
     });
   }
@@ -592,7 +598,7 @@ export class LicenseManagementService {
       where: { user_id: userId },
       include: {
         license_activation: { where: { status: 'active' } },
-        version_upgrades: true,
+        version_upgrade: true,
       },
       orderBy: { purchased_at: 'desc' },
     });
@@ -645,7 +651,7 @@ export class LicenseManagementService {
           take: limit,
           orderBy: { created_at: 'desc' },
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 email: true,

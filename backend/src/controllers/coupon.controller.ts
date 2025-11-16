@@ -138,7 +138,7 @@ export class CouponController {
         data: {
           redemptionId: redemption.id,
           discountApplied: parseFloat(redemption.discount_applied_usd.toString()),
-          finalAmount: parseFloat(redemption.finalAmountUsd.toString()),
+          finalAmount: parseFloat(redemption.final_amount_usd.toString()),
           redemptionStatus: redemption.redemption_status,
         }
       });

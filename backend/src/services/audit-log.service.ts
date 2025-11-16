@@ -57,7 +57,7 @@ export class AuditLogService {
    */
   async log(entry: AuditLogEntry): Promise<void> {
     try {
-      await this.prisma.adminAuditLog.create({
+      await this.prisma.admin_audit_log.create({
         data: {
           admin_user_id: entry.adminUserId,
           action: entry.action,
@@ -98,7 +98,7 @@ export class AuditLogService {
    * @returns Array of audit log entries with admin user details
    */
   async getLogs(filters: AuditLogFilters): Promise<AdminAuditLog[]> {
-    return this.prisma.adminAuditLog.findMany({
+    return this.prisma.admin_audit_log.findMany({
       where: {
         admin_user_id: filters.adminUserId,
         resource_type: filters.resourceType,
@@ -133,7 +133,7 @@ export class AuditLogService {
    * @returns Total count of matching audit logs
    */
   async getLogCount(filters: Omit<AuditLogFilters, 'limit' | 'offset'>): Promise<number> {
-    return this.prisma.adminAuditLog.count({
+    return this.prisma.admin_audit_log.count({
       where: {
         admin_user_id: filters.adminUserId,
         resource_type: filters.resourceType,
@@ -161,7 +161,7 @@ export class AuditLogService {
     resourceId: string,
     limit: number = 50
   ): Promise<AdminAuditLog[]> {
-    return this.prisma.adminAuditLog.findMany({
+    return this.prisma.admin_audit_log.findMany({
       where: {
         resource_type: resourceType,
         resource_id: resourceId
@@ -194,7 +194,7 @@ export class AuditLogService {
     adminUserId: string,
     limit: number = 100
   ): Promise<AdminAuditLog[]> {
-    return this.prisma.adminAuditLog.findMany({
+    return this.prisma.admin_audit_log.findMany({
       where: {
         admin_user_id: adminUserId
       },

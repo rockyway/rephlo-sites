@@ -80,7 +80,7 @@ export class SubscriptionsController {
 
       res.json({
         id: subscription.id,
-        user_id: subscription.userId,
+        user_id: subscription.user_id,
         tier: subscription.tier,
         status: subscription.status,
         credits_per_month: subscription.credits_per_month,

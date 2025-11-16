@@ -1,4 +1,4 @@
-import type { credit_balance } from '@prisma/client';
+import type { credits } from '@prisma/client';
 import { AllocateCreditsInput, DeductCreditsInput } from '../../types/credit-validation';
 
 export const ICreditService = Symbol('ICreditService');
@@ -48,12 +48,12 @@ export interface ICreditService {
   /**
    * Get current credit balance for a user
    */
-  getCurrentCredits(userId: string): Promise<credit_balance | null>;
+  getCurrentCredits(userId: string): Promise<credits | null>;
 
   /**
    * Allocate credits to a user for a billing period
    */
-  allocateCredits(input: AllocateCreditsInput): Promise<credit_balance>;
+  allocateCredits(input: AllocateCreditsInput): Promise<credits>;
 
   /**
    * Check if user has sufficient credits
@@ -63,7 +63,7 @@ export interface ICreditService {
   /**
    * Deduct credits from user's balance (atomic transaction)
    */
-  deductCredits(input: DeductCreditsInput): Promise<credit_balance>;
+  deductCredits(input: DeductCreditsInput): Promise<credits>;
 
   /**
    * Get credit balance for a specific billing period
@@ -72,27 +72,27 @@ export interface ICreditService {
     userId: string,
     billingPeriodStart: Date,
     billingPeriodEnd: Date
-  ): Promise<credit_balance | null>;
+  ): Promise<credits | null>;
 
   /**
    * Get all credit records for a user (historical)
    */
-  getCreditHistory(userId: string, limit?: number): Promise<credit_balance[]>;
+  getCreditHistory(userId: string, limit?: number): Promise<credits[]>;
 
   /**
    * Calculate remaining credits
    */
-  calculateRemainingCredits(credit: credit_balance): number;
+  calculateRemainingCredits(credit: credits): number;
 
   /**
    * Calculate usage percentage (0-100)
    */
-  calculateUsagePercentage(credit: credit_balance): number;
+  calculateUsagePercentage(credit: credits): number;
 
   /**
    * Check if credits are low (below threshold)
    */
-  isCreditsLow(credit: credit_balance, thresholdPercentage?: number): boolean;
+  isCreditsLow(credit: credits, thresholdPercentage?: number): boolean;
 
   // ===========================================================================
   // Enhanced Credits API Methods (Phase 2)

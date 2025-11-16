@@ -431,27 +431,27 @@ export class AdminProfitabilityService {
       const prices = await this.prisma.model_provider_pricing.findMany({
         where,
         include: {
-          provider: {
+          providers: {
             select: {
               name: true,
             },
           },
         },
-        orderBy: { lastVerified: 'desc' },
+        orderBy: { last_verified: 'desc' },
         take: 100,
       });
 
       return prices.map((price) => ({
         id: price.id,
-        provider: price.provider.name,
-        modelName: price.modelName,
-        inputPricePer1k: Number(price.inputPricePer1k),
-        outputPricePer1k: Number(price.outputPricePer1k),
-        effectiveFrom: price.effectiveFrom,
-        effectiveUntil: price.effectiveUntil,
-        priceChangePercentInput: price.priceChangePercentInput ? Number(price.priceChangePercentInput) : null,
-        priceChangePercentOutput: price.priceChangePercentOutput ? Number(price.priceChangePercentOutput) : null,
-        lastVerified: price.lastVerified,
+        provider: price.providers.name,
+        modelName: price.model_name,
+        inputPricePer1k: Number(price.input_price_per_1k),
+        outputPricePer1k: Number(price.output_price_per_1k),
+        effectiveFrom: price.effective_from,
+        effectiveUntil: price.effective_until,
+        priceChangePercentInput: price.price_change_percent_input ? Number(price.price_change_percent_input) : null,
+        priceChangePercentOutput: price.price_change_percent_output ? Number(price.price_change_percent_output) : null,
+        lastVerified: price.last_verified,
       }));
     } catch (error) {
       logger.error('AdminProfitabilityService.getVendorPrices: Error', { error });

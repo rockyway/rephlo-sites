@@ -114,7 +114,7 @@ export class CreditManagementService {
       // Use transaction to ensure atomicity
       return await this.prisma.$transaction(async (tx) => {
         // Create credit allocation record
-        const allocation = await tx.credit_allocations.create({
+        const allocation = await tx.credit_allocation.create({
           data: {
             user_id: userId,
             subscription_id: subscriptionId,
@@ -126,7 +126,7 @@ export class CreditManagementService {
         });
 
         // Update user credit balance (Plan 112 integration)
-        await tx.user_credit_balances.upsert({
+        await tx.user_credit_balance.upsert({
           where: { user_id: userId },
           update: {
             amount: { increment: allocation.amount },
@@ -222,7 +222,7 @@ export class CreditManagementService {
       // Use transaction to ensure atomicity
       return await this.prisma.$transaction(async (tx) => {
         // Create bonus allocation record
-        const allocation = await tx.credit_allocations.create({
+        const allocation = await tx.credit_allocation.create({
           data: {
             user_id: userId,
             amount,
@@ -233,7 +233,7 @@ export class CreditManagementService {
         });
 
         // Update user credit balance (Plan 112 integration)
-        await tx.user_credit_balances.upsert({
+        await tx.user_credit_balance.upsert({
           where: { user_id: userId },
           update: {
             amount: { increment: amount },
@@ -314,7 +314,7 @@ export class CreditManagementService {
       }
 
       // Get tier config for rollover limits
-      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: subscription.tier },
       });
 
@@ -376,7 +376,6 @@ export class CreditManagementService {
           allocation_period_start: now,
           allocation_period_end: expiryDate,
           source: 'bonus', // Rollover treated as bonus
-          updated_at: new Date(),
         },
       });
 
@@ -416,7 +415,7 @@ export class CreditManagementService {
         deductions.reduce((sum, d) => sum + d.amount, 0);
 
       // Update balance to match expected value
-      await this.prisma.user_credit_balances.upsert({
+      await this.prisma.user_credit_balance.upsert({
         where: { user_id: userId },
         update: {
           amount: expectedBalance,
@@ -560,17 +559,17 @@ export class CreditManagementService {
     });
 
     try {
-      const usageHistory = await this.prisma.usage_history.findMany({
+      const usageHistory = await this.prisma.token_usage_ledger.findMany({
         where: {
           user_id: userId,
           created_at: { gte: startDate, lte: endDate },
         },
       });
 
-      const totalUsed = usageHistory.reduce((sum, usage) => sum + usage.credits_used, 0);
+      const totalUsed = usageHistory.reduce((sum: number, usage: any) => sum + usage.credits_used, 0);
 
       const byModel: Record<string, number> = {};
-      usageHistory.forEach((usage) => {
+      usageHistory.forEach((usage: any) => {
         byModel[usage.model_id] = (byModel[usage.model_id] || 0) + usage.credits_used;
       });
 

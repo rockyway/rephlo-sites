@@ -86,7 +86,7 @@ export class MigrationController {
         status: 'success',
         data: {
           license_id: result.perpetualLicense?.id,
-          license_key: result.perpetualLicense?.licenseKey,
+          license_key: result.perpetualLicense?.license_key,
           trade_in_credit_usd: result.tradeInCredit,
           target_tier: targetTier,
           billing_cycle: billingCycle || 'monthly',

@@ -211,7 +211,7 @@ export class AdminAnalyticsService {
     // Get users with active licenses
     const currentLicenseUsers = await this.prisma.users.count({
       where: {
-        perpetual_licenses: {
+        perpetual_license: {
           some: {
             status: 'active',
           },
@@ -232,7 +232,7 @@ export class AdminAnalyticsService {
             },
           },
           {
-            perpetual_licenses: {
+            perpetual_license: {
               some: {
                 status: 'active',
               },
@@ -258,7 +258,7 @@ export class AdminAnalyticsService {
 
     const previousLicenseUsers = await this.prisma.users.count({
       where: {
-        perpetual_licenses: {
+        perpetual_license: {
           some: {
             status: 'active',
           },
@@ -278,7 +278,7 @@ export class AdminAnalyticsService {
             },
           },
           {
-            perpetual_licenses: {
+            perpetual_license: {
               some: {
                 status: 'active',
               },
@@ -443,7 +443,7 @@ export class AdminAnalyticsService {
       take: limit,
       orderBy: { created_at: 'desc' },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             email: true,
@@ -459,7 +459,7 @@ export class AdminAnalyticsService {
       type: 'subscription' as const,
       action: 'created' as const,
       description: `User ${sub.status === 'active' ? 'activated' : 'created'} ${sub.tier} subscription`,
-      user: this.formatUser(sub.user),
+      user: this.formatUser(sub.users),
       metadata: {
         tier: sub.tier,
         status: sub.status,
@@ -477,7 +477,7 @@ export class AdminAnalyticsService {
       take: limit,
       orderBy: { purchased_at: 'desc' },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             email: true,
@@ -493,7 +493,7 @@ export class AdminAnalyticsService {
       type: 'license' as const,
       action: license.activated_at ? ('activated' as const) : ('created' as const),
       description: `User purchased Perpetual License (v${license.purchased_version})`,
-      user: this.formatUser(license.user),
+      user: this.formatUser(license.users),
       metadata: {
         licenseKey: license.license_key,
         version: license.purchased_version,
@@ -515,7 +515,7 @@ export class AdminAnalyticsService {
         coupon: { select: { code: true } },
         subscription_monetization: {
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 email: true,
@@ -529,13 +529,13 @@ export class AdminAnalyticsService {
     });
 
     return redemptions
-      .filter((redemption) => redemption.subscription?.user)
+      .filter((redemption) => redemption.subscription_monetization?.users)
       .map((redemption) => ({
         id: redemption.id,
         type: 'coupon' as const,
         action: 'redeemed' as const,
         description: `User redeemed ${redemption.coupon.code} coupon`,
-        user: this.formatUser(redemption.subscription!.user),
+        user: this.formatUser(redemption.subscription_monetization!.users),
         metadata: {
           code: redemption.coupon.code,
           discount: Number(redemption.discount_applied_usd),
@@ -553,7 +553,7 @@ export class AdminAnalyticsService {
       orderBy: { created_at: 'desc' },
       where: { source: { in: ['bonus', 'admin_grant', 'referral', 'coupon'] } },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             email: true,
@@ -569,7 +569,7 @@ export class AdminAnalyticsService {
       type: 'credit' as const,
       action: 'created' as const,
       description: `User received ${allocation.amount.toLocaleString()} ${allocation.source} credits`,
-      user: this.formatUser(allocation.user),
+      user: this.formatUser(allocation.users),
       metadata: {
         amount: allocation.amount,
         source: allocation.source,
@@ -586,7 +586,7 @@ export class AdminAnalyticsService {
       take: limit,
       orderBy: { activated_at: 'desc' },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             email: true,
@@ -602,7 +602,7 @@ export class AdminAnalyticsService {
       type: 'device' as const,
       action: activation.status === 'active' ? ('activated' as const) : ('deactivated' as const),
       description: `User ${activation.status === 'active' ? 'activated' : 'deactivated'} device (${activation.device_name || 'Unknown'})`,
-      user: this.formatUser(activation.user),
+      user: this.formatUser(activation.users),
       metadata: {
         deviceName: activation.device_name,
         osType: activation.os_type,

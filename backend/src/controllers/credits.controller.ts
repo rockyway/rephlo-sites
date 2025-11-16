@@ -67,12 +67,12 @@ export class CreditsController {
 
     const response: CurrentCreditsResponse = {
       id: credit.id,
-      userId: credit.userId,
-      totalCredits: credit.totalCredits,
-      usedCredits: credit.usedCredits,
+      userId: credit.user_id,
+      totalCredits: credit.total_credits,
+      usedCredits: credit.used_credits,
       remainingCredits: this.creditService.calculateRemainingCredits(credit),
-      billingPeriodStart: credit.billingPeriodStart.toISOString(),
-      billingPeriodEnd: credit.billingPeriodEnd.toISOString(),
+      billingPeriodStart: credit.billing_period_start.toISOString(),
+      billingPeriodEnd: credit.billing_period_end.toISOString(),
       usagePercentage: this.creditService.calculateUsagePercentage(credit),
     };
 
@@ -144,13 +144,13 @@ export class CreditsController {
     const response: UsageHistoryResponse = {
       usage: result.usage.map((item) => ({
         id: item.id,
-        modelId: item.modelId,
-        operation: item.operation,
-        creditsUsed: item.creditsUsed,
-        inputTokens: item.inputTokens,
-        outputTokens: item.outputTokens,
-        totalTokens: item.totalTokens,
-        requestDurationMs: item.requestDurationMs,
+        modelId: item.model_id,
+        operation: item.request_type,
+        creditsUsed: item.credits_deducted,
+        inputTokens: item.input_tokens,
+        outputTokens: item.output_tokens,
+        totalTokens: item.input_tokens + item.output_tokens,
+        requestDurationMs: item.processing_time_ms,
         createdAt: item.created_at.toISOString(),
       })),
       pagination: result.pagination,

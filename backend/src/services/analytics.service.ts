@@ -523,7 +523,7 @@ export class AnalyticsService {
               return;
             }
 
-            const batch = await prisma.tokenUsageLedger.findMany({
+            const batch = await prisma.token_usage_ledger.findMany({
               where: whereClause,
               include: { provider: { select: { name: true } } },
               skip: offset,

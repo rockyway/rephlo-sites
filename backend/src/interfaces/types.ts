@@ -2,10 +2,10 @@
  * Common types used across service interfaces
  */
 
-import type { users, credit_balance, token_usage, models, subscription_monetization } from '@prisma/client';
+import type { users, user_credit_balance, token_usage_ledger, models, subscription_monetization } from '@prisma/client';
 
 // Re-export Prisma types for convenience
-export type { users as User, credit_balance as Credit, token_usage as UsageHistory, models as Model, subscription_monetization as Subscription };
+export type { users as User, user_credit_balance as Credit, token_usage_ledger as UsageHistory, models as Model, subscription_monetization as Subscription };
 
 // Common input types
 export interface PaginationOptions {

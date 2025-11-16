@@ -35,24 +35,24 @@ export class CampaignController {
       const data = safeValidateRequest(createCampaignRequestSchema, req.body);
 
       const campaign = await this.campaignService.createCampaign({
-        campaignName: data.campaign_name as string,
-        campaignType: data.campaign_type as string,
-        startDate: new Date(data.start_date as string | Date),
-        endDate: new Date(data.end_date as string | Date),
-        budgetLimitUsd: data.budget_limit_usd as number,
-        targetTier: (data.target_tier as string) || undefined,
-        isActive: (data.is_active as boolean) ?? true,
-        createdBy: adminUserId,
+        campaign_name: data.campaign_name as string,
+        campaign_type: data.campaign_type as any,
+        start_date: new Date(data.start_date as string | Date),
+        end_date: new Date(data.end_date as string | Date),
+        budget_limit_usd: data.budget_limit_usd as number,
+        target_tier: (data.target_tier as string) || undefined,
+        is_active: (data.is_active as boolean) ?? true,
+        created_by: adminUserId,
       });
 
       // Calculate status from dates (same as getSingleCampaign)
       const now = new Date();
       let status: 'planning' | 'active' | 'paused' | 'ended';
-      if (!campaign.isActive) {
+      if (!campaign.is_active) {
         status = 'paused';
-      } else if (now < campaign.startDate) {
+      } else if (now < campaign.start_date) {
         status = 'planning';
-      } else if (now > campaign.endDate) {
+      } else if (now > campaign.end_date) {
         status = 'ended';
       } else {
         status = 'active';
@@ -61,15 +61,15 @@ export class CampaignController {
       // Return full object like getSingleCampaign
       res.status(201).json({
         id: campaign.id,
-        name: campaign.campaignName,
-        type: campaign.campaignType,
-        starts_at: campaign.startDate.toISOString(),
-        ends_at: campaign.endDate.toISOString(),
+        name: campaign.campaign_name,
+        type: campaign.campaign_type,
+        starts_at: campaign.start_date.toISOString(),
+        ends_at: campaign.end_date.toISOString(),
         status,
-        budget_cap: parseFloat(campaign.budgetLimitUsd.toString()),
-        current_spend: parseFloat(campaign.totalSpentUsd.toString()),
-        target_audience: campaign.targetTier ? { user_tiers: [campaign.targetTier] } : undefined,
-        is_active: campaign.isActive,
+        budget_cap: parseFloat(campaign.budget_limit_usd.toString()),
+        current_spend: parseFloat(campaign.total_spent_usd.toString()),
+        target_audience: campaign.target_tier ? { user_tiers: [campaign.target_tier] } : undefined,
+        is_active: campaign.is_active,
         coupon_count: 0, // New campaign has no coupons yet
         created_at: campaign.created_at.toISOString(),
         updated_at: campaign.updated_at.toISOString(),
