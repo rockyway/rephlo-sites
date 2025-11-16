@@ -20,6 +20,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient, coupon as Coupon, subscription_tier as SubscriptionTier, validation_rule_type as ValidationRuleType } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   ValidationContext,
   ValidationResult,
@@ -404,6 +405,7 @@ export class CouponValidationService {
       // Log velocity abuse
       await this.prisma.coupon_fraud_detection.create({
         data: {
+          id: randomUUID(),
           coupon_id: '', // Will be set by caller
           user_id: userId,
           detection_type: 'velocity_abuse',
@@ -413,6 +415,7 @@ export class CouponValidationService {
             timeWindow: '1 hour',
           },
           is_flagged: true,
+          updated_at: new Date(),
         },
       });
 
@@ -455,6 +458,7 @@ export class CouponValidationService {
       // Log for review (don't block)
       await this.prisma.coupon_fraud_detection.create({
         data: {
+          id: randomUUID(),
           coupon_id: '', // Will be set by caller
           user_id: userId,
           detection_type: 'ip_switching',
@@ -465,6 +469,7 @@ export class CouponValidationService {
             previousIPs: userFingerprints.map((r) => r.ip_address),
           },
           is_flagged: false, // Don't block, just log
+          updated_at: new Date(),
         },
       });
     }
@@ -617,10 +622,12 @@ export class CouponValidationService {
     if (!usageLimits) {
       usageLimits = await this.prisma.coupon_usage_limit.create({
         data: {
+          id: randomUUID(),
           coupon_id: couponId,
           total_uses: 0,
           unique_users: 0,
           total_discount_applied_usd: 0,
+          updated_at: new Date(),
         },
       });
     }

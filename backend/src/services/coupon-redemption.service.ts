@@ -17,6 +17,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient, Prisma, coupon_redemption as CouponRedemption, coupon as Coupon } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { CouponValidationService } from './coupon-validation.service';
 import {
   RedemptionContext,
@@ -66,6 +67,7 @@ export class CouponRedemptionService {
         // Step 2: Record redemption in immutable ledger (GAP FIX #4)
         const redemption = await tx.coupon_redemption.create({
           data: {
+            id: randomUUID(),
             coupon_id: couponId,
             user_id: userId,
             subscription_id: context.subscriptionId || null,
@@ -83,6 +85,7 @@ export class CouponRedemptionService {
             user_tier_after: context.tierAfter || null,
             billing_cycle_before: context.billingCycleBefore || null,
             billing_cycle_after: context.billingCycleAfter || null,
+            updated_at: new Date(),
           },
         });
 
@@ -143,6 +146,7 @@ export class CouponRedemptionService {
 
     return await this.prisma.coupon_redemption.create({
       data: {
+        id: randomUUID(),
         coupon_id: coupon.id,
         user_id: userId,
         subscription_id: null, // Can be updated later
@@ -153,6 +157,7 @@ export class CouponRedemptionService {
         redemption_status: 'success',
         ip_address: metadata.ipAddress || null,
         user_agent: metadata.userAgent || null,
+        updated_at: new Date(),
       },
     });
   }

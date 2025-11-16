@@ -16,6 +16,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
 import logger from '../utils/logger';
 import { notFoundError, badRequestError } from '../middleware/error.middleware';
 import {
@@ -84,7 +85,7 @@ export class SubscriptionManagementService {
 
     try {
       // Get tier configuration
-      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: input.tier },
       });
 
@@ -123,6 +124,7 @@ export class SubscriptionManagementService {
       // Create subscription record
       const subscription = await this.prisma.subscription_monetization.create({
         data: {
+          id: crypto.randomUUID(),
           user_id: input.userId,
           tier: input.tier as any, // Cast to enum type
           billing_cycle: input.billingCycle,
@@ -134,6 +136,7 @@ export class SubscriptionManagementService {
           current_period_start: currentPeriodStart,
           current_period_end: currentPeriodEnd,
           trial_ends_at: trialEndsAt,
+          updated_at: new Date(),
         },
       });
 
@@ -146,7 +149,7 @@ export class SubscriptionManagementService {
       const createdSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscription.id },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -202,7 +205,7 @@ export class SubscriptionManagementService {
       }
 
       // Get new tier configuration
-      const newTierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const newTierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: newTier },
       });
 
@@ -234,7 +237,7 @@ export class SubscriptionManagementService {
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -290,7 +293,7 @@ export class SubscriptionManagementService {
       }
 
       // Get new tier configuration
-      const newTierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const newTierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: newTier },
       });
 
@@ -319,7 +322,7 @@ export class SubscriptionManagementService {
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -387,7 +390,7 @@ export class SubscriptionManagementService {
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -447,7 +450,7 @@ export class SubscriptionManagementService {
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -513,12 +516,14 @@ export class SubscriptionManagementService {
       // Create credit allocation record
       const allocation = await this.prisma.credit_allocation.create({
         data: {
+          id: crypto.randomUUID(),
           user_id: userId,
           subscription_id: subscription.id,
           amount: subscription.monthly_credit_allocation,
           allocation_period_start: subscription.current_period_start,
           allocation_period_end: subscription.current_period_end,
           source: 'subscription',
+          created_at: new Date(),
         },
       });
 
@@ -530,7 +535,16 @@ export class SubscriptionManagementService {
         amount: allocation.amount,
       });
 
-      return allocation as CreditAllocation;
+      return {
+        id: allocation.id,
+        userId: allocation.user_id,
+        subscriptionId: allocation.subscription_id,
+        amount: allocation.amount,
+        allocationPeriodStart: allocation.allocation_period_start,
+        allocationPeriodEnd: allocation.allocation_period_end,
+        source: allocation.source as any,
+        createdAt: allocation.created_at,
+      };
     } catch (error) {
       logger.error('SubscriptionManagementService.allocateMonthlyCredits: Error', { error });
       throw error;
@@ -553,7 +567,7 @@ export class SubscriptionManagementService {
       }
 
       // Get tier configuration for rollover limits
-      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: subscription.tier },
       });
 
@@ -605,7 +619,7 @@ export class SubscriptionManagementService {
         return this.freeUserCanAccessFeature(feature);
       }
 
-      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: subscription.tier },
       });
 
@@ -634,7 +648,7 @@ export class SubscriptionManagementService {
 
       const tier = subscription?.tier || 'free';
 
-      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
         where: { tier_name: tier },
       });
 
@@ -674,7 +688,7 @@ export class SubscriptionManagementService {
         },
         orderBy: { created_at: 'desc' },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -705,7 +719,7 @@ export class SubscriptionManagementService {
         where: { user_id: userId },
         orderBy: { created_at: 'desc' },
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
@@ -758,7 +772,7 @@ export class SubscriptionManagementService {
           take: limit,
           orderBy: { created_at: 'desc' },
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 email: true,

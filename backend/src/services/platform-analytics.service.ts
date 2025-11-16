@@ -92,17 +92,17 @@ export class PlatformAnalyticsService {
     logger.debug('PlatformAnalyticsService.calculateMRR');
 
     try {
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
         where: { status: { in: ['trial', 'active'] } },
       });
 
       let mrr = 0;
 
       subscriptions.forEach((sub) => {
-        const price = Number(sub.basePriceUsd);
-        if (sub.billingCycle === 'monthly') {
+        const price = Number(sub.base_price_usd);
+        if (sub.billing_cycle === 'monthly') {
           mrr += price;
-        } else if (sub.billingCycle === 'annual') {
+        } else if (sub.billing_cycle === 'annual') {
           mrr += price / 12;
         }
       });
@@ -145,15 +145,15 @@ export class PlatformAnalyticsService {
     logger.debug('PlatformAnalyticsService.getRevenueByTier');
 
     try {
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
         where: { status: { in: ['trial', 'active'] } },
       });
 
       const revenueByTier = new Map<string, { revenue: number; count: number }>();
 
       subscriptions.forEach((sub) => {
-        const price = Number(sub.basePriceUsd);
-        const monthlyRevenue = sub.billingCycle === 'annual' ? price / 12 : price;
+        const price = Number(sub.base_price_usd);
+        const monthlyRevenue = sub.billing_cycle === 'annual' ? price / 12 : price;
 
         const current = revenueByTier.get(sub.tier) || { revenue: 0, count: 0 };
         revenueByTier.set(sub.tier, {
@@ -192,19 +192,19 @@ export class PlatformAnalyticsService {
 
     try {
       // Get all transactions in period
-      const transactions = await this.prisma.paymentTransaction.findMany({
+      const transactions = await this.prisma.payment_transaction.findMany({
         where: {
           status: 'succeeded',
-          createdAt: { gte: startDate, lte: endDate },
+          created_at: { gte: startDate, lte: endDate },
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { created_at: 'asc' },
       });
 
       // Group by date
       const revenueByDate = new Map<string, number>();
 
       transactions.forEach((txn) => {
-        const dateKey = txn.createdAt.toISOString().split('T')[0];
+        const dateKey = txn.created_at.toISOString().split('T')[0];
         const amount = Number(txn.amount);
         revenueByDate.set(dateKey, (revenueByDate.get(dateKey) || 0) + amount);
       });
@@ -241,8 +241,8 @@ export class PlatformAnalyticsService {
     try {
       const count = await this.prisma.users.count({
         where: {
-          isActive: true,
-          deletedAt: null,
+          is_active: true,
+          deleted_at: null,
         },
       });
 
@@ -263,7 +263,7 @@ export class PlatformAnalyticsService {
     logger.debug('PlatformAnalyticsService.getUsersByTier');
 
     try {
-      const subscriptions = await this.prisma.subscriptionMonetization.groupBy({
+      const subscriptions = await this.prisma.subscription_monetization.groupBy({
         by: ['tier'],
         where: { status: { in: ['trial', 'active'] } },
         _count: true,
@@ -314,18 +314,18 @@ export class PlatformAnalyticsService {
       }
 
       // Count active subscriptions at start of period
-      const activeAtStart = await this.prisma.subscriptionMonetization.count({
+      const activeAtStart = await this.prisma.subscription_monetization.count({
         where: {
-          createdAt: { lt: periodStart },
+          created_at: { lt: periodStart },
           status: { in: ['trial', 'active'] },
         },
       });
 
       // Count cancellations during period
-      const cancelledInPeriod = await this.prisma.subscriptionMonetization.count({
+      const cancelledInPeriod = await this.prisma.subscription_monetization.count({
         where: {
           status: 'cancelled',
-          cancelledAt: { gte: periodStart, lte: now },
+          cancelled_at: { gte: periodStart, lte: now },
         },
       });
 
@@ -382,18 +382,18 @@ export class PlatformAnalyticsService {
 
     try {
       // Get total allocated credits
-      const allocations = await this.prisma.creditAllocation.aggregate({
+      const allocations = await this.prisma.credit_allocation.aggregate({
         _sum: { amount: true },
       });
 
       const totalAllocated = allocations._sum.amount || 0;
 
       // Get total used credits
-      const usage = await this.prisma.usageHistory.aggregate({
-        _sum: { creditsUsed: true },
+      const usage = await this.prisma.token_usage_ledger.aggregate({
+        _sum: { credits_deducted: true },
       });
 
-      const totalUsed = usage._sum.creditsUsed || 0;
+      const totalUsed = usage._sum.credits_deducted || 0;
 
       const utilizationRate = totalAllocated > 0 ? (totalUsed / totalAllocated) * 100 : 0;
 
@@ -419,12 +419,12 @@ export class PlatformAnalyticsService {
 
     try {
       const [allocations, usage] = await Promise.all([
-        this.prisma.creditAllocation.aggregate({ _sum: { amount: true } }),
-        this.prisma.usageHistory.aggregate({ _sum: { creditsUsed: true } }),
+        this.prisma.credit_allocation.aggregate({ _sum: { amount: true } }),
+        this.prisma.token_usage_ledger.aggregate({ _sum: { credits_deducted: true } }),
       ]);
 
       const totalAllocated = allocations._sum.amount || 0;
-      const totalUsed = usage._sum.creditsUsed || 0;
+      const totalUsed = usage._sum.credits_deducted || 0;
       const utilizationRate = totalAllocated > 0 ? (totalUsed / totalAllocated) * 100 : 0;
 
       const result = {
@@ -447,20 +447,20 @@ export class PlatformAnalyticsService {
    * @param limit - Number of users to return
    * @returns Array of user IDs with credit usage
    */
-  async getTopCreditConsumers(limit: number): Promise<Array<{ userId: string; creditsUsed: number }>> {
+  async getTopCreditConsumers(limit: number): Promise<Array<{ userId: string; credits_deducted: number }>> {
     logger.debug('PlatformAnalyticsService.getTopCreditConsumers', { limit });
 
     try {
-      const topUsers = await this.prisma.usageHistory.groupBy({
-        by: ['userId'],
-        _sum: { creditsUsed: true },
-        orderBy: { _sum: { creditsUsed: 'desc' } },
+      const topUsers = await this.prisma.token_usage_ledger.groupBy({
+        by: ['user_id'],
+        _sum: { credits_deducted: true },
+        orderBy: { _sum: { credits_deducted: 'desc' } },
         take: limit,
       });
 
       const result = topUsers.map((user) => ({
-        userId: user.userId,
-        creditsUsed: user._sum.creditsUsed || 0,
+        userId: user.user_id,
+        credits_deducted: user._sum.credits_deducted || 0,
       }));
 
       logger.info('PlatformAnalyticsService: Top credit consumers retrieved', {
@@ -490,7 +490,7 @@ export class PlatformAnalyticsService {
       const totalFreeUsers = await this.prisma.users.count();
 
       // Count users who converted to pro (or higher)
-      const convertedUsers = await this.prisma.subscriptionMonetization.count({
+      const convertedUsers = await this.prisma.subscription_monetization.count({
         where: {
           tier: { not: 'free' },
           status: { in: ['trial', 'active'] },
@@ -521,14 +521,14 @@ export class PlatformAnalyticsService {
 
     try {
       // Count subscriptions that started as trial
-      const totalTrials = await this.prisma.subscriptionMonetization.count({
-        where: { trialEndsAt: { not: null } },
+      const totalTrials = await this.prisma.subscription_monetization.count({
+        where: { trial_ends_at: { not: null } },
       });
 
       // Count trials that converted to active
-      const convertedTrials = await this.prisma.subscriptionMonetization.count({
+      const convertedTrials = await this.prisma.subscription_monetization.count({
         where: {
-          trialEndsAt: { not: null, lte: new Date() },
+          trial_ends_at: { not: null, lte: new Date() },
           status: 'active',
         },
       });

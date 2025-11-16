@@ -16,6 +16,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import logger from '../utils/logger';
 import { notFoundError, badRequestError } from '../middleware/error.middleware';
 
@@ -369,11 +370,13 @@ export class CreditManagementService {
 
       await this.prisma.credit_allocation.create({
         data: {
+          id: randomUUID(),
           user_id: userId,
           amount: rolloverAmount,
           allocation_period_start: now,
           allocation_period_end: expiryDate,
           source: 'bonus', // Rollover treated as bonus
+          updated_at: new Date(),
         },
       });
 

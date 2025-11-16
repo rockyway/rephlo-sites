@@ -14,6 +14,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import logger from '../../utils/logger';
 import { ModelService } from '../model.service';
 import {
@@ -126,6 +127,7 @@ export class ModelTierAdminService {
       // Create audit log entry
       const auditLog = await tx.model_tier_audit_logs.create({
         data: {
+          id: randomUUID(),
           model_id: modelId,
           admin_user_id: adminUserId,
           change_type: this.determineChangeType(changes),
@@ -133,6 +135,7 @@ export class ModelTierAdminService {
           new_value: changes,
           reason: tierData.reason || null,
           ip_address: ipAddress || null,
+          updated_at: new Date(),
         },
         include: {
           users: {

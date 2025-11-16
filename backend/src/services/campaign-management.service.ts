@@ -8,6 +8,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient, Prisma, campaign_type as CampaignType, coupon_campaign as CouponCampaign, coupon as Coupon } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import logger from '../utils/logger';
 
 @injectable()
@@ -30,6 +31,7 @@ export class CampaignManagementService {
 
     return await this.prisma.coupon_campaign.create({
       data: {
+        id: randomUUID(),
         campaign_name: data.campaignName,
         campaign_type: data.campaignType,
         start_date: data.startDate,
@@ -38,6 +40,7 @@ export class CampaignManagementService {
         target_tier: data.targetTier as any,
         is_active: data.isActive ?? true,
         created_by: data.createdBy,
+        updated_at: new Date(),
       },
     });
   }
@@ -68,7 +71,11 @@ export class CampaignManagementService {
     logger.info('Assigning coupon to campaign', { campaignId, couponId });
 
     await this.prisma.campaign_coupon.create({
-      data: { campaign_id: campaignId, coupon_id: couponId },
+      data: {
+        id: randomUUID(),
+        campaign_id: campaignId,
+        coupon_id: couponId
+      },
     });
   }
 

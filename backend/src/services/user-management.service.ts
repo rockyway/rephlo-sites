@@ -169,7 +169,7 @@ export class UserManagementService {
           take: pagination.limit,
           orderBy: { created_at: 'desc' },
           include: {
-            credit_balance: true,
+            user_credit_balance: true,
             subscription_monetization: {
               where: { status: { in: ['trial', 'active'] } },
               take: 1,
@@ -223,7 +223,7 @@ export class UserManagementService {
         },
         take: 20, // Limit search results
         include: {
-          credit_balance: true,
+          user_credit_balance: true,
           subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
@@ -261,12 +261,12 @@ export class UserManagementService {
             orderBy: { created_at: 'desc' },
             take: 1,
           },
-          credit_balance: true,
-          token_usage: {
+          user_credit_balance: true,
+          token_usage_ledger: {
             take: 100,
             orderBy: { created_at: 'desc' },
           },
-          credit_deductions: {
+          credit_deduction_ledger_credit_deduction_ledger_user_idTousers: {
             take: 100,
             orderBy: { created_at: 'desc' },
           },
@@ -278,12 +278,12 @@ export class UserManagementService {
       }
 
       // Get total API calls count
-      const totalApiCalls = await this.prisma.usage_history.count({
+      const totalApiCalls = await this.prisma.token_usage_ledger.count({
         where: { user_id: userId },
       });
 
       // Calculate credits used from deductions
-      const creditsUsed = user.credit_deductions.reduce(
+      const creditsUsed = user.credit_deduction_ledger_credit_deduction_ledger_user_idTousers.reduce(
         (sum, deduction) => sum + deduction.amount,
         0
       );
@@ -291,7 +291,7 @@ export class UserManagementService {
       // Calculate average calls per day (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const recentApiCalls = await this.prisma.usage_history.count({
+      const recentApiCalls = await this.prisma.token_usage_ledger.count({
         where: {
           user_id: userId,
           created_at: { gte: thirtyDaysAgo },
@@ -346,7 +346,7 @@ export class UserManagementService {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
-          credit_balance: true,
+          user_credit_balance: true,
         },
       });
 
@@ -399,7 +399,7 @@ export class UserManagementService {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
-          credit_balance: true,
+          user_credit_balance: true,
         },
       });
 
@@ -438,7 +438,7 @@ export class UserManagementService {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
-          credit_balance: true,
+          user_credit_balance: true,
         },
       });
 
@@ -483,7 +483,7 @@ export class UserManagementService {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
-          credit_balance: true,
+          user_credit_balance: true,
         },
       });
 
@@ -522,7 +522,7 @@ export class UserManagementService {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
-          credit_balance: true,
+          user_credit_balance: true,
         },
       });
 
@@ -675,7 +675,7 @@ export class UserManagementService {
             allocation_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
           },
         }),
-        this.prisma.user_credit_balances.upsert({
+        this.prisma.user_credit_balance.upsert({
           where: { user_id: userId },
           create: {
             user_id: userId,

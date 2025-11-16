@@ -17,6 +17,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
 import logger from '../utils/logger';
 import { notFoundError, badRequestError, createApiError } from '../middleware/error.middleware';
@@ -296,6 +297,7 @@ export class BillingPaymentsService {
       // Create payment transaction record
       const transaction = await this.prisma.payment_transaction.create({
         data: {
+          id: randomUUID(),
           user_id: invoice.user_id,
           invoice_id: invoice.id,
           subscription_id: invoice.subscription_id,
@@ -305,6 +307,7 @@ export class BillingPaymentsService {
           status: 'succeeded',
           payment_method_type: 'card', // TODO: Get actual payment method type
           completed_at: new Date(),
+          updated_at: new Date(),
         },
       });
 
@@ -573,6 +576,7 @@ export class BillingPaymentsService {
 
         const attempt = await this.prisma.dunning_attempt.create({
           data: {
+            id: randomUUID(),
             user_id: invoice.user_id,
             invoice_id: invoice.id,
             subscription_id: invoice.subscription_id,
@@ -580,6 +584,7 @@ export class BillingPaymentsService {
             scheduled_at: scheduledAt,
             result: 'pending',
             next_retry_at: nextRetryAt,
+            updated_at: new Date(),
           },
         });
 

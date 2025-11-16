@@ -60,10 +60,10 @@ export function createMFARouter(): Router {
       // Check if MFA is already enabled
       const user = await prisma.users.findUnique({
         where: { id: userId },
-        select: { mfaEnabled: true },
+        select: { mfa_enabled: true },
       });
 
-      if (user?.mfaEnabled) {
+      if (user?.mfa_enabled) {
         logger.warn('MFA Setup: MFA already enabled', { userId });
         return res.status(400).json({
           error: {
@@ -79,7 +79,7 @@ export function createMFARouter(): Router {
       // Store secret temporarily (MFA not yet enabled)
       await prisma.users.update({
         where: { id: userId },
-        data: { mfaSecret: secret },
+        data: { mfa_secret: secret },
       });
 
       logger.info('MFA Setup: Secret generated successfully', { userId });
@@ -130,7 +130,7 @@ export function createMFARouter(): Router {
       // Get user's MFA secret
       const user = await prisma.users.findUnique({
         where: { id: userId },
-        select: { mfaSecret: true, mfaEnabled: true },
+        select: { mfa_secret: true, mfa_enabled: true },
       });
 
       if (!user) {
@@ -142,7 +142,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.mfaSecret) {
+      if (!user.mfa_secret) {
         return res.status(400).json({
           error: {
             code: 'MFA_NOT_SETUP',
@@ -151,7 +151,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (user.mfaEnabled) {
+      if (user.mfa_enabled) {
         return res.status(400).json({
           error: {
             code: 'MFA_ALREADY_ENABLED',
@@ -161,7 +161,7 @@ export function createMFARouter(): Router {
       }
 
       // Verify TOTP token
-      const isValid = mfaService.verifyTOTP(user.mfaSecret, token);
+      const isValid = mfaService.verifyTOTP(user.mfa_secret, token);
 
       if (!isValid) {
         logger.warn('MFA Verify Setup: Invalid TOTP token', { userId });
@@ -180,8 +180,8 @@ export function createMFARouter(): Router {
       await prisma.users.update({
         where: { id: userId },
         data: {
-          mfaEnabled: true,
-          mfaBackupCodes: JSON.stringify(hashedBackupCodes),
+          mfa_enabled: true,
+          mfa_backup_codes: JSON.stringify(hashedBackupCodes),
         },
       });
 
@@ -228,9 +228,9 @@ export function createMFARouter(): Router {
         where: { id: userId },
         select: {
           id: true,
-          mfaEnabled: true,
-          mfaSecret: true,
-          isActive: true,
+          mfa_enabled: true,
+          mfa_secret: true,
+          is_active: true,
         },
       });
 
@@ -243,7 +243,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.isActive) {
+      if (!user.is_active) {
         return res.status(403).json({
           error: {
             code: 'ACCOUNT_INACTIVE',
@@ -252,7 +252,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.mfaEnabled || !user.mfaSecret) {
+      if (!user.mfa_enabled || !user.mfa_secret) {
         return res.status(400).json({
           error: {
             code: 'MFA_NOT_ENABLED',
@@ -262,7 +262,7 @@ export function createMFARouter(): Router {
       }
 
       // Verify TOTP token
-      const isValid = mfaService.verifyTOTP(user.mfaSecret, token);
+      const isValid = mfaService.verifyTOTP(user.mfa_secret, token);
 
       if (!isValid) {
         logger.warn('MFA Login: Invalid MFA token', { userId });
@@ -321,9 +321,9 @@ export function createMFARouter(): Router {
       const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
-          passwordHash: true,
-          mfaEnabled: true,
-          mfaSecret: true,
+          password_hash: true,
+          mfa_enabled: true,
+          mfa_secret: true,
         },
       });
 
@@ -336,7 +336,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.mfaEnabled) {
+      if (!user.mfa_enabled) {
         return res.status(400).json({
           error: {
             code: 'MFA_NOT_ENABLED',
@@ -346,7 +346,7 @@ export function createMFARouter(): Router {
       }
 
       // Verify password
-      if (!user.passwordHash) {
+      if (!user.password_hash) {
         return res.status(400).json({
           error: {
             code: 'NO_PASSWORD',
@@ -355,7 +355,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      const passwordValid = await bcrypt.compare(password, user.passwordHash);
+      const passwordValid = await bcrypt.compare(password, user.password_hash);
 
       if (!passwordValid) {
         logger.warn('MFA Disable: Invalid password', { userId });
@@ -368,7 +368,7 @@ export function createMFARouter(): Router {
       }
 
       // Verify MFA token
-      if (!user.mfaSecret) {
+      if (!user.mfa_secret) {
         return res.status(500).json({
           error: {
             code: 'INTERNAL_ERROR',
@@ -377,7 +377,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      const isValid = mfaService.verifyTOTP(user.mfaSecret, token);
+      const isValid = mfaService.verifyTOTP(user.mfa_secret, token);
 
       if (!isValid) {
         logger.warn('MFA Disable: Invalid MFA token', { userId });
@@ -393,9 +393,9 @@ export function createMFARouter(): Router {
       await prisma.users.update({
         where: { id: userId },
         data: {
-          mfaEnabled: false,
-          mfaSecret: null,
-          mfaBackupCodes: '',
+          mfa_enabled: false,
+          mfa_secret: null,
+          mfa_backup_codes: '',
         },
       });
 
@@ -442,9 +442,9 @@ export function createMFARouter(): Router {
         where: { id: userId },
         select: {
           id: true,
-          mfaEnabled: true,
-          mfaBackupCodes: true,
-          isActive: true,
+          mfa_enabled: true,
+          mfa_backup_codes: true,
+          is_active: true,
         },
       });
 
@@ -457,7 +457,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.isActive) {
+      if (!user.is_active) {
         return res.status(403).json({
           error: {
             code: 'ACCOUNT_INACTIVE',
@@ -466,7 +466,7 @@ export function createMFARouter(): Router {
         });
       }
 
-      if (!user.mfaEnabled) {
+      if (!user.mfa_enabled) {
         return res.status(400).json({
           error: {
             code: 'MFA_NOT_ENABLED',
@@ -477,9 +477,9 @@ export function createMFARouter(): Router {
 
       // Parse backup codes from JSON string
       let backupCodeList: string[] = [];
-      if (user.mfaBackupCodes) {
+      if (user.mfa_backup_codes) {
         try {
-          backupCodeList = JSON.parse(user.mfaBackupCodes);
+          backupCodeList = JSON.parse(user.mfa_backup_codes);
         } catch (e) {
           logger.error('MFA Backup Code Login: Failed to parse backup codes', { userId });
           return res.status(500).json({
@@ -522,7 +522,7 @@ export function createMFARouter(): Router {
       await prisma.users.update({
         where: { id: userId },
         data: {
-          mfaBackupCodes: JSON.stringify(updatedBackupCodes),
+          mfa_backup_codes: JSON.stringify(updatedBackupCodes),
         },
       });
 
@@ -565,8 +565,8 @@ export function createMFARouter(): Router {
       const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
-          mfaEnabled: true,
-          mfaBackupCodes: true,
+          mfa_enabled: true,
+          mfa_backup_codes: true,
         },
       });
 
@@ -581,9 +581,9 @@ export function createMFARouter(): Router {
 
       // Parse backup codes from JSON string
       let backupCodesRemaining = 0;
-      if (user.mfaBackupCodes) {
+      if (user.mfa_backup_codes) {
         try {
-          const backupCodeList = JSON.parse(user.mfaBackupCodes);
+          const backupCodeList = JSON.parse(user.mfa_backup_codes);
           backupCodesRemaining = Array.isArray(backupCodeList) ? backupCodeList.length : 0;
         } catch (e) {
           logger.warn('MFA Status: Failed to parse backup codes', { userId });
@@ -591,7 +591,7 @@ export function createMFARouter(): Router {
       }
 
       return res.status(200).json({
-        mfaEnabled: user.mfaEnabled,
+        mfa_enabled: user.mfa_enabled,
         backupCodesRemaining,
       });
     })

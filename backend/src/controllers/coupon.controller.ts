@@ -19,6 +19,7 @@
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { CouponValidationService } from '../services/coupon-validation.service';
 import { CouponRedemptionService } from '../services/coupon-redemption.service';
 import {
@@ -206,6 +207,7 @@ export class CouponController {
 
       const coupon = await this.prisma.coupon.create({
         data: {
+          id: randomUUID(),
           code: data.code.toUpperCase(),
           coupon_type: data.type,
           discount_value: new Prisma.Decimal(data.discountValue),
@@ -223,6 +225,7 @@ export class CouponController {
           description: data.description || null,
           internal_notes: data.internalNotes || null,
           created_by: adminUserId,
+          updated_at: new Date(),
         },
         include: {
           coupon_usage_limit: true,
@@ -237,10 +240,12 @@ export class CouponController {
       // Create usage limits record
       await this.prisma.coupon_usage_limit.create({
         data: {
+          id: randomUUID(),
           coupon_id: coupon.id,
           total_uses: 0,
           unique_users: 0,
           total_discount_applied_usd: 0,
+          updated_at: new Date(),
         },
       });
 
