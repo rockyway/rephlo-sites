@@ -151,7 +151,7 @@ export class CreditsController {
         outputTokens: item.outputTokens,
         totalTokens: item.totalTokens,
         requestDurationMs: item.requestDurationMs,
-        createdAt: item.createdAt.toISOString(),
+        createdAt: item.created_at.toISOString(),
       })),
       pagination: result.pagination,
       summary: result.summary,

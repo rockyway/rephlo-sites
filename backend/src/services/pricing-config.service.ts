@@ -55,7 +55,7 @@ export class PricingConfigService implements IPricingConfigService {
 
     try {
       // Get user's subscription tier
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
           subscriptions: {

@@ -133,7 +133,7 @@ export class BillingPaymentsService {
 
     try {
       // Get subscription to find customer ID
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      const subscription = await this.prisma.subscription_monetization.findFirst({
         where: { userId },
         orderBy: { createdAt: 'desc' },
       });
@@ -166,7 +166,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.setDefaultPaymentMethod', { userId, paymentMethodId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      const subscription = await this.prisma.subscription_monetization.findFirst({
         where: { userId },
         orderBy: { createdAt: 'desc' },
       });
@@ -218,7 +218,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.createInvoice', { subscriptionId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -238,7 +238,7 @@ export class BillingPaymentsService {
       });
 
       // Create invoice record in database
-      const invoice = await this.prisma.billingInvoice.create({
+      const invoice = await this.prisma.billing_invoices.create({
         data: {
           userId: subscription.userId,
           subscriptionId: subscription.id,
@@ -272,7 +272,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.payInvoice', { invoiceId });
 
     try {
-      const invoice = await this.prisma.billingInvoice.findUnique({
+      const invoice = await this.prisma.billing_invoices.findUnique({
         where: { id: invoiceId },
       });
 
@@ -284,7 +284,7 @@ export class BillingPaymentsService {
       const stripeInvoice = await this.stripe.invoices.pay(invoice.stripeInvoiceId);
 
       // Update invoice status
-      await this.prisma.billingInvoice.update({
+      await this.prisma.billing_invoices.update({
         where: { id: invoiceId },
         data: {
           status: stripeInvoice.status || 'paid',
@@ -294,7 +294,7 @@ export class BillingPaymentsService {
       });
 
       // Create payment transaction record
-      const transaction = await this.prisma.paymentTransaction.create({
+      const transaction = await this.prisma.payment_transactions.create({
         data: {
           userId: invoice.userId,
           invoiceId: invoice.id,
@@ -326,7 +326,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.voidInvoice', { invoiceId });
 
     try {
-      const invoice = await this.prisma.billingInvoice.findUnique({
+      const invoice = await this.prisma.billing_invoices.findUnique({
         where: { id: invoiceId },
       });
 
@@ -338,7 +338,7 @@ export class BillingPaymentsService {
       await this.stripe.invoices.voidInvoice(invoice.stripeInvoiceId);
 
       // Update invoice status
-      const updatedInvoice = await this.prisma.billingInvoice.update({
+      const updatedInvoice = await this.prisma.billing_invoices.update({
         where: { id: invoiceId },
         data: { status: 'void' },
       });
@@ -401,7 +401,7 @@ export class BillingPaymentsService {
 
     try {
       // Update or create invoice record
-      await this.prisma.billingInvoice.upsert({
+      await this.prisma.billing_invoices.upsert({
         where: { stripeInvoiceId: invoice.id },
         update: {
           status: 'paid',
@@ -441,7 +441,7 @@ export class BillingPaymentsService {
 
     try {
       // Update invoice status
-      const dbInvoice = await this.prisma.billingInvoice.findUnique({
+      const dbInvoice = await this.prisma.billing_invoices.findUnique({
         where: { stripeInvoiceId: invoice.id },
       });
 
@@ -450,7 +450,7 @@ export class BillingPaymentsService {
         return;
       }
 
-      await this.prisma.billingInvoice.update({
+      await this.prisma.billing_invoices.update({
         where: { id: dbInvoice.id },
         data: { status: 'open' }, // Keep as open for retry
       });
@@ -475,7 +475,7 @@ export class BillingPaymentsService {
     });
 
     try {
-      await this.prisma.subscriptionMonetization.updateMany({
+      await this.prisma.subscription_monetization.updateMany({
         where: { stripeSubscriptionId: subscription.id },
         data: {
           status: subscription.status as any,
@@ -502,7 +502,7 @@ export class BillingPaymentsService {
     });
 
     try {
-      await this.prisma.subscriptionMonetization.updateMany({
+      await this.prisma.subscription_monetization.updateMany({
         where: { stripeSubscriptionId: subscription.id },
         data: {
           status: 'cancelled',
@@ -549,7 +549,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.scheduleDunningAttempts', { invoiceId });
 
     try {
-      const invoice = await this.prisma.billingInvoice.findUnique({
+      const invoice = await this.prisma.billing_invoices.findUnique({
         where: { id: invoiceId },
       });
 
@@ -571,7 +571,7 @@ export class BillingPaymentsService {
           ? new Date(scheduledAt.getTime() + retrySchedule[i + 1] * 24 * 60 * 60 * 1000)
           : null;
 
-        const attempt = await this.prisma.dunningAttempt.create({
+        const attempt = await this.prisma.dunning_attempts.create({
           data: {
             userId: invoice.userId,
             invoiceId: invoice.id,
@@ -607,7 +607,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.retryFailedPayment', { attemptId });
 
     try {
-      const attempt = await this.prisma.dunningAttempt.findUnique({
+      const attempt = await this.prisma.dunning_attempts.findUnique({
         where: { id: attemptId },
         include: { invoice: true },
       });
@@ -620,7 +620,7 @@ export class BillingPaymentsService {
       const transaction = await this.payInvoice(attempt.invoiceId);
 
       // Update dunning attempt
-      await this.prisma.dunningAttempt.update({
+      await this.prisma.dunning_attempts.update({
         where: { id: attemptId },
         data: {
           attemptedAt: new Date(),
@@ -635,7 +635,7 @@ export class BillingPaymentsService {
       logger.error('BillingPaymentsService.retryFailedPayment: Error', { error });
 
       // Update dunning attempt with failure
-      await this.prisma.dunningAttempt.update({
+      await this.prisma.dunning_attempts.update({
         where: { id: attemptId },
         data: {
           attemptedAt: new Date(),
@@ -734,12 +734,12 @@ export class BillingPaymentsService {
       const skip = (page - 1) * limit;
 
       const [invoices, total] = await Promise.all([
-        this.prisma.billingInvoice.findMany({
+        this.prisma.billing_invoices.findMany({
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
         }),
-        this.prisma.billingInvoice.count(),
+        this.prisma.billing_invoices.count(),
       ]);
 
       const mappedInvoices = invoices.map((inv) => this.mapInvoice(inv));
@@ -776,12 +776,12 @@ export class BillingPaymentsService {
       const skip = (page - 1) * limit;
 
       const [transactions, total] = await Promise.all([
-        this.prisma.paymentTransaction.findMany({
+        this.prisma.payment_transactions.findMany({
           skip,
           take: limit,
           orderBy: { createdAt: 'desc' },
         }),
-        this.prisma.paymentTransaction.count(),
+        this.prisma.payment_transactions.count(),
       ]);
 
       const mappedTransactions = transactions.map((txn) => this.mapTransaction(txn));
@@ -807,7 +807,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.listDunningAttempts');
 
     try {
-      const attempts = await this.prisma.dunningAttempt.findMany({
+      const attempts = await this.prisma.dunning_attempts.findMany({
         orderBy: { scheduledAt: 'desc' },
         take: 100, // Limit to recent 100 attempts
       });
@@ -847,10 +847,10 @@ export class BillingPaymentsService {
 
     try {
       // Get user's Stripe customer ID
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             select: {
               stripeCustomerId: true,
             },

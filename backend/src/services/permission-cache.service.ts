@@ -77,7 +77,7 @@ export class PermissionCacheService {
       // 2. Query database
       // Current: Simple role-based permissions
       // Future: Query RolePermission tables (Plan 119)
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         select: { role: true },
       });
@@ -119,7 +119,7 @@ export class PermissionCacheService {
           }
         );
 
-        const user = await this.prisma.user.findUnique({
+        const user = await this.prisma.users.findUnique({
           where: { id: userId },
           select: { role: true },
         });
@@ -174,9 +174,9 @@ export class PermissionCacheService {
       );
 
       // 2. Query database
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
-        select: { role: true, isActive: true },
+        select: { role: true, is_active: true },
       });
 
       if (!user) {
@@ -186,7 +186,7 @@ export class PermissionCacheService {
 
       const result = {
         permissions: this.roleToPermissions(user.role),
-        isActive: user.isActive,
+        isActive: user.is_active,
       };
 
       // 3. Update cache
@@ -219,9 +219,9 @@ export class PermissionCacheService {
           }
         );
 
-        const user = await this.prisma.user.findUnique({
+        const user = await this.prisma.users.findUnique({
           where: { id: userId },
-          select: { role: true, isActive: true },
+          select: { role: true, is_active: true },
         });
 
         if (!user) {
@@ -230,7 +230,7 @@ export class PermissionCacheService {
 
         return {
           permissions: this.roleToPermissions(user.role),
-          isActive: user.isActive,
+          isActive: user.is_active,
         };
       }
 

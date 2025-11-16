@@ -16,8 +16,8 @@
 
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
+import { activation_status } from '@prisma/client';
 import { DeviceActivationManagementService } from '../services/device-activation-management.service';
-import { ActivationStatus } from '@prisma/client';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
 
@@ -39,7 +39,7 @@ export class DeviceActivationManagementController {
       const { status, os, suspicious, search, page, limit } = req.query;
 
       const filters = {
-        status: status as ActivationStatus | undefined,
+        status: status as activation_status | undefined,
         os: os as string | undefined,
         suspicious: suspicious === 'true' ? true : suspicious === 'false' ? false : undefined,
         search: search as string | undefined,

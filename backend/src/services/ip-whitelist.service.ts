@@ -45,10 +45,10 @@ export class IPWhitelistService implements IIPWhitelistService {
 
     try {
       // Check if this IP already exists for this user
-      const existing = await this.prisma.iPWhitelist.findFirst({
+      const existing = await this.prisma.ip_whitelists.findFirst({
         where: {
-          userId,
-          ipAddress,
+          user_id: userId,
+          ip_address: ipAddress,
         },
       });
 
@@ -56,12 +56,12 @@ export class IPWhitelistService implements IIPWhitelistService {
         throw new Error(`IP address ${ipAddress} is already whitelisted for this user`);
       }
 
-      const entry = await this.prisma.iPWhitelist.create({
+      const entry = await this.prisma.ip_whitelists.create({
         data: {
-          userId,
-          ipAddress,
+          user_id: userId,
+          ip_address: ipAddress,
           description: description || null,
-          isActive: true,
+          is_active: true,
         },
         include: {
           user: {
@@ -102,7 +102,7 @@ export class IPWhitelistService implements IIPWhitelistService {
 
     try {
       // First, verify the entry exists and belongs to the user
-      const existing = await this.prisma.iPWhitelist.findUnique({
+      const existing = await this.prisma.ip_whitelists.findUnique({
         where: { id: entryId },
         include: {
           user: {
@@ -118,12 +118,12 @@ export class IPWhitelistService implements IIPWhitelistService {
         throw new Error(`Whitelist entry not found: ${entryId}`);
       }
 
-      if (existing.userId !== userId) {
+      if (existing.user_id !== userId) {
         throw new Error('Cannot remove whitelist entry belonging to another user');
       }
 
       // Delete the entry
-      await this.prisma.iPWhitelist.delete({
+      await this.prisma.ip_whitelists.delete({
         where: { id: entryId },
       });
 
@@ -151,8 +151,8 @@ export class IPWhitelistService implements IIPWhitelistService {
     logger.debug('IPWhitelistService: Getting user whitelist', { userId });
 
     try {
-      const entries = await this.prisma.iPWhitelist.findMany({
-        where: { userId },
+      const entries = await this.prisma.ip_whitelists.findMany({
+        where: { user_id: userId },
         include: {
           user: {
             select: {
@@ -162,7 +162,7 @@ export class IPWhitelistService implements IIPWhitelistService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
       });
 
@@ -180,10 +180,10 @@ export class IPWhitelistService implements IIPWhitelistService {
     logger.debug('IPWhitelistService: Getting active user whitelist', { userId });
 
     try {
-      const entries = await this.prisma.iPWhitelist.findMany({
+      const entries = await this.prisma.ip_whitelists.findMany({
         where: {
-          userId,
-          isActive: true,
+          user_id: userId,
+          is_active: true,
         },
         include: {
           user: {
@@ -194,7 +194,7 @@ export class IPWhitelistService implements IIPWhitelistService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
       });
 
@@ -220,20 +220,20 @@ export class IPWhitelistService implements IIPWhitelistService {
 
     try {
       // Get all active whitelist entries for this user
-      const entries = await this.prisma.iPWhitelist.findMany({
+      const entries = await this.prisma.ip_whitelists.findMany({
         where: {
-          userId,
-          isActive: true,
+          user_id: userId,
+          is_active: true,
         },
       });
 
       // Check if the IP matches any whitelisted entry
       for (const entry of entries) {
-        if (this.ipMatchesCIDR(ipAddress, entry.ipAddress)) {
+        if (this.ipMatchesCIDR(ipAddress, entry.ip_address)) {
           logger.debug('IPWhitelistService: IP is whitelisted', {
             userId,
             ipAddress,
-            matchedEntry: entry.ipAddress,
+            matchedEntry: entry.ip_address,
           });
           return true;
         }
@@ -285,7 +285,7 @@ export class IPWhitelistService implements IIPWhitelistService {
 
     try {
       // First, verify the entry exists and belongs to the user
-      const existing = await this.prisma.iPWhitelist.findUnique({
+      const existing = await this.prisma.ip_whitelists.findUnique({
         where: { id: entryId },
       });
 
@@ -293,12 +293,12 @@ export class IPWhitelistService implements IIPWhitelistService {
         throw new Error(`Whitelist entry not found: ${entryId}`);
       }
 
-      if (existing.userId !== userId) {
+      if (existing.user_id !== userId) {
         throw new Error('Cannot update whitelist entry belonging to another user');
       }
 
       // Update the description
-      const updated = await this.prisma.iPWhitelist.update({
+      const updated = await this.prisma.ip_whitelists.update({
         where: { id: entryId },
         data: { description },
         include: {
@@ -368,7 +368,7 @@ export class IPWhitelistService implements IIPWhitelistService {
   ): Promise<IPWhitelistResponse> {
     try {
       // First, verify the entry exists and belongs to the user
-      const existing = await this.prisma.iPWhitelist.findUnique({
+      const existing = await this.prisma.ip_whitelists.findUnique({
         where: { id: entryId },
       });
 
@@ -376,14 +376,14 @@ export class IPWhitelistService implements IIPWhitelistService {
         throw new Error(`Whitelist entry not found: ${entryId}`);
       }
 
-      if (existing.userId !== userId) {
+      if (existing.user_id !== userId) {
         throw new Error('Cannot update whitelist entry belonging to another user');
       }
 
       // Update the status
-      const updated = await this.prisma.iPWhitelist.update({
+      const updated = await this.prisma.ip_whitelists.update({
         where: { id: entryId },
-        data: { isActive },
+        data: { is_active: isActive },
         include: {
           user: {
             select: {
@@ -450,12 +450,12 @@ export class IPWhitelistService implements IIPWhitelistService {
   private mapToResponse(entry: any): IPWhitelistResponse {
     return {
       id: entry.id,
-      userId: entry.userId,
-      ipAddress: entry.ipAddress,
+      userId: entry.user_id,
+      ipAddress: entry.ip_address,
       description: entry.description,
-      isActive: entry.isActive,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
+      isActive: entry.is_active,
+      createdAt: entry.created_at,
+      updatedAt: entry.updated_at,
       user: entry.user
         ? {
             id: entry.user.id,

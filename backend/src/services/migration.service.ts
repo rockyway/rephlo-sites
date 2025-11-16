@@ -78,9 +78,9 @@ export class MigrationService {
     });
 
     // Find active perpetual license
-    const license = await this.prisma.perpetualLicense.findFirst({
+    const license = await this.prisma.perpetual_license.findFirst({
       where: {
-        userId,
+        user_id: userId,
         status: 'active',
       },
     });
@@ -96,7 +96,7 @@ export class MigrationService {
     await this.applyPerpetualCredit(userId, tradeInValue);
 
     // Mark perpetual license as inactive (but preserve it)
-    await this.prisma.perpetualLicense.update({
+    await this.prisma.perpetual_license.update({
       where: { id: license.id },
       data: { status: 'suspended' }, // Suspended, not revoked (can reactivate)
     });
@@ -124,7 +124,7 @@ export class MigrationService {
    * @returns Trade-in value in USD
    */
   async calculatePerpetualTradeInValue(licenseId: string): Promise<number> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
     });
 
@@ -134,7 +134,7 @@ export class MigrationService {
 
     // Calculate months since purchase
     const now = new Date();
-    const purchaseDate = license.purchasedAt;
+    const purchaseDate = license.purchased_at;
     const monthsSincePurchase =
       (now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
 
@@ -170,13 +170,13 @@ export class MigrationService {
 
     // In a real implementation, this would create a credit allocation or Stripe customer balance
     // For now, we'll create a credit allocation record
-    await this.prisma.creditAllocation.create({
+    await this.prisma.credit_allocation.create({
       data: {
-        userId,
+        user_id: userId,
         amount: Math.round(tradeInValue * 1000), // Convert to credits (assuming $1 = 1000 credits)
         source: 'perpetual_migration',
-        allocationPeriodStart: new Date(),
-        allocationPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiry
+        allocation_period_start: new Date(),
+        allocation_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiry
       },
     });
 
@@ -202,7 +202,7 @@ export class MigrationService {
       subscriptionId,
     });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -210,7 +210,7 @@ export class MigrationService {
       throw new NotFoundError('Subscription not found');
     }
 
-    if (subscription.userId !== userId) {
+    if (subscription.user_id !== userId) {
       throw new ValidationError('Subscription does not belong to user');
     }
 
@@ -238,11 +238,11 @@ export class MigrationService {
   async cancelSubscriptionOnMigration(subscriptionId: string): Promise<void> {
     logger.info('MigrationService: Cancelling subscription for migration', { subscriptionId });
 
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
       data: {
         status: 'cancelled',
-        cancelledAt: new Date(),
+        cancelled_at: new Date(),
       },
     });
 
@@ -255,7 +255,7 @@ export class MigrationService {
    * @returns Refund amount in USD
    */
   async refundUnusedSubscriptionTime(subscriptionId: string): Promise<number> {
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -264,8 +264,8 @@ export class MigrationService {
     }
 
     const now = new Date();
-    const periodStart = subscription.currentPeriodStart;
-    const periodEnd = subscription.currentPeriodEnd;
+    const periodStart = subscription.current_period_start;
+    const periodEnd = subscription.current_period_end;
 
     // Calculate days since period start
     const daysSinceStart = Math.ceil(
@@ -290,7 +290,7 @@ export class MigrationService {
       Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     );
 
-    const refundAmount = (daysRemaining / totalDays) * Number(subscription.basePriceUsd);
+    const refundAmount = (daysRemaining / totalDays) * Number(subscription.base_price_usd);
 
     logger.info('MigrationService: Refund calculated for unused time', {
       subscriptionId,
@@ -313,9 +313,9 @@ export class MigrationService {
    */
   async canMigrateToPerpetual(userId: string): Promise<boolean> {
     // User must have an active subscription
-    const subscription = await this.prisma.subscriptionMonetization.findFirst({
+    const subscription = await this.prisma.subscription_monetization.findFirst({
       where: {
-        userId,
+        user_id: userId,
         status: { in: ['active', 'trial'] },
       },
     });
@@ -329,7 +329,7 @@ export class MigrationService {
    * @returns Validation result
    */
   async canMigrateToSubscription(licenseId: string): Promise<boolean> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
     });
 
@@ -355,9 +355,9 @@ export class MigrationService {
 
     if (migrationPath === 'perpetual_to_subscription') {
       // Check if user has active perpetual license
-      const license = await this.prisma.perpetualLicense.findFirst({
+      const license = await this.prisma.perpetual_license.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: 'active',
         },
       });
@@ -367,9 +367,9 @@ export class MigrationService {
       }
 
       // Check if user already has active subscription
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      const subscription = await this.prisma.subscription_monetization.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: { in: ['active', 'trial'] },
         },
       });
@@ -380,9 +380,9 @@ export class MigrationService {
     } else {
       // subscription_to_perpetual
       // Check if user has active subscription
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      const subscription = await this.prisma.subscription_monetization.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: { in: ['active', 'trial'] },
         },
       });
@@ -392,9 +392,9 @@ export class MigrationService {
       }
 
       // Check if user already has active perpetual license
-      const license = await this.prisma.perpetualLicense.findFirst({
+      const license = await this.prisma.perpetual_license.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: 'active',
         },
       });
@@ -424,26 +424,26 @@ export class MigrationService {
     subscriptions: any[];
   }> {
     // Get perpetual licenses
-    const licenses = await this.prisma.perpetualLicense.findMany({
-      where: { userId },
+    const licenses = await this.prisma.perpetual_license.findMany({
+      where: { user_id: userId },
       select: {
         id: true,
-        licenseKey: true,
+        license_key: true,
         status: true,
-        purchasedAt: true,
-        purchasePriceUsd: true,
+        purchased_at: true,
+        purchase_price_usd: true,
       },
     });
 
     // Get subscriptions
-    const subscriptions = await this.prisma.subscriptionMonetization.findMany({
-      where: { userId },
+    const subscriptions = await this.prisma.subscription_monetization.findMany({
+      where: { user_id: userId },
       select: {
         id: true,
         tier: true,
         status: true,
-        createdAt: true,
-        cancelledAt: true,
+        created_at: true,
+        cancelled_at: true,
       },
     });
 

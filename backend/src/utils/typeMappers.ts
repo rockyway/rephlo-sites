@@ -170,7 +170,7 @@ export function mapSubscriptionToApiType(
  * Handles discount field splitting by type and computed fields
  */
 export function mapCouponToApiType(
-  dbCoupon: Prisma.CouponGetPayload<{
+  dbCoupon: Prisma.couponGetPayload<{
     include: {
       usageLimits: true;
       campaign: {
@@ -258,7 +258,7 @@ export function computeCampaignStatus(
  * Handles field renaming and computed status
  */
 export function mapCampaignToApiType(
-  dbCampaign: Prisma.CouponCampaignGetPayload<{
+  dbCampaign: Prisma.coupon_campaignGetPayload<{
     include: {
       _count: {
         select: {
@@ -309,7 +309,7 @@ export function mapCampaignToApiType(
  * Map database Redemption to API CouponRedemption type
  */
 export function mapRedemptionToApiType(
-  dbRedemption: Prisma.CouponRedemptionGetPayload<{
+  dbRedemption: Prisma.coupon_redemptionGetPayload<{
     include: {
       coupon: {
         select: {
@@ -356,7 +356,7 @@ export function mapRedemptionToApiType(
  * Extracts fields from JSON details column
  */
 export function mapFraudEventToApiType(
-  dbFraud: Prisma.CouponFraudDetectionGetPayload<{
+  dbFraud: Prisma.coupon_fraud_detectionGetPayload<{
     include: {
       coupon: {
         select: {
@@ -403,7 +403,7 @@ export function mapFraudEventToApiType(
  * Ensures response matches shared-types ProrationEvent interface
  */
 export function mapProrationEventToApiType(
-  dbEvent: Prisma.ProrationEventGetPayload<{
+  dbEvent: Prisma.proration_eventGetPayload<{
     include: {
       user: {
         select: {

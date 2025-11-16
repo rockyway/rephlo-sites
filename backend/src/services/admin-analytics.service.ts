@@ -86,96 +86,96 @@ export class AdminAnalyticsService {
    */
   private async getTotalRevenue(periodConfig: PeriodConfig) {
     // Get MRR from active subscriptions
-    const currentSubscriptions = await this.prisma.subscriptionMonetization.findMany({
+    const currentSubscriptions = await this.prisma.subscription_monetization.findMany({
       where: {
         status: 'active',
-        currentPeriodStart: { lte: periodConfig.endDate },
-        currentPeriodEnd: { gte: periodConfig.startDate },
+        current_period_start: { lte: periodConfig.endDate },
+        current_period_end: { gte: periodConfig.startDate },
       },
       select: {
-        monthlyCreditAllocation: true,
-        basePriceUsd: true,
-        billingCycle: true,
+        monthly_credit_allocation: true,
+        base_price_usd: true,
+        billing_cycle: true,
       },
     });
 
-    const previousSubscriptions = await this.prisma.subscriptionMonetization.findMany({
+    const previousSubscriptions = await this.prisma.subscription_monetization.findMany({
       where: {
         status: 'active',
-        currentPeriodStart: { lte: periodConfig.previousEndDate },
-        currentPeriodEnd: { gte: periodConfig.previousStartDate },
+        current_period_start: { lte: periodConfig.previousEndDate },
+        current_period_end: { gte: periodConfig.previousStartDate },
       },
       select: {
-        monthlyCreditAllocation: true,
-        basePriceUsd: true,
-        billingCycle: true,
+        monthly_credit_allocation: true,
+        base_price_usd: true,
+        billing_cycle: true,
       },
     });
 
     // Calculate MRR (convert annual to monthly)
     const currentMRR = currentSubscriptions.reduce((sum, sub) => {
-      const monthlyPrice = sub.billingCycle === 'annual'
-        ? Number(sub.basePriceUsd) / 12
-        : Number(sub.basePriceUsd);
+      const monthlyPrice = sub.billing_cycle === 'annual'
+        ? Number(sub.base_price_usd) / 12
+        : Number(sub.base_price_usd);
       return sum + monthlyPrice * 100; // Convert to cents
     }, 0);
 
     const previousMRR = previousSubscriptions.reduce((sum, sub) => {
-      const monthlyPrice = sub.billingCycle === 'annual'
-        ? Number(sub.basePriceUsd) / 12
-        : Number(sub.basePriceUsd);
+      const monthlyPrice = sub.billing_cycle === 'annual'
+        ? Number(sub.base_price_usd) / 12
+        : Number(sub.base_price_usd);
       return sum + monthlyPrice * 100; // Convert to cents
     }, 0);
 
     // Get perpetual license revenue
-    const currentPerpetual = await this.prisma.perpetualLicense.aggregate({
+    const currentPerpetual = await this.prisma.perpetual_license.aggregate({
       where: {
-        purchasedAt: {
+        purchased_at: {
           gte: periodConfig.startDate,
           lte: periodConfig.endDate,
         },
       },
-      _sum: { purchasePriceUsd: true },
+      _sum: { purchase_price_usd: true },
     });
 
-    const previousPerpetual = await this.prisma.perpetualLicense.aggregate({
+    const previousPerpetual = await this.prisma.perpetual_license.aggregate({
       where: {
-        purchasedAt: {
+        purchased_at: {
           gte: periodConfig.previousStartDate,
           lte: periodConfig.previousEndDate,
         },
       },
-      _sum: { purchasePriceUsd: true },
+      _sum: { purchase_price_usd: true },
     });
 
-    const currentPerpetualRevenue = Number(currentPerpetual._sum.purchasePriceUsd || 0) * 100; // Convert to cents
-    const previousPerpetualRevenue = Number(previousPerpetual._sum.purchasePriceUsd || 0) * 100;
+    const currentPerpetualRevenue = Number(currentPerpetual._sum.purchase_price_usd || 0) * 100; // Convert to cents
+    const previousPerpetualRevenue = Number(previousPerpetual._sum.purchase_price_usd || 0) * 100;
 
     // Get version upgrade revenue
-    const currentUpgrades = await this.prisma.versionUpgrade.aggregate({
+    const currentUpgrades = await this.prisma.version_upgrade.aggregate({
       where: {
-        purchasedAt: {
+        purchased_at: {
           gte: periodConfig.startDate,
           lte: periodConfig.endDate,
         },
         status: 'completed',
       },
-      _sum: { upgradePriceUsd: true },
+      _sum: { upgrade_price_usd: true },
     });
 
-    const previousUpgrades = await this.prisma.versionUpgrade.aggregate({
+    const previousUpgrades = await this.prisma.version_upgrade.aggregate({
       where: {
-        purchasedAt: {
+        purchased_at: {
           gte: periodConfig.previousStartDate,
           lte: periodConfig.previousEndDate,
         },
         status: 'completed',
       },
-      _sum: { upgradePriceUsd: true },
+      _sum: { upgrade_price_usd: true },
     });
 
-    const currentUpgradeRevenue = Number(currentUpgrades._sum.upgradePriceUsd || 0) * 100; // Convert to cents
-    const previousUpgradeRevenue = Number(previousUpgrades._sum.upgradePriceUsd || 0) * 100;
+    const currentUpgradeRevenue = Number(currentUpgrades._sum.upgrade_price_usd || 0) * 100; // Convert to cents
+    const previousUpgradeRevenue = Number(previousUpgrades._sum.upgrade_price_usd || 0) * 100;
 
     // Calculate totals
     const currentTotal = currentMRR + currentPerpetualRevenue + currentUpgradeRevenue;
@@ -197,21 +197,21 @@ export class AdminAnalyticsService {
    */
   private async getActiveUsers(periodConfig: PeriodConfig) {
     // Get users with active subscriptions
-    const currentSubUsers = await this.prisma.user.count({
+    const currentSubUsers = await this.prisma.users.count({
       where: {
-        subscriptionMonetization: {
+        subscription_monetization: {
           some: {
             status: 'active',
-            currentPeriodEnd: { gte: periodConfig.endDate },
+            current_period_end: { gte: periodConfig.endDate },
           },
         },
       },
     });
 
     // Get users with active licenses
-    const currentLicenseUsers = await this.prisma.user.count({
+    const currentLicenseUsers = await this.prisma.users.count({
       where: {
-        perpetualLicenses: {
+        perpetual_licenses: {
           some: {
             status: 'active',
           },
@@ -220,19 +220,19 @@ export class AdminAnalyticsService {
     });
 
     // Get users with both (to avoid double counting)
-    const currentBothUsers = await this.prisma.user.count({
+    const currentBothUsers = await this.prisma.users.count({
       where: {
         AND: [
           {
-            subscriptionMonetization: {
+            subscription_monetization: {
               some: {
                 status: 'active',
-                currentPeriodEnd: { gte: periodConfig.endDate },
+                current_period_end: { gte: periodConfig.endDate },
               },
             },
           },
           {
-            perpetualLicenses: {
+            perpetual_licenses: {
               some: {
                 status: 'active',
               },
@@ -245,20 +245,20 @@ export class AdminAnalyticsService {
     const currentCount = currentSubUsers + currentLicenseUsers - currentBothUsers;
 
     // Same for previous period
-    const previousSubUsers = await this.prisma.user.count({
+    const previousSubUsers = await this.prisma.users.count({
       where: {
-        subscriptionMonetization: {
+        subscription_monetization: {
           some: {
             status: 'active',
-            currentPeriodEnd: { gte: periodConfig.previousEndDate },
+            current_period_end: { gte: periodConfig.previousEndDate },
           },
         },
       },
     });
 
-    const previousLicenseUsers = await this.prisma.user.count({
+    const previousLicenseUsers = await this.prisma.users.count({
       where: {
-        perpetualLicenses: {
+        perpetual_licenses: {
           some: {
             status: 'active',
           },
@@ -266,19 +266,19 @@ export class AdminAnalyticsService {
       },
     });
 
-    const previousBothUsers = await this.prisma.user.count({
+    const previousBothUsers = await this.prisma.users.count({
       where: {
         AND: [
           {
-            subscriptionMonetization: {
+            subscription_monetization: {
               some: {
                 status: 'active',
-                currentPeriodEnd: { gte: periodConfig.previousEndDate },
+                current_period_end: { gte: periodConfig.previousEndDate },
               },
             },
           },
           {
-            perpetualLicenses: {
+            perpetual_licenses: {
               some: {
                 status: 'active',
               },
@@ -300,28 +300,28 @@ export class AdminAnalyticsService {
    * Calculate total credits consumed from TokenUsageLedger
    */
   private async getCreditsConsumed(periodConfig: PeriodConfig) {
-    const currentCredits = await this.prisma.tokenUsageLedger.aggregate({
+    const currentCredits = await this.prisma.token_usage_ledger.aggregate({
       where: {
-        createdAt: {
+        created_at: {
           gte: periodConfig.startDate,
           lte: periodConfig.endDate,
         },
       },
-      _sum: { creditsDeducted: true },
+      _sum: { credits_deducted: true },
     });
 
-    const previousCredits = await this.prisma.tokenUsageLedger.aggregate({
+    const previousCredits = await this.prisma.token_usage_ledger.aggregate({
       where: {
-        createdAt: {
+        created_at: {
           gte: periodConfig.previousStartDate,
           lte: periodConfig.previousEndDate,
         },
       },
-      _sum: { creditsDeducted: true },
+      _sum: { credits_deducted: true },
     });
 
-    const currentValue = currentCredits._sum.creditsDeducted || 0;
-    const previousValue = previousCredits._sum.creditsDeducted || 0;
+    const currentValue = currentCredits._sum.credits_deducted || 0;
+    const previousValue = previousCredits._sum.credits_deducted || 0;
 
     return {
       value: currentValue,
@@ -333,33 +333,33 @@ export class AdminAnalyticsService {
    * Calculate coupon redemptions and total discount value
    */
   private async getCouponRedemptions(periodConfig: PeriodConfig) {
-    const currentRedemptions = await this.prisma.couponRedemption.aggregate({
+    const currentRedemptions = await this.prisma.coupon_redemption.aggregate({
       where: {
-        redemptionDate: {
+        redemption_date: {
           gte: periodConfig.startDate,
           lte: periodConfig.endDate,
         },
-        redemptionStatus: 'success',
+        redemption_status: 'success',
       },
       _count: { id: true },
-      _sum: { discountAppliedUsd: true },
+      _sum: { discount_applied_usd: true },
     });
 
-    const previousRedemptions = await this.prisma.couponRedemption.aggregate({
+    const previousRedemptions = await this.prisma.coupon_redemption.aggregate({
       where: {
-        redemptionDate: {
+        redemption_date: {
           gte: periodConfig.previousStartDate,
           lte: periodConfig.previousEndDate,
         },
-        redemptionStatus: 'success',
+        redemption_status: 'success',
       },
       _count: { id: true },
-      _sum: { discountAppliedUsd: true },
+      _sum: { discount_applied_usd: true },
     });
 
     const currentCount = currentRedemptions._count.id || 0;
     const previousCount = previousRedemptions._count.id || 0;
-    const currentDiscount = Number(currentRedemptions._sum.discountAppliedUsd || 0) * 100; // Convert to cents
+    const currentDiscount = Number(currentRedemptions._sum.discount_applied_usd || 0) * 100; // Convert to cents
 
     return {
       value: currentCount,
@@ -439,16 +439,16 @@ export class AdminAnalyticsService {
    * Get subscription events (created, updated)
    */
   private async getSubscriptionEvents(limit: number, _offset: number): Promise<ActivityEvent[]> {
-    const subscriptions = await this.prisma.subscriptionMonetization.findMany({
+    const subscriptions = await this.prisma.subscription_monetization.findMany({
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       include: {
         user: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true,
+            first_name: true,
+            last_name: true,
           },
         },
       },
@@ -463,9 +463,9 @@ export class AdminAnalyticsService {
       metadata: {
         tier: sub.tier,
         status: sub.status,
-        billingCycle: sub.billingCycle,
+        billingCycle: sub.billing_cycle,
       },
-      timestamp: sub.createdAt,
+      timestamp: sub.created_at,
     }));
   }
 
@@ -473,16 +473,16 @@ export class AdminAnalyticsService {
    * Get perpetual license events (created, activated)
    */
   private async getLicenseEvents(limit: number, _offset: number): Promise<ActivityEvent[]> {
-    const licenses = await this.prisma.perpetualLicense.findMany({
+    const licenses = await this.prisma.perpetual_license.findMany({
       take: limit,
-      orderBy: { purchasedAt: 'desc' },
+      orderBy: { purchased_at: 'desc' },
       include: {
         user: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true,
+            first_name: true,
+            last_name: true,
           },
         },
       },
@@ -491,15 +491,15 @@ export class AdminAnalyticsService {
     return licenses.map((license) => ({
       id: license.id,
       type: 'license' as const,
-      action: license.activatedAt ? ('activated' as const) : ('created' as const),
-      description: `User purchased Perpetual License (v${license.purchasedVersion})`,
+      action: license.activated_at ? ('activated' as const) : ('created' as const),
+      description: `User purchased Perpetual License (v${license.purchased_version})`,
       user: this.formatUser(license.user),
       metadata: {
-        licenseKey: license.licenseKey,
-        version: license.purchasedVersion,
-        price: Number(license.purchasePriceUsd),
+        licenseKey: license.license_key,
+        version: license.purchased_version,
+        price: Number(license.purchase_price_usd),
       },
-      timestamp: license.purchasedAt,
+      timestamp: license.purchased_at,
     }));
   }
 
@@ -507,10 +507,10 @@ export class AdminAnalyticsService {
    * Get coupon redemption events
    */
   private async getCouponEvents(limit: number, _offset: number): Promise<ActivityEvent[]> {
-    const redemptions = await this.prisma.couponRedemption.findMany({
+    const redemptions = await this.prisma.coupon_redemption.findMany({
       take: limit,
-      orderBy: { redemptionDate: 'desc' },
-      where: { redemptionStatus: 'success' },
+      orderBy: { redemption_date: 'desc' },
+      where: { redemption_status: 'success' },
       include: {
         coupon: { select: { code: true } },
         subscription: {
@@ -519,8 +519,8 @@ export class AdminAnalyticsService {
               select: {
                 id: true,
                 email: true,
-                firstName: true,
-                lastName: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },
@@ -538,9 +538,9 @@ export class AdminAnalyticsService {
         user: this.formatUser(redemption.subscription!.user),
         metadata: {
           code: redemption.coupon.code,
-          discount: Number(redemption.discountAppliedUsd),
+          discount: Number(redemption.discount_applied_usd),
         },
-        timestamp: redemption.redemptionDate,
+        timestamp: redemption.redemption_date,
       }));
   }
 
@@ -548,17 +548,17 @@ export class AdminAnalyticsService {
    * Get credit allocation events
    */
   private async getCreditEvents(limit: number, _offset: number): Promise<ActivityEvent[]> {
-    const allocations = await this.prisma.creditAllocation.findMany({
+    const allocations = await this.prisma.credit_allocation.findMany({
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
       where: { source: { in: ['bonus', 'admin_grant', 'referral', 'coupon'] } },
       include: {
         user: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true,
+            first_name: true,
+            last_name: true,
           },
         },
       },
@@ -574,7 +574,7 @@ export class AdminAnalyticsService {
         amount: allocation.amount,
         source: allocation.source,
       },
-      timestamp: allocation.createdAt,
+      timestamp: allocation.created_at,
     }));
   }
 
@@ -582,16 +582,16 @@ export class AdminAnalyticsService {
    * Get device activation events
    */
   private async getDeviceEvents(limit: number, _offset: number): Promise<ActivityEvent[]> {
-    const activations = await this.prisma.licenseActivation.findMany({
+    const activations = await this.prisma.license_activation.findMany({
       take: limit,
-      orderBy: { activatedAt: 'desc' },
+      orderBy: { activated_at: 'desc' },
       include: {
         user: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true,
+            first_name: true,
+            last_name: true,
           },
         },
       },
@@ -601,14 +601,14 @@ export class AdminAnalyticsService {
       id: activation.id,
       type: 'device' as const,
       action: activation.status === 'active' ? ('activated' as const) : ('deactivated' as const),
-      description: `User ${activation.status === 'active' ? 'activated' : 'deactivated'} device (${activation.deviceName || 'Unknown'})`,
+      description: `User ${activation.status === 'active' ? 'activated' : 'deactivated'} device (${activation.device_name || 'Unknown'})`,
       user: this.formatUser(activation.user),
       metadata: {
-        deviceName: activation.deviceName,
-        osType: activation.osType,
+        deviceName: activation.device_name,
+        osType: activation.os_type,
         status: activation.status,
       },
-      timestamp: activation.activatedAt,
+      timestamp: activation.activated_at,
     }));
   }
 
@@ -688,13 +688,13 @@ export class AdminAnalyticsService {
   private formatUser(user: {
     id: string;
     email: string;
-    firstName: string | null;
-    lastName: string | null;
+    first_name: string | null;
+    last_name: string | null;
   }): ActivityEventUser {
     const name =
-      user.firstName && user.lastName
-        ? `${user.firstName} ${user.lastName}`
-        : user.firstName || user.lastName || null;
+      user.first_name && user.last_name
+        ? `${user.first_name} ${user.last_name}`
+        : user.first_name || user.last_name || null;
 
     return {
       id: user.id,

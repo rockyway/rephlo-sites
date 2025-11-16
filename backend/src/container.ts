@@ -63,12 +63,26 @@ container.register('RedisConnection', {
 
 /**
  * Register OpenAI Client
+ * Supports both standard OpenAI and Azure OpenAI endpoints
  */
 if (process.env.OPENAI_API_KEY) {
+  const clientConfig: any = {
+    apiKey: process.env.OPENAI_API_KEY,
+  };
+
+  // Configure for Azure OpenAI if OPENAI_BASE_URL points to Azure
+  if (process.env.OPENAI_BASE_URL) {
+    clientConfig.baseURL = process.env.OPENAI_BASE_URL;
+
+    // Azure OpenAI requires api-version query parameter and api-key header
+    if (process.env.AZURE_OPENAI_API_VERSION) {
+      clientConfig.defaultQuery = { 'api-version': process.env.AZURE_OPENAI_API_VERSION };
+      clientConfig.defaultHeaders = { 'api-key': process.env.OPENAI_API_KEY };
+    }
+  }
+
   container.register('OpenAIClient', {
-    useValue: new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    }),
+    useValue: new OpenAI(clientConfig),
   });
   logger.info('DI Container: OpenAI client registered');
 } else {

@@ -89,7 +89,7 @@ export class UsageService {
       creditsUsed: input.creditsUsed,
     });
 
-    const usageRecord = await this.prisma.usageHistory.create({
+    const usageRecord = await this.prisma.usage_history.create({
       data: {
         userId: input.userId,
         creditId: input.creditId,
@@ -157,10 +157,10 @@ export class UsageService {
     }
 
     // Get total count for pagination
-    const total = await this.prisma.usageHistory.count({ where });
+    const total = await this.prisma.usage_history.count({ where });
 
     // Get usage records with pagination
-    const usage = await this.prisma.usageHistory.findMany({
+    const usage = await this.prisma.usage_history.findMany({
       where,
       orderBy: {
         createdAt: 'desc',
@@ -170,7 +170,7 @@ export class UsageService {
     });
 
     // Calculate summary statistics
-    const summaryData = await this.prisma.usageHistory.aggregate({
+    const summaryData = await this.prisma.usage_history.aggregate({
       where,
       _sum: {
         creditsUsed: true,
@@ -363,7 +363,7 @@ export class UsageService {
    * @returns Array of model-grouped statistics
    */
   private async getStatsByModel(where: any): Promise<UsageStatsItem[]> {
-    const results = await this.prisma.usageHistory.groupBy({
+    const results = await this.prisma.usage_history.groupBy({
       by: ['modelId'],
       where,
       _sum: {
@@ -414,7 +414,7 @@ export class UsageService {
       if (endDate) where.createdAt.lte = endDate;
     }
 
-    const result = await this.prisma.tokenUsageLedger.aggregate({
+    const result = await this.prisma.token_usage_ledger.aggregate({
       where,
       _sum: {
         creditsDeducted: true,
@@ -433,7 +433,7 @@ export class UsageService {
    * @returns Number of requests for the model
    */
   async getModelUsageCount(userId: string, modelId: string): Promise<number> {
-    const count = await this.prisma.usageHistory.count({
+    const count = await this.prisma.usage_history.count({
       where: {
         userId,
         modelId,
@@ -451,7 +451,7 @@ export class UsageService {
    * @returns Most used model ID or null
    */
   async getMostUsedModel(userId: string): Promise<string | null> {
-    const result = await this.prisma.usageHistory.groupBy({
+    const result = await this.prisma.usage_history.groupBy({
       by: ['modelId'],
       where: { userId },
       _count: {
@@ -476,7 +476,7 @@ export class UsageService {
    * @returns Average tokens per request
    */
   async getAverageTokensPerRequest(userId: string): Promise<number> {
-    const result = await this.prisma.usageHistory.aggregate({
+    const result = await this.prisma.usage_history.aggregate({
       where: { userId },
       _avg: {
         totalTokens: true,
@@ -542,7 +542,7 @@ export class UsageService {
     const { startDate, endDate } = this.parsePeriod(period);
 
     // Aggregate from token_usage_ledger table (Prisma client uses camelCase)
-    const usageRecords = await this.prisma.tokenUsageLedger.findMany({
+    const usageRecords = await this.prisma.token_usage_ledger.findMany({
       where: {
         userId,
         createdAt: {
@@ -688,7 +688,7 @@ export class UsageService {
     endDate: Date
   ): Promise<CreditBreakdown> {
     // Get subscription to check tier
-    const subscription = await this.prisma.subscriptionMonetization.findFirst({
+    const subscription = await this.prisma.subscription_monetization.findFirst({
       where: {
         userId,
         status: 'active',

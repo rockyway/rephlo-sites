@@ -11,7 +11,7 @@
 import { z } from 'zod';
 
 // Re-export Prisma enums for use in validation schemas
-export {
+export type {
   CouponType,
   DiscountType,
   CampaignType,
@@ -22,7 +22,7 @@ export {
   SubscriptionTier,
 } from '@prisma/client';
 
-import {
+import type {
   CouponType,
   DiscountType,
   CampaignType,

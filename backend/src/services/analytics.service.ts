@@ -54,7 +54,7 @@ export interface GrossMarginKPIData {
 
 export interface ProviderCostData {
   providers: Array<{
-    providerId: string;
+    provider_id: string;
     providerName: string;
     totalCost: number;
     requestCount: number;
@@ -91,7 +91,7 @@ export interface CostDistributionData {
     percentage: number;
   }>;
   anomalies: Array<{
-    requestId: string;
+    request_id: string;
     cost: number;
     timestamp: string;
     model: string;
@@ -140,30 +140,30 @@ export class AnalyticsService {
 
       // Build where clause
       const whereClause: Prisma.TokenUsageLedgerWhereInput = {
-        createdAt: { gte: startDate, lte: endDate },
+        created_at: { gte: startDate, lte: endDate },
         status: 'success',
-        ...(tier && { userTierAtRequest: tier }),
-        ...(providers && providers.length > 0 && { providerId: { in: providers } }),
-        ...(models && models.length > 0 && { modelId: { in: models } }),
+        ...(tier && { user_tier_at_request: tier }),
+        ...(providers && providers.length > 0 && { provider_id: { in: providers } }),
+        ...(models && models.length > 0 && { model_id: { in: models } }),
       };
 
       // Current period aggregation
-      const currentPeriod = await this.prisma.tokenUsageLedger.aggregate({
+      const currentPeriod = await this.prisma.token_usage_ledger.aggregate({
         where: whereClause,
         _sum: {
-          grossMarginUsd: true,
-          creditsDeducted: true,
+          gross_margin_usd: true,
+          credits_deducted: true,
         },
         _count: true,
       });
 
-      // Tier breakdown (group by userTierAtRequest)
-      const tierBreakdown = await this.prisma.tokenUsageLedger.groupBy({
-        by: ['userTierAtRequest'],
+      // Tier breakdown (group by user_tier_at_request)
+      const tierBreakdown = await this.prisma.token_usage_ledger.groupBy({
+        by: ['user_tier_at_request'],
         where: whereClause,
         _sum: {
-          grossMarginUsd: true,
-          creditsDeducted: true,
+          gross_margin_usd: true,
+          credits_deducted: true,
         },
       });
 
@@ -173,26 +173,26 @@ export class AnalyticsService {
       previousStart.setDate(previousStart.getDate() - periodDays);
       const previousEnd = new Date(startDate);
 
-      const previousPeriod = await this.prisma.tokenUsageLedger.aggregate({
+      const previousPeriod = await this.prisma.token_usage_ledger.aggregate({
         where: {
-          createdAt: { gte: previousStart, lte: previousEnd },
+          created_at: { gte: previousStart, lte: previousEnd },
           status: 'success',
         },
-        _sum: { grossMarginUsd: true },
+        _sum: { gross_margin_usd: true },
       });
 
       // Calculate metrics
-      const totalGrossMargin = Number(currentPeriod._sum.grossMarginUsd || 0);
-      const totalRevenue = Number(currentPeriod._sum.creditsDeducted || 0) * 0.01; // Credits to USD
+      const totalGrossMargin = Number(currentPeriod._sum.gross_margin_usd || 0);
+      const totalRevenue = Number(currentPeriod._sum.credits_deducted || 0) * 0.01; // Credits to USD
       const requestCount = currentPeriod._count;
-      const previousMargin = Number(previousPeriod._sum.grossMarginUsd || 0);
+      const previousMargin = Number(previousPeriod._sum.gross_margin_usd || 0);
 
       // Build tier breakdown response
       const tierMap = tierBreakdown.map((item) => ({
-        tier: item.userTierAtRequest || 'unknown',
-        grossMargin: Number(item._sum.grossMarginUsd || 0),
-        revenue: Number(item._sum.creditsDeducted || 0) * 0.01,
-        percentage: totalGrossMargin > 0 ? (Number(item._sum.grossMarginUsd || 0) / totalGrossMargin) * 100 : 0,
+        tier: item.user_tier_at_request || 'unknown',
+        grossMargin: Number(item._sum.gross_margin_usd || 0),
+        revenue: Number(item._sum.credits_deducted || 0) * 0.01,
+        percentage: totalGrossMargin > 0 ? (Number(item._sum.gross_margin_usd || 0) / totalGrossMargin) * 100 : 0,
       }));
 
       const result: GrossMarginKPIData = {
@@ -236,42 +236,42 @@ export class AnalyticsService {
       });
 
       const whereClause: Prisma.TokenUsageLedgerWhereInput = {
-        createdAt: { gte: startDate, lte: endDate },
+        created_at: { gte: startDate, lte: endDate },
         status: 'success',
-        ...(tier && { userTierAtRequest: tier }),
-        ...(models && models.length > 0 && { modelId: { in: models } }),
+        ...(tier && { user_tier_at_request: tier }),
+        ...(models && models.length > 0 && { model_id: { in: models } }),
       };
 
       // Group by provider
-      const providerCosts = await this.prisma.tokenUsageLedger.groupBy({
-        by: ['providerId'],
+      const providerCosts = await this.prisma.token_usage_ledger.groupBy({
+        by: ['provider_id'],
         where: whereClause,
-        _sum: { vendorCost: true },
+        _sum: { vendor_cost: true },
         _count: true,
-        orderBy: { _sum: { vendorCost: 'desc' } },
+        orderBy: { _sum: { vendor_cost: 'desc' } },
         take: 5,
       });
 
       // Get provider names
-      const providerIds = providerCosts.map((p) => p.providerId);
-      const providers = await this.prisma.provider.findMany({
-        where: { id: { in: providerIds } },
+      const provider_ids = providerCosts.map((p) => p.provider_id);
+      const providers = await this.prisma.providers.findMany({
+        where: { id: { in: provider_ids } },
         select: { id: true, name: true },
       });
 
       const providerMap = new Map(providers.map((p) => [p.id, p.name]));
 
-      const totalCost = providerCosts.reduce((sum, p) => sum + Number(p._sum.vendorCost || 0), 0);
+      const totalCost = providerCosts.reduce((sum, p) => sum + Number(p._sum.vendor_cost || 0), 0);
       const totalRequests = providerCosts.reduce((sum, p) => sum + p._count, 0);
 
       const result: ProviderCostData = {
         providers: providerCosts.map((p) => ({
-          providerId: p.providerId,
-          providerName: providerMap.get(p.providerId) || 'Unknown',
-          totalCost: Number(p._sum.vendorCost || 0),
+          provider_id: p.provider_id,
+          providerName: providerMap.get(p.provider_id) || 'Unknown',
+          totalCost: Number(p._sum.vendor_cost || 0),
           requestCount: p._count,
-          avgCostPerRequest: p._count > 0 ? Number(p._sum.vendorCost || 0) / p._count : 0,
-          percentage: totalCost > 0 ? (Number(p._sum.vendorCost || 0) / totalCost) * 100 : 0,
+          avgCostPerRequest: p._count > 0 ? Number(p._sum.vendor_cost || 0) / p._count : 0,
+          percentage: totalCost > 0 ? (Number(p._sum.vendor_cost || 0) / totalCost) * 100 : 0,
         })),
         totalCost,
         totalRequests,
@@ -397,19 +397,19 @@ export class AnalyticsService {
       });
 
       const whereClause: Prisma.TokenUsageLedgerWhereInput = {
-        createdAt: { gte: startDate, lte: endDate },
+        created_at: { gte: startDate, lte: endDate },
         status: 'success',
-        ...(tier && { userTierAtRequest: tier }),
-        ...(providers && providers.length > 0 && { providerId: { in: providers } }),
+        ...(tier && { user_tier_at_request: tier }),
+        ...(providers && providers.length > 0 && { provider_id: { in: providers } }),
       };
 
       // Get all costs for statistics
-      const costs = await this.prisma.tokenUsageLedger.findMany({
+      const costs = await this.prisma.token_usage_ledger.findMany({
         where: whereClause,
-        select: { vendorCost: true, requestId: true, createdAt: true, modelId: true },
+        select: { vendor_cost: true, request_id: true, created_at: true, model_id: true },
       });
 
-      const costValues = costs.map((c) => Number(c.vendorCost));
+      const costValues = costs.map((c) => Number(c.vendor_cost));
       const mean = costValues.length > 0 ? costValues.reduce((sum, c) => sum + c, 0) / costValues.length : 0;
       const variance = costValues.length > 0 ? costValues.reduce((sum, c) => sum + Math.pow(c - mean, 2), 0) / costValues.length : 0;
       const stdDev = Math.sqrt(variance);
@@ -425,7 +425,7 @@ export class AnalyticsService {
 
       // Populate buckets
       costs.forEach((cost) => {
-        const value = Number(cost.vendorCost);
+        const value = Number(cost.vendor_cost);
         const bucket = buckets.find((b) => value >= b.rangeMin && value < b.rangeMax);
         if (bucket) {
           bucket.requestCount++;
@@ -440,13 +440,13 @@ export class AnalyticsService {
 
       // Identify anomalies (>3 std dev)
       const anomalies = costs
-        .filter((c) => Math.abs(Number(c.vendorCost) - mean) > 3 * stdDev)
+        .filter((c) => Math.abs(Number(c.vendor_cost) - mean) > 3 * stdDev)
         .map((c) => ({
-          requestId: c.requestId,
-          cost: Number(c.vendorCost),
-          timestamp: c.createdAt.toISOString(),
-          model: c.modelId,
-          stdDeviation: Math.abs(Number(c.vendorCost) - mean) / stdDev,
+          request_id: c.request_id,
+          cost: Number(c.vendor_cost),
+          timestamp: c.created_at.toISOString(),
+          model: c.model_id,
+          stdDeviation: Math.abs(Number(c.vendor_cost) - mean) / stdDev,
         }));
 
       // Calculate percentiles
@@ -496,11 +496,11 @@ export class AnalyticsService {
       });
 
       const whereClause: Prisma.TokenUsageLedgerWhereInput = {
-        createdAt: { gte: startDate, lte: endDate },
+        created_at: { gte: startDate, lte: endDate },
         status: 'success',
-        ...(tier && { userTierAtRequest: tier }),
-        ...(providers && providers.length > 0 && { providerId: { in: providers } }),
-        ...(models && models.length > 0 && { modelId: { in: models } }),
+        ...(tier && { user_tier_at_request: tier }),
+        ...(providers && providers.length > 0 && { provider_id: { in: providers } }),
+        ...(models && models.length > 0 && { model_id: { in: models } }),
       };
 
       const batchSize = 1000;
@@ -528,7 +528,7 @@ export class AnalyticsService {
               include: { provider: { select: { name: true } } },
               skip: offset,
               take: batchSize,
-              orderBy: { createdAt: 'asc' },
+              orderBy: { created_at: 'asc' },
             });
 
             if (batch.length === 0) {
@@ -549,20 +549,20 @@ export class AnalyticsService {
             }>();
 
             batch.forEach((row) => {
-              const date = row.createdAt.toISOString().split('T')[0];
-              const key = `${date}-${row.userTierAtRequest}-${row.provider.name}-${row.modelId}`;
+              const date = row.created_at.toISOString().split('T')[0];
+              const key = `${date}-${row.user_tier_at_request}-${row.provider.name}-${row.model_id}`;
               const existing = grouped.get(key) || {
                 date,
-                tier: row.userTierAtRequest || 'unknown',
+                tier: row.user_tier_at_request || 'unknown',
                 provider: row.provider.name,
-                model: row.modelId,
+                model: row.model_id,
                 requestCount: 0,
                 totalCost: 0,
                 grossMargin: 0,
               };
               existing.requestCount++;
-              existing.totalCost += Number(row.vendorCost);
-              existing.grossMargin += Number(row.grossMarginUsd);
+              existing.totalCost += Number(row.vendor_cost);
+              existing.grossMargin += Number(row.gross_margin_usd);
               grouped.set(key, existing);
             });
 

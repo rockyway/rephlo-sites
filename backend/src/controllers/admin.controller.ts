@@ -94,7 +94,7 @@ export class AdminController {
       }
 
       // Aggregate download counts by OS
-      const downloadsByOS = await this.prisma.download.groupBy({
+      const downloadsByOS = await this.prisma.downloads.groupBy({
         by: ['os'],
         _count: {
           id: true,
@@ -119,8 +119,8 @@ export class AdminController {
       };
 
       // Get feedback counts
-      const totalFeedback = await this.prisma.feedback.count();
-      const recentFeedbackCount = await this.prisma.feedback.count({
+      const totalFeedback = await this.prisma.feedbacks.count();
+      const recentFeedbackCount = await this.prisma.feedbacks.count({
         where: {
           timestamp: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
@@ -129,7 +129,7 @@ export class AdminController {
       });
 
       // Get diagnostic statistics
-      const diagnosticStats = await this.prisma.diagnostic.aggregate({
+      const diagnosticStats = await this.prisma.diagnostics.aggregate({
         _count: {
           id: true,
         },
@@ -139,7 +139,7 @@ export class AdminController {
       });
 
       // Get timestamp ranges for downloads
-      const firstDownload = await this.prisma.download.findFirst({
+      const firstDownload = await this.prisma.downloads.findFirst({
         orderBy: {
           timestamp: 'asc',
         },
@@ -148,7 +148,7 @@ export class AdminController {
         },
       });
 
-      const lastDownload = await this.prisma.download.findFirst({
+      const lastDownload = await this.prisma.downloads.findFirst({
         orderBy: {
           timestamp: 'desc',
         },
@@ -249,23 +249,23 @@ export class AdminController {
       }
 
       // Get total count for pagination
-      const total = await this.prisma.user.count({ where });
+      const total = await this.prisma.users.count({ where });
 
       // Get users with pagination
-      const users = await this.prisma.user.findMany({
+      const users = await this.prisma.users.findMany({
         where,
         skip,
         take: limit,
         select: {
           id: true,
           email: true,
-          emailVerified: true,
+          email_verified: true,
           username: true,
-          firstName: true,
-          lastName: true,
-          createdAt: true,
-          lastLoginAt: true,
-          credit_balance: true,
+          first_name: true,
+          last_name: true,
+          created_at: true,
+          last_login_at: true,
+          user_credit_balance: true,
           subscriptions: {
             where: {
               status: 'active',
@@ -273,17 +273,17 @@ export class AdminController {
             select: {
               tier: true,
               status: true,
-              currentPeriodStart: true,
-              currentPeriodEnd: true,
+              current_period_start: true,
+              current_period_end: true,
             },
             take: 1,
             orderBy: {
-              currentPeriodStart: 'desc',
+              current_period_start: 'desc',
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
       });
 
@@ -301,19 +301,19 @@ export class AdminController {
           return {
             id: user.id,
             email: user.email,
-            emailVerified: user.emailVerified,
+            emailVerified: user.email_verified,
             username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            createdAt: user.createdAt.toISOString(),
-            lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
-            creditsBalance: user.credit_balance?.amount || 0,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            createdAt: user.created_at.toISOString(),
+            lastLoginAt: user.last_login_at ? user.last_login_at.toISOString() : null,
+            creditsBalance: user.user_credit_balance?.amount || 0,
             subscription: activeSubscription
               ? {
                   tier: activeSubscription.tier,
                   status: activeSubscription.status,
-                  currentPeriodStart: activeSubscription.currentPeriodStart.toISOString(),
-                  currentPeriodEnd: activeSubscription.currentPeriodEnd.toISOString(),
+                  currentPeriodStart: activeSubscription.current_period_start.toISOString(),
+                  currentPeriodEnd: activeSubscription.current_period_end.toISOString(),
                 }
               : null,
           };
@@ -369,7 +369,7 @@ export class AdminController {
       const { reason } = req.body;
 
       // Check if user exists
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id },
         select: { id: true, email: true },
       });
@@ -437,7 +437,7 @@ export class AdminController {
   async getSubscriptionOverview(_req: Request, res: Response): Promise<void> {
     try {
       // Get subscription counts grouped by tier and status
-      const stats = await this.prisma.subscription.groupBy({
+      const stats = await this.prisma.subscriptions.groupBy({
         by: ['tier', 'status'],
         _count: {
           id: true,
@@ -571,65 +571,65 @@ export class AdminController {
       // Build where clause for date filtering
       const where: any = {};
       if (startDate || endDate) {
-        where.createdAt = {};
-        if (startDate) where.createdAt.gte = startDate;
-        if (endDate) where.createdAt.lte = endDate;
+        where.created_at = {};
+        if (startDate) where.created_at.gte = startDate;
+        if (endDate) where.created_at.lte = endDate;
       }
 
       // Get total operations and credits used
-      const aggregates = await this.prisma.usageHistory.aggregate({
+      const aggregates = await this.prisma.token_usage_ledger.aggregate({
         where,
         _count: {
           id: true,
         },
         _sum: {
-          creditsUsed: true,
+          credits_deducted: true,
         },
       });
 
       // Get usage grouped by model
-      const byModel = await this.prisma.usageHistory.groupBy({
-        by: ['modelId'],
+      const byModel = await this.prisma.token_usage_ledger.groupBy({
+        by: ['model_id'],
         where,
         _count: {
           id: true,
         },
         _sum: {
-          creditsUsed: true,
+          credits_deducted: true,
         },
       });
 
-      // Get usage grouped by operation type
-      const byOperation = await this.prisma.usageHistory.groupBy({
-        by: ['operation'],
+      // Get usage grouped by operation type (request_type)
+      const byOperation = await this.prisma.token_usage_ledger.groupBy({
+        by: ['request_type'],
         where,
         _count: {
           id: true,
         },
         _sum: {
-          creditsUsed: true,
+          credits_deducted: true,
         },
       });
 
       logger.info('AdminController.getSystemUsage: Usage stats retrieved', {
         totalOperations: aggregates._count.id,
-        totalCreditsUsed: aggregates._sum.creditsUsed,
+        totalCreditsUsed: aggregates._sum.credits_deducted,
         startDate: startDate?.toISOString(),
         endDate: endDate?.toISOString(),
       });
 
       res.json(successResponse({
         totalOperations: aggregates._count.id || 0,
-        totalCreditsUsed: aggregates._sum.creditsUsed || 0,
+        totalCreditsUsed: aggregates._sum.credits_deducted || 0,
         byModel: byModel.map((m: any) => ({
-          modelId: m.modelId,
+          modelId: m.model_id,
           operations: m._count.id,
-          creditsUsed: m._sum.creditsUsed || 0,
+          creditsUsed: m._sum.credits_deducted || 0,
         })),
         byOperation: byOperation.map((o: any) => ({
-          operationType: o.operation,
+          operationType: o.request_type,
           operations: o._count.id,
-          creditsUsed: o._sum.creditsUsed || 0,
+          creditsUsed: o._sum.credits_deducted || 0,
         })),
         dateRange: {
           startDate: startDate?.toISOString() || null,

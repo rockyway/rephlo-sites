@@ -52,12 +52,12 @@ describe('RoleCacheService', () => {
 
       expect(role).toBe('admin');
       expect(mockRedis.get).toHaveBeenCalledWith(`user:${userId}:role`);
-      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockprisma.users.findUnique).not.toHaveBeenCalled();
     });
 
     it('should query database and cache result on cache miss', async () => {
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'user',
       } as any);
@@ -66,7 +66,7 @@ describe('RoleCacheService', () => {
 
       expect(role).toBe('user');
       expect(mockRedis.get).toHaveBeenCalledWith(`user:${userId}:role`);
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      expect(mockprisma.users.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
         select: { role: true },
       });
@@ -79,7 +79,7 @@ describe('RoleCacheService', () => {
 
     it('should throw error when user not found', async () => {
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockprisma.users.findUnique.mockResolvedValue(null);
 
       await expect(roleCacheService.getUserRole(userId)).rejects.toThrow(
         'User not found'
@@ -88,7 +88,7 @@ describe('RoleCacheService', () => {
 
     it('should fall back to database when Redis is unavailable', async () => {
       mockRedis.get.mockRejectedValue(new Error('Redis connection failed'));
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'admin',
       } as any);
@@ -96,7 +96,7 @@ describe('RoleCacheService', () => {
       const role = await roleCacheService.getUserRole(userId);
 
       expect(role).toBe('admin');
-      expect(mockPrisma.user.findUnique).toHaveBeenCalled();
+      expect(mockprisma.users.findUnique).toHaveBeenCalled();
     });
   });
 
@@ -113,12 +113,12 @@ describe('RoleCacheService', () => {
       expect(mockRedis.get).toHaveBeenCalledWith(
         `user:${userId}:role_status`
       );
-      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockprisma.users.findUnique).not.toHaveBeenCalled();
     });
 
     it('should query database and cache result on cache miss', async () => {
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'user',
         isActive: true,
@@ -127,7 +127,7 @@ describe('RoleCacheService', () => {
       const result = await roleCacheService.getUserRoleAndStatus(userId);
 
       expect(result).toEqual({ role: 'user', isActive: true });
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      expect(mockprisma.users.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
         select: { role: true, isActive: true },
       });
@@ -140,7 +140,7 @@ describe('RoleCacheService', () => {
 
     it('should handle inactive users correctly', async () => {
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'admin',
         isActive: false,
@@ -216,7 +216,7 @@ describe('RoleCacheService', () => {
     it('should use 5-minute TTL for role caching', async () => {
       const userId = '123e4567-e89b-12d3-a456-426614174000';
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'admin',
       } as any);
@@ -236,7 +236,7 @@ describe('RoleCacheService', () => {
 
     it('should handle malformed cached data gracefully', async () => {
       mockRedis.get.mockResolvedValue('invalid-json');
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'user',
         isActive: true,
@@ -250,7 +250,7 @@ describe('RoleCacheService', () => {
 
     it('should propagate user not found error from database', async () => {
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockprisma.users.findUnique.mockResolvedValue(null);
 
       await expect(roleCacheService.getUserRole(userId)).rejects.toThrow(
         'User not found'
@@ -259,7 +259,7 @@ describe('RoleCacheService', () => {
 
     it('should handle database errors gracefully after Redis failure', async () => {
       mockRedis.get.mockRejectedValue(new Error('Redis down'));
-      mockPrisma.user.findUnique.mockRejectedValue(new Error('DB error'));
+      mockprisma.users.findUnique.mockRejectedValue(new Error('DB error'));
 
       await expect(roleCacheService.getUserRole(userId)).rejects.toThrow(
         'DB error'

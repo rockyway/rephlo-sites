@@ -51,12 +51,12 @@ describe('Complete Admin Flow - All Phases Integration', () => {
   beforeAll(async () => {
     // Clean up test data
     await redis.flushdb();
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'admin-flow-test' } },
     });
 
     // Create admin user for testing
-    adminUser = await prisma.user.create({
+    adminUser = await prisma.users.create({
       data: {
         email: 'admin-flow-test@example.com',
         passwordHash: '$2b$12$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', // hashed 'password'
@@ -69,7 +69,7 @@ describe('Complete Admin Flow - All Phases Integration', () => {
 
   afterAll(async () => {
     // Clean up
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'admin-flow-test' } },
     });
     await redis.flushdb();
@@ -140,7 +140,7 @@ describe('Complete Admin Flow - All Phases Integration', () => {
       expect(verifyResponse.body.message).toContain('MFA enabled successfully');
 
       // Verify MFA is enabled in database
-      const updatedUser = await prisma.user.findUnique({
+      const updatedUser = await prisma.users.findUnique({
         where: { id: adminUser.id },
         select: { mfaEnabled: true, mfaSecret: true },
       });
@@ -414,7 +414,7 @@ describe('Complete Admin Flow - All Phases Integration', () => {
   describe('Scenario C: Concurrent Session Limits (Phase 5)', () => {
     it('Should enforce max 3 concurrent sessions for admin', async () => {
       // Change user back to admin
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: adminUser.id },
         data: { role: 'admin' },
       });
@@ -534,7 +534,7 @@ describe('Multi-Phase Integration Scenarios', () => {
   let testToken: string;
 
   beforeAll(async () => {
-    testUser = await prisma.user.create({
+    testUser = await prisma.users.create({
       data: {
         email: 'multi-phase-test@example.com',
         passwordHash: '$2b$12$test',
@@ -545,7 +545,7 @@ describe('Multi-Phase Integration Scenarios', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: 'multi-phase-test@example.com' },
     });
   });
@@ -553,7 +553,7 @@ describe('Multi-Phase Integration Scenarios', () => {
   describe('Phase 1 + Phase 2: Role Caching + Admin Scope', () => {
     it('Should extract role from JWT and cache it', async () => {
       // Update user to admin
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUser.id },
         data: { role: 'admin' },
       });
@@ -621,7 +621,7 @@ describe('Multi-Phase Integration Scenarios', () => {
       const { secret, backupCodes } = await mfaService.generateMFASecret(testUser.id);
       const hashedCodes = await mfaService.hashBackupCodes(backupCodes);
 
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUser.id },
         data: {
           mfaEnabled: true,

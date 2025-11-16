@@ -120,12 +120,12 @@ export class ModelService implements IModelService {
     const where: any = {};
 
     if (filters?.available !== undefined) {
-      where.isAvailable = filters.available;
+      where.is_available = filters.available;
     }
 
     // Exclude archived models by default (unless admin explicitly includes them)
     if (!filters?.includeArchived) {
-      where.isArchived = false;
+      where.is_archived = false;
     }
 
     // TODO: Capability filtering requires querying meta JSONB field
@@ -143,15 +143,15 @@ export class ModelService implements IModelService {
       userTier,
     });
 
-    const models = await this.prisma.model.findMany({
+    const models = await this.prisma.models.findMany({
       where,
       select: {
         id: true,
         provider: true,
-        isAvailable: true,
+        is_available: true,
         meta: true,
       },
-      orderBy: [{ isAvailable: 'desc' }, { name: 'asc' }],
+      orderBy: [{ is_available: 'desc' }, { name: 'asc' }],
     });
 
     logger.debug('ModelService.listModels: Query returned', {
@@ -199,7 +199,7 @@ export class ModelService implements IModelService {
           context_length: meta?.contextLength ?? 0,
           max_output_tokens: meta?.maxOutputTokens ?? 0,
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
-          is_available: model.isAvailable,
+          is_available: model.is_available,
           version: meta?.version ?? '',
           // Tier access fields from meta JSONB
           required_tier: meta?.requiredTier ?? 'free',
@@ -245,7 +245,7 @@ export class ModelService implements IModelService {
       return cached;
     }
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
@@ -299,7 +299,7 @@ export class ModelService implements IModelService {
       input_cost_per_million_tokens: meta?.inputCostPerMillionTokens ?? 0,
       output_cost_per_million_tokens: meta?.outputCostPerMillionTokens ?? 0,
       credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
-      is_available: model.isAvailable,
+      is_available: model.is_available,
       is_deprecated: model.isLegacy, // Use isLegacy instead of deprecated isDeprecated
       version: meta?.version ?? '',
       created_at: model.createdAt.toISOString(),
@@ -340,7 +340,7 @@ export class ModelService implements IModelService {
       userTier,
     });
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         meta: true,
@@ -381,7 +381,7 @@ export class ModelService implements IModelService {
   async isModelAvailable(modelId: string): Promise<boolean> {
     logger.debug('ModelService: Checking model availability', { modelId });
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         isAvailable: true,
@@ -391,7 +391,7 @@ export class ModelService implements IModelService {
     });
 
     // Available if exists, isAvailable is true, and not archived
-    const isAvailable = model !== null && model.isAvailable && !model.isArchived;
+    const isAvailable = model !== null && model.is_available && !model.is_archived;
 
     logger.debug('ModelService: Model availability check', {
       modelId,
@@ -416,7 +416,7 @@ export class ModelService implements IModelService {
   } | null> {
     logger.debug('ModelService: Getting model for inference', { modelId });
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
@@ -429,12 +429,12 @@ export class ModelService implements IModelService {
     });
 
     // Reject if model is not available or archived
-    if (!model || !model.isAvailable || model.isArchived) {
+    if (!model || !model.is_available || model.is_archived) {
       logger.warn('ModelService: Model not available for inference', {
         modelId,
         reason: !model
           ? 'not_found'
-          : model.isArchived
+          : model.is_archived
           ? 'archived'
           : 'unavailable',
       });
@@ -447,7 +447,7 @@ export class ModelService implements IModelService {
       id: model.id,
       provider: model.provider,
       creditsPer1kTokens: meta?.creditsPer1kTokens ?? 0,
-      isAvailable: model.isAvailable,
+      isAvailable: model.is_available,
     };
   }
 
@@ -476,7 +476,7 @@ export class ModelService implements IModelService {
       await this.listModels({ available: true });
 
       // Pre-load individual model details for available models
-      const models = await this.prisma.model.findMany({
+      const models = await this.prisma.models.findMany({
         where: { isAvailable: true },
         select: { id: true },
       });
@@ -583,7 +583,7 @@ export class ModelService implements IModelService {
     }
 
     // Check if model already exists
-    const existing = await this.prisma.model.findUnique({
+    const existing = await this.prisma.models.findUnique({
       where: { id: data.id },
     });
 
@@ -593,7 +593,7 @@ export class ModelService implements IModelService {
 
     // Create model in database
     // Tier fields stored ONLY in meta JSONB (not in root columns)
-    const model = await this.prisma.model.create({
+    const model = await this.prisma.models.create({
       data: {
         id: data.id,
         name: data.name,
@@ -639,7 +639,7 @@ export class ModelService implements IModelService {
     });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: { meta: true },
     });
@@ -650,7 +650,7 @@ export class ModelService implements IModelService {
 
     // Validate replacement model if provided
     if (options.replacementModelId) {
-      const replacement = await this.prisma.model.findUnique({
+      const replacement = await this.prisma.models.findUnique({
         where: { id: options.replacementModelId },
       });
       if (!replacement) {
@@ -670,7 +670,7 @@ export class ModelService implements IModelService {
     };
 
     // Persist to database
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
         isLegacy: true,
@@ -699,7 +699,7 @@ export class ModelService implements IModelService {
     });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: { meta: true },
     });
@@ -725,7 +725,7 @@ export class ModelService implements IModelService {
     });
 
     // Persist to database
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
         isLegacy: false,
@@ -751,7 +751,7 @@ export class ModelService implements IModelService {
     logger.info('ModelService: Archiving model', { modelId, adminUserId });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
     });
 
@@ -760,7 +760,7 @@ export class ModelService implements IModelService {
     }
 
     // Archive model
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
         isArchived: true,
@@ -786,7 +786,7 @@ export class ModelService implements IModelService {
     logger.info('ModelService: Unarchiving model', { modelId, adminUserId });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
     });
 
@@ -795,7 +795,7 @@ export class ModelService implements IModelService {
     }
 
     // Unarchive model
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
         isArchived: false,
@@ -830,7 +830,7 @@ export class ModelService implements IModelService {
     });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: { meta: true },
     });
@@ -851,7 +851,7 @@ export class ModelService implements IModelService {
 
     // Update database
     // Tier fields stored ONLY in meta JSONB (not synced to root columns)
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
         meta: validatedMeta as any,
@@ -873,7 +873,7 @@ export class ModelService implements IModelService {
   async getLegacyModels(): Promise<ModelListResponse> {
     logger.debug('ModelService: Getting legacy models');
 
-    const models = await this.prisma.model.findMany({
+    const models = await this.prisma.models.findMany({
       where: { isLegacy: true },
       select: {
         id: true,
@@ -899,9 +899,9 @@ export class ModelService implements IModelService {
           context_length: meta?.contextLength ?? 0,
           max_output_tokens: meta?.maxOutputTokens ?? 0,
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
-          is_available: model.isAvailable,
+          is_available: model.is_available,
           is_legacy: model.isLegacy,
-          is_archived: model.isArchived,
+          is_archived: model.is_archived,
           version: meta?.version ?? '',
           required_tier: meta?.requiredTier ?? 'free',
           tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as
@@ -925,7 +925,7 @@ export class ModelService implements IModelService {
   async getArchivedModels(): Promise<ModelListResponse> {
     logger.debug('ModelService: Getting archived models');
 
-    const models = await this.prisma.model.findMany({
+    const models = await this.prisma.models.findMany({
       where: { isArchived: true },
       select: {
         id: true,
@@ -951,9 +951,9 @@ export class ModelService implements IModelService {
           context_length: meta?.contextLength ?? 0,
           max_output_tokens: meta?.maxOutputTokens ?? 0,
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
-          is_available: model.isAvailable,
+          is_available: model.is_available,
           is_legacy: model.isLegacy,
-          is_archived: model.isArchived,
+          is_archived: model.is_archived,
           version: meta?.version ?? '',
           required_tier: meta?.requiredTier ?? 'free',
           tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as

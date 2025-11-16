@@ -64,25 +64,25 @@ export class CouponRedemptionService {
         const discount = validation.discount!;
 
         // Step 2: Record redemption in immutable ledger (GAP FIX #4)
-        const redemption = await tx.couponRedemption.create({
+        const redemption = await tx.coupon_redemption.create({
           data: {
-            couponId: couponId,
-            userId: userId,
-            subscriptionId: context.subscriptionId || null,
-            redemptionDate: new Date(),
-            discountAppliedUsd: new Prisma.Decimal(discount.discountAmount),
-            originalAmountUsd: new Prisma.Decimal(context.originalAmount),
-            finalAmountUsd: new Prisma.Decimal(discount.finalAmount),
-            redemptionStatus: 'success',
-            ipAddress: context.ipAddress || null,
-            userAgent: context.userAgent || null,
+            coupon_id: couponId,
+            user_id: userId,
+            subscription_id: context.subscriptionId || null,
+            redemption_date: new Date(),
+            discount_applied_usd: new Prisma.Decimal(discount.discountAmount),
+            original_amount_usd: new Prisma.Decimal(context.originalAmount),
+            final_amount_usd: new Prisma.Decimal(discount.finalAmount),
+            redemption_status: 'success',
+            ip_address: context.ipAddress || null,
+            user_agent: context.userAgent || null,
             // Proration fields
-            isProrationInvolved: context.isProrationInvolved || false,
-            prorationAmount: context.prorationAmount ? new Prisma.Decimal(context.prorationAmount) : null,
-            userTierBefore: context.tierBefore || null,
-            userTierAfter: context.tierAfter || null,
-            billingCycleBefore: context.billingCycleBefore || null,
-            billingCycleAfter: context.billingCycleAfter || null,
+            is_proration_involved: context.isProrationInvolved || false,
+            proration_amount: context.prorationAmount ? new Prisma.Decimal(context.prorationAmount) : null,
+            user_tier_before: context.tierBefore || null,
+            user_tier_after: context.tierAfter || null,
+            billing_cycle_before: context.billingCycleBefore || null,
+            billing_cycle_after: context.billingCycleAfter || null,
           },
         });
 
@@ -141,18 +141,18 @@ export class CouponRedemptionService {
   ): Promise<CouponRedemption> {
     logger.info('Recording coupon redemption', { couponId: coupon.id, userId });
 
-    return await this.prisma.couponRedemption.create({
+    return await this.prisma.coupon_redemption.create({
       data: {
-        couponId: coupon.id,
-        userId: userId,
-        subscriptionId: null, // Can be updated later
-        redemptionDate: new Date(),
-        discountAppliedUsd: new Prisma.Decimal(discount.discountAmount),
-        originalAmountUsd: new Prisma.Decimal(discount.originalAmount),
-        finalAmountUsd: new Prisma.Decimal(discount.finalAmount),
-        redemptionStatus: 'success',
-        ipAddress: metadata.ipAddress || null,
-        userAgent: metadata.userAgent || null,
+        coupon_id: coupon.id,
+        user_id: userId,
+        subscription_id: null, // Can be updated later
+        redemption_date: new Date(),
+        discount_applied_usd: new Prisma.Decimal(discount.discountAmount),
+        original_amount_usd: new Prisma.Decimal(discount.originalAmount),
+        final_amount_usd: new Prisma.Decimal(discount.finalAmount),
+        redemption_status: 'success',
+        ip_address: metadata.ipAddress || null,
+        user_agent: metadata.userAgent || null,
       },
     });
   }
@@ -171,38 +171,38 @@ export class CouponRedemptionService {
     const prismaClient = tx || this.prisma;
 
     // Get or create usage limits
-    let usageLimits = await prismaClient.couponUsageLimit.findUnique({
-      where: { couponId },
+    let usageLimits = await prismaClient.coupon_usage_limit.findUnique({
+      where: { coupon_id: couponId },
     });
 
     if (!usageLimits) {
-      usageLimits = await prismaClient.couponUsageLimit.create({
+      usageLimits = await prismaClient.coupon_usage_limit.create({
         data: {
-          couponId,
-          totalUses: 0,
-          uniqueUsers: 0,
-          totalDiscountAppliedUsd: 0,
+          coupon_id: couponId,
+          total_uses: 0,
+          unique_users: 0,
+          total_discount_applied_usd: 0,
         },
       });
     }
 
     // Check if this is a new user
-    const existingRedemptions = await prismaClient.couponRedemption.count({
-      where: { couponId, userId, redemptionStatus: 'success' },
+    const existingRedemptions = await prismaClient.coupon_redemption.count({
+      where: { coupon_id: couponId, user_id: userId, redemption_status: 'success' },
     });
 
     const isNewUser = existingRedemptions === 0;
 
     // Update counters
-    await prismaClient.couponUsageLimit.update({
-      where: { couponId },
+    await prismaClient.coupon_usage_limit.update({
+      where: { coupon_id: couponId },
       data: {
-        totalUses: { increment: 1 },
-        uniqueUsers: isNewUser ? { increment: 1 } : undefined,
-        totalDiscountAppliedUsd: {
+        total_uses: { increment: 1 },
+        unique_users: isNewUser ? { increment: 1 } : undefined,
+        total_discount_applied_usd: {
           increment: new Prisma.Decimal(discountAmount),
         },
-        lastUsedAt: new Date(),
+        last_used_at: new Date(),
       },
     });
   }
@@ -219,10 +219,10 @@ export class CouponRedemptionService {
 
     const prismaClient = tx || this.prisma;
 
-    await prismaClient.couponCampaign.update({
+    await prismaClient.coupon_campaign.update({
       where: { id: campaignId },
       data: {
-        totalSpentUsd: {
+        total_spent_usd: {
           increment: new Prisma.Decimal(discountApplied),
         },
       },
@@ -237,7 +237,7 @@ export class CouponRedemptionService {
 
     return await this.prisma.$transaction(async (tx) => {
       // Get redemption
-      const redemption = await tx.couponRedemption.findUnique({
+      const redemption = await tx.coupon_redemption.findUnique({
         where: { id: redemptionId },
       });
 
@@ -245,41 +245,41 @@ export class CouponRedemptionService {
         throw new Error('Redemption not found');
       }
 
-      if (redemption.redemptionStatus === 'reversed') {
+      if (redemption.redemption_status === 'reversed') {
         throw new Error('Redemption already reversed');
       }
 
       // Update redemption status
-      const updatedRedemption = await tx.couponRedemption.update({
+      const updatedRedemption = await tx.coupon_redemption.update({
         where: { id: redemptionId },
         data: {
-          redemptionStatus: 'reversed',
-          failureReason: reason,
+          redemption_status: 'reversed',
+          failure_reason: reason,
         },
       });
 
       // Decrement usage counters
-      await tx.couponUsageLimit.update({
-        where: { couponId: redemption.couponId },
+      await tx.coupon_usage_limit.update({
+        where: { coupon_id: redemption.coupon_id },
         data: {
-          totalUses: { decrement: 1 },
-          totalDiscountAppliedUsd: {
-            decrement: redemption.discountAppliedUsd,
+          total_uses: { decrement: 1 },
+          total_discount_applied_usd: {
+            decrement: redemption.discount_applied_usd,
           },
         },
       });
 
       // Revert campaign budget
       const coupon = await tx.coupon.findUnique({
-        where: { id: redemption.couponId },
+        where: { id: redemption.coupon_id },
       });
 
-      if (coupon?.campaignId) {
-        await tx.couponCampaign.update({
-          where: { id: coupon.campaignId },
+      if (coupon?.campaign_id) {
+        await tx.coupon_campaign.update({
+          where: { id: coupon.campaign_id },
           data: {
-            totalSpentUsd: {
-              decrement: redemption.discountAppliedUsd,
+            total_spent_usd: {
+              decrement: redemption.discount_applied_usd,
             },
           },
         });
@@ -312,7 +312,7 @@ export class CouponRedemptionService {
 
     // Update subscription with discount metadata
     // Note: Actual Stripe discount application happens in CheckoutIntegrationService
-    await prismaClient.subscriptionMonetization.update({
+    await prismaClient.subscription_monetization.update({
       where: { id: subscriptionId },
       data: {
         // Store coupon discount in subscription metadata if needed
@@ -334,10 +334,10 @@ export class CouponRedemptionService {
     const prismaClient = tx || this.prisma;
 
     // Update invoice with discount
-    await prismaClient.billingInvoice.update({
+    await prismaClient.billing_invoice.update({
       where: { id: invoiceId },
       data: {
-        amountDue: {
+        amount_due: {
           decrement: new Prisma.Decimal(discount.discountAmount),
         },
       },
@@ -358,13 +358,13 @@ export class CouponRedemptionService {
     const prismaClient = tx || this.prisma;
 
     // Create credit allocation
-    await prismaClient.creditAllocation.create({
+    await prismaClient.credit_allocation.create({
       data: {
-        userId: userId,
-        subscriptionId: null, // Not tied to subscription
+        user_id: userId,
+        subscription_id: null, // Not tied to subscription
         amount: amount,
-        allocationPeriodStart: new Date(),
-        allocationPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+        allocation_period_start: new Date(),
+        allocation_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
         source: 'coupon',
       },
     });
@@ -374,9 +374,9 @@ export class CouponRedemptionService {
    * Get user redemptions
    */
   async getUserRedemptions(userId: string): Promise<CouponRedemption[]> {
-    return await this.prisma.couponRedemption.findMany({
-      where: { userId },
-      orderBy: { redemptionDate: 'desc' },
+    return await this.prisma.coupon_redemption.findMany({
+      where: { user_id: userId },
+      orderBy: { redemption_date: 'desc' },
       include: {
         coupon: true,
       },
@@ -387,9 +387,9 @@ export class CouponRedemptionService {
    * Get coupon redemptions
    */
   async getCouponRedemptions(couponId: string): Promise<CouponRedemption[]> {
-    return await this.prisma.couponRedemption.findMany({
-      where: { couponId },
-      orderBy: { redemptionDate: 'desc' },
+    return await this.prisma.coupon_redemption.findMany({
+      where: { coupon_id: couponId },
+      orderBy: { redemption_date: 'desc' },
     });
   }
 
@@ -403,25 +403,25 @@ export class CouponRedemptionService {
     uniqueUsers: number;
     averageDiscountUsd: number;
   }> {
-    const stats = await this.prisma.couponRedemption.groupBy({
-      by: ['redemptionStatus'],
-      where: { couponId },
+    const stats = await this.prisma.coupon_redemption.groupBy({
+      by: ['redemption_status'],
+      where: { coupon_id: couponId },
       _count: true,
-      _sum: { discountAppliedUsd: true },
+      _sum: { discount_applied_usd: true },
     });
 
-    const usageLimits = await this.prisma.couponUsageLimit.findUnique({
-      where: { couponId },
+    const usageLimits = await this.prisma.coupon_usage_limit.findUnique({
+      where: { coupon_id: couponId },
     });
 
     const totalRedemptions = stats.reduce((sum, s) => sum + s._count, 0);
     const successfulRedemptions =
-      stats.find((s) => s.redemptionStatus === 'success')?._count || 0;
+      stats.find((s) => s.redemption_status === 'success')?._count || 0;
     const totalDiscountUsd =
       stats
-        .filter((s) => s.redemptionStatus === 'success')
-        .reduce((sum, s) => sum + parseFloat(s._sum.discountAppliedUsd?.toString() || '0'), 0) || 0;
-    const uniqueUsers = usageLimits?.uniqueUsers || 0;
+        .filter((s) => s.redemption_status === 'success')
+        .reduce((sum, s) => sum + parseFloat(s._sum.discount_applied_usd?.toString() || '0'), 0) || 0;
+    const uniqueUsers = usageLimits?.unique_users || 0;
     const averageDiscountUsd = successfulRedemptions > 0 ? totalDiscountUsd / successfulRedemptions : 0;
 
     return {

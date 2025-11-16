@@ -1,5 +1,5 @@
 import { IModelService } from '../../interfaces';
-import { SubscriptionTier } from '@prisma/client';
+import { subscription_tier } from '@prisma/client';
 import { TierAccessResult } from '../../utils/tier-access';
 
 export class MockModelService implements IModelService {
@@ -60,7 +60,7 @@ export class MockModelService implements IModelService {
       capability?: string[];
       provider?: string;
     },
-    userTier?: SubscriptionTier
+    userTier?: subscription_tier
   ): Promise<any> {
     let models = Array.from(this.models.values());
 
@@ -81,13 +81,13 @@ export class MockModelService implements IModelService {
     return { models, count: models.length, user_tier: userTier };
   }
 
-  async getModelDetails(modelId: string, _userTier?: SubscriptionTier): Promise<any> {
+  async getModelDetails(modelId: string, _userTier?: subscription_tier): Promise<any> {
     return this.models.get(modelId) || null;
   }
 
   async canUserAccessModel(
     _modelId: string,
-    _userTier: SubscriptionTier
+    _userTier: subscription_tier
   ): Promise<TierAccessResult> {
     // Mock implementation - always allow access in tests
     return {

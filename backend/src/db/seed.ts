@@ -165,7 +165,7 @@ async function seedOAuthClients() {
   for (const client of OAUTH_CLIENTS_CONFIG) {
     const clientSecretHash = await hashPassword(client.clientSecret);
 
-    const oauthClient = await prisma.oAuthClient.upsert({
+    const oauthClient = await prisma.oauth_clients.upsert({
       where: { clientId: client.clientId },
       update: {
         clientName: client.clientName,
@@ -230,7 +230,7 @@ async function seedUserPersonas() {
       ).toString('utf-8');
     }
 
-    const user = await prisma.user.upsert({
+    const user = await prisma.users.upsert({
       where: { email: persona.email },
       update: {
         firstName: persona.firstName,
@@ -311,11 +311,11 @@ async function seedSubscriptions(users: any[]) {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Delete existing subscription for this user to avoid conflicts
-    await prisma.subscription.deleteMany({
+    await prisma.subscriptions.deleteMany({
       where: { userId: user.userId },
     });
 
-    const subscription = await prisma.subscription.create({
+    const subscription = await prisma.subscriptions.create({
       data: {
         userId: user.userId,
         tier,
@@ -365,12 +365,12 @@ async function seedCredits(users: any[]) {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Delete existing credit for this user to start fresh
-    await prisma.credit.deleteMany({
+    await prisma.credits.deleteMany({
       where: { userId: user.userId },
     });
 
     // Create new credit allocation
-    const credit = await prisma.credit.create({
+    const credit = await prisma.credits.create({
       data: {
         userId: user.userId,
         totalCredits: monthlyAllocation,
@@ -416,35 +416,35 @@ async function main() {
 
   console.log('Creating download records...');
   const downloads = await Promise.all([
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
         os: 'windows',
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
         os: 'macos',
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
         os: 'linux',
         userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
         os: 'windows',
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
         ipHash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
         os: 'macos',
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
@@ -456,33 +456,33 @@ async function main() {
 
   console.log('Creating feedback entries...');
   const feedbacks = await Promise.all([
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
         userId: 'user_' + Math.random().toString(36).substring(7),
         message: 'Love the app! The AI rewriting feature is incredibly helpful for my daily writing tasks.',
         email: 'user1@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
         userId: 'user_' + Math.random().toString(36).substring(7),
         message: 'Great tool, but would love to see more customization options for the rewriting styles.',
         email: 'user2@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
         message: 'Anonymous feedback: The interface is clean and intuitive. Keep up the good work!',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
         userId: 'user_' + Math.random().toString(36).substring(7),
         message: 'Found a bug with the clipboard integration on Linux. Submitted diagnostic logs.',
         email: 'user3@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
         message: 'This has transformed my workflow! Thank you for creating such an amazing tool.',
         email: 'user4@example.com',
@@ -493,21 +493,21 @@ async function main() {
 
   console.log('Creating diagnostic records...');
   const diagnostics = await Promise.all([
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
         userId: 'user_' + Math.random().toString(36).substring(7),
         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
         fileSize: 15240, // ~15KB
       },
     }),
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
         userId: 'user_' + Math.random().toString(36).substring(7),
         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
         fileSize: 28900, // ~29KB
       },
     }),
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
         fileSize: 45120, // ~45KB
@@ -518,7 +518,7 @@ async function main() {
 
   console.log('Creating app version records...');
   const versions = await Promise.all([
-    prisma.appVersion.create({
+    prisma.app_versions.create({
       data: {
         version: '1.0.0',
         releaseDate: new Date('2025-10-01'),
@@ -540,7 +540,7 @@ Download and run the installer for your platform.`,
         isLatest: false, // Old version
       },
     }),
-    prisma.appVersion.create({
+    prisma.app_versions.create({
       data: {
         version: '1.1.0',
         releaseDate: new Date('2025-10-15'),
@@ -561,7 +561,7 @@ Download and run the installer for your platform.`,
         isLatest: false,
       },
     }),
-    prisma.appVersion.create({
+    prisma.app_versions.create({
       data: {
         version: '1.2.0',
         releaseDate: new Date('2025-11-01'),
@@ -748,7 +748,7 @@ Download and run the installer for your platform.`,
 
   for (const rbacUser of rbacUsers) {
     const passwordHash = await hashPassword(rbacUser.password);
-    const user = await prisma.user.upsert({
+    const user = await prisma.users.upsert({
       where: { email: rbacUser.email },
       update: {
         firstName: rbacUser.firstName,
@@ -772,7 +772,7 @@ Download and run the installer for your platform.`,
     // Find the corresponding role
     const role = roles.find((r) => r.name === rbacUser.roleName);
     if (role) {
-      const assignment = await prisma.userRoleAssignment.upsert({
+      const assignment = await prisma.user_role_assignment.upsert({
         where: {
           userId_roleId: {
             userId: user.id,
@@ -799,7 +799,7 @@ Download and run the installer for your platform.`,
   // Assign Super Admin role to existing admin
   const superAdminRole = roles.find((r) => r.name === 'super_admin');
   if (superAdminRole && users[2]) {
-    await prisma.userRoleAssignment.upsert({
+    await prisma.user_role_assignment.upsert({
       where: {
         userId_roleId: {
           userId: users[2].userId,
@@ -827,7 +827,7 @@ Download and run the installer for your platform.`,
   if (roles.length >= 3 && users.length >= 3) {
     const opsRole = roles.find((r) => r.name === 'ops');
     if (opsRole) {
-      const override = await prisma.permissionOverride.create({
+      const override = await prisma.permission_override.create({
         data: {
           userId: users[2].userId, // Using admin user for example
           permission: 'licenses.revoke',

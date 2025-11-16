@@ -191,7 +191,7 @@ export class SettingsService {
    */
   async getCategorySettings(category: SettingCategory): Promise<CategorySettings> {
     // Get from database
-    const settings = await this.prisma.appSetting.findMany({
+    const settings = await this.prisma.app_settings.findMany({
       where: { category },
     });
 
@@ -202,7 +202,7 @@ export class SettingsService {
       let value = setting.value;
 
       // Decrypt if needed
-      if (setting.isEncrypted && typeof value === 'string') {
+      if (setting.is_encrypted && typeof value === 'string') {
         value = this.decrypt(value);
       }
 
@@ -257,7 +257,7 @@ export class SettingsService {
       }
 
       // Upsert setting
-      await this.prisma.appSetting.upsert({
+      await this.prisma.app_settings.upsert({
         where: {
           category_key: {
             category,
@@ -268,11 +268,11 @@ export class SettingsService {
           category,
           key,
           value: processedValue,
-          isEncrypted: shouldEncrypt,
+          is_encrypted: shouldEncrypt,
         },
         update: {
           value: processedValue,
-          isEncrypted: shouldEncrypt,
+          is_encrypted: shouldEncrypt,
         },
       });
     }
@@ -421,7 +421,7 @@ export class SettingsService {
   async initializeDefaultSettings(): Promise<void> {
     for (const [category, settings] of Object.entries(DEFAULT_SETTINGS)) {
       for (const [key, value] of Object.entries(settings)) {
-        const existing = await this.prisma.appSetting.findUnique({
+        const existing = await this.prisma.app_settings.findUnique({
           where: {
             category_key: {
               category,
@@ -438,12 +438,12 @@ export class SettingsService {
             processedValue = this.encrypt(value);
           }
 
-          await this.prisma.appSetting.create({
+          await this.prisma.app_settings.create({
             data: {
               category,
               key,
               value: processedValue,
-              isEncrypted: shouldEncrypt,
+              is_encrypted: shouldEncrypt,
             },
           });
         }

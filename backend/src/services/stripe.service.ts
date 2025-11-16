@@ -483,12 +483,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, pris
 
   try {
     // Find and mark subscription as cancelled
-    const dbSubscription = await prisma.subscription.findFirst({
+    const dbSubscription = await prisma.subscriptions.findFirst({
       where: { stripeSubscriptionId: subscription.id },
     });
 
     if (dbSubscription) {
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: dbSubscription.id },
         data: {
           status: 'cancelled',
@@ -527,7 +527,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
     // Only allocate credits if this is a subscription invoice
     if (invoice.subscription && typeof invoice.subscription === 'string') {
       // Find subscription in database
-      const dbSubscription = await prisma.subscription.findFirst({
+      const dbSubscription = await prisma.subscriptions.findFirst({
         where: { stripeSubscriptionId: invoice.subscription },
       });
 
@@ -580,12 +580,12 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: Prism
   try {
     // Suspend subscription on payment failure
     if (invoice.subscription && typeof invoice.subscription === 'string') {
-      const dbSubscription = await prisma.subscription.findFirst({
+      const dbSubscription = await prisma.subscriptions.findFirst({
         where: { stripeSubscriptionId: invoice.subscription },
       });
 
       if (dbSubscription) {
-        await prisma.subscription.update({
+        await prisma.subscriptions.update({
           where: { id: dbSubscription.id },
           data: {
             status: 'suspended',

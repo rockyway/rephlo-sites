@@ -58,7 +58,7 @@ export function createMFARouter(): Router {
       logger.info('MFA Setup: Generating MFA secret', { userId });
 
       // Check if MFA is already enabled
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: { mfaEnabled: true },
       });
@@ -77,7 +77,7 @@ export function createMFARouter(): Router {
       const { secret, qrCode, backupCodes } = await mfaService.generateMFASecret(userId);
 
       // Store secret temporarily (MFA not yet enabled)
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: userId },
         data: { mfaSecret: secret },
       });
@@ -128,7 +128,7 @@ export function createMFARouter(): Router {
       logger.info('MFA Verify Setup: Verifying TOTP token', { userId });
 
       // Get user's MFA secret
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: { mfaSecret: true, mfaEnabled: true },
       });
@@ -177,7 +177,7 @@ export function createMFARouter(): Router {
       const hashedBackupCodes = await mfaService.hashBackupCodes(backupCodes);
 
       // Enable MFA and save backup codes (stored as JSON string)
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: userId },
         data: {
           mfaEnabled: true,
@@ -224,7 +224,7 @@ export function createMFARouter(): Router {
       logger.info('MFA Login: Verifying MFA token for login', { userId });
 
       // Get user's MFA configuration
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
           id: true,
@@ -318,7 +318,7 @@ export function createMFARouter(): Router {
       logger.info('MFA Disable: Disabling MFA', { userId });
 
       // Get user data
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
           passwordHash: true,
@@ -390,7 +390,7 @@ export function createMFARouter(): Router {
       }
 
       // Disable MFA and clear secrets
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: userId },
         data: {
           mfaEnabled: false,
@@ -438,7 +438,7 @@ export function createMFARouter(): Router {
       logger.info('MFA Backup Code Login: Attempting backup code login', { userId });
 
       // Get user's MFA configuration
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
           id: true,
@@ -519,7 +519,7 @@ export function createMFARouter(): Router {
       // Remove used backup code
       const updatedBackupCodes = backupCodeList.filter((_: string, index: number) => index !== matchIndex);
 
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: userId },
         data: {
           mfaBackupCodes: JSON.stringify(updatedBackupCodes),
@@ -562,7 +562,7 @@ export function createMFARouter(): Router {
 
       logger.debug('MFA Status: Getting MFA status', { userId });
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: {
           mfaEnabled: true,

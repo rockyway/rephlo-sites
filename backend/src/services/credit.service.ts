@@ -47,13 +47,13 @@ export class CreditService {
   async getCurrentCredits(userId: string): Promise<Credit | null> {
     logger.debug('CreditService: Getting current credits', { userId });
 
-    const credit = await this.prisma.credit.findFirst({
+    const credit = await this.prisma.credits.findFirst({
       where: {
-        userId,
-        isCurrent: true,
+        user_id: userId,
+        is_current: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
     });
 
@@ -64,17 +64,17 @@ export class CreditService {
 
     // Check if billing period has expired
     const now = new Date();
-    if (now > credit.billingPeriodEnd) {
+    if (now > credit.billing_period_end) {
       logger.info('CreditService: Billing period expired', {
         userId,
         creditId: credit.id,
-        billingPeriodEnd: credit.billingPeriodEnd,
+        billingPeriodEnd: credit.billing_period_end,
       });
 
       // Mark as not current (rollover will be handled by subscription service)
-      await this.prisma.credit.update({
+      await this.prisma.credits.update({
         where: { id: credit.id },
-        data: { isCurrent: false },
+        data: { is_current: false },
       });
 
       return null;
@@ -83,7 +83,7 @@ export class CreditService {
     logger.debug('CreditService: Current credits retrieved', {
       userId,
       creditId: credit.id,
-      remaining: credit.totalCredits - credit.usedCredits,
+      remaining: credit.total_credits - credit.used_credits,
     });
 
     return credit;
@@ -107,33 +107,33 @@ export class CreditService {
     // Use transaction to ensure atomicity
     const credit = await this.prisma.$transaction(async (tx) => {
       // Mark all existing current credits as not current
-      await tx.credit.updateMany({
+      await tx.credits.updateMany({
         where: {
-          userId: input.userId,
-          isCurrent: true,
+          user_id: input.userId,
+          is_current: true,
         },
         data: {
-          isCurrent: false,
+          is_current: false,
         },
       });
 
       // Create new credit record
-      const newCredit = await tx.credit.create({
+      const newCredit = await tx.credits.create({
         data: {
-          userId: input.userId,
-          subscriptionId: input.subscriptionId,
-          totalCredits: input.totalCredits,
-          usedCredits: 0,
-          billingPeriodStart: input.billingPeriodStart,
-          billingPeriodEnd: input.billingPeriodEnd,
-          isCurrent: true,
+          user_id: input.userId,
+          subscription_id: input.subscriptionId,
+          total_credits: input.totalCredits,
+          used_credits: 0,
+          billing_period_start: input.billingPeriodStart,
+          billing_period_end: input.billingPeriodEnd,
+          is_current: true,
         },
       });
 
       logger.info('CreditService: Credits allocated successfully', {
         userId: input.userId,
         creditId: newCredit.id,
-        totalCredits: newCredit.totalCredits,
+        totalCredits: newCredit.total_credits,
       });
 
       return newCredit;
@@ -168,7 +168,7 @@ export class CreditService {
       return false;
     }
 
-    const remainingCredits = credit.totalCredits - credit.usedCredits;
+    const remainingCredits = credit.total_credits - credit.used_credits;
     const hasCredits = remainingCredits >= requiredCredits;
 
     logger.debug('CreditService: Credit availability checked', {
@@ -201,13 +201,13 @@ export class CreditService {
     // Use transaction to ensure atomicity (prevent race conditions)
     const result = await this.prisma.$transaction(async (tx) => {
       // Get current credit record with row-level lock
-      const credit = await tx.credit.findFirst({
+      const credit = await tx.credits.findFirst({
         where: {
-          userId: input.userId,
-          isCurrent: true,
+          user_id: input.userId,
+          is_current: true,
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
       });
 
@@ -220,16 +220,16 @@ export class CreditService {
 
       // Check if billing period has expired
       const now = new Date();
-      if (now > credit.billingPeriodEnd) {
+      if (now > credit.billing_period_end) {
         logger.error('CreditService: Billing period expired during deduction', {
           userId: input.userId,
-          billingPeriodEnd: credit.billingPeriodEnd,
+          billingPeriodEnd: credit.billing_period_end,
         });
         throw new Error('Billing period has expired');
       }
 
       // Check sufficient credits
-      const remainingCredits = credit.totalCredits - credit.usedCredits;
+      const remainingCredits = credit.total_credits - credit.used_credits;
       if (remainingCredits < input.creditsToDeduct) {
         logger.error('CreditService: Insufficient credits', {
           userId: input.userId,
@@ -242,28 +242,28 @@ export class CreditService {
       }
 
       // Deduct credits atomically
-      const updatedCredit = await tx.credit.update({
+      const updatedCredit = await tx.credits.update({
         where: { id: credit.id },
         data: {
-          usedCredits: {
+          used_credits: {
             increment: input.creditsToDeduct,
           },
         },
       });
 
       // Record usage history
-      await tx.usageHistory.create({
+      await tx.usage_history.create({
         data: {
-          userId: input.userId,
-          creditId: credit.id,
-          modelId: input.modelId,
+          user_id: input.userId,
+          credit_id: credit.id,
+          model_id: input.modelId,
           operation: input.operation as UsageOperation,
-          creditsUsed: input.creditsToDeduct,
-          inputTokens: input.inputTokens,
-          outputTokens: input.outputTokens,
-          totalTokens: input.totalTokens,
-          requestDurationMs: input.requestDurationMs,
-          requestMetadata: input.requestMetadata,
+          credits_used: input.creditsToDeduct,
+          input_tokens: input.inputTokens,
+          output_tokens: input.outputTokens,
+          total_tokens: input.totalTokens,
+          request_duration_ms: input.requestDurationMs,
+          request_metadata: input.requestMetadata,
         },
       });
 
@@ -272,16 +272,16 @@ export class CreditService {
         creditId: credit.id,
         creditsDeducted: input.creditsToDeduct,
         remainingCredits:
-          updatedCredit.totalCredits - updatedCredit.usedCredits,
+          updatedCredit.total_credits - updatedCredit.used_credits,
       });
 
       return updatedCredit;
     });
 
     // Check if credits are depleted or low after deduction
-    const remainingCredits = result.totalCredits - result.usedCredits;
+    const remainingCredits = result.total_credits - result.used_credits;
     const thresholdPercentage = 10; // 10% threshold for low credits warning
-    const thresholdCredits = result.totalCredits * (thresholdPercentage / 100);
+    const thresholdCredits = result.total_credits * (thresholdPercentage / 100);
 
     try {
       // Trigger credits.depleted webhook if no credits remaining
@@ -289,7 +289,7 @@ export class CreditService {
         await this.webhookService.queueWebhook(input.userId, 'credits.depleted', {
           user_id: input.userId,
           remaining_credits: 0,
-          total_credits: result.totalCredits,
+          total_credits: result.total_credits,
         });
       }
       // Trigger credits.low webhook if below threshold (but not depleted)
@@ -297,7 +297,7 @@ export class CreditService {
         await this.webhookService.queueWebhook(input.userId, 'credits.low', {
           user_id: input.userId,
           remaining_credits: remainingCredits,
-          total_credits: result.totalCredits,
+          total_credits: result.total_credits,
           threshold_percentage: thresholdPercentage,
         });
       }
@@ -334,13 +334,13 @@ export class CreditService {
       billingPeriodEnd,
     });
 
-    const credit = await this.prisma.credit.findFirst({
+    const credit = await this.prisma.credits.findFirst({
       where: {
-        userId,
-        billingPeriodStart: {
+        user_id: userId,
+        billing_period_start: {
           gte: billingPeriodStart,
         },
-        billingPeriodEnd: {
+        billing_period_end: {
           lte: billingPeriodEnd,
         },
       },
@@ -360,9 +360,9 @@ export class CreditService {
   async getCreditHistory(userId: string, limit = 12): Promise<Credit[]> {
     logger.debug('CreditService: Getting credit history', { userId, limit });
 
-    const credits = await this.prisma.credit.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
+    const credits = await this.prisma.credits.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
       take: limit,
     });
 
@@ -377,7 +377,7 @@ export class CreditService {
    * @returns Remaining credits
    */
   calculateRemainingCredits(credit: Credit): number {
-    return credit.totalCredits - credit.usedCredits;
+    return credit.total_credits - credit.used_credits;
   }
 
   /**
@@ -388,8 +388,8 @@ export class CreditService {
    * @returns Usage percentage
    */
   calculateUsagePercentage(credit: Credit): number {
-    if (credit.totalCredits === 0) return 0;
-    return (credit.usedCredits / credit.totalCredits) * 100;
+    if (credit.total_credits === 0) return 0;
+    return (credit.used_credits / credit.total_credits) * 100;
   }
 
   /**
@@ -420,12 +420,12 @@ export class CreditService {
   async getFreeCreditsBreakdown(userId: string): Promise<any> {
     logger.debug('CreditService: Getting free credits breakdown', { userId });
 
-    // Query for current free credits (creditType='free', isCurrent=true)
-    const freeCredit = await this.prisma.credit.findFirst({
+    // Query for current free credits (credit_type='free', is_current=true)
+    const freeCredit = await this.prisma.credits.findFirst({
       where: {
-        userId,
-        creditType: 'free',
-        isCurrent: true,
+        user_id: userId,
+        credit_type: 'free',
+        is_current: true,
       },
     });
 
@@ -446,20 +446,20 @@ export class CreditService {
       };
     }
 
-    const remaining = freeCredit.totalCredits - freeCredit.usedCredits;
-    const resetDate = freeCredit.billingPeriodEnd;
+    const remaining = freeCredit.total_credits - freeCredit.used_credits;
+    const resetDate = freeCredit.billing_period_end;
 
     logger.debug('CreditService: Free credits breakdown retrieved', {
       userId,
       remaining,
-      monthlyAllocation: freeCredit.monthlyAllocation,
+      monthlyAllocation: freeCredit.monthly_allocation,
       daysUntilReset: this.calculateDaysUntilReset(resetDate),
     });
 
     return {
       remaining,
-      monthlyAllocation: freeCredit.monthlyAllocation,
-      used: freeCredit.usedCredits,
+      monthlyAllocation: freeCredit.monthly_allocation,
+      used: freeCredit.used_credits,
       resetDate,
       daysUntilReset: this.calculateDaysUntilReset(resetDate),
     };
@@ -475,11 +475,11 @@ export class CreditService {
   async getProCreditsBreakdown(userId: string): Promise<any> {
     logger.debug('CreditService: Getting pro credits breakdown', { userId });
 
-    // Query all pro credits (creditType='pro')
-    const proCredits = await this.prisma.credit.findMany({
+    // Query all pro credits (credit_type='pro')
+    const proCredits = await this.prisma.credits.findMany({
       where: {
-        userId,
-        creditType: 'pro',
+        user_id: userId,
+        credit_type: 'pro',
       },
     });
 
@@ -494,8 +494,8 @@ export class CreditService {
     }
 
     // Aggregate across all pro credit records
-    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.totalCredits, 0);
-    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.usedCredits, 0);
+    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.total_credits, 0);
+    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.used_credits, 0);
     const remaining = purchasedTotal - lifetimeUsed;
 
     logger.debug('CreditService: Pro credits breakdown retrieved', {

@@ -53,6 +53,7 @@
     "speakeasy": "^2.0.0",
     "stripe": "^14.25.0",
     "swagger-ui-express": "^5.0.1",
+    "tiktoken": "^1.0.22",
     "tsyringe": "^4.10.0",
     "winston": "^3.11.0",
     "yamljs": "^0.3.0",

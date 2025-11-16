@@ -40,7 +40,7 @@ describe('POST /oauth/token - Enhanced (Integration)', () => {
   async function seedTestData() {
     try {
       // Create test user
-      await prisma.user.upsert({
+      await prisma.users.upsert({
         where: { email: 'oauth-test@example.com' },
         update: {},
         create: {
@@ -55,7 +55,7 @@ describe('POST /oauth/token - Enhanced (Integration)', () => {
       });
 
       // Create test subscription
-      await prisma.subscription.upsert({
+      await prisma.subscriptions.upsert({
         where: { id: 'oauth-test-sub-1' },
         update: {},
         create: {
@@ -73,7 +73,7 @@ describe('POST /oauth/token - Enhanced (Integration)', () => {
       });
 
       // Create test credits (free)
-      await prisma.credit.upsert({
+      await prisma.credits.upsert({
         where: { id: 'oauth-test-credit-free-1' },
         update: {},
         create: {
@@ -92,7 +92,7 @@ describe('POST /oauth/token - Enhanced (Integration)', () => {
       });
 
       // Create test credits (pro)
-      await prisma.credit.upsert({
+      await prisma.credits.upsert({
         where: { id: 'oauth-test-credit-pro-1' },
         update: {},
         create: {
@@ -136,11 +136,11 @@ describe('POST /oauth/token - Enhanced (Integration)', () => {
    */
   async function cleanupTestData() {
     try {
-      await prisma.credit.deleteMany({
+      await prisma.credits.deleteMany({
         where: { userId: 'oauth-test-user-1' },
       });
 
-      await prisma.subscription.deleteMany({
+      await prisma.subscriptions.deleteMany({
         where: { userId: 'oauth-test-user-1' },
       });
 
@@ -148,7 +148,7 @@ describe('POST /oauth/token - Enhanced (Integration)', () => {
         where: { userId: 'oauth-test-user-1' },
       });
 
-      await prisma.user.deleteMany({
+      await prisma.users.deleteMany({
         where: { email: 'oauth-test@example.com' },
       });
 

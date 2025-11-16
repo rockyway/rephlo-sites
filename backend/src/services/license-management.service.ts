@@ -80,16 +80,16 @@ export class LicenseManagementService {
     const majorVersion = this.extractMajorVersion(purchasedVersion);
     const eligibleUntilVersion = `${majorVersion}.99.99`;
 
-    const license = await this.prisma.perpetualLicense.create({
+    const license = await this.prisma.perpetual_license.create({
       data: {
-        userId,
-        licenseKey,
-        purchasePriceUsd: purchasePrice,
-        purchasedVersion,
-        eligibleUntilVersion,
+        user_id: userId,
+        license_key: licenseKey,
+        purchase_price_usd: purchasePrice,
+        purchased_version: purchasedVersion,
+        eligible_until_version: eligibleUntilVersion,
         status: 'pending', // Will become 'active' after first activation
-        maxActivations: 3, // Default 3 devices
-        currentActivations: 0,
+        max_activations: 3, // Default 3 devices
+        current_activations: 0,
       },
     });
 
@@ -132,8 +132,8 @@ export class LicenseManagementService {
       licenseKey = `REPHLO-${keySegments.join('-')}`;
 
       // Check uniqueness in database
-      const existing = await this.prisma.perpetualLicense.findUnique({
-        where: { licenseKey },
+      const existing = await this.prisma.perpetual_license.findUnique({
+        where: { license_key: licenseKey },
       });
 
       isUnique = !existing;
@@ -164,8 +164,8 @@ export class LicenseManagementService {
     });
 
     // Find license with active activations
-    const license = await this.prisma.perpetualLicense.findUnique({
-      where: { licenseKey },
+    const license = await this.prisma.perpetual_license.findUnique({
+      where: { license_key: licenseKey },
       include: {
         activations: {
           where: { status: 'active' },
@@ -187,14 +187,14 @@ export class LicenseManagementService {
 
     // Check if this device is already activated
     const existingActivation = license.activations.find(
-      (a) => a.machineFingerprint === deviceInfo.fingerprint
+      (a) => a.machine_fingerprint === deviceInfo.fingerprint
     );
 
     if (existingActivation) {
       // Update last seen time
-      const updated = await this.prisma.licenseActivation.update({
+      const updated = await this.prisma.license_activation.update({
         where: { id: existingActivation.id },
-        data: { lastSeenAt: new Date() },
+        data: { last_seen_at: new Date() },
       });
 
       logger.info('LicenseManagementService: Device already activated, updated last seen', {
@@ -209,33 +209,33 @@ export class LicenseManagementService {
     }
 
     // Check activation limit
-    if (license.activations.length >= license.maxActivations) {
+    if (license.activations.length >= license.max_activations) {
       throw new ValidationError(
-        `Activation limit reached (${license.maxActivations} devices max). Please deactivate a device first.`
+        `Activation limit reached (${license.max_activations} devices max). Please deactivate a device first.`
       );
     }
 
     // Create new activation
-    const activation = await this.prisma.licenseActivation.create({
+    const activation = await this.prisma.license_activation.create({
       data: {
-        licenseId: license.id,
-        userId: license.userId,
-        machineFingerprint: deviceInfo.fingerprint,
-        deviceName: deviceInfo.deviceName,
-        osType: deviceInfo.osType,
-        osVersion: deviceInfo.osVersion,
-        cpuInfo: deviceInfo.cpuInfo,
+        license_id: license.id,
+        user_id: license.user_id,
+        machine_fingerprint: deviceInfo.fingerprint,
+        device_name: deviceInfo.deviceName,
+        os_type: deviceInfo.osType,
+        os_version: deviceInfo.osVersion,
+        cpu_info: deviceInfo.cpuInfo,
         status: 'active',
       },
     });
 
     // Update license activation count and status
-    await this.prisma.perpetualLicense.update({
+    await this.prisma.perpetual_license.update({
       where: { id: license.id },
       data: {
-        currentActivations: { increment: 1 },
+        current_activations: { increment: 1 },
         status: 'active',
-        activatedAt: license.activatedAt || new Date(),
+        activated_at: license.activated_at || new Date(),
       },
     });
 
@@ -258,7 +258,7 @@ export class LicenseManagementService {
   async deactivateDevice(activationId: string): Promise<void> {
     logger.debug('LicenseManagementService: Deactivating device', { activationId });
 
-    const activation = await this.prisma.licenseActivation.findUnique({
+    const activation = await this.prisma.license_activation.findUnique({
       where: { id: activationId },
       include: { license: true },
     });
@@ -272,25 +272,25 @@ export class LicenseManagementService {
     }
 
     // Update activation status
-    await this.prisma.licenseActivation.update({
+    await this.prisma.license_activation.update({
       where: { id: activationId },
       data: {
         status: 'deactivated',
-        deactivatedAt: new Date(),
+        deactivated_at: new Date(),
       },
     });
 
     // Decrement license activation count
-    await this.prisma.perpetualLicense.update({
-      where: { id: activation.licenseId },
+    await this.prisma.perpetual_license.update({
+      where: { id: activation.license_id },
       data: {
-        currentActivations: { decrement: 1 },
+        current_activations: { decrement: 1 },
       },
     });
 
     logger.info('LicenseManagementService: Device deactivated successfully', {
       activationId,
-      licenseId: activation.licenseId,
+      licenseId: activation.license_id,
     });
   }
 
@@ -309,7 +309,7 @@ export class LicenseManagementService {
       newFingerprint: newDeviceInfo.fingerprint,
     });
 
-    const oldActivation = await this.prisma.licenseActivation.findUnique({
+    const oldActivation = await this.prisma.license_activation.findUnique({
       where: { id: oldActivationId },
       include: { license: true },
     });
@@ -319,23 +319,23 @@ export class LicenseManagementService {
     }
 
     // Mark old activation as replaced
-    await this.prisma.licenseActivation.update({
+    await this.prisma.license_activation.update({
       where: { id: oldActivationId },
       data: {
         status: 'replaced',
-        deactivatedAt: new Date(),
+        deactivated_at: new Date(),
       },
     });
 
     // Create new activation (this will decrement and increment, net zero)
-    await this.prisma.perpetualLicense.update({
-      where: { id: oldActivation.licenseId },
+    await this.prisma.perpetual_license.update({
+      where: { id: oldActivation.license_id },
       data: {
-        currentActivations: { decrement: 1 },
+        current_activations: { decrement: 1 },
       },
     });
 
-    const result = await this.activateDevice(oldActivation.license.licenseKey, newDeviceInfo);
+    const result = await this.activateDevice(oldActivation.license.license_key, newDeviceInfo);
 
     logger.info('LicenseManagementService: Device replaced successfully', {
       oldActivationId,
@@ -377,11 +377,11 @@ export class LicenseManagementService {
    * @returns True if duplicate found
    */
   async detectDuplicateActivation(licenseId: string, fingerprint: string): Promise<boolean> {
-    const duplicates = await this.prisma.licenseActivation.findMany({
+    const duplicates = await this.prisma.license_activation.findMany({
       where: {
-        machineFingerprint: fingerprint,
+        machine_fingerprint: fingerprint,
         status: 'active',
-        licenseId: { not: licenseId },
+        license_id: { not: licenseId },
       },
     });
 
@@ -406,7 +406,7 @@ export class LicenseManagementService {
    * @returns True if limit reached
    */
   async checkActivationLimit(licenseId: string): Promise<boolean> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
       include: {
         activations: {
@@ -419,7 +419,7 @@ export class LicenseManagementService {
       throw new NotFoundError('License not found');
     }
 
-    return license.activations.length >= license.maxActivations;
+    return license.activations.length >= license.max_activations;
   }
 
   /**
@@ -428,12 +428,12 @@ export class LicenseManagementService {
    * @returns List of active activations
    */
   async getActiveDevices(licenseId: string): Promise<LicenseActivation[]> {
-    const activations = await this.prisma.licenseActivation.findMany({
+    const activations = await this.prisma.license_activation.findMany({
       where: {
-        licenseId,
+        license_id: licenseId,
         status: 'active',
       },
-      orderBy: { activatedAt: 'desc' },
+      orderBy: { activated_at: 'desc' },
     });
 
     return activations;
@@ -448,7 +448,7 @@ export class LicenseManagementService {
   async suspendLicense(licenseId: string, reason: string): Promise<PerpetualLicense> {
     logger.warn('LicenseManagementService: Suspending license', { licenseId, reason });
 
-    const license = await this.prisma.perpetualLicense.update({
+    const license = await this.prisma.perpetual_license.update({
       where: { id: licenseId },
       data: { status: 'suspended' },
     });
@@ -468,22 +468,22 @@ export class LicenseManagementService {
     logger.warn('LicenseManagementService: Revoking license', { licenseId, reason });
 
     // Deactivate all active devices
-    await this.prisma.licenseActivation.updateMany({
+    await this.prisma.license_activation.updateMany({
       where: {
-        licenseId,
+        license_id: licenseId,
         status: 'active',
       },
       data: {
         status: 'deactivated',
-        deactivatedAt: new Date(),
+        deactivated_at: new Date(),
       },
     });
 
-    const license = await this.prisma.perpetualLicense.update({
+    const license = await this.prisma.perpetual_license.update({
       where: { id: licenseId },
       data: {
         status: 'revoked',
-        currentActivations: 0,
+        current_activations: 0,
       },
     });
 
@@ -500,7 +500,7 @@ export class LicenseManagementService {
   async reactivateLicense(licenseId: string): Promise<PerpetualLicense> {
     logger.info('LicenseManagementService: Reactivating license', { licenseId });
 
-    const license = await this.prisma.perpetualLicense.update({
+    const license = await this.prisma.perpetual_license.update({
       where: { id: licenseId },
       data: { status: 'active' },
     });
@@ -519,8 +519,8 @@ export class LicenseManagementService {
    * @returns True if version is eligible
    */
   async checkVersionEligibility(licenseKey: string, requestedVersion: string): Promise<boolean> {
-    const license = await this.prisma.perpetualLicense.findUnique({
-      where: { licenseKey },
+    const license = await this.prisma.perpetual_license.findUnique({
+      where: { license_key: licenseKey },
     });
 
     if (!license) {
@@ -529,8 +529,8 @@ export class LicenseManagementService {
 
     // Compare versions (simple string comparison works for SemVer)
     return this.isVersionEligible(
-      license.purchasedVersion,
-      license.eligibleUntilVersion,
+      license.purchased_version,
+      license.eligible_until_version,
       requestedVersion
     );
   }
@@ -541,7 +541,7 @@ export class LicenseManagementService {
    * @returns Version range
    */
   async getEligibleVersionRange(licenseId: string): Promise<VersionRange> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
     });
 
@@ -550,8 +550,8 @@ export class LicenseManagementService {
     }
 
     return {
-      minVersion: license.purchasedVersion,
-      maxVersion: license.eligibleUntilVersion,
+      minVersion: license.purchased_version,
+      maxVersion: license.eligible_until_version,
     };
   }
 
@@ -573,11 +573,11 @@ export class LicenseManagementService {
       })
     | null
   > {
-    return this.prisma.perpetualLicense.findUnique({
-      where: { licenseKey },
+    return this.prisma.perpetual_license.findUnique({
+      where: { license_key: licenseKey },
       include: {
         activations: true,
-        versionUpgrades: true,
+        version_upgrades: true,
       },
     });
   }
@@ -588,13 +588,13 @@ export class LicenseManagementService {
    * @returns List of licenses
    */
   async getUserLicenses(userId: string): Promise<PerpetualLicense[]> {
-    return this.prisma.perpetualLicense.findMany({
-      where: { userId },
+    return this.prisma.perpetual_license.findMany({
+      where: { user_id: userId },
       include: {
         activations: { where: { status: 'active' } },
-        versionUpgrades: true,
+        version_upgrades: true,
       },
-      orderBy: { purchasedAt: 'desc' },
+      orderBy: { purchased_at: 'desc' },
     });
   }
 
@@ -604,9 +604,9 @@ export class LicenseManagementService {
    * @returns Activation history
    */
   async getLicenseActivationHistory(licenseId: string): Promise<LicenseActivation[]> {
-    return this.prisma.licenseActivation.findMany({
-      where: { licenseId },
-      orderBy: { activatedAt: 'desc' },
+    return this.prisma.license_activation.findMany({
+      where: { license_id: licenseId },
+      orderBy: { activated_at: 'desc' },
     });
   }
 
@@ -639,23 +639,23 @@ export class LicenseManagementService {
       }
 
       const [licenses, total] = await Promise.all([
-        this.prisma.perpetualLicense.findMany({
+        this.prisma.perpetual_license.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           include: {
             user: {
               select: {
                 id: true,
                 email: true,
-                firstName: true,
-                lastName: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },
         }),
-        this.prisma.perpetualLicense.count({ where }),
+        this.prisma.perpetual_license.count({ where }),
       ]);
 
       return {
@@ -685,8 +685,8 @@ export class LicenseManagementService {
 
     try {
       const [total, byStatus] = await Promise.all([
-        this.prisma.perpetualLicense.count(),
-        this.prisma.perpetualLicense.groupBy({
+        this.prisma.perpetual_license.count(),
+        this.prisma.perpetual_license.groupBy({
           by: ['status'],
           _count: { id: true },
         }),

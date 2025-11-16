@@ -1,6 +1,15 @@
 /**
  * Azure OpenAI Provider Implementation
  *
+ * @deprecated This provider is being phased out in favor of the standard OpenAIProvider.
+ * The standard OpenAIProvider (openai.provider.ts) can handle both OpenAI and Azure OpenAI
+ * endpoints by configuring the baseURL. This separate Azure provider will be removed in a
+ * future release.
+ *
+ * Migration Guide:
+ * - Use OpenAIProvider with OPENAI_BASE_URL pointing to Azure deployment URL
+ * - Both providers now support GPT-5 models and stream_options for accurate token counting
+ *
  * Handles all Azure OpenAI-specific API interactions.
  * Uses OpenAI SDK with Azure-specific configuration (endpoint, deployment, api-version).
  *
@@ -8,7 +17,7 @@
  * - AZURE_OPENAI_ENDPOINT: Azure OpenAI endpoint URL (e.g., https://your-resource.openai.azure.com)
  * - AZURE_OPENAI_API_KEY: Azure OpenAI API key
  * - AZURE_OPENAI_DEPLOYMENT_NAME: Deployment name (e.g., gpt-4)
- * - AZURE_OPENAI_API_VERSION: API version (e.g., 2024-02-15-preview)
+ * - AZURE_OPENAI_API_VERSION: API version (e.g., 2024-12-01-preview)
  */
 
 import { injectable, inject } from 'tsyringe';
@@ -24,6 +33,7 @@ import {
   TextCompletionChunk,
 } from '../types/model-validation';
 import logger from '../utils/logger';
+import { countChatTokens, countTokens } from '../utils/tokenCounter';
 
 @injectable()
 export class AzureOpenAIProvider implements ILLMProvider {
@@ -31,6 +41,65 @@ export class AzureOpenAIProvider implements ILLMProvider {
 
   constructor(@inject('AzureOpenAIClient') private client: OpenAI) {
     logger.debug('AzureOpenAIProvider: Initialized');
+  }
+
+  /**
+   * Checks if the model is a GPT-5 variant
+   */
+  private isGPT5Model(model: string): boolean {
+    return model.includes('gpt-5');
+  }
+
+  /**
+   * Checks if the model is GPT-5-mini (which has restricted temperature support)
+   */
+  private isGPT5Mini(model: string): boolean {
+    return model.includes('gpt-5-mini');
+  }
+
+  /**
+   * Builds API parameters with GPT-5 compatibility
+   * GPT-5 models use max_completion_tokens instead of max_tokens
+   * GPT-5-mini only supports default temperature (1.0)
+   */
+  private buildChatParams(request: ChatCompletionRequest, streaming: boolean = false): any {
+    const isGPT5 = this.isGPT5Model(request.model);
+    const isGPT5Mini = this.isGPT5Mini(request.model);
+
+    const params: any = {
+      model: request.model,
+      messages: request.messages,
+      stop: request.stop,
+      presence_penalty: request.presence_penalty,
+      frequency_penalty: request.frequency_penalty,
+      n: request.n,
+    };
+
+    // GPT-5 models use max_completion_tokens instead of max_tokens
+    if (isGPT5) {
+      params.max_completion_tokens = request.max_tokens;
+    } else {
+      params.max_tokens = request.max_tokens;
+    }
+
+    // GPT-5-mini only supports default temperature (1.0)
+    // Other GPT-5 variants and GPT-4 support custom temperature
+    if (!isGPT5Mini) {
+      params.temperature = request.temperature;
+      params.top_p = request.top_p;
+    }
+
+    // Add function calling params for non-streaming requests
+    if (!streaming) {
+      params.functions = request.functions;
+      params.function_call = request.function_call;
+    }
+
+    if (streaming) {
+      params.stream = true;
+    }
+
+    return params;
   }
 
   // ============================================================================
@@ -52,23 +121,13 @@ export class AzureOpenAIProvider implements ILLMProvider {
     logger.debug('AzureOpenAIProvider: Chat completion request', {
       model: request.model,
       messagesCount: request.messages.length,
+      isGPT5: this.isGPT5Model(request.model),
+      isGPT5Mini: this.isGPT5Mini(request.model),
     });
 
-    // Note: Azure OpenAI uses deployment name, not model name in API calls
-    // But we keep request.model for logging/tracking purposes
-    const completion = await this.client.chat.completions.create({
-      model: request.model, // This will be overridden by deployment name in baseURL
-      messages: request.messages as any,
-      max_tokens: request.max_tokens,
-      temperature: request.temperature,
-      top_p: request.top_p,
-      stop: request.stop,
-      presence_penalty: request.presence_penalty,
-      frequency_penalty: request.frequency_penalty,
-      n: request.n,
-      functions: request.functions as any,
-      function_call: request.function_call as any,
-    });
+    // Build API parameters with GPT-5 compatibility
+    const params = this.buildChatParams(request, false);
+    const completion = await this.client.chat.completions.create(params);
 
     return {
       response: {
@@ -103,27 +162,42 @@ export class AzureOpenAIProvider implements ILLMProvider {
 
     logger.debug('AzureOpenAIProvider: Streaming chat completion request', {
       model: request.model,
+      isGPT5: this.isGPT5Model(request.model),
+      isGPT5Mini: this.isGPT5Mini(request.model),
     });
 
-    const stream = await this.client.chat.completions.create({
-      model: request.model,
-      messages: request.messages as any,
-      max_tokens: request.max_tokens,
-      temperature: request.temperature,
-      top_p: request.top_p,
-      stop: request.stop,
-      stream: true,
-    });
+    // Build API parameters with GPT-5 compatibility
+    const params = this.buildChatParams(request, true);
+
+    // Add stream_options to get accurate token usage in streaming mode
+    // Azure OpenAI API v2024-12-01-preview supports this feature
+    params.stream_options = { include_usage: true };
+
+    const stream = await this.client.chat.completions.create(params) as any;
 
     let completionText = '';
+    let chunkCount = 0;
+    let usageData: { promptTokens: number; completionTokens: number; totalTokens: number } | null = null;
 
     for await (const chunk of stream) {
+      chunkCount++;
+
+      // Check if this chunk contains usage information (from stream_options)
+      if (chunk.usage) {
+        usageData = {
+          promptTokens: chunk.usage.prompt_tokens,
+          completionTokens: chunk.usage.completion_tokens,
+          totalTokens: chunk.usage.total_tokens,
+        };
+        logger.debug('AzureOpenAIProvider: Received usage data in streaming chunk', usageData);
+      }
+
       const chunkData: ChatCompletionChunk = {
         id: chunk.id,
         object: 'chat.completion.chunk',
         created: chunk.created,
         model: chunk.model,
-        choices: chunk.choices.map((choice) => ({
+        choices: chunk.choices.map((choice: any) => ({
           index: choice.index,
           delta: {
             role: choice.delta.role,
@@ -140,8 +214,33 @@ export class AzureOpenAIProvider implements ILLMProvider {
       }
     }
 
-    const promptText = request.messages.map((m) => m.content).join(' ');
-    const totalTokens = Math.ceil((promptText.length + completionText.length) / 4);
+    // Use accurate token counts from Azure (stream_options), fallback to tiktoken if not available
+    let totalTokens: number;
+
+    if (usageData) {
+      // Use accurate counts from Azure OpenAI streaming
+      totalTokens = usageData.totalTokens;
+      logger.debug('AzureOpenAIProvider: Streaming completed (using Azure usage data)', {
+        model: request.model,
+        chunkCount,
+        completionLength: completionText.length,
+        ...usageData,
+      });
+    } else {
+      // Fallback to tiktoken estimation (should not happen with API v2024-12-01-preview)
+      const { promptTokens } = countChatTokens(request.messages, request.model);
+      const completionTokens = countTokens(completionText, request.model);
+      totalTokens = promptTokens + completionTokens;
+
+      logger.warn('AzureOpenAIProvider: No usage data in streaming response, using tiktoken estimation', {
+        model: request.model,
+        chunkCount,
+        completionLength: completionText.length,
+        promptTokens,
+        completionTokens,
+        totalTokens,
+      });
+    }
 
     return totalTokens;
   }

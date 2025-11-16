@@ -46,7 +46,7 @@ export class CheckoutIntegrationService {
     logger.info('Applying coupon to checkout', { couponCode, userId: checkoutSession.userId });
 
     // Step 1: Fetch subscription to get actual tier (GAP FIX #2)
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: checkoutSession.subscriptionId }
     });
 
@@ -136,7 +136,7 @@ export class CheckoutIntegrationService {
   async applyDurationBonus(subscriptionId: string, bonusMonths: number): Promise<void> {
     logger.info('Applying duration bonus', { subscriptionId, bonusMonths });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -147,7 +147,7 @@ export class CheckoutIntegrationService {
     const newEndDate = new Date(subscription.currentPeriodEnd);
     newEndDate.setMonth(newEndDate.getMonth() + bonusMonths);
 
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
       data: { currentPeriodEnd: newEndDate },
     });
@@ -160,7 +160,7 @@ export class CheckoutIntegrationService {
   ): Promise<void> {
     logger.info('Applying percentage discount', { subscriptionId, percentage, durationMonths });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -170,7 +170,7 @@ export class CheckoutIntegrationService {
 
     const discountedPrice = parseFloat(subscription.basePriceUsd.toString()) * (1 - percentage / 100);
 
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
       data: {
         basePriceUsd: discountedPrice,
@@ -193,7 +193,7 @@ export class CheckoutIntegrationService {
   async grantCouponCredits(userId: string, amount: number, couponId: string): Promise<void> {
     logger.info('Granting coupon credits', { userId, amount, couponId });
 
-    await this.prisma.creditAllocation.create({
+    await this.prisma.credit_allocation.create({
       data: {
         userId,
         subscriptionId: null,
@@ -249,10 +249,10 @@ export class CheckoutIntegrationService {
   } | null> {
     logger.debug('CheckoutIntegrationService: Getting active discount', { subscriptionId });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
       include: {
-        couponRedemptions: {
+        coupon_redemptions: {
           where: {
             redemptionStatus: 'success', // Successfully redeemed coupons only
           },
@@ -310,7 +310,7 @@ export class CheckoutIntegrationService {
     tier: string,
     billingCycle: string
   ): Promise<number> {
-    const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
+    const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
       where: { tierName: tier },
     });
 
@@ -356,7 +356,7 @@ export class CheckoutIntegrationService {
     });
 
     // Step 1: Validate coupon against actual subscription tier
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 

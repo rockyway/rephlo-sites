@@ -84,19 +84,19 @@ export class SubscriptionManagementService {
 
     try {
       // Get tier configuration
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: input.tier },
+      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: input.tier },
       });
 
-      if (!tierConfig || !tierConfig.isActive) {
+      if (!tierConfig || !tierConfig.is_active) {
         throw badRequestError(`Invalid or inactive subscription tier: ${input.tier}`);
       }
 
       // Calculate pricing based on billing cycle
       const basePriceUsd =
         input.billingCycle === 'annual'
-          ? Number(tierConfig.annualPriceUsd)
-          : Number(tierConfig.monthlyPriceUsd);
+          ? Number(tierConfig.annual_price_usd)
+          : Number(tierConfig.monthly_price_usd);
 
       // Calculate billing period
       const now = new Date();
@@ -121,37 +121,37 @@ export class SubscriptionManagementService {
       }
 
       // Create subscription record
-      const subscription = await this.prisma.subscriptionMonetization.create({
+      const subscription = await this.prisma.subscription_monetization.create({
         data: {
-          userId: input.userId,
+          user_id: input.userId,
           tier: input.tier as any, // Cast to enum type
-          billingCycle: input.billingCycle,
+          billing_cycle: input.billingCycle,
           status: initialStatus,
-          basePriceUsd,
-          monthlyCreditAllocation: tierConfig.monthlyCreditAllocation,
-          stripeCustomerId: input.stripeCustomerId || null,
-          stripeSubscriptionId: input.stripeSubscriptionId || null,
-          currentPeriodStart,
-          currentPeriodEnd,
-          trialEndsAt,
+          base_price_usd: basePriceUsd,
+          monthly_credit_allocation: tierConfig.monthly_credit_allocation,
+          stripe_customer_id: input.stripeCustomerId || null,
+          stripe_subscription_id: input.stripeSubscriptionId || null,
+          current_period_start: currentPeriodStart,
+          current_period_end: currentPeriodEnd,
+          trial_ends_at: trialEndsAt,
         },
       });
 
       // Allocate initial credits (except for trial users - they get credits when trial ends)
-      if (initialStatus === 'active' && tierConfig.monthlyCreditAllocation > 0) {
+      if (initialStatus === 'active' && tierConfig.monthly_credit_allocation > 0) {
         await this.allocateMonthlyCredits(input.userId, subscription.id);
       }
 
       // Fetch subscription with user relation for mapper
-      const createdSubscription = await this.prisma.subscriptionMonetization.findUnique({
+      const createdSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscription.id },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -183,7 +183,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -202,28 +202,28 @@ export class SubscriptionManagementService {
       }
 
       // Get new tier configuration
-      const newTierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: newTier },
+      const newTierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: newTier },
       });
 
-      if (!newTierConfig || !newTierConfig.isActive) {
+      if (!newTierConfig || !newTierConfig.is_active) {
         throw badRequestError(`Invalid or inactive subscription tier: ${newTier}`);
       }
 
       // Calculate new pricing
       const basePriceUsd =
-        subscription.billingCycle === 'annual'
-          ? Number(newTierConfig.annualPriceUsd)
-          : Number(newTierConfig.monthlyPriceUsd);
+        subscription.billing_cycle === 'annual'
+          ? Number(newTierConfig.annual_price_usd)
+          : Number(newTierConfig.monthly_price_usd);
 
       // Update subscription
-      await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
-          basePriceUsd,
-          monthlyCreditAllocation: newTierConfig.monthlyCreditAllocation,
-          updatedAt: new Date(),
+          base_price_usd: basePriceUsd,
+          monthly_credit_allocation: newTierConfig.monthly_credit_allocation,
+          updated_at: new Date(),
         },
       });
 
@@ -231,15 +231,15 @@ export class SubscriptionManagementService {
       // For now, upgrade takes effect immediately at renewal
 
       // Fetch updated subscription with user relation
-      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -271,7 +271,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -290,41 +290,41 @@ export class SubscriptionManagementService {
       }
 
       // Get new tier configuration
-      const newTierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: newTier },
+      const newTierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: newTier },
       });
 
-      if (!newTierConfig || !newTierConfig.isActive) {
+      if (!newTierConfig || !newTierConfig.is_active) {
         throw badRequestError(`Invalid or inactive subscription tier: ${newTier}`);
       }
 
       // Calculate new pricing
       const basePriceUsd =
-        subscription.billingCycle === 'annual'
-          ? Number(newTierConfig.annualPriceUsd)
-          : Number(newTierConfig.monthlyPriceUsd);
+        subscription.billing_cycle === 'annual'
+          ? Number(newTierConfig.annual_price_usd)
+          : Number(newTierConfig.monthly_price_usd);
 
       // Update subscription (downgrade takes effect at period end)
-      await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
-          basePriceUsd,
-          monthlyCreditAllocation: newTierConfig.monthlyCreditAllocation,
-          updatedAt: new Date(),
+          base_price_usd: basePriceUsd,
+          monthly_credit_allocation: newTierConfig.monthly_credit_allocation,
+          updated_at: new Date(),
         },
       });
 
       // Fetch updated subscription with user relation
-      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -359,7 +359,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -374,25 +374,25 @@ export class SubscriptionManagementService {
       const now = new Date();
       const newStatus = cancelAtPeriodEnd ? subscription.status : 'cancelled';
 
-      await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           status: newStatus,
-          cancelledAt: now,
-          updatedAt: now,
+          cancelled_at: now,
+          updated_at: now,
         },
       });
 
       // Fetch updated subscription with user relation
-      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -401,7 +401,7 @@ export class SubscriptionManagementService {
       logger.info('SubscriptionManagementService: Subscription cancelled', {
         subscriptionId,
         cancelAtPeriodEnd,
-        effectiveDate: cancelAtPeriodEnd ? subscription.currentPeriodEnd : now,
+        effectiveDate: cancelAtPeriodEnd ? subscription.current_period_end : now,
       });
 
       return mapSubscriptionToApiType(finalSubscription!);
@@ -422,7 +422,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -430,29 +430,29 @@ export class SubscriptionManagementService {
         throw notFoundError('Subscription');
       }
 
-      if (subscription.status !== 'cancelled' && !subscription.cancelledAt) {
+      if (subscription.status !== 'cancelled' && !subscription.cancelled_at) {
         throw badRequestError('Subscription is not cancelled');
       }
 
-      await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           status: 'active',
-          cancelledAt: null,
-          updatedAt: new Date(),
+          cancelled_at: null,
+          updated_at: new Date(),
         },
       });
 
       // Fetch updated subscription with user relation
-      const finalSubscription = await this.prisma.subscriptionMonetization.findUnique({
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -492,17 +492,17 @@ export class SubscriptionManagementService {
       // Get subscription (always fetch from Prisma for consistent types)
       let subscription;
       if (subscriptionId) {
-        subscription = await this.prisma.subscriptionMonetization.findUnique({
+        subscription = await this.prisma.subscription_monetization.findUnique({
           where: { id: subscriptionId },
         });
       } else {
         // Fetch active subscription directly from Prisma (not using mapper)
-        subscription = await this.prisma.subscriptionMonetization.findFirst({
+        subscription = await this.prisma.subscription_monetization.findFirst({
           where: {
-            userId,
+            user_id: userId,
             status: { in: ['trial', 'active'] },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
         });
       }
 
@@ -511,13 +511,13 @@ export class SubscriptionManagementService {
       }
 
       // Create credit allocation record
-      const allocation = await this.prisma.creditAllocation.create({
+      const allocation = await this.prisma.credit_allocation.create({
         data: {
-          userId,
-          subscriptionId: subscription.id,
-          amount: subscription.monthlyCreditAllocation,
-          allocationPeriodStart: subscription.currentPeriodStart,
-          allocationPeriodEnd: subscription.currentPeriodEnd,
+          user_id: userId,
+          subscription_id: subscription.id,
+          amount: subscription.monthly_credit_allocation,
+          allocation_period_start: subscription.current_period_start,
+          allocation_period_end: subscription.current_period_end,
           source: 'subscription',
         },
       });
@@ -553,15 +553,15 @@ export class SubscriptionManagementService {
       }
 
       // Get tier configuration for rollover limits
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: subscription.tier },
+      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: subscription.tier },
       });
 
       if (!tierConfig) {
         throw badRequestError(`Tier configuration not found: ${subscription.tier}`);
       }
 
-      const maxRollover = tierConfig.maxCreditRollover;
+      const maxRollover = tierConfig.max_credit_rollover;
 
       if (maxRollover === 0) {
         logger.debug('No rollover allowed for tier', { tier: subscription.tier });
@@ -605,8 +605,8 @@ export class SubscriptionManagementService {
         return this.freeUserCanAccessFeature(feature);
       }
 
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: subscription.tier },
+      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: subscription.tier },
       });
 
       if (!tierConfig) {
@@ -634,8 +634,8 @@ export class SubscriptionManagementService {
 
       const tier = subscription?.tier || 'free';
 
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: tier },
+      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: tier },
       });
 
       if (!tierConfig) {
@@ -643,9 +643,9 @@ export class SubscriptionManagementService {
       }
 
       return {
-        tier: tierConfig.tierName,
-        creditsPerMonth: tierConfig.monthlyCreditAllocation,
-        maxRollover: tierConfig.maxCreditRollover,
+        tier: tierConfig.tier_name,
+        creditsPerMonth: tierConfig.monthly_credit_allocation,
+        maxRollover: tierConfig.max_credit_rollover,
         features: tierConfig.features as Record<string, any>,
       };
     } catch (error) {
@@ -667,19 +667,19 @@ export class SubscriptionManagementService {
     logger.debug('SubscriptionManagementService.getActiveSubscription', { userId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      const subscription = await this.prisma.subscription_monetization.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: { in: ['trial', 'active'] },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -701,16 +701,16 @@ export class SubscriptionManagementService {
     logger.debug('SubscriptionManagementService.getSubscriptionHistory', { userId });
 
     try {
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
         },
@@ -752,23 +752,23 @@ export class SubscriptionManagementService {
       }
 
       const [subscriptions, total] = await Promise.all([
-        this.prisma.subscriptionMonetization.findMany({
+        this.prisma.subscription_monetization.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           include: {
             user: {
               select: {
                 id: true,
                 email: true,
-                firstName: true,
-                lastName: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },
         }),
-        this.prisma.subscriptionMonetization.count({ where }),
+        this.prisma.subscription_monetization.count({ where }),
       ]);
 
       return {
@@ -799,29 +799,29 @@ export class SubscriptionManagementService {
 
       const [activeCount, pastDueCount, mrrData, trialConversions] = await Promise.all([
         // Count active subscriptions
-        this.prisma.subscriptionMonetization.count({
+        this.prisma.subscription_monetization.count({
           where: { status: 'active' },
         }),
 
         // Count past due subscriptions
-        this.prisma.subscriptionMonetization.count({
+        this.prisma.subscription_monetization.count({
           where: { status: 'past_due' },
         }),
 
         // Calculate MRR (Monthly Recurring Revenue)
-        this.prisma.subscriptionMonetization.aggregate({
+        this.prisma.subscription_monetization.aggregate({
           where: {
             status: 'active',
-            billingCycle: 'monthly',
+            billing_cycle: 'monthly',
           },
-          _sum: { basePriceUsd: true },
+          _sum: { base_price_usd: true },
         }),
 
         // Count trial conversions this month (trials that became active)
-        this.prisma.subscriptionMonetization.count({
+        this.prisma.subscription_monetization.count({
           where: {
             status: 'active',
-            updatedAt: {
+            updated_at: {
               gte: startOfMonth,
               lte: endOfMonth,
             },
@@ -832,16 +832,16 @@ export class SubscriptionManagementService {
       ]);
 
       // Calculate MRR including annual subscriptions (converted to monthly)
-      const annualMrrData = await this.prisma.subscriptionMonetization.aggregate({
+      const annualMrrData = await this.prisma.subscription_monetization.aggregate({
         where: {
           status: 'active',
-          billingCycle: 'annual',
+          billing_cycle: 'annual',
         },
-        _sum: { basePriceUsd: true },
+        _sum: { base_price_usd: true },
       });
 
-      const monthlyMrr = Number(mrrData._sum.basePriceUsd) || 0;
-      const annualMrr = (Number(annualMrrData._sum.basePriceUsd) || 0) / 12; // Convert annual to monthly
+      const monthlyMrr = Number(mrrData._sum.base_price_usd) || 0;
+      const annualMrr = (Number(annualMrrData._sum.base_price_usd) || 0) / 12; // Convert annual to monthly
       const totalMrr = monthlyMrr + annualMrr;
 
       return {

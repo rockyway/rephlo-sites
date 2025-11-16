@@ -60,7 +60,7 @@ export class ModelTierAdminService {
     });
 
     // Fetch current model data
-    const currentModel = await this.prisma.model.findUnique({
+    const currentModel = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
@@ -108,7 +108,7 @@ export class ModelTierAdminService {
     // Update model in transaction with audit log
     const result = await this.prisma.$transaction(async (tx) => {
       // Update model - only update meta JSONB field
-      const updatedModel = await tx.model.update({
+      const updatedModel = await tx.models.update({
         where: { id: modelId },
         data: {
           meta: updatedMeta as any,
@@ -117,22 +117,22 @@ export class ModelTierAdminService {
           id: true,
           name: true,
           provider: true,
-          isAvailable: true,
+          is_available: true,
           meta: true,
-          updatedAt: true,
+          updated_at: true,
         },
       });
 
       // Create audit log entry
-      const auditLog = await tx.modelTierAuditLog.create({
+      const auditLog = await tx.model_tier_audit_logs.create({
         data: {
-          modelId,
-          adminUserId,
-          changeType: this.determineChangeType(changes),
-          previousValue: previousValues,
-          newValue: changes,
+          model_id: modelId,
+          admin_user_id: adminUserId,
+          change_type: this.determineChangeType(changes),
+          previous_value: previousValues,
+          new_value: changes,
           reason: tierData.reason || null,
-          ipAddress: ipAddress || null,
+          ip_address: ipAddress || null,
         },
         include: {
           admin: {
@@ -165,20 +165,20 @@ export class ModelTierAdminService {
         requiredTier: resultMeta?.requiredTier ?? 'free',
         tierRestrictionMode: (resultMeta?.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
         allowedTiers: resultMeta?.allowedTiers ?? ['free'],
-        isAvailable: result.updatedModel.isAvailable,
-        lastModified: result.updatedModel.updatedAt.toISOString(),
+        isAvailable: result.updatedModel.is_available,
+        lastModified: result.updatedModel.updated_at.toISOString(),
       },
       auditLog: {
         id: result.auditLog.id,
-        modelId: result.auditLog.modelId,
-        adminUserId: result.auditLog.adminUserId,
+        modelId: result.auditLog.model_id,
+        adminUserId: result.auditLog.admin_user_id,
         adminEmail: result.auditLog.admin.email,
-        changeType: result.auditLog.changeType,
-        previousValue: result.auditLog.previousValue as Record<string, any> | null,
-        newValue: result.auditLog.newValue as Record<string, any>,
+        changeType: result.auditLog.change_type,
+        previousValue: result.auditLog.previous_value as Record<string, any> | null,
+        newValue: result.auditLog.new_value as Record<string, any>,
         reason: result.auditLog.reason || undefined,
-        ipAddress: result.auditLog.ipAddress || undefined,
-        createdAt: result.auditLog.createdAt.toISOString(),
+        ipAddress: result.auditLog.ip_address || undefined,
+        createdAt: result.auditLog.created_at.toISOString(),
       },
     };
   }
@@ -266,26 +266,26 @@ export class ModelTierAdminService {
     const where: any = {};
 
     if (params.modelId) {
-      where.modelId = params.modelId;
+      where.model_id = params.modelId;
     }
 
     if (params.adminUserId) {
-      where.adminUserId = params.adminUserId;
+      where.admin_user_id = params.adminUserId;
     }
 
     if (params.startDate || params.endDate) {
-      where.createdAt = {};
+      where.created_at = {};
       if (params.startDate) {
-        where.createdAt.gte = new Date(params.startDate);
+        where.created_at.gte = new Date(params.startDate);
       }
       if (params.endDate) {
-        where.createdAt.lte = new Date(params.endDate);
+        where.created_at.lte = new Date(params.endDate);
       }
     }
 
     // Query audit logs
     const [logs, total] = await Promise.all([
-      this.prisma.modelTierAuditLog.findMany({
+      this.prisma.model_tier_audit_logs.findMany({
         where,
         include: {
           admin: {
@@ -295,26 +295,26 @@ export class ModelTierAdminService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
         take: params.limit,
         skip: params.offset,
       }),
-      this.prisma.modelTierAuditLog.count({ where }),
+      this.prisma.model_tier_audit_logs.count({ where }),
     ]);
 
     return {
       logs: logs.map((log) => ({
         id: log.id,
-        modelId: log.modelId,
-        adminUserId: log.adminUserId,
+        modelId: log.model_id,
+        adminUserId: log.admin_user_id,
         adminEmail: log.admin.email,
-        changeType: log.changeType,
-        previousValue: log.previousValue as Record<string, any> | null,
-        newValue: log.newValue as Record<string, any>,
+        changeType: log.change_type,
+        previousValue: log.previous_value as Record<string, any> | null,
+        newValue: log.new_value as Record<string, any>,
         reason: log.reason || undefined,
-        ipAddress: log.ipAddress || undefined,
-        createdAt: log.createdAt.toISOString(),
+        ipAddress: log.ip_address || undefined,
+        createdAt: log.created_at.toISOString(),
       })),
       total,
       limit: params.limit || 50,
@@ -341,7 +341,7 @@ export class ModelTierAdminService {
     });
 
     // Fetch audit log entry
-    const auditLog = await this.prisma.modelTierAuditLog.findUnique({
+    const auditLog = await this.prisma.model_tier_audit_logs.findUnique({
       where: { id: auditLogId },
     });
 
@@ -349,12 +349,12 @@ export class ModelTierAdminService {
       throw new Error(`Audit log entry '${auditLogId}' not found`);
     }
 
-    if (!auditLog.previousValue) {
+    if (!auditLog.previous_value) {
       throw new Error('Cannot revert: no previous value recorded');
     }
 
     // Revert to previous values
-    const previousValue = auditLog.previousValue as Record<string, any>;
+    const previousValue = auditLog.previous_value as Record<string, any>;
     const revertData: UpdateModelTierRequest = {
       requiredTier: previousValue.requiredTier,
       tierRestrictionMode: previousValue.tierRestrictionMode,
@@ -363,7 +363,7 @@ export class ModelTierAdminService {
     };
 
     return this.updateModelTier(
-      auditLog.modelId,
+      auditLog.model_id,
       revertData,
       adminUserId,
       ipAddress
@@ -406,17 +406,17 @@ export class ModelTierAdminService {
     }
 
     // Query models - only select meta JSONB, not deprecated root columns
-    const models = await this.prisma.model.findMany({
+    const models = await this.prisma.models.findMany({
       where,
       select: {
         id: true,
         name: true,
         provider: true,
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
         meta: true,
-        updatedAt: true,
+        updated_at: true,
       },
       orderBy: [{ provider: 'asc' }, { name: 'asc' }],
     });
@@ -432,11 +432,11 @@ export class ModelTierAdminService {
           requiredTier: meta?.requiredTier ?? 'free',
           tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
           allowedTiers: meta?.allowedTiers ?? ['free'],
-          isAvailable: model.isAvailable,
-          isLegacy: model.isLegacy,
-          isArchived: model.isArchived,
+          isAvailable: model.is_available,
+          isLegacy: model.is_legacy,
+          isArchived: model.is_archived,
           meta: model.meta,
-          lastModified: model.updatedAt.toISOString(),
+          lastModified: model.updated_at.toISOString(),
         };
       }),
       total: models.length,
@@ -452,7 +452,7 @@ export class ModelTierAdminService {
     logger.info('ModelTierAdminService.getUniqueProviders');
 
     try {
-      const providers = await this.prisma.model.findMany({
+      const providers = await this.prisma.models.findMany({
         distinct: ['provider'],
         select: {
           provider: true,

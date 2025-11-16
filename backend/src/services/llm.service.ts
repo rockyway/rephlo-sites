@@ -386,6 +386,7 @@ export class LLMService {
         provider: modelProvider,
         userId,
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       const errorMessage = this.getErrorMessage(error, modelProvider);

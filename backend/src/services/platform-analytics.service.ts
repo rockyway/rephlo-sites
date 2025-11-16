@@ -239,7 +239,7 @@ export class PlatformAnalyticsService {
     logger.debug('PlatformAnalyticsService.getTotalActiveUsers');
 
     try {
-      const count = await this.prisma.user.count({
+      const count = await this.prisma.users.count({
         where: {
           isActive: true,
           deletedAt: null,
@@ -487,7 +487,7 @@ export class PlatformAnalyticsService {
 
     try {
       // Count users who started with free tier
-      const totalFreeUsers = await this.prisma.user.count();
+      const totalFreeUsers = await this.prisma.users.count();
 
       // Count users who converted to pro (or higher)
       const convertedUsers = await this.prisma.subscriptionMonetization.count({

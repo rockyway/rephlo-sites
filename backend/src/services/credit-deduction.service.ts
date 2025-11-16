@@ -67,7 +67,7 @@ export class CreditDeductionService implements ICreditDeductionService {
       ];
 
       // Add tier-specific suggestions
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
           subscriptions: {

@@ -101,7 +101,7 @@ export class ProrationService {
   ): Promise<ProrationCalculation> {
     logger.debug('ProrationService: Calculating proration', { subscriptionId, newTier });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -185,7 +185,7 @@ export class ProrationService {
    */
   async previewTierChange(subscriptionId: string, newTier: string): Promise<ProrationPreview> {
     const calculation = await this.calculateProration(subscriptionId, newTier);
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -262,7 +262,7 @@ export class ProrationService {
     newTier: string,
     changeType: 'upgrade' | 'downgrade'
   ): Promise<ProrationEvent> {
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -274,7 +274,7 @@ export class ProrationService {
     const calculation = await this.calculateProration(subscriptionId, newTier);
 
     // Create proration event
-    const prorationEvent = await this.prisma.prorationEvent.create({
+    const prorationEvent = await this.prisma.proration_events.create({
       data: {
         userId: subscription.userId,
         subscriptionId: subscription.id,
@@ -292,7 +292,7 @@ export class ProrationService {
     });
 
     // Update subscription tier
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
       data: {
         tier: newTier as any, // Cast to enum type
@@ -387,7 +387,7 @@ export class ProrationService {
     // For now, we'll just log it
 
     // Update proration event status
-    await this.prisma.prorationEvent.update({
+    await this.prisma.proration_events.update({
       where: { id: prorationEventId },
       data: { status: 'applied' },
     });
@@ -416,7 +416,7 @@ export class ProrationService {
    * @returns List of proration events
    */
   async getProrationHistory(userId: string): Promise<ProrationEvent[]> {
-    return this.prisma.prorationEvent.findMany({
+    return this.prisma.proration_events.findMany({
       where: { userId },
       include: {
         subscription: {
@@ -435,7 +435,7 @@ export class ProrationService {
    * @returns List of pending prorations
    */
   async getPendingProrations(): Promise<ProrationEvent[]> {
-    return this.prisma.prorationEvent.findMany({
+    return this.prisma.proration_events.findMany({
       where: { status: 'pending' },
       include: {
         user: {
@@ -504,8 +504,8 @@ export class ProrationService {
 
     // Get total count and data
     const [total, data] = await Promise.all([
-      this.prisma.prorationEvent.count({ where }),
-      this.prisma.prorationEvent.findMany({
+      this.prisma.proration_events.count({ where }),
+      this.prisma.proration_events.findMany({
         where,
         include: {
           user: {
@@ -541,7 +541,7 @@ export class ProrationService {
    * @returns Proration event
    */
   async getProrationEventById(eventId: string): Promise<ProrationEvent> {
-    const event = await this.prisma.prorationEvent.findUnique({
+    const event = await this.prisma.proration_events.findUnique({
       where: { id: eventId },
       include: {
         user: {
@@ -575,7 +575,7 @@ export class ProrationService {
 
     try {
       // Get aggregate stats
-      const stats = await this.prisma.prorationEvent.aggregate({
+      const stats = await this.prisma.proration_events.aggregate({
         _count: true,
         _sum: {
           netChargeUsd: true,
@@ -586,7 +586,7 @@ export class ProrationService {
       });
 
       // Get pending prorations count
-      const pendingCount = await this.prisma.prorationEvent.count({
+      const pendingCount = await this.prisma.proration_events.count({
         where: { status: 'pending' },
       });
 
@@ -653,7 +653,7 @@ export class ProrationService {
     }
 
     // Create reverse proration event (swap tiers, negate amounts)
-    const reverseEvent = await this.prisma.prorationEvent.create({
+    const reverseEvent = await this.prisma.proration_events.create({
       data: {
         userId: originalEvent.userId,
         subscriptionId: originalEvent.subscriptionId,
@@ -672,13 +672,13 @@ export class ProrationService {
     });
 
     // Mark original proration as reversed
-    await this.prisma.prorationEvent.update({
+    await this.prisma.proration_events.update({
       where: { id: prorationId },
       data: { status: 'reversed' },
     });
 
     // Restore subscription to original tier
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: originalEvent.subscriptionId },
       data: {
         tier: originalEvent.fromTier as any,

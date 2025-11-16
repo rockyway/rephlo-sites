@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import type { users } from '@prisma/client';
 
 export const IAuthService = Symbol('IAuthService');
 
@@ -6,12 +6,12 @@ export interface IAuthService {
   /**
    * Find user by email
    */
-  findByEmail(email: string): Promise<User | null>;
+  findByEmail(email: string): Promise<users | null>;
 
   /**
    * Find user by ID
    */
-  findById(userId: string): Promise<User | null>;
+  findById(userId: string): Promise<users | null>;
 
   /**
    * Create a new user account
@@ -22,12 +22,12 @@ export interface IAuthService {
     firstName?: string;
     lastName?: string;
     username?: string;
-  }): Promise<User>;
+  }): Promise<users>;
 
   /**
    * Authenticate user with email and password
    */
-  authenticate(email: string, password: string): Promise<User | null>;
+  authenticate(email: string, password: string): Promise<users | null>;
 
   /**
    * Find or create user by account ID (for OIDC provider)

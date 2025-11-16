@@ -13,7 +13,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, users } from '@prisma/client';
 import { google } from 'googleapis';
 import crypto from 'crypto';
 import logger from '../utils/logger';
@@ -171,7 +171,7 @@ export class SocialAuthController {
       const { data: profile } = await oauth2.userinfo.get();
 
       logger.info('Google profile fetched', {
-        googleId: profile.id,
+        google_id: profile.id,
         email: profile.email,
         emailVerified: profile.verified_email,
       });
@@ -179,7 +179,7 @@ export class SocialAuthController {
       // 6. Validate email
       if (!profile.email || !profile.verified_email) {
         logger.error('Google account email not verified', {
-          googleId: profile.id,
+          google_id: profile.id,
         });
         return res.redirect('/login?error=email_not_verified');
       }
@@ -240,18 +240,18 @@ export class SocialAuthController {
   ): Promise<any | null> {
     try {
       // 1. Try to find existing user by googleId
-      let user = await this.prisma.user.findUnique({
-        where: { googleId: profile.id },
+      let user = await this.prisma.users.findUnique({
+        where: { google_id: profile.id },
       });
 
       if (user) {
         logger.info('Existing Google user found', {
           userId: user.id,
-          googleId: profile.id,
+          google_id: profile.id,
         });
 
         // Update last login timestamp
-        await this.prisma.user.update({
+        await this.prisma.users.update({
           where: { id: user.id },
           data: { lastLoginAt: new Date() },
         });
@@ -260,16 +260,16 @@ export class SocialAuthController {
       }
 
       // 2. Try to find by email (user might have registered with email/password)
-      user = await this.prisma.user.findUnique({
+      user = await this.prisma.users.findUnique({
         where: { email: profile.email.toLowerCase() },
       });
 
       if (user) {
         // Link Google account to existing user
-        user = await this.prisma.user.update({
+        user = await this.prisma.users.update({
           where: { id: user.id },
           data: {
-            googleId: profile.id,
+            google_id: profile.id,
             googleProfileUrl: profile.picture,
             authProvider: 'google',
             emailVerified: true, // Trust Google's verification
@@ -280,7 +280,7 @@ export class SocialAuthController {
         logger.info('Linked Google account to existing user', {
           userId: user.id,
           email: user.email,
-          googleId: profile.id,
+          google_id: profile.id,
         });
 
         return user;
@@ -292,7 +292,7 @@ export class SocialAuthController {
         '_' +
         crypto.randomBytes(4).toString('hex');
 
-      user = await this.prisma.user.create({
+      user = await this.prisma.users.create({
         data: {
           email: profile.email.toLowerCase(),
           emailVerified: true, // Trust Google's verification
@@ -300,7 +300,7 @@ export class SocialAuthController {
           firstName: profile.given_name || '',
           lastName: profile.family_name || '',
           profilePictureUrl: profile.picture,
-          googleId: profile.id,
+          google_id: profile.id,
           googleProfileUrl: profile.picture,
           authProvider: 'google',
           // No password needed for Google users
@@ -313,14 +313,14 @@ export class SocialAuthController {
       logger.info('Created new user from Google profile', {
         userId: user.id,
         email: user.email,
-        googleId: profile.id,
+        google_id: profile.id,
       });
 
       return user;
     } catch (error) {
       logger.error('Error finding/creating Google user', {
         error: error instanceof Error ? error.message : String(error),
-        googleId: profile.id,
+        google_id: profile.id,
         email: profile.email,
       });
       return null;

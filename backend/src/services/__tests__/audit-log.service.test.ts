@@ -25,7 +25,7 @@ describe('AuditLogService - Audit Logging', () => {
     await cleanDatabase();
 
     // Create test admin users
-    const admin1 = await prisma.user.create({
+    const admin1 = await prisma.users.create({
       data: {
         email: 'admin1@example.com',
         emailVerified: true,
@@ -38,7 +38,7 @@ describe('AuditLogService - Audit Logging', () => {
     });
     testAdminId = admin1.id;
 
-    const admin2 = await prisma.user.create({
+    const admin2 = await prisma.users.create({
       data: {
         email: 'admin2@example.com',
         emailVerified: true,
@@ -59,7 +59,7 @@ describe('AuditLogService - Audit Logging', () => {
         admin_user_id: { in: [testAdminId, testAdmin2Id] }
       }
     });
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { id: { in: [testAdminId, testAdmin2Id] } }
     });
   });

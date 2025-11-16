@@ -293,15 +293,26 @@ async function seedSubscriptions(users: any[]) {
   const createdSubscriptions = [];
 
   // Subscription tier configuration
+  // Updated 2025-11-15: New pricing structure with x100 credit conversion (1 credit = $0.01)
   const tierConfig = {
     free: {
-      creditsPerMonth: 100,
+      creditsPerMonth: 200,        // $2 worth of API usage
       priceCents: 0,
       billingInterval: 'monthly',
     },
     pro: {
-      creditsPerMonth: 10000,
-      priceCents: 9999, // $99.99
+      creditsPerMonth: 1500,       // $15 worth of API usage
+      priceCents: 1500,            // $15/month
+      billingInterval: 'monthly',
+    },
+    pro_plus: {                    // NEW TIER
+      creditsPerMonth: 5000,       // $50 worth of API usage
+      priceCents: 4500,            // $45/month
+      billingInterval: 'monthly',
+    },
+    pro_max: {
+      creditsPerMonth: 25000,      // $250 worth of API usage
+      priceCents: 19900,           // $199/month
       billingInterval: 'monthly',
     },
   };

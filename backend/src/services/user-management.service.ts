@@ -125,37 +125,37 @@ export class UserManagementService {
 
     try {
       // Build where clause
-      const where: Prisma.UserWhereInput = {};
+      const where: Prisma.usersWhereInput = {};
 
       if (filters.search) {
         where.OR = [
           { email: { contains: filters.search, mode: 'insensitive' } },
           { username: { contains: filters.search, mode: 'insensitive' } },
-          { firstName: { contains: filters.search, mode: 'insensitive' } },
-          { lastName: { contains: filters.search, mode: 'insensitive' } },
+          { first_name: { contains: filters.search, mode: 'insensitive' } },
+          { last_name: { contains: filters.search, mode: 'insensitive' } },
         ];
       }
 
       if (filters.status === 'active') {
-        where.isActive = true;
-        where.deactivatedAt = null;
-        where.deletedAt = null;
+        where.is_active = true;
+        where.deactivated_at = null;
+        where.deleted_at = null;
       } else if (filters.status === 'suspended') {
-        where.deactivatedAt = { not: null };
+        where.deactivated_at = { not: null };
       } else if (filters.status === 'banned') {
-        where.deletedAt = { not: null };
+        where.deleted_at = { not: null };
       }
 
       if (filters.registeredAfter) {
-        where.createdAt = { ...(where.createdAt as any), gte: filters.registeredAfter };
+        where.created_at = { ...(where.created_at as any), gte: filters.registeredAfter };
       }
 
       if (filters.registeredBefore) {
-        where.createdAt = { ...(where.createdAt as any), lte: filters.registeredBefore };
+        where.created_at = { ...(where.created_at as any), lte: filters.registeredBefore };
       }
 
       if (filters.lastActiveBefore) {
-        where.lastLoginAt = { lte: filters.lastActiveBefore };
+        where.last_login_at = { lte: filters.lastActiveBefore };
       }
 
       // Calculate offset
@@ -163,20 +163,20 @@ export class UserManagementService {
 
       // Execute query
       const [users, total] = await Promise.all([
-        this.prisma.user.findMany({
+        this.prisma.users.findMany({
           where,
           skip,
           take: pagination.limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           include: {
             credit_balance: true,
-            subscriptionMonetization: {
+            subscription_monetization: {
               where: { status: { in: ['trial', 'active'] } },
               take: 1,
             },
           },
         }),
-        this.prisma.user.count({ where }),
+        this.prisma.users.count({ where }),
       ]);
 
       const totalPages = Math.ceil(total / pagination.limit);
@@ -212,19 +212,19 @@ export class UserManagementService {
     logger.debug('UserManagementService.searchUsers', { query });
 
     try {
-      const users = await this.prisma.user.findMany({
+      const users = await this.prisma.users.findMany({
         where: {
           OR: [
             { email: { contains: query, mode: 'insensitive' } },
             { username: { contains: query, mode: 'insensitive' } },
-            { firstName: { contains: query, mode: 'insensitive' } },
-            { lastName: { contains: query, mode: 'insensitive' } },
+            { first_name: { contains: query, mode: 'insensitive' } },
+            { last_name: { contains: query, mode: 'insensitive' } },
           ],
         },
         take: 20, // Limit search results
         include: {
           credit_balance: true,
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
@@ -253,22 +253,22 @@ export class UserManagementService {
     logger.debug('UserManagementService.viewUserDetails', { userId });
 
     try {
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
             take: 1,
           },
           credit_balance: true,
           token_usage: {
             take: 100,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
           },
           credit_deductions: {
             take: 100,
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
           },
         },
       });
@@ -278,8 +278,8 @@ export class UserManagementService {
       }
 
       // Get total API calls count
-      const totalApiCalls = await this.prisma.usageHistory.count({
-        where: { userId },
+      const totalApiCalls = await this.prisma.usage_history.count({
+        where: { user_id: userId },
       });
 
       // Calculate credits used from deductions
@@ -291,10 +291,10 @@ export class UserManagementService {
       // Calculate average calls per day (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const recentApiCalls = await this.prisma.usageHistory.count({
+      const recentApiCalls = await this.prisma.usage_history.count({
         where: {
-          userId,
-          createdAt: { gte: thirtyDaysAgo },
+          user_id: userId,
+          created_at: { gte: thirtyDaysAgo },
         },
       });
       const averageCallsPerDay = recentApiCalls / 30;
@@ -327,22 +327,22 @@ export class UserManagementService {
     logger.info('UserManagementService.editUserProfile', { userId, updates });
 
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
           ...(updates.username && { username: updates.username }),
-          ...(updates.firstName && { firstName: updates.firstName }),
-          ...(updates.lastName && { lastName: updates.lastName }),
-          ...(updates.profilePictureUrl && { profilePictureUrl: updates.profilePictureUrl }),
-          updatedAt: new Date(),
+          ...(updates.firstName && { first_name: updates.firstName }),
+          ...(updates.lastName && { last_name: updates.lastName }),
+          ...(updates.profilePictureUrl && { profile_picture_url: updates.profilePictureUrl }),
+          updated_at: new Date(),
         },
       });
 
       // Fetch updated user with relations for mapper
-      const updatedUser = await this.prisma.user.findUnique({
+      const updatedUser = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
@@ -377,12 +377,12 @@ export class UserManagementService {
       const now = new Date();
       const expiresAt = duration ? new Date(now.getTime() + duration * 24 * 60 * 60 * 1000) : null;
 
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
-          isActive: false,
-          deactivatedAt: now,
-          updatedAt: now,
+          is_active: false,
+          deactivated_at: now,
+          updated_at: now,
         },
       });
 
@@ -392,10 +392,10 @@ export class UserManagementService {
       // });
 
       // Fetch user with relations for mapper
-      const updatedUser = await this.prisma.user.findUnique({
+      const updatedUser = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
@@ -421,20 +421,20 @@ export class UserManagementService {
     logger.info('UserManagementService.unsuspendUser', { userId });
 
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
-          isActive: true,
-          deactivatedAt: null,
-          updatedAt: new Date(),
+          is_active: true,
+          deactivated_at: null,
+          updated_at: new Date(),
         },
       });
 
       // Fetch user with relations for mapper
-      const updatedUser = await this.prisma.user.findUnique({
+      const updatedUser = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
@@ -464,22 +464,22 @@ export class UserManagementService {
     try {
       const now = new Date();
 
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
-          isActive: false,
-          deletedAt: now,
-          updatedAt: now,
+          is_active: false,
+          deleted_at: now,
+          updated_at: now,
         },
       });
 
       // TODO: Store ban reason in separate table or use metadata field
 
       // Fetch user with relations for mapper
-      const updatedUser = await this.prisma.user.findUnique({
+      const updatedUser = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
@@ -505,20 +505,20 @@ export class UserManagementService {
     logger.info('UserManagementService.unbanUser', { userId });
 
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
-          isActive: true,
-          deletedAt: null,
-          updatedAt: new Date(),
+          is_active: true,
+          deleted_at: null,
+          updated_at: new Date(),
         },
       });
 
       // Fetch user with relations for mapper
-      const updatedUser = await this.prisma.user.findUnique({
+      const updatedUser = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptionMonetization: {
+          subscription_monetization: {
             where: { status: { in: ['trial', 'active'] } },
             take: 1,
           },
@@ -559,12 +559,12 @@ export class UserManagementService {
 
     for (const userId of userIds) {
       try {
-        await this.prisma.user.update({
+        await this.prisma.users.update({
           where: { id: userId },
           data: {
             ...(updates.role && { role: updates.role }),
-            ...(updates.isActive !== undefined && { isActive: updates.isActive }),
-            updatedAt: new Date(),
+            ...(updates.isActive !== undefined && { is_active: updates.isActive }),
+            updated_at: new Date(),
           },
         });
 
@@ -659,26 +659,26 @@ export class UserManagementService {
 
     try {
       // Validate user exists
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const user = await this.prisma.users.findUnique({ where: { id: userId } });
       if (!user) {
         throw notFoundError('User');
       }
 
       // Create credit allocation record and update user's credit balance atomically
       const [allocation, updatedBalance] = await this.prisma.$transaction([
-        this.prisma.creditAllocation.create({
+        this.prisma.credit_allocation.create({
           data: {
-            userId,
+            user_id: userId,
             amount: Math.abs(amount),
             source: amount > 0 ? 'admin_grant' : 'admin_grant', // TODO: Add 'admin_deduction' source
-            allocationPeriodStart: new Date(),
-            allocationPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+            allocation_period_start: new Date(),
+            allocation_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
           },
         }),
-        this.prisma.userCreditBalance.upsert({
-          where: { userId },
+        this.prisma.user_credit_balances.upsert({
+          where: { user_id: userId },
           create: {
-            userId,
+            user_id: userId,
             amount: Math.max(0, amount), // Ensure non-negative
           },
           update: {
@@ -698,11 +698,11 @@ export class UserManagementService {
 
       return {
         id: allocation.id,
-        userId: allocation.userId,
+        userId: allocation.user_id,
         amount: amount,
         reason,
         source: allocation.source,
-        createdAt: allocation.createdAt,
+        createdAt: allocation.created_at,
       };
     } catch (error) {
       logger.error('UserManagementService.adjustUserCredits: Error', { error });
@@ -719,9 +719,9 @@ export class UserManagementService {
     logger.debug('UserManagementService.viewCreditHistory', { userId });
 
     try {
-      const allocations = await this.prisma.creditAllocation.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const allocations = await this.prisma.credit_allocation.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
         take: 100,
       });
 
@@ -730,7 +730,7 @@ export class UserManagementService {
         amount: alloc.amount,
         type: 'allocation' as const,
         source: alloc.source,
-        createdAt: alloc.createdAt,
+        createdAt: alloc.created_at,
       }));
 
       // TODO: Also fetch deductions from Plan 112's credit_deduction_ledger

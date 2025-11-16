@@ -128,28 +128,28 @@ export class DeviceActivationManagementService {
 
     // Get total count and data
     const [total, activations, stats] = await Promise.all([
-      this.prisma.licenseActivation.count({ where }),
-      this.prisma.licenseActivation.findMany({
+      this.prisma.license_activation.count({ where }),
+      this.prisma.license_activation.findMany({
         where,
         include: {
           user: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
           license: {
             select: {
               id: true,
-              licenseKey: true,
-              maxActivations: true,
-              currentActivations: true,
+              license_key: true,
+              max_activations: true,
+              current_activations: true,
             },
           },
         },
-        orderBy: { activatedAt: 'desc' },
+        orderBy: { activated_at: 'desc' },
         skip,
         take: limit,
       }),
@@ -162,25 +162,25 @@ export class DeviceActivationManagementService {
     const devices: DeviceActivationData[] = activations.map((activation) => {
       const user = (activation as any).user;
       const license = (activation as any).license;
-      const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Unknown';
+      const userName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Unknown';
 
       return {
         id: activation.id,
-        userId: activation.userId,
+        userId: activation.user_id,
         userName,
         userEmail: user?.email || 'Unknown',
-        licenseId: activation.licenseId,
-        licenseKey: license?.licenseKey || 'Unknown',
-        deviceName: activation.deviceName,
-        deviceId: activation.machineFingerprint,
-        os: activation.osType,
-        ipAddress: activation.ipAddress || null,
-        activatedAt: activation.activatedAt.toISOString(),
-        lastSeenAt: activation.lastSeenAt.toISOString(),
+        licenseId: activation.license_id,
+        licenseKey: license?.license_key || 'Unknown',
+        deviceName: activation.device_name,
+        deviceId: activation.machine_fingerprint,
+        os: activation.os_type,
+        ipAddress: activation.ip_address || null,
+        activatedAt: activation.activated_at.toISOString(),
+        lastSeenAt: activation.last_seen_at.toISOString(),
         status: activation.status,
-        isSuspicious: activation.isSuspicious,
-        suspiciousFlags: Array.isArray(activation.suspiciousFlags)
-          ? (activation.suspiciousFlags as string[])
+        isSuspicious: activation.is_suspicious,
+        suspiciousFlags: Array.isArray(activation.suspicious_flags)
+          ? (activation.suspicious_flags as string[])
           : [],
       };
     });
@@ -205,30 +205,30 @@ export class DeviceActivationManagementService {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     const [totalActive, suspiciousActivations, recentlyActivated24h, licenses] = await Promise.all([
-      this.prisma.licenseActivation.count({
+      this.prisma.license_activation.count({
         where: { status: 'active' },
       }),
-      this.prisma.licenseActivation.count({
-        where: { isSuspicious: true },
+      this.prisma.license_activation.count({
+        where: { is_suspicious: true },
       }),
-      this.prisma.licenseActivation.count({
+      this.prisma.license_activation.count({
         where: {
-          activatedAt: {
+          activated_at: {
             gte: yesterday,
           },
         },
       }),
-      this.prisma.perpetualLicense.findMany({
+      this.prisma.perpetual_license.findMany({
         select: {
-          maxActivations: true,
-          currentActivations: true,
+          max_activations: true,
+          current_activations: true,
         },
       }),
     ]);
 
     // Count licenses at max capacity
     const licensesAtMaxCapacity = licenses.filter(
-      (license) => license.currentActivations >= license.maxActivations
+      (license) => license.current_activations >= license.max_activations
     ).length;
 
     return {
@@ -243,7 +243,7 @@ export class DeviceActivationManagementService {
    * Deactivate a device (user-initiated)
    */
   async deactivateDevice(activationId: string): Promise<void> {
-    const activation = await this.prisma.licenseActivation.findUnique({
+    const activation = await this.prisma.license_activation.findUnique({
       where: { id: activationId },
       include: { license: true },
     });
@@ -253,19 +253,19 @@ export class DeviceActivationManagementService {
     }
 
     // Update activation status
-    await this.prisma.licenseActivation.update({
+    await this.prisma.license_activation.update({
       where: { id: activationId },
       data: {
         status: 'deactivated',
-        deactivatedAt: new Date(),
+        deactivated_at: new Date(),
       },
     });
 
     // Decrement current activations count on license
-    await this.prisma.perpetualLicense.update({
-      where: { id: activation.licenseId },
+    await this.prisma.perpetual_license.update({
+      where: { id: activation.license_id },
       data: {
-        currentActivations: {
+        current_activations: {
           decrement: 1,
         },
       },
@@ -273,7 +273,7 @@ export class DeviceActivationManagementService {
 
     logger.info('DeviceActivationManagementService: Device deactivated', {
       activationId,
-      licenseId: activation.licenseId,
+      licenseId: activation.license_id,
     });
   }
 
@@ -281,7 +281,7 @@ export class DeviceActivationManagementService {
    * Revoke a device (admin-initiated, permanent)
    */
   async revokeDevice(activationId: string, reason: string): Promise<void> {
-    const activation = await this.prisma.licenseActivation.findUnique({
+    const activation = await this.prisma.license_activation.findUnique({
       where: { id: activationId },
       include: { license: true },
     });
@@ -291,14 +291,14 @@ export class DeviceActivationManagementService {
     }
 
     // Mark as deactivated with revocation reason
-    await this.prisma.licenseActivation.update({
+    await this.prisma.license_activation.update({
       where: { id: activationId },
       data: {
         status: 'deactivated',
-        deactivatedAt: new Date(),
-        isSuspicious: true,
-        suspiciousFlags: [
-          ...(Array.isArray(activation.suspiciousFlags) ? activation.suspiciousFlags : []),
+        deactivated_at: new Date(),
+        is_suspicious: true,
+        suspicious_flags: [
+          ...(Array.isArray(activation.suspicious_flags) ? activation.suspicious_flags : []),
           `admin_revoked: ${reason}`,
         ],
       },
@@ -306,10 +306,10 @@ export class DeviceActivationManagementService {
 
     // Decrement current activations count on license if still active
     if (activation.status === 'active') {
-      await this.prisma.perpetualLicense.update({
-        where: { id: activation.licenseId },
+      await this.prisma.perpetual_license.update({
+        where: { id: activation.license_id },
         data: {
-          currentActivations: {
+          current_activations: {
             decrement: 1,
           },
         },
@@ -318,7 +318,7 @@ export class DeviceActivationManagementService {
 
     logger.warn('DeviceActivationManagementService: Device revoked', {
       activationId,
-      licenseId: activation.licenseId,
+      licenseId: activation.license_id,
       reason,
     });
   }
@@ -365,11 +365,11 @@ export class DeviceActivationManagementService {
    * Flag device as suspicious
    */
   async flagAsSuspicious(activationId: string, flags: string[]): Promise<void> {
-    await this.prisma.licenseActivation.update({
+    await this.prisma.license_activation.update({
       where: { id: activationId },
       data: {
-        isSuspicious: true,
-        suspiciousFlags: flags,
+        is_suspicious: true,
+        suspicious_flags: flags,
       },
     });
 

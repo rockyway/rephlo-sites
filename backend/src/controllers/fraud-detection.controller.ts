@@ -45,32 +45,32 @@ export class FraudDetectionController {
         where.severity = req.query.severity;
       }
       if (req.query.status === 'pending') {
-        where.reviewedAt = null;
+        where.reviewed_at = null;
       } else if (req.query.status === 'reviewed') {
-        where.reviewedAt = { not: null };
+        where.reviewed_at = { not: null };
       }
 
       // Fetch fraud events with pagination
       const [events, total] = await Promise.all([
-        this.prisma.couponFraudDetection.findMany({
+        this.prisma.coupon_fraud_detection.findMany({
           where,
           skip: page * limit,
           take: limit,
-          orderBy: { detectedAt: 'desc' },
+          orderBy: { detected_at: 'desc' },
         }),
-        this.prisma.couponFraudDetection.count({ where }),
+        this.prisma.coupon_fraud_detection.count({ where }),
       ]);
 
       // Map to response format
       const mappedEvents = events.map((e) => ({
         id: e.id,
-        coupon_id: e.couponId,
-        user_id: e.userId,
-        detection_type: e.detectionType,
+        coupon_id: e.coupon_id,
+        user_id: e.user_id,
+        detection_type: e.detection_type,
         severity: e.severity,
-        is_flagged: e.isFlagged,
-        detected_at: e.detectedAt.toISOString(),
-        reviewed_at: e.reviewedAt?.toISOString() || null,
+        is_flagged: e.is_flagged,
+        detected_at: e.detected_at.toISOString(),
+        reviewed_at: e.reviewed_at?.toISOString() || null,
         details: e.details,
       }));
 
@@ -86,7 +86,7 @@ export class FraudDetectionController {
 
   async reviewFraudEvent(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
-    const reviewerId = (req as any).userId;
+    const reviewerId = (req as any).user_id;
 
     try {
       const data = safeValidateRequest(reviewFraudEventRequestSchema, req.body);
@@ -99,8 +99,8 @@ export class FraudDetectionController {
         data: {
           id: event.id,
           resolution: data.resolution,
-          reviewedAt: event.reviewedAt?.toISOString(),
-          isFlagged: event.isFlagged,
+          reviewedAt: event.reviewed_at?.toISOString(),
+          isFlagged: event.is_flagged,
         }
       });
     } catch (error: any) {
@@ -122,11 +122,11 @@ export class FraudDetectionController {
       // Map to response format
       const mappedEvents = events.map((e) => ({
         id: e.id,
-        coupon_id: e.couponId,
-        user_id: e.userId,
-        detection_type: e.detectionType,
+        coupon_id: e.coupon_id,
+        user_id: e.user_id,
+        detection_type: e.detection_type,
         severity: e.severity,
-        detected_at: e.detectedAt.toISOString(),
+        detected_at: e.detected_at.toISOString(),
         details: e.details,
       }));
 

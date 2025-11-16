@@ -1182,3 +1182,157 @@ Users can now:
 - Message: "feat: Add model selection to POC chat UI"
 
 ---
+
+
+## 2025-11-15 - Investigated Streaming Inference Error with Custom OpenAI Endpoint
+Enhanced error logging in LLM service and OpenAI provider to diagnose streaming chat completion failure. Added stack traces, custom endpoint visibility, and streaming metrics logging. Created troubleshooting document (012-streaming-inference-error-investigation.md) analyzing potential causes and solutions.
+
+
+
+## 2025-11-15: GPT-5 Compatibility & Tiktoken Implementation
+
+**Objective**: Implement GPT-5 model support (gpt-5, gpt-5-chat, gpt-5-mini) with accurate token counting using tiktoken library.
+
+**Key Discoveries (Web Research)**:
+- GPT-5 models require `max_completion_tokens` instead of `max_tokens`
+- GPT-5-mini only supports default temperature (1.0)
+- GPT-5 uses o200k_base encoding (same as GPT-4o)
+- All GPT-5 variants: gpt-5, gpt-5-chat, gpt-5-mini, gpt-5-nano
+
+**Implementation Summary**:
+1. ✅ Installed tiktoken npm package
+2. ✅ Created `backend/src/utils/tokenCounter.ts` utility
+3. ✅ Updated `backend/src/providers/azure-openai.provider.ts`
+4. ✅ Updated POC script to compare tiktoken vs. Azure/character-based estimation
+5. ✅ Tested successfully with GPT-5-mini deployment
+
+**Test Results**:
+- Azure OpenAI GPT-5-mini: ✅ Working (both streaming and non-streaming)
+- Tiktoken accuracy: 34.6% better than character-based estimation (char/4)
+- Streaming token estimation: Old method 26 tokens → Tiktoken 35 tokens
+
+**Files Modified**:
+- `backend/package.json`, `backend/src/utils/tokenCounter.ts` (NEW)
+- `backend/src/providers/azure-openai.provider.ts`, `backend/poc-azure-openai-streaming.ts`
+- `backend/.env`, `docs/research/013-azure-openai-streaming-analysis.md`
+
+**Impact**:
+- ✅ Backend now supports GPT-5 variants with proper API parameters
+- ✅ Significantly improved token counting accuracy for streaming requests
+- ✅ Backward compatible with GPT-4 and GPT-3.5 models
+
+
+[2025-01-15] Stream Options Implementation Complete
+- Implemented stream_options: { include_usage: true } in both OpenAI and Azure OpenAI providers
+- Added GPT-5 model support (max_completion_tokens, temperature restrictions for gpt-5-mini)
+- Improved token counting accuracy from 24-67% to 100% for streaming requests
+- Eliminated revenue loss (was 28-67% due to underestimation)
+- Marked azure-openai.provider.ts as deprecated (migrate to openai.provider.ts with baseURL)
+- Created docs/progress/190-stream-options-implementation-complete.md
+- Files: openai.provider.ts, azure-openai.provider.ts, poc-openai-provider-azure.ts
+- Status: Ready for production testing (requires Azure API v2024-12-01-preview)
+
+
+## 2025-11-15: Pricing Tier Restructure & Credit Conversion Update
+
+**Completed**:
+1. ✅ Audited seed data credit allocations
+2. ✅ Created comprehensive pricing restructure plan (docs/plan/189-pricing-tier-restructure-plan.md)
+3. ✅ Updated Plan 109 with new 6-tier pricing structure
+4. ✅ Designed credit allocations for x100 conversion rate (1 credit = $0.01)
+
+**New Pricing Structure**:
+- Free: $0/month → 200 credits ($2 worth)
+- Pro: $15/month → 1,500 credits ($15 worth) [was $19, 10,000 credits]
+- Pro+ (NEW): $45/month → 5,000 credits ($50 worth)
+- Pro Max: $199/month → 25,000 credits ($250 worth) [was $49]
+- Enterprise Pro (Q2 2026): $30/month → 3,500 credits
+- Enterprise Pro+ (Q2 2026): $90/month → 11,000 credits
+
+**Impact Analysis**:
+- Credit conversion rate changed: x1000 → x100 (10x reduction)
+- Old: 1 credit = $0.001 | New: 1 credit = $0.01
+- Maintains same dollar value for users with adjusted credit amounts
+- Free tier doubled: 100 → 200 credits
+- Pro tier optimized for entry point: $15 with 1,500 credits
+
+**Pending Implementation** (see docs/plan/189-pricing-tier-restructure-plan.md):
+- Database schema updates (add pro_plus, enterprise_pro, enterprise_pro_plus enums)
+- Seed data updates (tierConfig in seed.ts)
+- Frontend pricing page updates
+- API tier validation logic
+- Rate limiting configurations
+- Testing & QA verification
+
+**Documents Created**:
+- docs/analysis/085-credit-conversion-rate-seed-data-audit.md
+- docs/plan/189-pricing-tier-restructure-plan.md (comprehensive 3-4 week implementation plan)
+
+**Next Steps**: Begin Phase 1 implementation (database & schema updates)
+
+
+## 2025-01-16 - TypeScript Compilation Error Reduction (Partial Progress)
+
+**Objective**: Fix remaining ~60 TypeScript compilation errors in backend to achieve 0 errors
+
+**Starting Status**: ~60 errors (92% reduction from original 810 errors)
+
+**Work Completed**:
+1. Fixed usage mock file (`src/__tests__/mocks/usage.service.mock.ts`):
+   - Updated to use correct `token_usage_ledger` schema fields
+   - Changed `credit_id`, `credits_used`, `total_tokens`, `request_duration_ms` to new schema
+   - Added required fields: `request_id`, `provider_id`, `vendor_cost`, `margin_multiplier`, etc.
+
+2. Fixed campaign controller (`src/controllers/campaign.controller.ts`):
+   - Replaced camelCase field access with snake_case (e.g., `c.campaignName` → `c.campaign_name`)
+   - Fixed orderBy: `{ createdAt: 'desc' }` → `{ created_at: 'desc' }`
+   - Added type assertions for validation data
+
+3. Fixed coupon controller (`src/controllers/coupon.controller.ts`):
+   - Added type assertions for unknown types
+   - Fixed snake_case field access in redemption mappings
+   - Fixed relation names (usageLimits → coupon_usage_limit)
+
+4. Fixed misc controllers:
+   - `database.ts`: Removed unused `PgPool` import
+   - `device-activation-management.controller.ts`: Fixed `ActivationStatus` → `activation_status`
+   - `fraud-detection.controller.ts`: Fixed snake_case field access
+   - `license-management.controller.ts`: Added explicit types to lambda parameters
+   - `models.controller.ts`: Fixed `SubscriptionTier` → `subscription_tier`
+   - `social-auth.controller.ts`: Fixed `googleId` → `google_id`
+
+5. Partially fixed typeMappers (`src/utils/typeMappers.ts`):
+   - Fixed snake_case field access in campaign, coupon, redemption, fraud detection, proration mappers
+   - Updated relation names (user → users, usageLimits → coupon_usage_limit, etc.)
+
+**Current Status**: ~825 errors (errors increased due to incomplete typeMapper fixes)
+
+**Remaining Issues**:
+1. **TypeMapper Prisma Type Definitions**: The Prisma `include` type definitions in function signatures don't match actual schema relation names
+   - Need to fix: `usageLimits` → `coupon_usage_limit`  
+   - Need to fix: `campaign` → `coupon_campaign`
+   - Need to fix: `user` → `users`
+   - Need to fix: `coupons` (count) → `coupon`
+
+2. **Coupon Controller Include Statements**: Several `include` statements use wrong relation names
+
+3. **Subscription Mock Interface Mismatch**: Mock service methods don't match interface expectations
+
+**Next Steps**:
+1. Fix all Prisma type definitions in typeMappers.ts function signatures to use correct relation names from schema
+2. Update all controller `include` statements to match schema relation names  
+3. Verify and fix subscription mock to match ISubscriptionService interface
+4. Run final build to confirm 0 errors
+
+**Files Modified**:
+- `src/__tests__/mocks/usage.service.mock.ts`
+- `src/controllers/campaign.controller.ts`
+- `src/controllers/coupon.controller.ts`
+- `src/config/database.ts`
+- `src/controllers/device-activation-management.controller.ts`
+- `src/controllers/fraud-detection.controller.ts`
+- `src/controllers/license-management.controller.ts`
+- `src/controllers/models.controller.ts`
+- `src/controllers/social-auth.controller.ts`
+- `src/utils/typeMappers.ts`
+

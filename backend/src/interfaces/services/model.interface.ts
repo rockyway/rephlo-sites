@@ -1,4 +1,4 @@
-import { SubscriptionTier } from '@prisma/client';
+import type { SubscriptionTier } from '@prisma/client';
 import { TierAccessResult } from '../../utils/tier-access';
 import {
   CreateModelRequest,

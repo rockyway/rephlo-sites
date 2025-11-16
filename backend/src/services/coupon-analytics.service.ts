@@ -73,67 +73,67 @@ export class CouponAnalyticsService {
     try {
       const dateFilter: any = {};
       if (startDate || endDate) {
-        dateFilter.redemptionDate = {};
-        if (startDate) dateFilter.redemptionDate.gte = startDate;
-        if (endDate) dateFilter.redemptionDate.lte = endDate;
+        dateFilter.redemption_date = {};
+        if (startDate) dateFilter.redemption_date.gte = startDate;
+        if (endDate) dateFilter.redemption_date.lte = endDate;
       }
 
       // Get current period metrics
-      const currentPeriodRedemptions = await this.prisma.couponRedemption.aggregate({
+      const currentPeriodRedemptions = await this.prisma.coupon_redemption.aggregate({
         where: {
-          redemptionStatus: 'success',
+          redemption_status: 'success',
           ...dateFilter,
         },
         _count: true,
         _sum: {
-          discountAppliedUsd: true,
+          discount_applied_usd: true,
         },
       });
 
       // Get previous period for comparison (same duration before startDate)
-      let previousPeriodRedemptions: any = { _count: 0, _sum: { discountAppliedUsd: 0 } };
+      let previousPeriodRedemptions: any = { _count: 0, _sum: { discount_applied_usd: 0 } };
       if (startDate && endDate) {
         const duration = endDate.getTime() - startDate.getTime();
         const previousStart = new Date(startDate.getTime() - duration);
         const previousEnd = startDate;
 
-        previousPeriodRedemptions = await this.prisma.couponRedemption.aggregate({
+        previousPeriodRedemptions = await this.prisma.coupon_redemption.aggregate({
           where: {
-            redemptionStatus: 'success',
-            redemptionDate: {
+            redemption_status: 'success',
+            redemption_date: {
               gte: previousStart,
               lte: previousEnd,
             },
           },
           _count: true,
           _sum: {
-            discountAppliedUsd: true,
+            discount_applied_usd: true,
           },
         });
       }
 
       // Get fraud detection count
-      const fraudDetectedCount = await this.prisma.couponRedemption.count({
+      const fraudDetectedCount = await this.prisma.coupon_redemption.count({
         where: {
-          redemptionStatus: 'failed',
+          redemption_status: 'failed',
           ...dateFilter,
         },
       });
 
       // Get total attempts for conversion rate
-      const totalAttempts = await this.prisma.couponRedemption.count({
+      const totalAttempts = await this.prisma.coupon_redemption.count({
         where: dateFilter,
       });
 
       const totalRedemptions = currentPeriodRedemptions._count || 0;
-      const totalDiscountValue = Number(currentPeriodRedemptions._sum?.discountAppliedUsd || 0);
+      const totalDiscountValue = Number(currentPeriodRedemptions._sum?.discount_applied_usd || 0);
       const averageDiscount = totalRedemptions > 0 ? totalDiscountValue / totalRedemptions : 0;
       const conversionRate = totalAttempts > 0 ? (totalRedemptions / totalAttempts) * 100 : 0;
       const fraudRate = totalAttempts > 0 ? (fraudDetectedCount / totalAttempts) * 100 : 0;
 
       // Calculate month-over-month changes
       const previousRedemptions = previousPeriodRedemptions._count || 0;
-      const previousDiscount = Number(previousPeriodRedemptions._sum?.discountAppliedUsd || 0);
+      const previousDiscount = Number(previousPeriodRedemptions._sum?.discount_applied_usd || 0);
 
       const redemptionChange = previousRedemptions > 0
         ? ((totalRedemptions - previousRedemptions) / previousRedemptions) * 100

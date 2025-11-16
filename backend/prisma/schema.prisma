@@ -1342,9 +1342,11 @@ enum subscription_status {
 enum subscription_tier {
   free
   pro
+  pro_plus          // NEW: $45/month tier
   pro_max
-  enterprise_pro
-  enterprise_max
+  enterprise_pro    // Coming Q2 2026
+  enterprise_pro_plus // NEW: Coming Q2 2026
+  enterprise_max    // DEPRECATED: Use enterprise_pro_plus
   perpetual
 }
 

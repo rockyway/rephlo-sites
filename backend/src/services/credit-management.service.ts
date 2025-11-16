@@ -100,7 +100,7 @@ export class CreditManagementService {
 
     try {
       // Get subscription to determine credit amount
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -108,34 +108,34 @@ export class CreditManagementService {
         throw notFoundError('Subscription');
       }
 
-      const monthlyAllocation = subscription.monthlyCreditAllocation;
+      const monthlyAllocation = subscription.monthly_credit_allocation;
 
       // Use transaction to ensure atomicity
       return await this.prisma.$transaction(async (tx) => {
         // Create credit allocation record
-        const allocation = await tx.creditAllocation.create({
+        const allocation = await tx.credit_allocations.create({
           data: {
-            userId,
-            subscriptionId,
+            user_id: userId,
+            subscription_id: subscriptionId,
             amount: monthlyAllocation,
-            allocationPeriodStart: subscription.currentPeriodStart,
-            allocationPeriodEnd: subscription.currentPeriodEnd,
+            allocation_period_start: subscription.current_period_start,
+            allocation_period_end: subscription.current_period_end,
             source: 'subscription',
           },
         });
 
         // Update user credit balance (Plan 112 integration)
-        await tx.userCreditBalance.upsert({
-          where: { userId: userId },
+        await tx.user_credit_balances.upsert({
+          where: { user_id: userId },
           update: {
             amount: { increment: allocation.amount },
-            updatedAt: new Date()
+            updated_at: new Date()
           },
           create: {
-            userId: userId,
+            user_id: userId,
             amount: allocation.amount,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            created_at: new Date(),
+            updated_at: new Date()
           }
         });
 
@@ -160,11 +160,11 @@ export class CreditManagementService {
     logger.info('CreditManagementService.processMonthlyAllocations');
 
     try {
-      const activeSubscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const activeSubscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
-          currentPeriodStart: { lte: new Date() },
-          currentPeriodEnd: { gte: new Date() },
+          current_period_start: { lte: new Date() },
+          current_period_end: { gte: new Date() },
         },
       });
 
@@ -172,10 +172,10 @@ export class CreditManagementService {
       const allocationsByTier: Record<string, number> = {};
 
       for (const subscription of activeSubscriptions) {
-        await this.allocateSubscriptionCredits(subscription.userId, subscription.id);
-        totalAllocated += subscription.monthlyCreditAllocation;
+        await this.allocateSubscriptionCredits(subscription.user_id, subscription.id);
+        totalAllocated += subscription.monthly_credit_allocation;
         allocationsByTier[subscription.tier] =
-          (allocationsByTier[subscription.tier] || 0) + subscription.monthlyCreditAllocation;
+          (allocationsByTier[subscription.tier] || 0) + subscription.monthly_credit_allocation;
       }
 
       const summary = {
@@ -221,28 +221,28 @@ export class CreditManagementService {
       // Use transaction to ensure atomicity
       return await this.prisma.$transaction(async (tx) => {
         // Create bonus allocation record
-        const allocation = await tx.creditAllocation.create({
+        const allocation = await tx.credit_allocations.create({
           data: {
-            userId,
+            user_id: userId,
             amount,
-            allocationPeriodStart: now,
-            allocationPeriodEnd: expiresAt || defaultExpiry,
+            allocation_period_start: now,
+            allocation_period_end: expiresAt || defaultExpiry,
             source: 'bonus',
           },
         });
 
         // Update user credit balance (Plan 112 integration)
-        await tx.userCreditBalance.upsert({
-          where: { userId: userId },
+        await tx.user_credit_balances.upsert({
+          where: { user_id: userId },
           update: {
             amount: { increment: amount },
-            updatedAt: new Date()
+            updated_at: new Date()
           },
           create: {
-            userId: userId,
+            user_id: userId,
             amount: amount,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            created_at: new Date(),
+            updated_at: new Date()
           }
         });
 
@@ -297,9 +297,9 @@ export class CreditManagementService {
     logger.debug('CreditManagementService.calculateRollover', { userId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
-        where: { userId, status: { in: ['trial', 'active'] } },
-        orderBy: { createdAt: 'desc' },
+      const subscription = await this.prisma.subscription_monetization.findFirst({
+        where: { user_id: userId, status: { in: ['trial', 'active'] } },
+        orderBy: { created_at: 'desc' },
       });
 
       if (!subscription) {
@@ -313,15 +313,15 @@ export class CreditManagementService {
       }
 
       // Get tier config for rollover limits
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: subscription.tier },
+      const tierConfig = await this.prisma.subscription_tier_configs.findUnique({
+        where: { tier_name: subscription.tier },
       });
 
       if (!tierConfig) {
         throw badRequestError(`Tier configuration not found: ${subscription.tier}`);
       }
 
-      const maxRollover = tierConfig.maxCreditRollover;
+      const maxRollover = tierConfig.max_credit_rollover;
 
       // TODO: Get actual current balance from Plan 112
       const currentBalance = 0;
@@ -367,12 +367,12 @@ export class CreditManagementService {
       const expiryDate = new Date(now);
       expiryDate.setMonth(expiryDate.getMonth() + 1); // Rollover expires in 1 month
 
-      await this.prisma.creditAllocation.create({
+      await this.prisma.credit_allocation.create({
         data: {
-          userId,
+          user_id: userId,
           amount: rolloverAmount,
-          allocationPeriodStart: now,
-          allocationPeriodEnd: expiryDate,
+          allocation_period_start: now,
+          allocation_period_end: expiryDate,
           source: 'bonus', // Rollover treated as bonus
         },
       });
@@ -397,14 +397,14 @@ export class CreditManagementService {
 
     try {
       // Calculate expected balance from allocations
-      const allocations = await this.prisma.creditAllocation.findMany({
-        where: { userId: userId },
+      const allocations = await this.prisma.credit_allocation.findMany({
+        where: { user_id: userId },
         select: { amount: true }
       });
 
       // Calculate total deductions
-      const deductions = await this.prisma.creditDeductionLedger.findMany({
-        where: { userId: userId },
+      const deductions = await this.prisma.credit_deduction_ledger.findMany({
+        where: { user_id: userId },
         select: { amount: true }
       });
 
@@ -413,17 +413,17 @@ export class CreditManagementService {
         deductions.reduce((sum, d) => sum + d.amount, 0);
 
       // Update balance to match expected value
-      await this.prisma.userCreditBalance.upsert({
-        where: { userId: userId },
+      await this.prisma.user_credit_balances.upsert({
+        where: { user_id: userId },
         update: {
           amount: expectedBalance,
-          updatedAt: new Date()
+          updated_at: new Date()
         },
         create: {
-          userId: userId,
+          user_id: userId,
           amount: expectedBalance,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          created_at: new Date(),
+          updated_at: new Date()
         }
       });
 
@@ -447,8 +447,8 @@ export class CreditManagementService {
 
     try {
       // Get Plan 109 allocations
-      const allocations = await this.prisma.creditAllocation.findMany({
-        where: { userId },
+      const allocations = await this.prisma.credit_allocation.findMany({
+        where: { user_id: userId },
       });
 
       const plan109Balance = allocations.reduce((sum, alloc) => sum + alloc.amount, 0);
@@ -520,9 +520,9 @@ export class CreditManagementService {
     logger.debug('CreditManagementService.getCreditAllocationHistory', { userId });
 
     try {
-      const allocations = await this.prisma.creditAllocation.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const allocations = await this.prisma.credit_allocation.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
         take: 100,
       });
 
@@ -557,18 +557,18 @@ export class CreditManagementService {
     });
 
     try {
-      const usageHistory = await this.prisma.usageHistory.findMany({
+      const usageHistory = await this.prisma.usage_history.findMany({
         where: {
-          userId,
-          createdAt: { gte: startDate, lte: endDate },
+          user_id: userId,
+          created_at: { gte: startDate, lte: endDate },
         },
       });
 
-      const totalUsed = usageHistory.reduce((sum, usage) => sum + usage.creditsUsed, 0);
+      const totalUsed = usageHistory.reduce((sum, usage) => sum + usage.credits_used, 0);
 
       const byModel: Record<string, number> = {};
       usageHistory.forEach((usage) => {
-        byModel[usage.modelId] = (byModel[usage.modelId] || 0) + usage.creditsUsed;
+        byModel[usage.model_id] = (byModel[usage.model_id] || 0) + usage.credits_used;
       });
 
       const summary: CreditUsageSummary = {

@@ -2,22 +2,30 @@
 
 **Document ID**: 109
 **Created**: 2025-11-08
-**Status**: Planning
+**Last Updated**: 2025-11-15 (Pricing Restructure)
+**Status**: Active Implementation
 **Priority**: P0 (High)
 **Target Version**: v2.0.0
 **Application**: Rephlo Desktop (formerly Text Assistant)
 
 ## Executive Summary
 
-This document outlines a comprehensive monetization strategy and admin moderation system for the Rephlo Desktop Application - a Windows-based AI-powered text transformation tool. Based on 2025 SaaS best practices and competitive LLM pricing analysis, this plan introduces a 5-tier subscription model with credit-based usage tracking and a full-featured admin moderation dashboard for managing subscriptions, users, billing, and platform health.
+This document outlines a comprehensive monetization strategy and admin moderation system for the Rephlo Desktop Application - a Windows-based AI-powered text transformation tool. Based on 2025 SaaS best practices and competitive LLM pricing analysis, this plan introduces a **6-tier subscription model** (4 consumer + 2 enterprise) with credit-based usage tracking and a full-featured admin moderation dashboard for managing subscriptions, users, billing, and platform health.
+
+### Recent Updates (2025-11-15)
+- ✅ Updated credit conversion rate from x1000 to **x100** (1 credit = $0.01 USD)
+- ✅ Restructured pricing: Pro ($15), Pro+ ($45, NEW), Pro Max ($199)
+- ✅ Adjusted credit allocations: Free (200), Pro (1,500), Pro+ (5,000), Pro Max (25,000)
+- ✅ Added Enterprise Pro ($30) and Enterprise Pro+ ($90) - **Coming Q2 2026**
+- 📋 Comprehensive implementation plan: `docs/plan/189-pricing-tier-restructure-plan.md`
 
 ## Table of Contents
 
 1. [Current State Analysis](#current-state-analysis)
 2. [Market Research Summary](#market-research-summary)
-3. [5-Tier Subscription Model](#5-tier-subscription-model)
-4. [Credit System & Usage Metering](#credit-system--usage-metering)
-5. [Pricing Strategy](#pricing-strategy)
+3. [6-Tier Subscription Model](#6-tier-subscription-model) ⬅️ **UPDATED**
+4. [Credit System & Usage Metering](#credit-system--usage-metering) ⬅️ **UPDATED**
+5. [Pricing Strategy](#pricing-strategy) ⬅️ **UPDATED**
 6. [Admin Moderation System](#admin-moderation-system)
 7. [Database Schema Enhancements](#database-schema-enhancements)
 8. [Implementation Phases](#implementation-phases)
@@ -135,25 +143,41 @@ Based on web research of 100+ SaaS companies in 2025:
 
 ---
 
-## 5-Tier Subscription Model
+## 6-Tier Subscription Model ⬅️ UPDATED
 
 ### Tier Structure Overview
 
-| Tier | Target Audience | Monthly Price | Annual Price | Credits/Month | Use Case |
-|------|----------------|---------------|--------------|---------------|----------|
-| **Free** | Individual users, students, evaluation | $0 | $0 | 2,000 | Trial, basic personal use |
-| **Pro** | Professionals, freelancers, power users | $19 | $190 (17% off) | 20,000 | Daily professional work |
-| **Pro Max** | Heavy users, small teams, content creators | $49 | $490 (17% off) | 60,000 | High-volume daily usage |
-| **Enterprise Pro** | Small-medium businesses, departments | $149 | $1,490 (17% off) | 250,000 | Team collaboration, shared workspaces |
-| **Enterprise Max** | Large enterprises, unlimited teams | Custom | Custom | Unlimited | Enterprise features, SLA, dedicated support |
+> **🔄 UPDATED 2025-11-15**: New pricing structure with Pro+ tier and enterprise tiers coming Q2 2026
+
+| Tier | Target Audience | Monthly Price | Credits/Month | Dollar Value | Status |
+|------|----------------|---------------|---------------|--------------|--------|
+| **Free** | Individual users, students, evaluation | $0 | **200** | $2 | ✅ Active |
+| **Pro** | Professionals, freelancers | **$15** | **1,500** | $15 | ✅ Active |
+| **Pro+** 🆕 | Power users, developers, small teams | **$45** | **5,000** | $50 | ✅ Active |
+| **Pro Max** | Heavy users, agencies, medium teams | **$199** | **25,000** | $250 | ✅ Active |
+| **Enterprise Pro** | Small teams (5 users) | **$30** | **3,500** | $35 | 🔜 Q2 2026 |
+| **Enterprise Pro+** | Medium teams (15 users) | **$90** | **11,000** | $110 | 🔜 Q2 2026 |
+
+**Key Changes**:
+- ✅ Credit conversion rate: x100 (1 credit = $0.01 USD)
+- ✅ Pro tier price reduced: $19 → **$15**
+- 🆕 New Pro+ tier at $45 (sweet spot for power users)
+- ✅ Pro Max repositioned: $49 → **$199** (premium tier)
+- 🔜 Enterprise tiers coming Q2 2026
 
 ### Tier Feature Matrix
 
+> **📋 Comprehensive implementation plan**: `docs/plan/189-pricing-tier-restructure-plan.md`
+
+---
+
 #### Free Tier
-**Credits & Models**:
-- 2,000 credits/month (no rollover)
-- Access to free-tier models only (GPT-3.5-Turbo, basic Gemini)
-- Standard processing speed
+**Pricing**: $0/month
+**Credits**: **200 credits/month** ($2 worth of API usage) ⬅️ UPDATED
+
+**Models**:
+- Access to free-tier models only (GPT-3.5-Turbo, Claude 3 Haiku, Gemini Flash)
+- Standard processing speed (1.0x)
 - Public LLM providers only
 
 **Features**:
@@ -169,13 +193,17 @@ Based on web research of 100+ SaaS companies in 2025:
 - Max 1 concurrent request
 - Standard rate limiting (10 req/min)
 - No priority queue
+- No rollover credits
 - 30-day usage history retention
 
-#### Pro Tier ($19/month)
-**Credits & Models**:
-- 20,000 credits/month (+18,000 from Free)
-- Rollover up to 10,000 credits (1 month)
-- Access to pro-tier models (GPT-4, Claude 3.5 Sonnet, Gemini Pro)
+---
+
+#### Pro Tier ($15/month) ⬅️ UPDATED PRICING
+**Pricing**: **$15/month** (was $19)
+**Credits**: **1,500 credits/month** ($15 worth of API usage) ⬅️ UPDATED
+
+**Models**:
+- Access to pro-tier models (GPT-4, GPT-4o, Claude 3.5 Sonnet, Gemini Pro)
 - Priority processing speed (1.5x faster)
 - All public LLM providers
 
@@ -183,7 +211,7 @@ Based on web research of 100+ SaaS companies in 2025:
 - ✅ All Free tier features
 - Unlimited custom command templates
 - 5 workspaces (Spaces)
-- Email support (48-hour SLA)
+- Email support (24-48h SLA)
 - Advanced keyboard shortcuts
 - Custom hotkey combinations
 - Usage analytics dashboard
@@ -193,60 +221,129 @@ Based on web research of 100+ SaaS companies in 2025:
 - Max 200 API calls/day
 - Max 3 concurrent requests
 - Elevated rate limiting (30 req/min)
-- Standard priority queue
+- Rollover up to 750 credits (1 month)
 - 90-day usage history retention
 
-#### Pro Max Tier ($49/month)
-**Credits & Models**:
-- 60,000 credits/month (+40,000 from Pro)
-- Rollover up to 30,000 credits (3 months)
-- Access to all pro models + premium tier (GPT-5 preview, Claude Opus)
+---
+
+#### Pro+ Tier ($45/month) 🆕 NEW TIER
+**Pricing**: **$45/month**
+**Credits**: **5,000 credits/month** ($50 worth of API usage)
+
+**Models**:
+- All Pro tier models + premium tier (GPT-4 Turbo, Claude 3 Opus)
 - High-priority processing (2x faster)
 - Early access to new model releases
 
 **Features**:
 - ✅ All Pro tier features
 - Unlimited workspaces
-- Priority email support (24-hour SLA)
+- Priority email support (12-24h SLA)
 - Live chat support (business hours)
 - Advanced usage analytics with exports
+- API access (beta)
 - Custom LLM endpoint integration (bring your own API keys)
 - Bulk command execution
 - Team sharing (up to 3 users)
 
 **Limits**:
-- Max 1,000 API calls/day
-- Max 10 concurrent requests
-- Premium rate limiting (60 req/min)
-- High priority queue
+- Max 500 API calls/day
+- Max 5 concurrent requests
+- High rate limiting (60 req/min)
+- Rollover up to 2,500 credits (3 months)
 - 180-day usage history retention
-- 10 GB workspace storage
+- 5 GB workspace storage
 
-#### Enterprise Pro Tier ($149/month)
-**Credits & Models**:
-- 250,000 credits/month (+190,000 from Pro Max)
-- Rollover up to 100,000 credits (6 months)
-- Access to all models including enterprise-grade
-- Enterprise priority processing (3x faster)
+---
+
+#### Pro Max Tier ($199/month) ⬅️ UPDATED PRICING
+**Pricing**: **$199/month** (was $49)
+**Credits**: **25,000 credits/month** ($250 worth of API usage) ⬅️ UPDATED
+
+**Models**:
+- Access to ALL models including enterprise-grade
+- Ultra-priority processing (3x faster)
 - Dedicated model instances (optional add-on)
+- Early access to experimental models
 
 **Features**:
-- ✅ All Pro Max features
-- Unlimited team members
-- Unlimited workspaces with collaboration
-- Priority phone + email support (12-hour SLA)
-- Dedicated account manager (optional)
-- Advanced RBAC and permissions
+- ✅ All Pro+ tier features
+- Unlimited workspaces with advanced collaboration
+- Priority support (4-8h SLA)
+- Full API access
+- Dedicated account manager
+- Custom model fine-tuning (coming soon)
+- Advanced analytics with custom reports
+- White-label options
+
+**Limits**:
+- Max 2,500 API calls/day
+- Max 10 concurrent requests
+- Premium rate limiting (120 req/min)
+- Rollover up to 12,500 credits (6 months)
+- Unlimited usage history
+- 20 GB workspace storage
+
+---
+
+#### Enterprise Pro Tier ($30/month) 🔜 COMING Q2 2026
+**Pricing**: **$30/month**
+**Credits**: **3,500 credits/month** ($35 worth of API usage)
+**Status**: **Coming Soon** - Expected Q2 2026
+
+**Models**:
+- All Pro+ tier models
+- Enterprise priority processing (2x faster)
+- Dedicated infrastructure (optional)
+
+**Features**:
+- ✅ All Pro+ tier features
+- Team management (up to 5 users)
+- Centralized billing
+- Usage analytics per user
 - SSO integration (SAML, OAuth)
+- Priority enterprise support (8h SLA)
+- SLA guarantee (99.5% uptime)
 - Audit logging and compliance reports
-- Custom branding/white-labeling
+
+**Limits**:
+- Max 700 API calls/day (team total)
+- Max 5 concurrent requests per user
+- Enterprise rate limiting (60 req/min per user)
+- Rollover up to 1,750 credits (3 months)
+- 180-day usage history retention
+- 10 GB shared workspace storage
+
+---
+
+#### Enterprise Pro+ Tier ($90/month) 🔜 COMING Q2 2026
+**Pricing**: **$90/month**
+**Credits**: **11,000 credits/month** ($110 worth of API usage)
+**Status**: **Coming Soon** - Expected Q2 2026
+
+**Models**:
+- All Pro Max tier models
+- Enterprise ultra-priority processing (3x faster)
+- Dedicated infrastructure included
+
+**Features**:
+- ✅ All Enterprise Pro features
+- Team management (up to 15 users)
+- Advanced security controls
+- Custom rate limits
+- Dedicated infrastructure
+- Priority enterprise support (4h SLA)
+- SLA guarantee (99.9% uptime)
+- Custom contracts available
 - On-premise deployment option (add-on)
 
 **Limits**:
-- Max 10,000 API calls/day
-- Max 50 concurrent requests
-- Enterprise rate limiting (120 req/min)
-- Highest priority queue
+- Max 2,200 API calls/day (team total)
+- Max 10 concurrent requests per user
+- Enterprise premium rate limiting (120 req/min per user)
+- Rollover up to 5,500 credits (6 months)
+- Unlimited usage history
+- 50 GB shared workspace storage
 - Unlimited usage history retention
 - 100 GB workspace storage
 - 99.5% uptime SLA

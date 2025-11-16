@@ -1,9 +1,9 @@
-import { WebhookConfig, WebhookLog } from '@prisma/client';
+import { webhook_configs, webhook_logs } from '@prisma/client';
 import { IWebhookService, WebhookEventType } from '../../interfaces';
 
 export class MockWebhookService implements IWebhookService {
-  private configs: Map<string, WebhookConfig> = new Map();
-  private logs: Map<string, WebhookLog> = new Map();
+  private configs: Map<string, webhook_configs> = new Map();
+  private logs: Map<string, webhook_logs> = new Map();
   private queue: Array<{ userId: string; eventType: WebhookEventType; eventData: any }> = [];
 
   async queueWebhook(
@@ -14,20 +14,20 @@ export class MockWebhookService implements IWebhookService {
     this.queue.push({ userId, eventType, eventData });
 
     // Also create a log entry
-    const config = Array.from(this.configs.values()).find((c) => c.userId === userId);
+    const config = Array.from(this.configs.values()).find((c) => c.user_id === userId);
     if (config) {
-      const log: WebhookLog = {
+      const log: webhook_logs = {
         id: `mock-log-${Date.now()}-${Math.random()}`,
-        webhookConfigId: config.id,
-        eventType,
+        webhook_config_id: config.id,
+        event_type: eventType,
         payload: eventData,
         status: 'pending',
         attempts: 0,
-        statusCode: null,
-        responseBody: null,
-        errorMessage: null,
-        createdAt: new Date(),
-        completedAt: null,
+        status_code: null,
+        response_body: null,
+        error_message: null,
+        created_at: new Date(),
+        completed_at: null,
       };
       this.logs.set(log.id, log);
     }
@@ -57,42 +57,42 @@ export class MockWebhookService implements IWebhookService {
     const log = this.logs.get(webhookLogId);
     if (log) {
       log.status = status;
-      log.statusCode = statusCode || null;
-      log.responseBody = responseBody || null;
-      log.errorMessage = errorMessage || null;
+      log.status_code = statusCode || null;
+      log.response_body = responseBody || null;
+      log.error_message = errorMessage || null;
       log.attempts = attempts || log.attempts;
       if (status === 'success' || status === 'failed') {
-        log.completedAt = new Date();
+        log.completed_at = new Date();
       }
     }
   }
 
-  async getWebhookConfig(userId: string): Promise<WebhookConfig | null> {
-    return Array.from(this.configs.values()).find((c) => c.userId === userId) || null;
+  async getWebhookConfig(userId: string): Promise<webhook_configs | null> {
+    return Array.from(this.configs.values()).find((c) => c.user_id === userId) || null;
   }
 
   async upsertWebhookConfig(
     userId: string,
     webhookUrl: string,
     webhookSecret: string
-  ): Promise<WebhookConfig> {
-    const existing = Array.from(this.configs.values()).find((c) => c.userId === userId);
+  ): Promise<webhook_configs> {
+    const existing = Array.from(this.configs.values()).find((c) => c.user_id === userId);
 
     if (existing) {
-      existing.webhookUrl = webhookUrl;
-      existing.webhookSecret = webhookSecret;
-      existing.updatedAt = new Date();
+      existing.webhook_url = webhookUrl;
+      existing.webhook_secret = webhookSecret;
+      existing.updated_at = new Date();
       return existing;
     }
 
-    const config: WebhookConfig = {
+    const config: webhook_configs = {
       id: `mock-config-${Date.now()}-${Math.random()}`,
-      userId,
-      webhookUrl,
-      webhookSecret,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      user_id: userId,
+      webhook_url: webhookUrl,
+      webhook_secret: webhookSecret,
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
     this.configs.set(config.id, config);
@@ -100,16 +100,16 @@ export class MockWebhookService implements IWebhookService {
   }
 
   async deleteWebhookConfig(userId: string): Promise<void> {
-    const config = Array.from(this.configs.values()).find((c) => c.userId === userId);
+    const config = Array.from(this.configs.values()).find((c) => c.user_id === userId);
     if (config) {
       this.configs.delete(config.id);
     }
   }
 
-  async getWebhookLogs(webhookConfigId: string, limit = 50): Promise<WebhookLog[]> {
+  async getWebhookLogs(webhookConfigId: string, limit = 50): Promise<webhook_logs[]> {
     return Array.from(this.logs.values())
-      .filter((log) => log.webhookConfigId === webhookConfigId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .filter((log) => log.webhook_config_id === webhookConfigId)
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
       .slice(0, limit);
   }
 
@@ -120,7 +120,7 @@ export class MockWebhookService implements IWebhookService {
     this.queue = [];
   }
 
-  seed(configs: WebhookConfig[], logs?: WebhookLog[]) {
+  seed(configs: webhook_configs[], logs?: webhook_logs[]) {
     configs.forEach((config) => this.configs.set(config.id, config));
     if (logs) {
       logs.forEach((log) => this.logs.set(log.id, log));
