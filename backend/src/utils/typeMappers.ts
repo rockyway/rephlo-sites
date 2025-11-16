@@ -37,11 +37,11 @@ import { Prisma } from '@prisma/client';
 export function mapUserToApiType(
   dbUser: Prisma.usersGetPayload<{
     include: {
-      subscriptionMonetization: {
+      subscription_monetization: {
         where: { status: { in: ['trial', 'active'] } };
         take: 1;
       };
-      credit_balance: true;
+      user_credit_balance: true;
     };
   }>
 ): User {
@@ -49,26 +49,26 @@ export function mapUserToApiType(
     id: dbUser.id,
     email: dbUser.email,
     name:
-      dbUser.firstName && dbUser.lastName
-        ? `${dbUser.firstName} ${dbUser.lastName}`
-        : dbUser.firstName || dbUser.lastName || null,
-    firstName: dbUser.firstName,
-    lastName: dbUser.lastName,
+      dbUser.first_name && dbUser.last_name
+        ? `${dbUser.first_name} ${dbUser.last_name}`
+        : dbUser.first_name || dbUser.last_name || null,
+    firstName: dbUser.first_name,
+    lastName: dbUser.last_name,
     username: dbUser.username,
-    profilePictureUrl: dbUser.profilePictureUrl,
+    profilePictureUrl: dbUser.profile_picture_url,
     status: dbUser.status as UserStatus,
-    isActive: dbUser.isActive,
+    isActive: dbUser.is_active,
     currentTier:
-      (dbUser.subscriptionMonetization[0]?.tier as SubscriptionTier) || SubscriptionTier.FREE,
-    creditsBalance: dbUser.credit_balance?.amount || 0,
-    createdAt: dbUser.createdAt.toISOString(),
-    lastActiveAt: dbUser.lastLoginAt?.toISOString() || null,
-    deactivatedAt: dbUser.deactivatedAt?.toISOString() || null,
-    deletedAt: dbUser.deletedAt?.toISOString() || null,
-    suspendedUntil: dbUser.suspendedUntil?.toISOString() || null,
-    bannedAt: dbUser.bannedAt?.toISOString() || null,
+      (dbUser.subscription_monetization[0]?.tier as SubscriptionTier) || SubscriptionTier.FREE,
+    creditsBalance: dbUser.user_credit_balance?.amount || 0,
+    createdAt: dbUser.created_at.toISOString(),
+    lastActiveAt: dbUser.last_login_at?.toISOString() || null,
+    deactivatedAt: dbUser.deactivated_at?.toISOString() || null,
+    deletedAt: dbUser.deleted_at?.toISOString() || null,
+    suspendedUntil: dbUser.suspended_until?.toISOString() || null,
+    bannedAt: dbUser.banned_at?.toISOString() || null,
     role: dbUser.role,
-    lifetimeValue: dbUser.lifetimeValue,
+    lifetimeValue: dbUser.lifetime_value,
   };
 }
 
@@ -79,13 +79,13 @@ export function mapUserToApiType(
 export function mapUserDetailsToApiType(
   dbUser: Prisma.usersGetPayload<{
     include: {
-      subscriptionMonetization: {
+      subscription_monetization: {
         where: { status: { in: ['trial', 'active'] } };
         take: 1;
       };
-      credit_balance: true;
-      token_usage: true;
-      credit_deductions: true;
+      user_credit_balance: true;
+      token_usage_ledger: true;
+      credit_deduction_ledger: true;
     };
   }>,
   usageStats: {
@@ -97,9 +97,9 @@ export function mapUserDetailsToApiType(
   return {
     ...mapUserToApiType(dbUser as any),
     usageStats,
-    emailVerified: dbUser.emailVerified,
-    hasActivePerpetualLicense: dbUser.hasActivePerpetualLicense,
-    mfaEnabled: dbUser.mfaEnabled,
+    emailVerified: dbUser.email_verified,
+    hasActivePerpetualLicense: dbUser.has_active_perpetual_license,
+    mfaEnabled: dbUser.mfa_enabled,
   };
 }
 
@@ -114,12 +114,12 @@ export function mapUserDetailsToApiType(
 export function mapSubscriptionToApiType(
   dbSub: Prisma.subscription_monetizationGetPayload<{
     include: {
-      user: {
+      users: {
         select: {
           id: true;
           email: true;
-          firstName: true;
-          lastName: true;
+          first_name: true;
+          last_name: true;
         };
       };
     };
@@ -127,35 +127,35 @@ export function mapSubscriptionToApiType(
 ): Subscription {
   // Compute nextBillingDate
   const nextBillingDate =
-    dbSub.status === 'active' && !dbSub.cancelledAt
-      ? dbSub.currentPeriodEnd.toISOString()
+    dbSub.status === 'active' && !dbSub.cancelled_at
+      ? dbSub.current_period_end.toISOString()
       : null;
 
   return {
     id: dbSub.id,
-    userId: dbSub.userId,
+    userId: dbSub.user_id,
     tier: dbSub.tier as SubscriptionTier,
     status: dbSub.status as SubscriptionStatus,
-    billingCycle: dbSub.billingCycle as BillingCycle,
-    finalPriceUsd: parseFloat(dbSub.basePriceUsd.toString()), // Use basePriceUsd for finalPriceUsd
-    basePriceUsd: parseFloat(dbSub.basePriceUsd.toString()),
-    monthlyCreditsAllocated: dbSub.monthlyCreditAllocation, // Field name mapping
-    currentPeriodStart: dbSub.currentPeriodStart.toISOString(),
-    currentPeriodEnd: dbSub.currentPeriodEnd.toISOString(),
+    billingCycle: dbSub.billing_cycle as BillingCycle,
+    finalPriceUsd: parseFloat(dbSub.base_price_usd.toString()), // Use base_price_usd for finalPriceUsd
+    basePriceUsd: parseFloat(dbSub.base_price_usd.toString()),
+    monthlyCreditsAllocated: dbSub.monthly_credit_allocation, // Field name mapping
+    currentPeriodStart: dbSub.current_period_start.toISOString(),
+    currentPeriodEnd: dbSub.current_period_end.toISOString(),
     nextBillingDate, // Computed field
-    stripeCustomerId: dbSub.stripeCustomerId,
-    stripeSubscriptionId: dbSub.stripeSubscriptionId,
+    stripeCustomerId: dbSub.stripe_customer_id,
+    stripeSubscriptionId: dbSub.stripe_subscription_id,
     cancelAtPeriodEnd: false, // TODO: Add this field to schema if needed
-    cancelledAt: dbSub.cancelledAt?.toISOString() || null,
-    trialEndsAt: dbSub.trialEndsAt?.toISOString() || null,
-    createdAt: dbSub.createdAt.toISOString(),
-    updatedAt: dbSub.updatedAt.toISOString(),
-    user: dbSub.user
+    cancelledAt: dbSub.cancelled_at?.toISOString() || null,
+    trialEndsAt: dbSub.trial_ends_at?.toISOString() || null,
+    createdAt: dbSub.created_at.toISOString(),
+    updatedAt: dbSub.updated_at.toISOString(),
+    user: dbSub.users
       ? {
-          id: dbSub.user.id,
-          email: dbSub.user.email,
-          firstName: dbSub.user.firstName,
-          lastName: dbSub.user.lastName,
+          id: dbSub.users.id,
+          email: dbSub.users.email,
+          firstName: dbSub.users.first_name,
+          lastName: dbSub.users.last_name,
         }
       : undefined,
   };
