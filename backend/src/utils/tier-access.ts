@@ -10,7 +10,6 @@
  * Reference: docs/plan/108-model-tier-access-control-architecture.md
  */
 
-import type { subscription_tier } from '@prisma/client';
 import logger from './logger';
 
 // =============================================================================

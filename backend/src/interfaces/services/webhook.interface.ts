@@ -1,4 +1,4 @@
-import type { webhook_config, webhook_log } from '@prisma/client';
+import type { webhook_configs, webhook_logs } from '@prisma/client';
 
 export const IWebhookService = Symbol('IWebhookService');
 
@@ -40,7 +40,7 @@ export interface IWebhookService {
   /**
    * Get webhook configuration for a user
    */
-  getWebhookConfig(userId: string): Promise<webhook_config | null>;
+  getWebhookConfig(userId: string): Promise<webhook_configs | null>;
 
   /**
    * Create or update webhook configuration
@@ -49,7 +49,7 @@ export interface IWebhookService {
     userId: string,
     webhookUrl: string,
     webhookSecret: string
-  ): Promise<webhook_config>;
+  ): Promise<webhook_configs>;
 
   /**
    * Delete webhook configuration
@@ -59,5 +59,5 @@ export interface IWebhookService {
   /**
    * Get webhook logs for a webhook configuration
    */
-  getWebhookLogs(webhookConfigId: string, limit?: number): Promise<webhook_log[]>;
+  getWebhookLogs(webhookConfigId: string, limit?: number): Promise<webhook_logs[]>;
 }

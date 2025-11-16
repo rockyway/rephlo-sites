@@ -14,7 +14,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, subscription_tier } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   ModelListResponse,

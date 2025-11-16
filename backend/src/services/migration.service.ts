@@ -10,8 +10,6 @@
 import { injectable, inject } from 'tsyringe';
 import {
   PrismaClient,
-  perpetual_license,
-  subscription_monetization,
 } from '@prisma/client';
 import logger from '../utils/logger';
 import { NotFoundError, ValidationError } from '../utils/errors';

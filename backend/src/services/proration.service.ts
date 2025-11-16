@@ -9,7 +9,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, subscription_monetization, proration_event } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
 

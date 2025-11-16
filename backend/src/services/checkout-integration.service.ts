@@ -8,7 +8,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, coupon, perpetual_license, coupon_redemption } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { CouponValidationService } from './coupon-validation.service';
 import { CouponRedemptionService } from './coupon-redemption.service';
 import { LicenseManagementService } from './license-management.service';

@@ -8,7 +8,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, activation_status } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
 
