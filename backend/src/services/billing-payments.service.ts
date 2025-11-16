@@ -707,7 +707,7 @@ export class BillingPaymentsService {
       attempted_at: attempt.attemptedAt,
       result: attempt.result,
       failure_reason: attempt.failureReason,
-      nextRetryAt: attempt.next_retry_at: nextRetryAt,
+      next_retry_at: attempt.nextRetryAt,
     };
   }
 

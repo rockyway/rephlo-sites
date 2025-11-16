@@ -10,25 +10,26 @@
 
 import { z } from 'zod';
 
-// Re-export Prisma enums for use in validation schemas
-export type {
-  CouponType,
-  DiscountType,
-  CampaignType,
-  RedemptionStatus,
-  FraudDetectionType,
-  FraudSeverity,
-  ValidationRuleType,
-  SubscriptionTier,
+// Import Prisma enums as values (required for z.nativeEnum)
+import {
+  coupon_type,
+  discount_type,
+  campaign_type,
+  fraud_detection_type,
+  fraud_severity,
+  subscription_tier,
 } from '@prisma/client';
 
-import type {
-  CouponType,
-  DiscountType,
-  CampaignType,
-  FraudDetectionType,
-  FraudSeverity,
-  SubscriptionTier,
+// Re-export types for use in other modules
+export type {
+  coupon_type as CouponType,
+  discount_type as DiscountType,
+  campaign_type as CampaignType,
+  redemption_status as RedemptionStatus,
+  fraud_detection_type as FraudDetectionType,
+  fraud_severity as FraudSeverity,
+  validation_rule_type as ValidationRuleType,
+  subscription_tier as SubscriptionTier,
 } from '@prisma/client';
 
 // ===== Common Field Validators =====
@@ -78,7 +79,7 @@ export const percentageSchema = z
 export const validateCouponRequestSchema = z.object({
   code: couponCodeSchema,
   user_id: uuidSchema.optional(),
-  subscription_tier: z.nativeEnum(SubscriptionTier).optional(),
+  subscription_tier: z.nativeEnum(subscription_tier).optional(),
   cart_total: amountSchema.optional().default(0),
   device_fingerprint: z.string().optional(),
 });
@@ -92,7 +93,7 @@ export type ValidateCouponRequest = z.infer<typeof validateCouponRequestSchema>;
 export const validationContextSchema = z.object({
   cartTotal: z.number().min(0),
   subscriptionId: uuidSchema.optional(),
-  subscriptionTier: z.nativeEnum(SubscriptionTier).optional().default('free' as SubscriptionTier),
+  subscriptionTier: z.nativeEnum(subscription_tier).optional().default('free' as subscription_tier),
   ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
   deviceFingerprint: z.string().optional(),
@@ -109,8 +110,8 @@ export const validationResultSchema = z.object({
   errors: z.array(z.string()),
   discount: z
     .object({
-      couponType: z.nativeEnum(CouponType),
-      discountType: z.nativeEnum(DiscountType),
+      couponType: z.nativeEnum(coupon_type),
+      discountType: z.nativeEnum(discount_type),
       originalAmount: z.number(),
       discountAmount: z.number(),
       finalAmount: z.number(),
@@ -183,11 +184,11 @@ export type RedemptionMetadata = z.infer<typeof redemptionMetadataSchema>;
  */
 export const createCampaignRequestSchema = z.object({
   campaign_name: z.string().min(3).max(255),
-  campaign_type: z.nativeEnum(CampaignType),
+  campaign_type: z.nativeEnum(campaign_type),
   start_date: z.string().datetime(),
   end_date: z.string().datetime(),
   budget_limit_usd: amountSchema,
-  target_tier: z.nativeEnum(SubscriptionTier).optional().nullable(),
+  target_tier: z.nativeEnum(subscription_tier).optional().nullable(),
   is_active: z.boolean().optional().default(true),
 });
 
@@ -202,7 +203,7 @@ export const updateCampaignRequestSchema = z.object({
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
   budget_limit_usd: amountSchema.optional(),
-  target_tier: z.nativeEnum(SubscriptionTier).optional().nullable(),
+  target_tier: z.nativeEnum(subscription_tier).optional().nullable(),
   is_active: z.boolean().optional(),
 });
 
@@ -226,13 +227,13 @@ export type AssignCouponRequest = z.infer<typeof assignCouponRequestSchema>;
  */
 export const createCouponRequestSchema = z.object({
   code: couponCodeSchema,
-  type: z.nativeEnum(CouponType),
+  type: z.nativeEnum(coupon_type),
   discountValue: z.number().min(0),
-  discountType: z.nativeEnum(DiscountType),
+  discountType: z.nativeEnum(discount_type),
   maxUses: z.number().int().positive().optional().nullable(),
   maxUsesPerUser: z.number().int().positive().optional().default(1),
   minPurchaseAmount: amountSchema.optional().nullable(),
-  tierEligibility: z.array(z.nativeEnum(SubscriptionTier)).optional().default(['free', 'pro', 'enterprise'] as SubscriptionTier[]),
+  tierEligibility: z.array(z.nativeEnum(subscription_tier)).optional().default(['free', 'pro', 'enterprise'] as subscription_tier[]),
   billingCycles: z.array(z.string()).optional().default(['monthly', 'annual']),
   validFrom: z.string().datetime(),
   validUntil: z.string().datetime(),
@@ -250,13 +251,13 @@ export type CreateCouponRequest = z.infer<typeof createCouponRequestSchema>;
  */
 export const updateCouponRequestSchema = z.object({
   code: couponCodeSchema.optional(),
-  type: z.nativeEnum(CouponType).optional(),
+  type: z.nativeEnum(coupon_type).optional(),
   discountValue: z.number().min(0).optional(),
-  discountType: z.nativeEnum(DiscountType).optional(),
+  discountType: z.nativeEnum(discount_type).optional(),
   maxUses: z.number().int().positive().optional().nullable(),
   maxUsesPerUser: z.number().int().positive().optional(),
   minPurchaseAmount: amountSchema.optional().nullable(),
-  tierEligibility: z.array(z.nativeEnum(SubscriptionTier)).optional(),
+  tierEligibility: z.array(z.nativeEnum(subscription_tier)).optional(),
   billingCycles: z.array(z.string()).optional(),
   validFrom: z.string().datetime().optional(),
   validUntil: z.string().datetime().optional(),
@@ -287,8 +288,8 @@ export type DeviceInfo = z.infer<typeof deviceInfoSchema>;
  */
 export const fraudDetectionResultSchema = z.object({
   detected: z.boolean(),
-  detectionType: z.nativeEnum(FraudDetectionType).optional(),
-  severity: z.nativeEnum(FraudSeverity).optional(),
+  detectionType: z.nativeEnum(fraud_detection_type).optional(),
+  severity: z.nativeEnum(fraud_severity).optional(),
   details: z.any().optional(),
   shouldBlock: z.boolean().optional().default(false),
 });
@@ -312,8 +313,8 @@ export type ReviewFraudEventRequest = z.infer<typeof reviewFraudEventRequestSche
  * Discount Calculation Schema
  */
 export const discountCalculationSchema = z.object({
-  couponType: z.nativeEnum(CouponType),
-  discountType: z.nativeEnum(DiscountType),
+  couponType: z.nativeEnum(coupon_type),
+  discountType: z.nativeEnum(discount_type),
   originalAmount: z.number(),
   discountAmount: z.number(),
   finalAmount: z.number(),
@@ -370,7 +371,7 @@ export class CouponValidationError extends Error {
 export class FraudDetectionError extends Error {
   constructor(
     message: string,
-    public severity: FraudSeverity,
+    public severity: fraud_severity,
     public details?: any
   ) {
     super(message);

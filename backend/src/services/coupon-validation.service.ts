@@ -19,7 +19,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Coupon, SubscriptionTier, ValidationRuleType } from '@prisma/client';
+import { PrismaClient, coupon, subscription_tier, validation_rule_type } from '@prisma/client';
 import {
   ValidationContext,
   ValidationResult,

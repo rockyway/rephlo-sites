@@ -101,8 +101,8 @@ export class AdminUserDetailService {
           license_key: true,
           status: true,
           activated_at: true,
-          current_activations: true,
-          max_activations: true,
+          current_license_activation: true,
+          max_license_activation: true,
         },
       });
 
@@ -130,7 +130,7 @@ export class AdminUserDetailService {
           }),
           this.prisma.coupon_redemption.count({
             where: {
-              subscription: {
+              subscription_monetization: {
                 user_id: userId,
               },
               redemption_status: 'success',
@@ -328,7 +328,7 @@ export class AdminUserDetailService {
         take: safeLimit,
         orderBy: { purchased_at: 'desc' },
         include: {
-          activations: {
+          license_activation: {
             orderBy: { activated_at: 'desc' },
             select: {
               id: true,
@@ -579,7 +579,7 @@ export class AdminUserDetailService {
       // Get total count
       const total = await this.prisma.coupon_redemption.count({
         where: {
-          subscription: {
+          subscription_monetization: {
             user_id: userId,
           },
         },
@@ -588,7 +588,7 @@ export class AdminUserDetailService {
       // Get coupon redemptions
       const redemptions = await this.prisma.coupon_redemption.findMany({
         where: {
-          subscription: {
+          subscription_monetization: {
             user_id: userId,
           },
         },
@@ -604,7 +604,7 @@ export class AdminUserDetailService {
               discount_value: true,
             },
           },
-          subscription: {
+          subscription_monetization: {
             select: {
               tier: true,
             },
@@ -629,7 +629,7 @@ export class AdminUserDetailService {
       // Calculate total discount value
       const totalDiscountSum = await this.prisma.coupon_redemption.aggregate({
         where: {
-          subscription: {
+          subscription_monetization: {
             user_id: userId,
           },
           redemption_status: 'success',
@@ -814,7 +814,7 @@ export class AdminUserDetailService {
       if (type === 'all' || type === 'coupon') {
         const coupons = await this.prisma.coupon_redemption.findMany({
           where: {
-            subscription: {
+            subscription_monetization: {
               user_id: userId,
             },
           },

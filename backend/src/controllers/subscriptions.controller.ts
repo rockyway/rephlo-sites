@@ -17,7 +17,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
-import { PrismaClient, subscriptions } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import {
   getCurrentSubscription,
   listSubscriptionPlans,

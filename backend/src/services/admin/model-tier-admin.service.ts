@@ -135,7 +135,7 @@ export class ModelTierAdminService {
           ip_address: ipAddress || null,
         },
         include: {
-          admin: {
+          users: {
             select: {
               email: true,
             },
@@ -288,7 +288,7 @@ export class ModelTierAdminService {
       this.prisma.model_tier_audit_logs.findMany({
         where,
         include: {
-          admin: {
+          users: {
             select: {
               email: true,
             },

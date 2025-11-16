@@ -1,0 +1,136 @@
+--- a/src/db/seed.ts
++++ b/src/db/seed.ts
+@@ -16,6 +16,7 @@
+
+ import { PrismaClient } from '@prisma/client';
+ import * as bcrypt from 'bcrypt';
++import { randomUUID } from 'crypto';
+
+ const prisma = new PrismaClient();
+
+@@ -419,6 +420,7 @@ async function main() {
+   const downloads = await Promise.all([
+     prisma.downloads.create({
+       data: {
++        id: randomUUID(),
+         os: 'windows',
+         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+         ipHash: 'hash_' + Math.random().toString(36).substring(7),
+@@ -426,6 +428,7 @@ async function main() {
+     }),
+     prisma.downloads.create({
+       data: {
++        id: randomUUID(),
+         os: 'macos',
+         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+         ipHash: 'hash_' + Math.random().toString(36).substring(7),
+@@ -433,6 +436,7 @@ async function main() {
+     }),
+     prisma.downloads.create({
+       data: {
++        id: randomUUID(),
+         os: 'linux',
+         userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+         ipHash: 'hash_' + Math.random().toString(36).substring(7),
+@@ -440,6 +444,7 @@ async function main() {
+     }),
+     prisma.downloads.create({
+       data: {
++        id: randomUUID(),
+         os: 'windows',
+         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+         ipHash: 'hash_' + Math.random().toString(36).substring(7),
+@@ -447,6 +452,7 @@ async function main() {
+     }),
+     prisma.downloads.create({
+       data: {
++        id: randomUUID(),
+         os: 'macos',
+         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
+         ipHash: 'hash_' + Math.random().toString(36).substring(7),
+@@ -459,6 +465,7 @@ async function main() {
+   const feedbacks = await Promise.all([
+     prisma.feedbacks.create({
+       data: {
++        id: randomUUID(),
+         userId: 'user_' + Math.random().toString(36).substring(7),
+         message: 'Love the app! The AI rewriting feature is incredibly helpful for my daily writing tasks.',
+         email: 'user1@example.com',
+@@ -466,6 +473,7 @@ async function main() {
+     }),
+     prisma.feedbacks.create({
+       data: {
++        id: randomUUID(),
+         userId: 'user_' + Math.random().toString(36).substring(7),
+         message: 'Great tool, but would love to see more customization options for the rewriting styles.',
+         email: 'user2@example.com',
+@@ -473,6 +481,7 @@ async function main() {
+     }),
+     prisma.feedbacks.create({
+       data: {
++        id: randomUUID(),
+         message: 'Anonymous feedback: The interface is clean and intuitive. Keep up the good work!',
+       },
+     }),
+     prisma.feedbacks.create({
+       data: {
++        id: randomUUID(),
+         userId: 'user_' + Math.random().toString(36).substring(7),
+         message: 'Found a bug with the clipboard integration on Linux. Submitted diagnostic logs.',
+         email: 'user3@example.com',
+@@ -486,6 +496,7 @@ async function main() {
+     }),
+     prisma.feedbacks.create({
+       data: {
++        id: randomUUID(),
+         message: 'This has transformed my workflow! Thank you for creating such an amazing tool.',
+         email: 'user4@example.com',
+       },
+@@ -497,6 +508,7 @@ async function main() {
+   const diagnostics = await Promise.all([
+     prisma.diagnostics.create({
+       data: {
++        id: randomUUID(),
+         userId: 'user_' + Math.random().toString(36).substring(7),
+         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
+         fileSize: 15240, // ~15KB
+@@ -504,6 +516,7 @@ async function main() {
+     }),
+     prisma.diagnostics.create({
+       data: {
++        id: randomUUID(),
+         userId: 'user_' + Math.random().toString(36).substring(7),
+         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
+         fileSize: 28900, // ~29KB
+@@ -511,6 +524,7 @@ async function main() {
+     }),
+     prisma.diagnostics.create({
+       data: {
++        id: randomUUID(),
+         filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
+         fileSize: 45120, // ~45KB
+       },
+@@ -522,6 +536,7 @@ async function main() {
+   const versions = await Promise.all([
+     prisma.app_versions.create({
+       data: {
++        id: randomUUID(),
+         version: '1.0.0',
+         releaseDate: new Date('2025-10-01'),
+         downloadUrl: 'https://releases.rephlo.ai/v1.0.0/rephlo-setup.exe',
+@@ -544,6 +559,7 @@ async function main() {
+     }),
+     prisma.app_versions.create({
+       data: {
++        id: randomUUID(),
+         version: '1.1.0',
+         releaseDate: new Date('2025-10-15'),
+         downloadUrl: 'https://releases.rephlo.ai/v1.1.0/rephlo-setup.exe',
+@@ -565,6 +581,7 @@ async function main() {
+     }),
+     prisma.app_versions.create({
+       data: {
++        id: randomUUID(),
+         version: '1.2.0',
+         releaseDate: new Date('2025-11-01'),
+         downloadUrl: 'https://releases.rephlo.ai/v1.2.0/rephlo-setup.exe',

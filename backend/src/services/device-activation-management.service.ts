@@ -8,7 +8,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, ActivationStatus } from '@prisma/client';
+import { PrismaClient, activation_status } from '@prisma/client';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
 
@@ -116,7 +116,7 @@ export class DeviceActivationManagementService {
           },
         },
         {
-          license: {
+          perpetual_license: {
             licenseKey: {
               contains: filters.search,
               mode: 'insensitive',
@@ -140,12 +140,12 @@ export class DeviceActivationManagementService {
               last_name: true,
             },
           },
-          license: {
+          perpetual_license: {
             select: {
               id: true,
               license_key: true,
-              max_activations: true,
-              current_activations: true,
+              max_license_activation: true,
+              current_license_activation: true,
             },
           },
         },
@@ -220,8 +220,8 @@ export class DeviceActivationManagementService {
       }),
       this.prisma.perpetual_license.findMany({
         select: {
-          max_activations: true,
-          current_activations: true,
+          max_license_activation: true,
+          current_license_activation: true,
         },
       }),
     ]);
@@ -245,7 +245,7 @@ export class DeviceActivationManagementService {
   async deactivateDevice(activationId: string): Promise<void> {
     const activation = await this.prisma.license_activation.findUnique({
       where: { id: activationId },
-      include: { license: true },
+      include: { perpetual_license: true },
     });
 
     if (!activation) {
@@ -265,7 +265,7 @@ export class DeviceActivationManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: activation.license_id },
       data: {
-        current_activations: {
+        current_license_activation: {
           decrement: 1,
         },
       },
@@ -283,7 +283,7 @@ export class DeviceActivationManagementService {
   async revokeDevice(activationId: string, reason: string): Promise<void> {
     const activation = await this.prisma.license_activation.findUnique({
       where: { id: activationId },
-      include: { license: true },
+      include: { perpetual_license: true },
     });
 
     if (!activation) {
@@ -309,7 +309,7 @@ export class DeviceActivationManagementService {
       await this.prisma.perpetual_license.update({
         where: { id: activation.license_id },
         data: {
-          current_activations: {
+          current_license_activation: {
             decrement: 1,
           },
         },

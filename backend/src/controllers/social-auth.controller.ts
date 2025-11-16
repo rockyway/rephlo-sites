@@ -13,7 +13,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
-import { PrismaClient, users } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { google } from 'googleapis';
 import crypto from 'crypto';
 import logger from '../utils/logger';

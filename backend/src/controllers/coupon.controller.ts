@@ -207,28 +207,28 @@ export class CouponController {
       const coupon = await this.prisma.coupon.create({
         data: {
           code: data.code.toUpperCase(),
-          couponType: data.type,
-          discountValue: new Prisma.Decimal(data.discountValue),
-          discountType: data.discountType,
+          coupon_type: data.type,
+          discount_value: new Prisma.Decimal(data.discountValue),
+          discount_type: data.discountType,
           currency: 'usd',
-          maxUses: data.maxUses,
-          maxUsesPerUser: data.maxUsesPerUser || 1,
-          minPurchaseAmount: data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null,
-          tierEligibility: data.tierEligibility || ['free', 'pro', 'enterprise'],
-          billingCycles: data.billingCycles || ['monthly', 'annual'],
-          validFrom: new Date(data.validFrom),
-          validUntil: new Date(data.validUntil),
-          isActive: data.isActive ?? true,
-          campaignId: data.campaignId || null,
+          max_uses: data.maxUses,
+          max_uses_per_user: data.maxUsesPerUser || 1,
+          min_purchase_amount: data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null,
+          tier_eligibility: data.tierEligibility || ['free', 'pro', 'enterprise'],
+          billing_cycles: data.billingCycles || ['monthly', 'annual'],
+          valid_from: new Date(data.validFrom),
+          valid_until: new Date(data.validUntil),
+          is_active: data.isActive ?? true,
+          campaign_id: data.campaignId || null,
           description: data.description || null,
-          internalNotes: data.internalNotes || null,
-          createdBy: adminUserId,
+          internal_notes: data.internalNotes || null,
+          created_by: adminUserId,
         },
         include: {
           coupon_usage_limit: true,
-          campaign: {
+          coupon_campaign: {
             select: {
-              campaignName: true,
+              campaign_name: true,
             },
           },
         },
@@ -238,9 +238,9 @@ export class CouponController {
       await this.prisma.coupon_usage_limit.create({
         data: {
           coupon_id: coupon.id,
-          totalUses: 0,
-          uniqueUsers: 0,
-          totalDiscountAppliedUsd: 0,
+          total_uses: 0,
+          unique_users: 0,
+          total_discount_applied_usd: 0,
         },
       });
 
@@ -249,9 +249,9 @@ export class CouponController {
         where: { id: coupon.id },
         include: {
           coupon_usage_limit: true,
-          campaign: {
+          coupon_campaign: {
             select: {
-              campaignName: true,
+              campaign_name: true,
             },
           },
         },
@@ -302,9 +302,9 @@ export class CouponController {
         data: updateData,
         include: {
           coupon_usage_limit: true,
-          campaign: {
+          coupon_campaign: {
             select: {
-              campaignName: true,
+              campaign_name: true,
             },
           },
         },
@@ -357,7 +357,7 @@ export class CouponController {
         where: { id },
         include: {
           coupon_usage_limit: true,
-          campaign: true,
+          coupon_campaign: true,
         },
       });
 
@@ -419,7 +419,7 @@ export class CouponController {
           orderBy: { created_at: 'desc' },
           include: {
             coupon_usage_limit: true,
-            campaign: true,
+            coupon_campaign: true,
           },
         }),
         this.prisma.coupon.count({ where }),

@@ -4,7 +4,6 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import type { Pool as PgPool } from 'pg';
 import { Pool } from 'pg';
 
 // =============================================================================

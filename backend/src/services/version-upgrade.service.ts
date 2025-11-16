@@ -8,7 +8,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, VersionUpgrade, PerpetualLicense } from '@prisma/client';
+import { PrismaClient, version_upgrade, perpetual_license } from '@prisma/client';
 import semver from 'semver';
 import logger from '../utils/logger';
 import { NotFoundError, ValidationError } from '../utils/errors';

@@ -35,7 +35,7 @@ import { Prisma } from '@prisma/client';
  * Handles field renaming and computed fields
  */
 export function mapUserToApiType(
-  dbUser: Prisma.UserGetPayload<{
+  dbUser: Prisma.usersGetPayload<{
     include: {
       subscriptionMonetization: {
         where: { status: { in: ['trial', 'active'] } };
@@ -77,7 +77,7 @@ export function mapUserToApiType(
  * Includes usage statistics
  */
 export function mapUserDetailsToApiType(
-  dbUser: Prisma.UserGetPayload<{
+  dbUser: Prisma.usersGetPayload<{
     include: {
       subscriptionMonetization: {
         where: { status: { in: ['trial', 'active'] } };
@@ -112,7 +112,7 @@ export function mapUserDetailsToApiType(
  * Handles field renaming and computed nextBillingDate
  */
 export function mapSubscriptionToApiType(
-  dbSub: Prisma.SubscriptionMonetizationGetPayload<{
+  dbSub: Prisma.subscription_monetizationGetPayload<{
     include: {
       user: {
         select: {

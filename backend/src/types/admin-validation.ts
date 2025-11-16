@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import type { SubscriptionTier } from '@prisma/client';
+import { subscription_tier } from '@prisma/client';
 
 // =============================================================================
 // Request Validation Schemas
@@ -16,9 +16,9 @@ import type { SubscriptionTier } from '@prisma/client';
  * Schema for updating a single model's tier configuration
  */
 export const updateModelTierSchema = z.object({
-  requiredTier: z.nativeEnum(SubscriptionTier).optional(),
+  requiredTier: z.nativeEnum(subscription_tier).optional(),
   tierRestrictionMode: z.enum(['minimum', 'exact', 'whitelist']).optional(),
-  allowedTiers: z.array(z.nativeEnum(SubscriptionTier)).optional(),
+  allowedTiers: z.array(z.nativeEnum(subscription_tier)).optional(),
   reason: z.string().max(500).optional(),
 });
 
@@ -32,9 +32,9 @@ export const bulkUpdateTiersSchema = z.object({
     .array(
       z.object({
         modelId: z.string().min(1, 'Model ID is required'),
-        requiredTier: z.nativeEnum(SubscriptionTier).optional(),
+        requiredTier: z.nativeEnum(subscription_tier).optional(),
         tierRestrictionMode: z.enum(['minimum', 'exact', 'whitelist']).optional(),
-        allowedTiers: z.array(z.nativeEnum(SubscriptionTier)).optional(),
+        allowedTiers: z.array(z.nativeEnum(subscription_tier)).optional(),
       })
     )
     .min(1, 'At least one model update is required')
@@ -63,7 +63,7 @@ export type AuditLogQueryParams = z.infer<typeof auditLogQuerySchema>;
  */
 export const modelTierFiltersSchema = z.object({
   provider: z.string().optional(),
-  tier: z.nativeEnum(SubscriptionTier).optional(),
+  tier: z.nativeEnum(subscription_tier).optional(),
   restrictionMode: z.enum(['minimum', 'exact', 'whitelist']).optional(),
 });
 

@@ -513,7 +513,7 @@ export class AdminAnalyticsService {
       where: { redemption_status: 'success' },
       include: {
         coupon: { select: { code: true } },
-        subscription: {
+        subscription_monetization: {
           include: {
             user: {
               select: {

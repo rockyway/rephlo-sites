@@ -11,9 +11,9 @@
 import { injectable, inject } from 'tsyringe';
 import {
   PrismaClient,
-  PerpetualLicense,
-  LicenseActivation,
-  VersionUpgrade,
+  perpetual_license,
+  license_activation,
+  version_upgrade,
 } from '@prisma/client';
 import crypto from 'crypto';
 import logger from '../utils/logger';
@@ -167,7 +167,7 @@ export class LicenseManagementService {
     const license = await this.prisma.perpetual_license.findUnique({
       where: { license_key: licenseKey },
       include: {
-        activations: {
+        license_activation: {
           where: { status: 'active' },
         },
       },
@@ -233,7 +233,7 @@ export class LicenseManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: license.id },
       data: {
-        current_activations: { increment: 1 },
+        current_license_activation: { increment: 1 },
         status: 'active',
         activated_at: license.activated_at || new Date(),
       },
@@ -260,7 +260,7 @@ export class LicenseManagementService {
 
     const activation = await this.prisma.license_activation.findUnique({
       where: { id: activationId },
-      include: { license: true },
+      include: { perpetual_license: true },
     });
 
     if (!activation) {
@@ -284,7 +284,7 @@ export class LicenseManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: activation.license_id },
       data: {
-        current_activations: { decrement: 1 },
+        current_license_activation: { decrement: 1 },
       },
     });
 
@@ -311,7 +311,7 @@ export class LicenseManagementService {
 
     const oldActivation = await this.prisma.license_activation.findUnique({
       where: { id: oldActivationId },
-      include: { license: true },
+      include: { perpetual_license: true },
     });
 
     if (!oldActivation) {
@@ -331,7 +331,7 @@ export class LicenseManagementService {
     await this.prisma.perpetual_license.update({
       where: { id: oldActivation.license_id },
       data: {
-        current_activations: { decrement: 1 },
+        current_license_activation: { decrement: 1 },
       },
     });
 
@@ -409,7 +409,7 @@ export class LicenseManagementService {
     const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
       include: {
-        activations: {
+        license_activation: {
           where: { status: 'active' },
         },
       },
@@ -576,7 +576,7 @@ export class LicenseManagementService {
     return this.prisma.perpetual_license.findUnique({
       where: { license_key: licenseKey },
       include: {
-        activations: true,
+        license_activation: true,
         version_upgrades: true,
       },
     });
@@ -591,7 +591,7 @@ export class LicenseManagementService {
     return this.prisma.perpetual_license.findMany({
       where: { user_id: userId },
       include: {
-        activations: { where: { status: 'active' } },
+        license_activation: { where: { status: 'active' } },
         version_upgrades: true,
       },
       orderBy: { purchased_at: 'desc' },

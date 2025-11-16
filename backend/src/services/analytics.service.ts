@@ -139,7 +139,7 @@ export class AnalyticsService {
       });
 
       // Build where clause
-      const whereClause: Prisma.TokenUsageLedgerWhereInput = {
+      const whereClause: Prisma.token_usage_ledgerWhereInput = {
         created_at: { gte: startDate, lte: endDate },
         status: 'success',
         ...(tier && { user_tier_at_request: tier }),
@@ -235,7 +235,7 @@ export class AnalyticsService {
         endDate: endDate.toISOString(),
       });
 
-      const whereClause: Prisma.TokenUsageLedgerWhereInput = {
+      const whereClause: Prisma.token_usage_ledgerWhereInput = {
         created_at: { gte: startDate, lte: endDate },
         status: 'success',
         ...(tier && { user_tier_at_request: tier }),
@@ -396,7 +396,7 @@ export class AnalyticsService {
         endDate: endDate.toISOString(),
       });
 
-      const whereClause: Prisma.TokenUsageLedgerWhereInput = {
+      const whereClause: Prisma.token_usage_ledgerWhereInput = {
         created_at: { gte: startDate, lte: endDate },
         status: 'success',
         ...(tier && { user_tier_at_request: tier }),
@@ -495,7 +495,7 @@ export class AnalyticsService {
         endDate: endDate.toISOString(),
       });
 
-      const whereClause: Prisma.TokenUsageLedgerWhereInput = {
+      const whereClause: Prisma.token_usage_ledgerWhereInput = {
         created_at: { gte: startDate, lte: endDate },
         status: 'success',
         ...(tier && { user_tier_at_request: tier }),

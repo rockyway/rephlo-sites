@@ -63,7 +63,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
           expires_at: expiresAt,
         },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
@@ -116,7 +116,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
       const requests = await this.prisma.approval_requests.findMany({
         where,
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
@@ -151,7 +151,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
       const request = await this.prisma.approval_requests.findUnique({
         where: { id: requestId },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
@@ -246,7 +246,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
           review_notes: 'Cancelled by requester',
         },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
@@ -374,7 +374,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
           review_notes: reviewNotes || null,
         },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
