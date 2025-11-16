@@ -138,28 +138,28 @@ export class UsageService {
 
     // Build where clause for filtering
     const where: any = {
-      userId,
+      user_id: userId,
     };
 
     // Date range filter
     if (params.start_date || params.end_date) {
-      where.createdAt = {};
+      where.created_at = {};
       if (params.start_date) {
-        where.createdAt.gte = new Date(params.start_date);
+        where.created_at.gte = new Date(params.start_date);
       }
       if (params.end_date) {
-        where.createdAt.lte = new Date(params.end_date);
+        where.created_at.lte = new Date(params.end_date);
       }
     }
 
     // Model filter
     if (params.model_id) {
-      where.modelId = params.model_id;
+      where.model_id = params.model_id;
     }
 
     // Operation filter
     if (params.operation) {
-      where.operation = params.operation;
+      where.request_type = params.operation;
     }
 
     // Get total count for pagination
