@@ -18,7 +18,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, token_usage_ledger as UsageHistory, usage_operation as UsageOperation } from '@prisma/client';
+import { PrismaClient, token_usage_ledger as UsageHistory } from '@prisma/client';
 import crypto from 'crypto';
 import logger from '../utils/logger';
 import {
@@ -97,8 +97,8 @@ export class UsageService {
         model_id: input.modelId,
         provider_id: input.operation as any, // TODO: This needs proper provider_id
         request_id: crypto.randomUUID(),
-        input_tokens: input.inputTokens,
-        output_tokens: input.outputTokens,
+        input_tokens: input.inputTokens || 0,
+        output_tokens: input.outputTokens || 0,
         vendor_cost: 0, // TODO: Needs actual vendor cost
         margin_multiplier: 1,
         credit_value_usd: 0.001,
@@ -169,7 +169,7 @@ export class UsageService {
     const usage = await this.prisma.token_usage_ledger.findMany({
       where,
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
       take: params.limit,
       skip: params.offset,
@@ -179,15 +179,16 @@ export class UsageService {
     const summaryData = await this.prisma.token_usage_ledger.aggregate({
       where,
       _sum: {
-        creditsUsed: true,
-        totalTokens: true,
+        credits_deducted: true,
+        input_tokens: true,
+        output_tokens: true,
       },
     });
 
     const summary = {
-      totalCreditsUsed: summaryData._sum.creditsUsed || 0,
+      totalCreditsUsed: summaryData._sum?.credits_deducted || 0,
       totalRequests: total,
-      totalTokens: summaryData._sum.totalTokens || 0,
+      totalTokens: (summaryData._sum?.input_tokens || 0) + (summaryData._sum?.output_tokens || 0),
     };
 
     const result: UsageHistoryResult = {
@@ -229,17 +230,17 @@ export class UsageService {
 
     // Build where clause for filtering
     const where: any = {
-      userId,
+      user_id: userId,
     };
 
     // Date range filter
     if (params.start_date || params.end_date) {
-      where.createdAt = {};
+      where.created_at = {};
       if (params.start_date) {
-        where.createdAt.gte = new Date(params.start_date);
+        where.created_at.gte = new Date(params.start_date);
       }
       if (params.end_date) {
-        where.createdAt.lte = new Date(params.end_date);
+        where.created_at.lte = new Date(params.end_date);
       }
     }
 
@@ -313,8 +314,8 @@ export class UsageService {
         COALESCE(AVG(request_duration_ms), 0)::int as average_duration_ms
       FROM token_usage_ledger
       WHERE user_id = ${where.userId}::uuid
-        ${where.createdAt?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.createdAt.gte}` : this.prisma.$queryRaw``}
-        ${where.createdAt?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.createdAt.lte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.created_at.gte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.created_at.lte}` : this.prisma.$queryRaw``}
       GROUP BY DATE(created_at)
       ORDER BY DATE(created_at) DESC
       LIMIT 90
@@ -346,8 +347,8 @@ export class UsageService {
         COALESCE(AVG(request_duration_ms), 0)::int as average_duration_ms
       FROM token_usage_ledger
       WHERE user_id = ${where.userId}::uuid
-        ${where.createdAt?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.createdAt.gte}` : this.prisma.$queryRaw``}
-        ${where.createdAt?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.createdAt.lte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.created_at.gte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.created_at.lte}` : this.prisma.$queryRaw``}
       GROUP BY EXTRACT(HOUR FROM created_at)
       ORDER BY hour ASC
     `;
@@ -370,31 +371,32 @@ export class UsageService {
    */
   private async getStatsByModel(where: any): Promise<UsageStatsItem[]> {
     const results = await this.prisma.token_usage_ledger.groupBy({
-      by: ['modelId'],
+      by: ['model_id'],
       where,
       _sum: {
-        creditsUsed: true,
-        totalTokens: true,
+        credits_deducted: true,
+        input_tokens: true,
+        output_tokens: true,
       },
       _count: {
         id: true,
       },
       _avg: {
-        requestDurationMs: true,
+        processing_time_ms: true,
       },
       orderBy: {
         _sum: {
-          creditsUsed: 'desc',
+          credits_deducted: 'desc',
         },
       },
     });
 
     return results.map((row) => ({
-      modelId: row.modelId,
-      creditsUsed: row._sum.creditsUsed || 0,
-      requestsCount: row._count.id,
-      tokensTotal: row._sum.totalTokens || 0,
-      averageDurationMs: Math.round(row._avg.requestDurationMs || 0),
+      modelId: row.model_id,
+      creditsUsed: row._sum?.credits_deducted || 0,
+      requestsCount: row._count?.id || 0,
+      tokensTotal: (row._sum?.input_tokens || 0) + (row._sum?.output_tokens || 0),
+      averageDurationMs: Math.round(row._avg?.processing_time_ms || 0),
     }));
   }
 
@@ -415,19 +417,19 @@ export class UsageService {
     const where: any = { userId };
 
     if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = startDate;
-      if (endDate) where.createdAt.lte = endDate;
+      where.created_at = {};
+      if (startDate) where.created_at.gte = startDate;
+      if (endDate) where.created_at.lte = endDate;
     }
 
     const result = await this.prisma.token_usage_ledger.aggregate({
       where,
       _sum: {
-        creditsDeducted: true,
+        credits_deducted: true,
       },
     });
 
-    return result._sum?.creditsDeducted || 0;
+    return result._sum?.credits_deducted || 0;
   }
 
   /**
@@ -441,8 +443,8 @@ export class UsageService {
   async getModelUsageCount(userId: string, modelId: string): Promise<number> {
     const count = await this.prisma.token_usage_ledger.count({
       where: {
-        userId,
-        modelId,
+        user_id: userId,
+        model_id: modelId,
       },
     });
 
@@ -458,8 +460,8 @@ export class UsageService {
    */
   async getMostUsedModel(userId: string): Promise<string | null> {
     const result = await this.prisma.token_usage_ledger.groupBy({
-      by: ['modelId'],
-      where: { userId },
+      by: ['model_id'],
+      where: { user_id: userId },
       _count: {
         id: true,
       },
@@ -471,7 +473,7 @@ export class UsageService {
       take: 1,
     });
 
-    return result[0]?.modelId || null;
+    return result[0]?.model_id || null;
   }
 
   /**
@@ -483,13 +485,19 @@ export class UsageService {
    */
   async getAverageTokensPerRequest(userId: string): Promise<number> {
     const result = await this.prisma.token_usage_ledger.aggregate({
-      where: { userId },
-      _avg: {
-        totalTokens: true,
+      where: { user_id: userId },
+      _sum: {
+        input_tokens: true,
+        output_tokens: true,
+      },
+      _count: {
+        id: true,
       },
     });
 
-    return Math.round(result._avg.totalTokens || 0);
+    const totalTokens = (result._sum?.input_tokens || 0) + (result._sum?.output_tokens || 0);
+    const count = result._count?.id || 1;
+    return Math.round(totalTokens / count);
   }
 
   /**
@@ -550,16 +558,16 @@ export class UsageService {
     // Aggregate from token_usage_ledger table (Prisma client uses camelCase)
     const usageRecords = await this.prisma.token_usage_ledger.findMany({
       where: {
-        userId,
-        createdAt: {
+        user_id: userId,
+        created_at: {
           gte: startDate,
           lte: endDate,
         },
       },
       include: {
-        provider: true, // Include provider details (camelCase relation name)
+        providers: true, // Include provider details
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
     });
 
     // Handle empty usage case
@@ -581,11 +589,11 @@ export class UsageService {
       };
     }
 
-    // Aggregate totals (Prisma returns camelCase fields)
+    // Aggregate totals
     const summary = {
-      creditsUsed: usageRecords.reduce((sum, r) => sum + r.creditsDeducted, 0),
+      creditsUsed: usageRecords.reduce((sum, r) => sum + r.credits_deducted, 0),
       apiRequests: usageRecords.length,
-      totalTokens: usageRecords.reduce((sum, r) => sum + (r.inputTokens + r.outputTokens), 0),
+      totalTokens: usageRecords.reduce((sum, r) => sum + (r.input_tokens + r.output_tokens), 0),
       averageTokensPerRequest: 0,
       mostUsedModel: '',
       mostUsedModelPercentage: 0,
@@ -597,18 +605,18 @@ export class UsageService {
 
     // Model breakdown
     const modelCounts = usageRecords.reduce((acc, r) => {
-      const key = r.modelId;
+      const key = r.model_id;
       if (!acc[key]) {
         acc[key] = {
           requests: 0,
           tokens: 0,
           credits: 0,
-          provider: r.provider.name, // Get provider name from joined table
+          provider: r.providers.name, // Get provider name from joined table
         };
       }
       acc[key].requests++;
-      acc[key].tokens += r.inputTokens + r.outputTokens;
-      acc[key].credits += r.creditsDeducted;
+      acc[key].tokens += r.input_tokens + r.output_tokens;
+      acc[key].credits += r.credits_deducted;
       return acc;
     }, {} as Record<string, { requests: number; tokens: number; credits: number; provider: string }>);
 
@@ -696,7 +704,7 @@ export class UsageService {
     // Get subscription to check tier
     const subscription = await this.prisma.subscription_monetization.findFirst({
       where: {
-        userId,
+        user_id: userId,
         status: 'active',
       },
     });

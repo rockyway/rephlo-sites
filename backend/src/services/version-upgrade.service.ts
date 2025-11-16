@@ -8,6 +8,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
+import crypto from 'crypto';
 import { PrismaClient, version_upgrade as VersionUpgrade, perpetual_license as PerpetualLicense } from '@prisma/client';
 import semver from 'semver';
 import logger from '../utils/logger';
@@ -240,12 +241,14 @@ export class VersionUpgradeService {
     const upgrade = await this.prisma.version_upgrade.create({
       data: {
         license_id: licenseId,
+        id: crypto.randomUUID(),
         user_id: license.user_id,
         from_version: license.eligible_until_version,
         to_version: targetVersion,
         upgrade_price_usd: pricing.finalPrice,
         stripe_payment_intent_id: paymentIntentId,
         status: 'pending', // Will be updated to 'completed' by webhook
+        updated_at: new Date(),
       },
     });
 

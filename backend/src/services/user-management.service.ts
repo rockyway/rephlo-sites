@@ -16,6 +16,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
+import crypto from 'crypto';
 import { PrismaClient, Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import { notFoundError } from '../middleware/error.middleware';
@@ -284,7 +285,7 @@ export class UserManagementService {
 
       // Calculate credits used from deductions
       const creditsUsed = user.credit_deduction_ledger_credit_deduction_ledger_user_idTousers.reduce(
-        (sum, deduction) => sum + deduction.amount,
+        (sum: number, deduction: any) => sum + deduction.amount,
         0
       );
 
@@ -306,7 +307,12 @@ export class UserManagementService {
       };
 
       // Map to shared UserDetails type using type mapper
-      const userDetails = mapUserDetailsToApiType(user, usageStats);
+      // Create alias for type mapper compatibility
+      const userWithAlias = {
+        ...user,
+        credit_deduction_ledger: user.credit_deduction_ledger_credit_deduction_ledger_user_idTousers
+      };
+      const userDetails = mapUserDetailsToApiType(userWithAlias as any, usageStats);
 
       logger.info('UserManagementService: User details retrieved', { userId });
 
@@ -668,6 +674,7 @@ export class UserManagementService {
       const [allocation, updatedBalance] = await this.prisma.$transaction([
         this.prisma.credit_allocation.create({
           data: {
+            id: crypto.randomUUID(),
             user_id: userId,
             amount: Math.abs(amount),
             source: amount > 0 ? 'admin_grant' : 'admin_grant', // TODO: Add 'admin_deduction' source
@@ -678,8 +685,10 @@ export class UserManagementService {
         this.prisma.user_credit_balance.upsert({
           where: { user_id: userId },
           create: {
+            id: crypto.randomUUID(),
             user_id: userId,
             amount: Math.max(0, amount), // Ensure non-negative
+            updated_at: new Date(),
           },
           update: {
             amount: {

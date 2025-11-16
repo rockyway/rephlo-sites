@@ -69,14 +69,14 @@ export class UserSuspensionService implements IUserSuspensionService {
           expires_at: expiresAt,
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
@@ -128,7 +128,7 @@ export class UserSuspensionService implements IUserSuspensionService {
       const existing = await this.prisma.user_suspensions.findUnique({
         where: { id: suspensionId },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
@@ -159,20 +159,20 @@ export class UserSuspensionService implements IUserSuspensionService {
           lifted_by: liftedBy,
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -217,20 +217,20 @@ export class UserSuspensionService implements IUserSuspensionService {
       const suspensions = await this.prisma.user_suspensions.findMany({
         where: { user_id: userId },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -271,14 +271,14 @@ export class UserSuspensionService implements IUserSuspensionService {
           ],
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
@@ -353,20 +353,20 @@ export class UserSuspensionService implements IUserSuspensionService {
       const suspensions = await this.prisma.user_suspensions.findMany({
         where,
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -489,20 +489,20 @@ export class UserSuspensionService implements IUserSuspensionService {
           reason: `${existing.reason}\n\nExtension: ${extendReason}`,
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,

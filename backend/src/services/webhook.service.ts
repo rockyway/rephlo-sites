@@ -6,6 +6,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 
 // Type aliases for snake_case Prisma models
@@ -113,6 +114,7 @@ export class WebhookService implements IWebhookService {
       // Create webhook log entry
       const webhookLog = await this.prisma.webhook_logs.create({
         data: {
+          id: crypto.randomUUID(),
           webhook_config_id: webhookConfig.id,
           event_type: eventType,
           payload,
@@ -287,7 +289,7 @@ export class WebhookService implements IWebhookService {
    */
   async getWebhookConfig(userId: string): Promise<WebhookConfig | null> {
     return this.prisma.webhook_configs.findUnique({
-      where: { userId },
+      where: { user_id: userId },
     });
   }
 
@@ -305,12 +307,14 @@ export class WebhookService implements IWebhookService {
     webhookSecret: string
   ): Promise<WebhookConfig> {
     return this.prisma.webhook_configs.upsert({
-      where: { userId },
+      where: { user_id: userId },
       create: {
+        id: crypto.randomUUID(),
         user_id: userId,
         webhook_url: webhookUrl,
         webhook_secret: webhookSecret,
         is_active: true,
+        updated_at: new Date(),
       },
       update: {
         webhook_url: webhookUrl,
@@ -327,7 +331,7 @@ export class WebhookService implements IWebhookService {
    */
   async deleteWebhookConfig(userId: string): Promise<void> {
     await this.prisma.webhook_configs.delete({
-      where: { userId },
+      where: { user_id: userId },
     });
   }
 

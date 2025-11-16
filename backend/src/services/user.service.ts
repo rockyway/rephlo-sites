@@ -234,6 +234,7 @@ export class UserService implements IUserService {
       preferences = await this.prisma.user_preferences.create({
         data: {
           user_id: userId,
+          updated_at: new Date(),
         },
         select: {
           default_model_id: true,
@@ -397,7 +398,7 @@ export class UserService implements IUserService {
       where: { user_id: userId },
       select: {
         default_model_id: true,
-        default_model: {
+        models: {
           select: {
             id: true,
             name: true,
@@ -422,11 +423,11 @@ export class UserService implements IUserService {
 
     // Extract from meta JSONB
     let modelInfo = null;
-    if (preferences.default_model) {
-      const meta = preferences.default_model.meta as any;
+    if (preferences.models) {
+      const meta = preferences.models.meta as any;
       modelInfo = {
-        id: preferences.default_model.id,
-        name: meta?.displayName ?? preferences.default_model.name,
+        id: preferences.models.id,
+        name: meta?.displayName ?? preferences.models.name,
         capabilities: meta?.capabilities ?? [],
       };
     }
@@ -455,7 +456,7 @@ export class UserService implements IUserService {
     if (!exists) {
       logger.debug('UserService: Creating default preferences', { userId });
       await this.prisma.user_preferences.create({
-        data: { user_id: userId },
+        data: { user_id: userId, updated_at: new Date() },
       });
     }
   }
