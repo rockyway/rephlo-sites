@@ -24,16 +24,6 @@
         "OLLAMA_URL": "http://localhost:11434",
         "MILVUS_URL": "http://localhost:19530"
       }
-    },
-     "chrome-devtools": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "chrome-devtools-mcp@latest"
-      ]
-    }
+    }    
   }
 }
