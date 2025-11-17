@@ -1,0 +1,44 @@
+{
+  "specPathGlobs": ["specs/**/*.spec.ts"],
+  "tsconfigPath": "./tsconfig.json",
+  "outputPath": "docs/openapi/generated-api.json",
+  "specVersion": 3,
+  "openapi": {
+    "title": "Rephlo Backend API (Generated)",
+    "version": "3.0.0",
+    "description": "Complete REST API documentation for the Rephlo Backend system. This specification is auto-generated from TypeScript type definitions.",
+    "servers": [
+      {
+        "url": "https://api.textassistant.com",
+        "description": "Production API"
+      },
+      {
+        "url": "https://staging-api.textassistant.com",
+        "description": "Staging API"
+      },
+      {
+        "url": "http://localhost:7150",
+        "description": "Local Development"
+      }
+    ],
+    "tags": [
+      { "name": "Health", "description": "Health check and status endpoints" },
+      { "name": "Branding", "description": "Public branding website endpoints (no authentication)" },
+      { "name": "Authentication", "description": "OAuth 2.0 / OIDC authentication endpoints" },
+      { "name": "Users", "description": "User profile and preferences management" },
+      { "name": "Credits", "description": "Credit balance and usage tracking" },
+      { "name": "Models", "description": "Available AI models and inference endpoints" },
+      { "name": "Subscriptions", "description": "Subscription plans and management" },
+      { "name": "Webhooks", "description": "User webhook configuration" },
+      { "name": "Admin", "description": "Administrative endpoints (admin only)" }
+    ],
+    "securityDefinitions": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token obtained through OAuth 2.0 authorization flow"
+      }
+    }
+  }
+}

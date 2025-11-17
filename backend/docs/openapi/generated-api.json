@@ -1,0 +1,224 @@
+{
+  "info": {
+    "title": "Rephlo Backend API (Generated)",
+    "version": "3.0.0",
+    "description": "Complete REST API documentation for the Rephlo Backend system. This specification is auto-generated from TypeScript type definitions."
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/user/profile": {
+      "get": {
+        "operationId": "UserProfileApiSpec_get_/api/user/profile",
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get detailed user profile",
+        "description": "Retrieve authenticated user's complete profile including:\n- Email and display name\n- Subscription tier and status\n- User preferences (default model, notification settings)\n- Account timestamps\n\n**Caching Recommendation**: Cache this response for 1 hour on the client side.\nRe-fetch only when profile data is explicitly needed (e.g., settings page).\n\n**Rate Limit**: 30 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "User Profile Response\nComplete user profile with subscription and preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse",
+                  "description": "Successful response with user profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient scope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Rate limit exceeded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UserProfileResponse": {
+        "description": "User Profile Response\nComplete user profile with subscription and preferences",
+        "type": "object",
+        "properties": {
+          "userId": {
+            "description": "User ID",
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Display name",
+            "type": "string"
+          },
+          "subscription": {
+            "description": "Subscription information",
+            "type": "object",
+            "properties": {
+              "tier": {
+                "description": "Subscription tier (free, pro, enterprise)",
+                "type": "string"
+              },
+              "status": {
+                "description": "Subscription status (active, inactive, canceled, past_due)",
+                "type": "string"
+              },
+              "currentPeriodStart": {
+                "description": "Start of current billing period",
+                "type": "string"
+              },
+              "currentPeriodEnd": {
+                "description": "End of current billing period",
+                "type": "string"
+              },
+              "cancelAtPeriodEnd": {
+                "description": "Whether subscription will cancel at period end",
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cancelAtPeriodEnd",
+              "currentPeriodEnd",
+              "currentPeriodStart",
+              "status",
+              "tier"
+            ]
+          },
+          "preferences": {
+            "description": "User preferences",
+            "type": "object",
+            "properties": {
+              "defaultModel": {
+                "description": "Default AI model preference",
+                "type": "string"
+              },
+              "emailNotifications": {
+                "description": "Email notification preference",
+                "type": "boolean"
+              },
+              "usageAlerts": {
+                "description": "Usage alert preference",
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "defaultModel",
+              "emailNotifications",
+              "usageAlerts"
+            ]
+          },
+          "accountCreatedAt": {
+            "description": "Account creation timestamp",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "description": "Last login timestamp",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "accountCreatedAt",
+          "displayName",
+          "email",
+          "lastLoginAt",
+          "preferences",
+          "subscription",
+          "userId"
+        ]
+      },
+      "ApiError": {
+        "description": "API Error Structure",
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {},
+          "field": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token obtained through OAuth 2.0 authorization flow"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.textassistant.com",
+      "description": "Production API"
+    },
+    {
+      "url": "https://staging-api.textassistant.com",
+      "description": "Staging API"
+    },
+    {
+      "url": "http://localhost:7150",
+      "description": "Local Development"
+    }
+  ]
+}
