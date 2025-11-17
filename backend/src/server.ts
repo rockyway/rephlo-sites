@@ -112,50 +112,86 @@ const startServer = async (): Promise<void> => {
 /**
  * Setup graceful shutdown handlers
  * Handles SIGTERM, SIGINT, uncaught exceptions, and unhandled rejections
+ *
+ * Enhanced to handle nodemon restarts more robustly:
+ * - Adds timeout to force exit if graceful shutdown hangs
+ * - Ensures port is fully released before exit
+ * - Properly cleans up all resources in order
  */
 function setupGracefulShutdown(server: http.Server): void {
+  let isShuttingDown = false;
+
   const shutdown = async (signal: string) => {
+    // Prevent multiple shutdown attempts
+    if (isShuttingDown) {
+      console.log('⚠️  Shutdown already in progress...');
+      return;
+    }
+    isShuttingDown = true;
+
     loggers.system('Server: Shutdown signal received', { signal });
     console.log(`\n⚠️  ${signal} received. Starting graceful shutdown...`);
 
-    // Stop accepting new connections
-    server.close(() => {
-      loggers.system('Server: HTTP server closed');
-      console.log('✓ HTTP server closed');
-    });
+    // Set a timeout to force exit if graceful shutdown takes too long
+    const forceExitTimeout = setTimeout(() => {
+      console.error('❌ Graceful shutdown timed out after 10s, forcing exit...');
+      process.exit(1);
+    }, 10000);
 
-    // Close all active connections
-    let connectionsClosed = 0;
-    for (const connection of connections) {
-      connection.destroy();
-      connectionsClosed++;
-    }
-
-    if (connectionsClosed > 0) {
-      loggers.system('Server: Active connections closed', { count: connectionsClosed });
-      console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
-    }
-
-    // Close Redis connection (used for rate limiting)
     try {
-      const { closeRedisForRateLimiting } = await import('./middleware/ratelimit.middleware');
-      await closeRedisForRateLimiting();
-      loggers.system('Server: Rate limiting Redis connection closed');
-      console.log('✓ Rate limiting Redis connection closed');
+      // Step 1: Stop accepting new connections
+      await new Promise<void>((resolve) => {
+        server.close(() => {
+          loggers.system('Server: HTTP server closed');
+          console.log('✓ HTTP server closed');
+          resolve();
+        });
+      });
+
+      // Step 2: Close all active connections
+      let connectionsClosed = 0;
+      for (const connection of connections) {
+        connection.destroy();
+        connectionsClosed++;
+      }
+
+      if (connectionsClosed > 0) {
+        loggers.system('Server: Active connections closed', { count: connectionsClosed });
+        console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
+      }
+
+      // Step 3: Close Redis connection (used for rate limiting)
+      try {
+        const { closeRedisForRateLimiting } = await import('./middleware/ratelimit.middleware');
+        await closeRedisForRateLimiting();
+        loggers.system('Server: Rate limiting Redis connection closed');
+        console.log('✓ Rate limiting Redis connection closed');
+      } catch (error) {
+        logger.error('Server: Error closing rate limiting Redis connection', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      // Step 4: Dispose DI container resources (handles Prisma, Redis, etc.)
+      await disposeContainer();
+      console.log('✓ DI container disposed');
+
+      // Step 5: Wait a moment to ensure port is fully released
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      loggers.system('Server: Graceful shutdown complete');
+      console.log('✓ Graceful shutdown complete');
+
+      clearTimeout(forceExitTimeout);
+      process.exit(0);
     } catch (error) {
-      logger.error('Server: Error closing rate limiting Redis connection', {
+      logger.error('Server: Error during graceful shutdown', {
         error: error instanceof Error ? error.message : String(error),
       });
+      console.error('❌ Error during shutdown:', error);
+      clearTimeout(forceExitTimeout);
+      process.exit(1);
     }
-
-    // Dispose DI container resources (handles Prisma, Redis, etc.)
-    await disposeContainer();
-    console.log('✓ DI container disposed');
-
-    loggers.system('Server: Graceful shutdown complete');
-    console.log('✓ Graceful shutdown complete');
-
-    process.exit(0);
   };
 
   // Handle shutdown signals
@@ -169,6 +205,14 @@ function setupGracefulShutdown(server: http.Server): void {
       stack: error.stack,
     });
     console.error('💥 Uncaught Exception:', error);
+
+    // For EADDRINUSE errors, exit quickly without trying to clean up
+    // since the server never actually started
+    if ('code' in error && error.code === 'EADDRINUSE') {
+      console.error('⚠️  Port already in use. Exiting immediately.');
+      process.exit(1);
+    }
+
     shutdown('uncaughtException');
   });
 

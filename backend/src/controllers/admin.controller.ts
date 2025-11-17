@@ -134,7 +134,7 @@ export class AdminController {
           id: true,
         },
         _sum: {
-          fileSize: true,
+          file_size: true,
         },
       });
 
@@ -173,7 +173,7 @@ export class AdminController {
         },
         diagnostics: {
           total: diagnosticStats._count.id || 0,
-          totalSize: diagnosticStats._sum.fileSize || 0,
+          totalSize: diagnosticStats._sum.file_size || 0,
         },
         timestamps: {
           firstDownload: firstDownload?.timestamp.toISOString() || null,

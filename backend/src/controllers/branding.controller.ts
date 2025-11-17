@@ -132,8 +132,8 @@ export class BrandingController {
         data: {
           id: crypto.randomUUID(),
           os,
-          userAgent,
-          ipHash,
+          user_agent: userAgent,
+          ip_hash: ipHash,
         },
       });
 
@@ -226,7 +226,7 @@ export class BrandingController {
           id: crypto.randomUUID(),
           message,
           email,
-          userId,
+          user_id: userId,
         },
       });
 
@@ -403,9 +403,9 @@ export class BrandingController {
       const diagnostic = await this.prisma.diagnostics.create({
         data: {
           id: crypto.randomUUID(),
-          userId,
-          filePath,
-          fileSize: file.size,
+          user_id: userId,
+          file_path: filePath,
+          file_size: file.size,
         },
       });
 

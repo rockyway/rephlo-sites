@@ -14,8 +14,9 @@
  * Uses upsert logic to ensure no duplicates and allows data restoration.
  */
 
-import { PrismaClient, ProrationEventType, ProrationStatus } from '@prisma/client';
+import { PrismaClient, proration_event_type, proration_status } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -185,34 +186,36 @@ async function seedOAuthClients() {
     // For public clients (no secret), clientSecretHash is null
     const clientSecretHash = client.clientSecret ? await hashPassword(client.clientSecret) : null;
 
-    const oauthClient = await prisma.oAuthClient.upsert({
-      where: { clientId: client.clientId },
+    const oauthClient = await prisma.oauth_clients.upsert({
+      where: { client_id: client.clientId },
       update: {
-        clientName: client.clientName,
-        clientSecretHash,
-        redirectUris: client.redirectUris,
-        grantTypes: client.grantTypes,
-        responseTypes: client.responseTypes,
+        client_name: client.clientName,
+        client_secret_hash: clientSecretHash,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
         scope: client.scope,
-        isActive: true,
+        is_active: true,
         config: client.config,
+        updated_at: new Date(),
       },
       create: {
-        clientId: client.clientId,
-        clientName: client.clientName,
-        clientSecretHash,
-        redirectUris: client.redirectUris,
-        grantTypes: client.grantTypes,
-        responseTypes: client.responseTypes,
+        client_id: client.clientId,
+        client_name: client.clientName,
+        client_secret_hash: clientSecretHash,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
         scope: client.scope,
-        isActive: true,
+        is_active: true,
         config: client.config,
+        updated_at: new Date(),
       },
     });
 
     createdClients.push({
-      clientId: oauthClient.clientId,
-      clientName: oauthClient.clientName,
+      clientId: oauthClient.client_id,
+      clientName: oauthClient.client_name,
       secret: client.clientSecret, // Display secret only on creation
     });
   }
@@ -240,35 +243,37 @@ async function seedUserPersonas() {
       : null;
 
     // Use upsert instead of delete + create to avoid foreign key conflicts
-    const user = await prisma.user.upsert({
+    const user = await prisma.users.upsert({
       where: { email: persona.email },
       update: {
-        firstName: persona.firstName,
-        lastName: persona.lastName,
+        first_name: persona.firstName,
+        last_name: persona.lastName,
         username: persona.username,
-        passwordHash,
-        emailVerified: persona.emailVerified,
-        authProvider: persona.authProvider,
-        googleId: persona.googleId || undefined,
+        password_hash: passwordHash,
+        email_verified: persona.emailVerified,
+        auth_provider: persona.authProvider,
+        google_id: persona.googleId || undefined,
         role: persona.role,
-        isActive: true,
+        is_active: true,
       },
       create: {
+        id: randomUUID(),
         email: persona.email,
-        firstName: persona.firstName,
-        lastName: persona.lastName,
+        first_name: persona.firstName,
+        last_name: persona.lastName,
         username: persona.username,
-        passwordHash,
-        emailVerified: persona.emailVerified,
-        authProvider: persona.authProvider,
-        googleId: persona.googleId || undefined,
+        password_hash: passwordHash,
+        email_verified: persona.emailVerified,
+        auth_provider: persona.authProvider,
+        google_id: persona.googleId || undefined,
         role: persona.role,
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     });
 
     createdUsers.push({
-      userId: user.id,
+      user_id: user.id,
       email: user.email,
       role: user.role,
       description: persona.description,
@@ -315,6 +320,16 @@ async function seedSubscriptions(users: any[]) {
       priceCents: 19900,           // $199/month
       billingInterval: 'monthly',
     },
+    enterprise_pro: {              // COMING SOON (Q2 2026)
+      creditsPerMonth: 3500,       // $35 worth of API usage
+      priceCents: 3000,            // $30/month
+      billingInterval: 'monthly',
+    },
+    enterprise_pro_plus: {         // COMING SOON (Q2 2026)
+      creditsPerMonth: 11000,      // $110 worth of API usage
+      priceCents: 9000,            // $90/month
+      billingInterval: 'monthly',
+    },
   };
 
   for (const user of users) {
@@ -328,29 +343,31 @@ async function seedSubscriptions(users: any[]) {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Delete existing subscription for this user to avoid conflicts
-    await prisma.subscription.deleteMany({
-      where: { userId: user.userId },
+    await prisma.subscriptions.deleteMany({
+      where: { user_id: user.user_id },
     });
 
-    const subscription = await prisma.subscription.create({
+    const subscription = await prisma.subscriptions.create({
       data: {
-        userId: user.userId,
+        id: randomUUID(),
+        user_id: user.user_id,
         tier,
         status: 'active',
-        creditsPerMonth: config.creditsPerMonth,
-        priceCents: config.priceCents,
-        billingInterval: config.billingInterval,
-        currentPeriodStart: now,
-        currentPeriodEnd: endOfMonth,
-        creditsRollover: false,
+        credits_per_month: config.creditsPerMonth,
+        price_cents: config.priceCents,
+        billing_interval: config.billingInterval,
+        current_period_start: now,
+        current_period_end: endOfMonth,
+        credits_rollover: false,
+        updated_at: new Date(),
       },
     });
 
     createdSubscriptions.push({
-      subscriptionId: subscription.id,
-      userId: subscription.userId,
+      subscription_id: subscription.id,
+      user_id: subscription.user_id,
       tier: subscription.tier,
-      creditsPerMonth: subscription.creditsPerMonth,
+      creditsPerMonth: subscription.credits_per_month,
     });
   }
 
@@ -382,30 +399,32 @@ async function seedCredits(users: any[]) {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Delete existing credit for this user to start fresh
-    await prisma.credit.deleteMany({
-      where: { userId: user.userId },
+    await prisma.credits.deleteMany({
+      where: { user_id: user.user_id },
     });
 
     // Create new credit allocation
-    const credit = await prisma.credit.create({
+    const credit = await prisma.credits.create({
       data: {
-        userId: user.userId,
-        totalCredits: monthlyAllocation,
-        usedCredits: 0,
-        creditType,
-        monthlyAllocation,
-        billingPeriodStart: now,
-        billingPeriodEnd: endOfMonth,
-        isCurrent: true,
-        resetDayOfMonth: 1,
+        id: randomUUID(),
+        user_id: user.user_id,
+        total_credits: monthlyAllocation,
+        used_credits: 0,
+        credit_type: creditType,
+        monthly_allocation: monthlyAllocation,
+        billing_period_start: now,
+        billing_period_end: endOfMonth,
+        is_current: true,
+        reset_day_of_month: 1,
+        updated_at: new Date(),
       },
     });
 
     createdCredits.push({
       creditId: credit.id,
-      userId: credit.userId,
-      creditType: credit.creditType,
-      monthlyAllocation: credit.monthlyAllocation,
+      user_id: credit.user_id,
+      creditType: credit.credit_type,
+      monthlyAllocation: credit.monthly_allocation,
     });
   }
 
@@ -936,24 +955,26 @@ async function seedModels() {
   const createdModels = [];
 
   for (const model of models) {
-    const created = await prisma.model.upsert({
+    const created = await prisma.models.upsert({
       where: { id: model.id },
       update: {
         name: model.name,
         provider: model.provider,
-        isLegacy: model.isLegacy,
-        isArchived: model.isArchived,
-        isAvailable: !model.isArchived, // Archived models are not available
+        is_legacy: model.isLegacy,
+        is_archived: model.isArchived,
+        is_available: !model.isArchived, // Archived models are not available
         meta: model.meta,
+        updated_at: new Date(),
       },
       create: {
         id: model.id,
         name: model.name,
         provider: model.provider,
-        isLegacy: model.isLegacy,
-        isArchived: model.isArchived,
-        isAvailable: !model.isArchived, // Archived models are not available
+        is_legacy: model.isLegacy,
+        is_archived: model.isArchived,
+        is_available: !model.isArchived, // Archived models are not available
         meta: model.meta,
+        updated_at: new Date(),
       },
     });
 
@@ -989,26 +1010,28 @@ async function seedProrations(users: any[], subscriptions: any[]) {
     const persona = USER_PERSONAS[i];
 
     // Delete existing monetization subscription
-    await prisma.subscriptionMonetization.deleteMany({
-      where: { userId: user.userId },
+    await prisma.subscription_monetization.deleteMany({
+      where: { user_id: user.user_id },
     });
 
-    const monetizationSub = await prisma.subscriptionMonetization.create({
+    const monetizationSub = await prisma.subscription_monetization.create({
       data: {
-        userId: user.userId,
+        id: randomUUID(),
+        user_id: user.user_id,
         tier: persona.subscriptionTier, // Plain string - schema defines tier as String, not enum
-        billingCycle: 'monthly',
+        billing_cycle: 'monthly',
         status: 'active',
-        basePriceUsd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
-        monthlyCreditAllocation: persona.subscriptionTier === 'free' ? 100 : 10000,
-        currentPeriodStart: now,
-        currentPeriodEnd: endOfMonth,
+        base_price_usd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
+        monthly_credit_allocation: persona.subscriptionTier === 'free' ? 100 : 10000,
+        current_period_start: now,
+        current_period_end: endOfMonth,
+        updated_at: new Date(),
       },
     });
 
     monetizationSubscriptions.push({
       subscriptionId: monetizationSub.id,
-      userId: monetizationSub.userId,
+      userId: monetizationSub.user_id,
       tier: monetizationSub.tier,
     });
   }
@@ -1018,140 +1041,144 @@ async function seedProrations(users: any[], subscriptions: any[]) {
   const prorationsData = [
     // Upgrade from free to pro
     {
-      userId: users[0]?.userId,
-      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
-      fromTier: 'free',
-      toTier: 'pro',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 20,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '0.00', // Free tier has no value
-      newTierProratedCostUsd: '13.33', // (20/30) × $20
-      netChargeUsd: '13.33',
-      effectiveDate: new Date('2025-11-05'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_upgrade_free_pro_001',
+      user_id: users[0]?.userId,
+      subscription_id: monetizationSubscriptions[0]?.subscriptionId,
+      from_tier: 'free',
+      to_tier: 'pro',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 20,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '0.00', // Free tier has no value
+      new_tier_prorated_cost_usd: '13.33', // (20/30) × $20
+      net_charge_usd: '13.33',
+      effective_date: new Date('2025-11-05'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_upgrade_free_pro_001',
     },
     // Upgrade from pro to pro_max
     {
-      userId: users[1]?.userId,
-      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'pro_max',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 15,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '10.00', // (15/30) × $20
-      newTierProratedCostUsd: '25.00', // (15/30) × $50
-      netChargeUsd: '15.00',
-      effectiveDate: new Date('2025-11-08'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_upgrade_pro_promax_001',
+      user_id: users[1]?.userId,
+      subscription_id: monetizationSubscriptions[1]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'pro_max',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 15,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '10.00', // (15/30) × $20
+      new_tier_prorated_cost_usd: '25.00', // (15/30) × $50
+      net_charge_usd: '15.00',
+      effective_date: new Date('2025-11-08'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_upgrade_pro_promax_001',
     },
     // Downgrade from pro to free
     {
-      userId: users[2]?.userId,
-      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'free',
-      changeType: ProrationEventType.downgrade,
-      daysRemaining: 10,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '6.67', // (10/30) × $20
-      newTierProratedCostUsd: '0.00', // Free tier
-      netChargeUsd: '-6.67', // Credit back to user
-      effectiveDate: new Date('2025-11-10'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_downgrade_pro_free_001',
+      user_id: users[2]?.userId,
+      subscription_id: monetizationSubscriptions[2]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'free',
+      change_type: proration_event_type.downgrade,
+      days_remaining: 10,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '6.67', // (10/30) × $20
+      new_tier_prorated_cost_usd: '0.00', // Free tier
+      net_charge_usd: '-6.67', // Credit back to user
+      effective_date: new Date('2025-11-10'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_downgrade_pro_free_001',
     },
     // Interval change - monthly to annual
     {
-      userId: users[0]?.userId,
-      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'pro',
-      changeType: ProrationEventType.interval_change,
-      daysRemaining: 25,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '16.67', // (25/30) × $20
-      newTierProratedCostUsd: '183.33', // (25/30) × $220 (annual)
-      netChargeUsd: '166.66',
-      effectiveDate: new Date('2025-11-03'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_interval_monthly_annual_001',
+      user_id: users[0]?.userId,
+      subscription_id: monetizationSubscriptions[0]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'pro',
+      change_type: proration_event_type.interval_change,
+      days_remaining: 25,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '16.67', // (25/30) × $20
+      new_tier_prorated_cost_usd: '183.33', // (25/30) × $220 (annual)
+      net_charge_usd: '166.66',
+      effective_date: new Date('2025-11-03'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_interval_monthly_annual_001',
     },
     // Pending upgrade
     {
-      userId: users[1]?.userId,
-      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
-      fromTier: 'free',
-      toTier: 'pro',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 18,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '0.00',
-      newTierProratedCostUsd: '12.00',
-      netChargeUsd: '12.00',
-      effectiveDate: new Date('2025-11-12'),
-      status: ProrationStatus.pending,
+      user_id: users[1]?.userId,
+      subscription_id: monetizationSubscriptions[1]?.subscriptionId,
+      from_tier: 'free',
+      to_tier: 'pro',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 18,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '0.00',
+      new_tier_prorated_cost_usd: '12.00',
+      net_charge_usd: '12.00',
+      effective_date: new Date('2025-11-12'),
+      status: proration_status.pending,
     },
     // Failed proration
     {
-      userId: users[2]?.userId,
-      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'pro_max',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 12,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '8.00',
-      newTierProratedCostUsd: '20.00',
-      netChargeUsd: '12.00',
-      effectiveDate: new Date('2025-11-09'),
-      status: ProrationStatus.failed,
+      user_id: users[2]?.userId,
+      subscription_id: monetizationSubscriptions[2]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'pro_max',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 12,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '8.00',
+      new_tier_prorated_cost_usd: '20.00',
+      net_charge_usd: '12.00',
+      effective_date: new Date('2025-11-09'),
+      status: proration_status.failed,
     },
     // Reversed proration (refund)
     {
-      userId: users[0]?.userId,
-      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
-      fromTier: 'pro_max',
-      toTier: 'pro',
-      changeType: ProrationEventType.downgrade,
-      daysRemaining: 22,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '36.67', // (22/30) × $50
-      newTierProratedCostUsd: '14.67', // (22/30) × $20
-      netChargeUsd: '-22.00', // Credit back
-      effectiveDate: new Date('2025-11-01'),
-      status: ProrationStatus.reversed,
-      stripeInvoiceId: 'in_test_reversed_promax_pro_001',
+      user_id: users[0]?.userId,
+      subscription_id: monetizationSubscriptions[0]?.subscriptionId,
+      from_tier: 'pro_max',
+      to_tier: 'pro',
+      change_type: proration_event_type.downgrade,
+      days_remaining: 22,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '36.67', // (22/30) × $50
+      new_tier_prorated_cost_usd: '14.67', // (22/30) × $20
+      net_charge_usd: '-22.00', // Credit back
+      effective_date: new Date('2025-11-01'),
+      status: proration_status.reversed,
+      stripe_invoice_id: 'in_test_reversed_promax_pro_001',
     },
     // Enterprise upgrade
     {
-      userId: users[1]?.userId,
-      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
-      fromTier: 'pro_max',
-      toTier: 'enterprise_pro',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 28,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '46.67', // (28/30) × $50
-      newTierProratedCostUsd: '93.33', // (28/30) × $100
-      netChargeUsd: '46.66',
-      effectiveDate: new Date('2025-11-02'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_upgrade_promax_ent_001',
+      user_id: users[1]?.userId,
+      subscription_id: monetizationSubscriptions[1]?.subscriptionId,
+      from_tier: 'pro_max',
+      to_tier: 'enterprise_pro',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 28,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '46.67', // (28/30) × $50
+      new_tier_prorated_cost_usd: '93.33', // (28/30) × $100
+      net_charge_usd: '46.66',
+      effective_date: new Date('2025-11-02'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_upgrade_promax_ent_001',
     },
   ];
 
   const createdProrations = [];
 
   for (const proration of prorationsData) {
-    if (!proration.userId || !proration.subscriptionId) continue;
+    if (!proration.user_id || !proration.subscription_id) continue;
 
     try {
-      const created = await prisma.prorationEvent.create({
-        data: proration,
+      const created = await prisma.proration_event.create({
+        data: {
+          id: randomUUID(),
+          ...proration,
+          updated_at: new Date(),
+        },
       });
       createdProrations.push(created);
     } catch (err) {
@@ -1177,72 +1204,82 @@ async function seedProviders() {
 
   const providers = await Promise.all([
     // OpenAI
-    prisma.provider.upsert({
+    prisma.providers.upsert({
       where: { name: 'openai' },
       update: {
-        apiType: 'openai-compatible',
-        isEnabled: true,
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
       },
       create: {
         name: 'openai',
-        apiType: 'openai-compatible',
-        isEnabled: true,
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
       },
     }),
 
     // Anthropic
-    prisma.provider.upsert({
+    prisma.providers.upsert({
       where: { name: 'anthropic' },
       update: {
-        apiType: 'anthropic-sdk',
-        isEnabled: true,
+        api_type: 'anthropic-sdk',
+        is_enabled: true,
+        updated_at: new Date(),
       },
       create: {
         name: 'anthropic',
-        apiType: 'anthropic-sdk',
-        isEnabled: true,
+        api_type: 'anthropic-sdk',
+        is_enabled: true,
+        updated_at: new Date(),
       },
     }),
 
     // Google AI
-    prisma.provider.upsert({
+    prisma.providers.upsert({
       where: { name: 'google' },
       update: {
-        apiType: 'google-generative-ai',
-        isEnabled: true,
+        api_type: 'google-generative-ai',
+        is_enabled: true,
+        updated_at: new Date(),
       },
       create: {
         name: 'google',
-        apiType: 'google-generative-ai',
-        isEnabled: true,
+        api_type: 'google-generative-ai',
+        is_enabled: true,
+        updated_at: new Date(),
       },
     }),
 
     // Mistral AI
-    prisma.provider.upsert({
+    prisma.providers.upsert({
       where: { name: 'mistral' },
       update: {
-        apiType: 'openai-compatible',
-        isEnabled: true,
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
       },
       create: {
         name: 'mistral',
-        apiType: 'openai-compatible',
-        isEnabled: true,
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
       },
     }),
 
     // Azure OpenAI (uses same API as OpenAI)
-    prisma.provider.upsert({
+    prisma.providers.upsert({
       where: { name: 'azure-openai' },
       update: {
-        apiType: 'openai-compatible',
-        isEnabled: true,
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
       },
       create: {
         name: 'azure-openai',
-        apiType: 'openai-compatible',
-        isEnabled: true,
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -1269,162 +1306,170 @@ async function seedModelPricing(providers: any[]) {
     // ========================================================================
 
     // GPT-4o ($5.00/$15.00 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'gpt-4o',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-4o',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'gpt-4o',
-        inputPricePer1k: 0.005, // $5.00 per 1M / 1000
-        outputPricePer1k: 0.015, // $15.00 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-4o',
+        input_price_per_1k: 0.005, // $5.00 per 1M / 1000
+        output_price_per_1k: 0.015, // $15.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // GPT-4o-mini ($0.15/$0.60 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'gpt-4o-mini',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-4o-mini',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'gpt-4o-mini',
-        inputPricePer1k: 0.00015, // $0.15 per 1M / 1000
-        outputPricePer1k: 0.0006, // $0.60 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-4o-mini',
+        input_price_per_1k: 0.00015, // $0.15 per 1M / 1000
+        output_price_per_1k: 0.0006, // $0.60 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // GPT-5 (use GPT-4o pricing as placeholder until official release)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'gpt-5',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'gpt-5',
-        inputPricePer1k: 0.005, // Same as GPT-4o
-        outputPricePer1k: 0.015,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5',
+        input_price_per_1k: 0.005, // Same as GPT-4o
+        output_price_per_1k: 0.015,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // GPT-5 Mini (use GPT-4o-mini pricing as placeholder)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'gpt-5-mini',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5-mini',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'gpt-5-mini',
-        inputPricePer1k: 0.00015, // Same as gpt-4o-mini
-        outputPricePer1k: 0.0006,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5-mini',
+        input_price_per_1k: 0.00015, // Same as gpt-4o-mini
+        output_price_per_1k: 0.0006,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // GPT-5 Nano (estimated $0.05/$0.20 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'gpt-5-nano',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5-nano',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'gpt-5-nano',
-        inputPricePer1k: 0.00005, // $0.05 per 1M / 1000
-        outputPricePer1k: 0.0002, // $0.20 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5-nano',
+        input_price_per_1k: 0.00005, // $0.05 per 1M / 1000
+        output_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // o1 ($15.00/$60.00 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'o1',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'o1',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'o1',
-        inputPricePer1k: 0.015, // $15.00 per 1M / 1000
-        outputPricePer1k: 0.06, // $60.00 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'o1',
+        input_price_per_1k: 0.015, // $15.00 per 1M / 1000
+        output_price_per_1k: 0.06, // $60.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // o1-mini ($1.10/$4.40 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'o1-mini',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'o1-mini',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'o1-mini',
-        inputPricePer1k: 0.0011, // $1.10 per 1M / 1000
-        outputPricePer1k: 0.0044, // $4.40 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'o1-mini',
+        input_price_per_1k: 0.0011, // $1.10 per 1M / 1000
+        output_price_per_1k: 0.0044, // $4.40 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // o3-mini ($1.10/$4.40 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['openai'],
-          modelName: 'o3-mini',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'o3-mini',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['openai'],
-        modelName: 'o3-mini',
-        inputPricePer1k: 0.0011, // $1.10 per 1M / 1000
-        outputPricePer1k: 0.0044, // $4.40 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['openai'],
+        model_name: 'o3-mini',
+        input_price_per_1k: 0.0011, // $1.10 per 1M / 1000
+        output_price_per_1k: 0.0044, // $4.40 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
@@ -1434,92 +1479,96 @@ async function seedModelPricing(providers: any[]) {
 
     // Claude Opus 4.1 ($15/$75 per 1M tokens)
     // Cache Write (5m): $18.75, Cache Hit: $1.50 per 1M tokens
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['anthropic'],
-          modelName: 'claude-opus-4.1',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-opus-4.1',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['anthropic'],
-        modelName: 'claude-opus-4.1',
-        inputPricePer1k: 0.015, // $15 per 1M / 1000
-        outputPricePer1k: 0.075, // $75 per 1M / 1000
-        cacheInputPricePer1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
-        cacheHitPricePer1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-opus-4.1',
+        input_price_per_1k: 0.015, // $15 per 1M / 1000
+        output_price_per_1k: 0.075, // $75 per 1M / 1000
+        cache_input_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
+        cache_hit_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Claude Sonnet 4.5 ($3/$15 per 1M tokens)
     // Cache Write (5m): $3.75, Cache Hit: $0.30 per 1M tokens
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['anthropic'],
-          modelName: 'claude-sonnet-4.5',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-sonnet-4.5',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['anthropic'],
-        modelName: 'claude-sonnet-4.5',
-        inputPricePer1k: 0.003, // $3 per 1M / 1000
-        outputPricePer1k: 0.015, // $15 per 1M / 1000
-        cacheInputPricePer1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
-        cacheHitPricePer1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-sonnet-4.5',
+        input_price_per_1k: 0.003, // $3 per 1M / 1000
+        output_price_per_1k: 0.015, // $15 per 1M / 1000
+        cache_input_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
+        cache_hit_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Claude 3.5 Sonnet (use Sonnet 4.5 pricing)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['anthropic'],
-          modelName: 'claude-3-5-sonnet',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-3-5-sonnet',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['anthropic'],
-        modelName: 'claude-3-5-sonnet',
-        inputPricePer1k: 0.003,
-        outputPricePer1k: 0.015,
-        cacheInputPricePer1k: 0.00375,
-        cacheHitPricePer1k: 0.0003,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-3-5-sonnet',
+        input_price_per_1k: 0.003,
+        output_price_per_1k: 0.015,
+        cache_input_price_per_1k: 0.00375,
+        cache_hit_price_per_1k: 0.0003,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Claude Haiku 4.5 ($1/$5 per 1M tokens)
     // Cache Write (5m): $1.25, Cache Hit: $0.10 per 1M tokens
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['anthropic'],
-          modelName: 'claude-haiku-4.5',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-haiku-4.5',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['anthropic'],
-        modelName: 'claude-haiku-4.5',
-        inputPricePer1k: 0.001, // $1 per 1M / 1000
-        outputPricePer1k: 0.005, // $5 per 1M / 1000
-        cacheInputPricePer1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
-        cacheHitPricePer1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-haiku-4.5',
+        input_price_per_1k: 0.001, // $1 per 1M / 1000
+        output_price_per_1k: 0.005, // $5 per 1M / 1000
+        cache_input_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
+        cache_hit_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
@@ -1529,109 +1578,114 @@ async function seedModelPricing(providers: any[]) {
 
     // Gemini 2.5 Pro (≤200K context: $1.25/$10 per 1M tokens)
     // Cache Write: $0.125, Cache storage not tracked in this table
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['google'],
-          modelName: 'gemini-2-5-pro',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-5-pro',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['google'],
-        modelName: 'gemini-2-5-pro',
-        inputPricePer1k: 0.00125, // $1.25 per 1M / 1000
-        outputPricePer1k: 0.01, // $10 per 1M / 1000
-        cacheInputPricePer1k: 0.000125, // $0.125 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-5-pro',
+        input_price_per_1k: 0.00125, // $1.25 per 1M / 1000
+        output_price_per_1k: 0.01, // $10 per 1M / 1000
+        cache_input_price_per_1k: 0.000125, // $0.125 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Gemini 2.5 Flash (text/image/video: $0.30/$2.50 per 1M tokens)
     // Cache Write: $0.03 per 1M tokens
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['google'],
-          modelName: 'gemini-2-5-flash',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-5-flash',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['google'],
-        modelName: 'gemini-2-5-flash',
-        inputPricePer1k: 0.0003, // $0.30 per 1M / 1000
-        outputPricePer1k: 0.0025, // $2.50 per 1M / 1000
-        cacheInputPricePer1k: 0.00003, // $0.03 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-5-flash',
+        input_price_per_1k: 0.0003, // $0.30 per 1M / 1000
+        output_price_per_1k: 0.0025, // $2.50 per 1M / 1000
+        cache_input_price_per_1k: 0.00003, // $0.03 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Gemini 2.0 Flash (use 2.5 Flash pricing)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['google'],
-          modelName: 'gemini-2-0-flash',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-0-flash',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['google'],
-        modelName: 'gemini-2-0-flash',
-        inputPricePer1k: 0.0003, // Same as 2.5 Flash
-        outputPricePer1k: 0.0025,
-        cacheInputPricePer1k: 0.00003,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-0-flash',
+        input_price_per_1k: 0.0003, // Same as 2.5 Flash
+        output_price_per_1k: 0.0025,
+        cache_input_price_per_1k: 0.00003,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Gemini 2.5 Flash-Lite (text/image/video: $0.10/$0.40 per 1M tokens)
     // Cache Write: $0.01 per 1M tokens
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['google'],
-          modelName: 'gemini-2-5-flash-lite',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-5-flash-lite',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['google'],
-        modelName: 'gemini-2-5-flash-lite',
-        inputPricePer1k: 0.0001, // $0.10 per 1M / 1000
-        outputPricePer1k: 0.0004, // $0.40 per 1M / 1000
-        cacheInputPricePer1k: 0.00001, // $0.01 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-5-flash-lite',
+        input_price_per_1k: 0.0001, // $0.10 per 1M / 1000
+        output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
+        cache_input_price_per_1k: 0.00001, // $0.01 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Gemini 2.0 Flash-Lite (use 2.5 Flash-Lite pricing)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['google'],
-          modelName: 'gemini-2-0-flash-lite',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-0-flash-lite',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['google'],
-        modelName: 'gemini-2-0-flash-lite',
-        inputPricePer1k: 0.0001, // Same as 2.5 Flash-Lite
-        outputPricePer1k: 0.0004,
-        cacheInputPricePer1k: 0.00001,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-0-flash-lite',
+        input_price_per_1k: 0.0001, // Same as 2.5 Flash-Lite
+        output_price_per_1k: 0.0004,
+        cache_input_price_per_1k: 0.00001,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
@@ -1640,42 +1694,44 @@ async function seedModelPricing(providers: any[]) {
     // ========================================================================
 
     // Mistral Large 2 ($2.00/$6.00 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['mistral'],
-          modelName: 'mistral-large-2',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['mistral'],
+          model_name: 'mistral-large-2',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['mistral'],
-        modelName: 'mistral-large-2',
-        inputPricePer1k: 0.002, // $2.00 per 1M / 1000
-        outputPricePer1k: 0.006, // $6.00 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['mistral'],
+        model_name: 'mistral-large-2',
+        input_price_per_1k: 0.002, // $2.00 per 1M / 1000
+        output_price_per_1k: 0.006, // $6.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // Mistral Medium 3 ($0.40/$2.00 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['mistral'],
-          modelName: 'mistral-medium-3',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['mistral'],
+          model_name: 'mistral-medium-3',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['mistral'],
-        modelName: 'mistral-medium-3',
-        inputPricePer1k: 0.0004, // $0.40 per 1M / 1000
-        outputPricePer1k: 0.002, // $2.00 per 1M / 1000
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['mistral'],
+        model_name: 'mistral-medium-3',
+        input_price_per_1k: 0.0004, // $0.40 per 1M / 1000
+        output_price_per_1k: 0.002, // $2.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
@@ -1684,42 +1740,44 @@ async function seedModelPricing(providers: any[]) {
     // ========================================================================
 
     // GPT-4o via Azure ($5.00/$15.00 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['azure-openai'],
-          modelName: 'gpt-4o',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['azure-openai'],
+          model_name: 'gpt-4o',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['azure-openai'],
-        modelName: 'gpt-4o',
-        inputPricePer1k: 0.005, // Same as OpenAI direct
-        outputPricePer1k: 0.015,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['azure-openai'],
+        model_name: 'gpt-4o',
+        input_price_per_1k: 0.005, // Same as OpenAI direct
+        output_price_per_1k: 0.015,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
 
     // GPT-4o-mini via Azure ($0.15/$0.60 per 1M tokens)
-    prisma.modelProviderPricing.upsert({
+    prisma.model_provider_pricing.upsert({
       where: {
-        providerId_modelName_effectiveFrom: {
-          providerId: providerMap['azure-openai'],
-          modelName: 'gpt-4o-mini',
-          effectiveFrom,
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['azure-openai'],
+          model_name: 'gpt-4o-mini',
+          effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
-        providerId: providerMap['azure-openai'],
-        modelName: 'gpt-4o-mini',
-        inputPricePer1k: 0.00015, // Same as OpenAI direct
-        outputPricePer1k: 0.0006,
-        effectiveFrom,
-        isActive: true,
+        provider_id: providerMap['azure-openai'],
+        model_name: 'gpt-4o-mini',
+        input_price_per_1k: 0.00015, // Same as OpenAI direct
+        output_price_per_1k: 0.0006,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -1741,7 +1799,7 @@ async function seedPricingConfigs(providers: any[]) {
   const providerMap = Object.fromEntries(providers.map((p) => [p.name, p.id]));
 
   // Get admin user to use as creator (admin.test@rephlo.ai from seed data)
-  const adminUser = await prisma.user.findFirst({
+  const adminUser = await prisma.users.findFirst({
     where: {
       email: 'admin.test@rephlo.ai'
     }
@@ -1756,12 +1814,12 @@ async function seedPricingConfigs(providers: any[]) {
 
   // Helper function to find-or-create pricing config
   const findOrCreateConfig = async (data: any) => {
-    const existing = await prisma.pricingConfig.findFirst({
+    const existing = await prisma.pricing_configs.findFirst({
       where: {
-        scopeType: data.scopeType,
-        subscriptionTier: data.subscriptionTier,
-        providerId: data.providerId || null,
-        isActive: true,
+        scope_type: data.scope_type,
+        subscription_tier: data.subscription_tier,
+        provider_id: data.provider_id || null,
+        is_active: true,
       },
     });
 
@@ -1769,7 +1827,7 @@ async function seedPricingConfigs(providers: any[]) {
       return existing;
     }
 
-    return await prisma.pricingConfig.create({ data });
+    return await prisma.pricing_configs.create({ data });
   };
 
   // Global tier configs (apply to all providers unless overridden)
@@ -1929,39 +1987,44 @@ async function main() {
 
   console.log('Creating download records...');
   const downloads = await Promise.all([
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'macos',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'linux',
-        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'macos',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
   ]);
@@ -1969,34 +2032,39 @@ async function main() {
 
   console.log('Creating feedback entries...');
   const feedbacks = await Promise.all([
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Love the app! The AI rewriting feature is incredibly helpful for my daily writing tasks.',
         email: 'user1@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Great tool, but would love to see more customization options for the rewriting styles.',
         email: 'user2@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         message: 'Anonymous feedback: The interface is clean and intuitive. Keep up the good work!',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Found a bug with the clipboard integration on Linux. Submitted diagnostic logs.',
         email: 'user3@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         message: 'This has transformed my workflow! Thank you for creating such an amazing tool.',
         email: 'user4@example.com',
       },
@@ -2006,24 +2074,27 @@ async function main() {
 
   console.log('Creating diagnostic records...');
   const diagnostics = await Promise.all([
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
-        fileSize: 15240, // ~15KB
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
+        file_size: 15240, // ~15KB
       },
     }),
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
-        fileSize: 28900, // ~29KB
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
+        file_size: 28900, // ~29KB
       },
     }),
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
-        fileSize: 45120, // ~45KB
+        id: randomUUID(),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
+        file_size: 45120, // ~45KB
       },
     }),
   ]);
@@ -2031,10 +2102,11 @@ async function main() {
 
   console.log('Creating app version records...');
   const versions = await Promise.all([
-    prisma.appVersion.upsert({
+    prisma.app_versions.upsert({
       where: { version: '1.0.0' },
       update: {},
       create: {
+        id: randomUUID(),
         version: '1.0.0',
         releaseDate: new Date('2025-10-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.0.0/rephlo-setup.exe',
@@ -2055,10 +2127,11 @@ Download and run the installer for your platform.`,
         isLatest: false, // Old version
       },
     }),
-    prisma.appVersion.upsert({
+    prisma.app_versions.upsert({
       where: { version: '1.1.0' },
       update: {},
       create: {
+        id: randomUUID(),
         version: '1.1.0',
         releaseDate: new Date('2025-10-15'),
         downloadUrl: 'https://releases.rephlo.ai/v1.1.0/rephlo-setup.exe',
@@ -2078,10 +2151,11 @@ Download and run the installer for your platform.`,
         isLatest: false,
       },
     }),
-    prisma.appVersion.upsert({
+    prisma.app_versions.upsert({
       where: { version: '1.2.0' },
       update: {},
       create: {
+        id: randomUUID(),
         version: '1.2.0',
         releaseDate: new Date('2025-11-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.2.0/rephlo-setup.exe',
@@ -2120,11 +2194,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'super_admin',
-        displayName: 'Super Administrator',
+        display_name: 'Super Administrator',
         description: 'Full system access with all permissions',
         hierarchy: 1,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -2134,7 +2208,8 @@ Download and run the installer for your platform.`,
           'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -2142,11 +2217,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'admin',
-        displayName: 'Administrator',
+        display_name: 'Administrator',
         description: 'Full administrative access except system configuration',
         hierarchy: 2,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -2156,7 +2231,8 @@ Download and run the installer for your platform.`,
           'roles.view', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -2164,11 +2240,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'ops',
-        displayName: 'Operations Manager',
+        display_name: 'Operations Manager',
         description: 'Operational access for managing subscriptions and licenses',
         hierarchy: 3,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate',
           'licenses.view', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.approve_redemption',
@@ -2176,7 +2252,8 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -2184,11 +2261,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'support',
-        displayName: 'Support Specialist',
+        display_name: 'Support Specialist',
         description: 'Customer support access for resolving issues',
         hierarchy: 4,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view',
           'licenses.view',
           'coupons.view',
@@ -2196,7 +2273,8 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile',
           'analytics.view_dashboard'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -2204,18 +2282,19 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'analyst',
-        displayName: 'Data Analyst',
+        display_name: 'Data Analyst',
         description: 'Analytics and reporting access',
         hierarchy: 5,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view',
           'licenses.view',
           'credits.view_history',
           'users.view',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -2223,11 +2302,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'auditor',
-        displayName: 'Auditor',
+        display_name: 'Auditor',
         description: 'Read-only access for compliance and audit',
         hierarchy: 6,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view',
           'licenses.view',
           'credits.view_history',
@@ -2235,7 +2314,8 @@ Download and run the installer for your platform.`,
           'roles.view_audit_log',
           'analytics.view_dashboard'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -2244,44 +2324,52 @@ Download and run the installer for your platform.`,
   // Create RBAC team users
   console.log('Creating RBAC team users...');
   const rbacTeamUsers = await Promise.all([
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'ops.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'ops.user@rephlo.ai',
-        firstName: 'Operations',
-        lastName: 'Manager',
-        emailVerified: true,
+        first_name: 'Operations',
+        last_name: 'Manager',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'support.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'support.user@rephlo.ai',
-        firstName: 'Support',
-        lastName: 'Specialist',
-        emailVerified: true,
+        first_name: 'Support',
+        last_name: 'Specialist',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'analyst.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'analyst.user@rephlo.ai',
-        firstName: 'Data',
-        lastName: 'Analyst',
-        emailVerified: true,
+        first_name: 'Data',
+        last_name: 'Analyst',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'auditor.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'auditor.user@rephlo.ai',
-        firstName: 'Security',
-        lastName: 'Auditor',
-        emailVerified: true,
+        first_name: 'Security',
+        last_name: 'Auditor',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -2291,83 +2379,93 @@ Download and run the installer for your platform.`,
   console.log('Creating role assignments...');
   const roleAssignments = await Promise.all([
     // Super admin assignment to existing admin user
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: users[2].userId, // admin.test@rephlo.ai
-          roleId: roles[0].id, // super_admin
+        user_id_role_id: {
+          user_id: users[2].user_id, // admin.test@rephlo.ai
+          role_id: roles[0].id, // super_admin
         },
       },
       update: {},
       create: {
-        userId: users[2].userId,
-        roleId: roles[0].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: users[2].user_id,
+        role_id: roles[0].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Ops user - Ops role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[0].id,
-          roleId: roles[2].id, // ops
+        user_id_role_id: {
+          user_id: rbacTeamUsers[0].id,
+          role_id: roles[2].id, // ops
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[0].id,
-        roleId: roles[2].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[0].id,
+        role_id: roles[2].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Support user - Support role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[1].id,
-          roleId: roles[3].id, // support
+        user_id_role_id: {
+          user_id: rbacTeamUsers[1].id,
+          role_id: roles[3].id, // support
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[1].id,
-        roleId: roles[3].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[1].id,
+        role_id: roles[3].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Analyst user - Analyst role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[2].id,
-          roleId: roles[4].id, // analyst
+        user_id_role_id: {
+          user_id: rbacTeamUsers[2].id,
+          role_id: roles[4].id, // analyst
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[2].id,
-        roleId: roles[4].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[2].id,
+        role_id: roles[4].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Auditor user - Auditor role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[3].id,
-          roleId: roles[5].id, // auditor
+        user_id_role_id: {
+          user_id: rbacTeamUsers[3].id,
+          role_id: roles[5].id, // auditor
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[3].id,
-        roleId: roles[5].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[3].id,
+        role_id: roles[5].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
   ]);
