@@ -671,8 +671,24 @@ export async function createOIDCProvider(
 
   provider.on('grant.error', (_ctx: any, error: any) => {
     logger.error('OIDC: grant error', {
-      error: error.message,
+      errorName: error.name,
+      errorMessage: error.message,
+      errorStack: error.stack,
+      errorDetails: error.error_description || error.error || 'No additional details',
       clientId: _ctx.oidc.client?.clientId,
+      grantType: _ctx.oidc.params?.grant_type,
+      requestParams: {
+        grantType: _ctx.oidc.params?.grant_type,
+        scope: _ctx.oidc.params?.scope,
+        hasRefreshToken: !!_ctx.oidc.params?.refresh_token,
+        hasCode: !!_ctx.oidc.params?.code,
+      },
+      entities: {
+        hasGrant: !!_ctx.oidc.entities?.Grant,
+        hasRefreshToken: !!_ctx.oidc.entities?.RefreshToken,
+        hasAccount: !!_ctx.oidc.entities?.Account,
+        grantId: _ctx.oidc.entities?.Grant?.jti,
+      },
     });
   });
 
@@ -691,12 +707,27 @@ export async function createOIDCProvider(
     logger.info('OIDC: refresh token saved', {
       clientId: refreshToken.clientId,
       accountId: refreshToken.accountId,
+      jti: refreshToken.jti,
+      expiresAt: refreshToken.exp,
+      grantId: refreshToken.grantId,
     });
   });
 
   provider.on('refresh_token.consumed', (refreshToken: any) => {
     logger.info('OIDC: refresh token consumed', {
       clientId: refreshToken.clientId,
+      accountId: refreshToken.accountId,
+      jti: refreshToken.jti,
+      grantId: refreshToken.grantId,
+    });
+  });
+
+  provider.on('refresh_token.destroyed', (refreshToken: any) => {
+    logger.info('OIDC: refresh token destroyed', {
+      clientId: refreshToken.clientId,
+      accountId: refreshToken.accountId,
+      jti: refreshToken.jti,
+      grantId: refreshToken.grantId,
     });
   });
 
