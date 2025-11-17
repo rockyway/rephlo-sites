@@ -143,4 +143,30 @@ export interface ICreditService {
    * @returns Days until reset (minimum 0)
    */
   calculateDaysUntilReset(resetDate: Date): number;
+
+  /**
+   * Calculate prorated credits for a tier change (upgrade or downgrade)
+   * Takes into account remaining time in billing cycle and current usage
+   *
+   * @param userId - User ID
+   * @param currentTierCredits - Monthly credit allocation for current tier
+   * @param newTierCredits - Monthly credit allocation for new tier
+   * @param billingPeriodStart - Start of current billing period
+   * @param billingPeriodEnd - End of current billing period
+   * @returns Proration calculation result with prorated credits and usage details
+   */
+  calculateProratedCreditsForTierChange(
+    userId: string,
+    currentTierCredits: number,
+    newTierCredits: number,
+    billingPeriodStart: Date,
+    billingPeriodEnd: Date
+  ): Promise<{
+    proratedCredits: number;
+    daysRemaining: number;
+    daysInCycle: number;
+    currentUsedCredits: number;
+    remainingCreditsAfterChange: number;
+    isDowngradeWithOveruse: boolean;
+  }>;
 }

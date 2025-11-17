@@ -27,6 +27,7 @@ import type {
 } from '@rephlo/shared-types';
 import { TierChangeType } from '@rephlo/shared-types';
 import { mapTierConfigToApiType, mapTierConfigHistoryToApiType } from '../utils/typeMappers';
+import { ICreditUpgradeService } from '../interfaces/services/credit-upgrade.interface';
 import logger from '../utils/logger';
 
 // =============================================================================
@@ -35,7 +36,10 @@ import logger from '../utils/logger';
 
 @injectable()
 export class TierConfigService {
-  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+  constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
+    @inject('ICreditUpgradeService') private creditUpgradeService: ICreditUpgradeService
+  ) {
     logger.debug('TierConfigService: Initialized');
   }
 
@@ -223,6 +227,57 @@ export class TierConfigService {
         affectedUsers: affectedUsersCount,
         version: updatedConfig.config_version,
       });
+
+      // 5. Apply credit upgrade to existing users (if immediate rollout)
+      if (
+        request.applyToExistingUsers &&
+        !request.scheduledRolloutDate &&
+        changeType === TierChangeType.CREDIT_INCREASE
+      ) {
+        logger.info(
+          'TierConfigService.updateTierCredits: Processing immediate credit upgrade for existing users',
+          { tierName, previousCredits, newCredits: request.newCredits }
+        );
+
+        try {
+          const upgradeResult = await this.creditUpgradeService.processTierCreditUpgrade(
+            tierName,
+            previousCredits,
+            request.newCredits,
+            request.reason
+          );
+
+          logger.info('TierConfigService.updateTierCredits: Credit upgrade completed', {
+            tierName,
+            successful: upgradeResult.successful,
+            failed: upgradeResult.failed,
+            totalProcessed: upgradeResult.totalProcessed,
+          });
+
+          // Mark history as applied if any users were successfully upgraded
+          if (upgradeResult.successful > 0) {
+            await this.prisma.tier_config_history.updateMany({
+              where: {
+                tier_name: tierName,
+                change_type: TierChangeType.CREDIT_INCREASE,
+                applied_at: null,
+              },
+              data: { applied_at: new Date() },
+            });
+          }
+        } catch (error) {
+          logger.error('TierConfigService.updateTierCredits: Credit upgrade failed', {
+            tierName,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          // Don't throw - tier config update succeeded, upgrade can be retried later
+        }
+      } else if (request.applyToExistingUsers && request.scheduledRolloutDate) {
+        logger.info(
+          'TierConfigService.updateTierCredits: Scheduled rollout configured - will be processed by background job',
+          { tierName, scheduledDate: request.scheduledRolloutDate }
+        );
+      }
 
       // Transform and return
       return mapTierConfigToApiType(updatedConfig);

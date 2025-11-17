@@ -214,6 +214,9 @@ import { BillingPaymentsService } from './services/billing-payments.service';
 import { CreditManagementService } from './services/credit-management.service';
 import { PlatformAnalyticsService } from './services/platform-analytics.service';
 
+// Plan 110: Proration Service
+import { ProrationService } from './services/proration.service';
+
 // Phase 4 P0 Fixes: Audit Logging
 import { AuditLogService } from './services/audit-log.service';
 
@@ -241,6 +244,7 @@ import { CouponAnalyticsService } from './services/coupon-analytics.service';
 
 // Plan 190: Tier Config Management Service
 import { TierConfigService } from './services/tier-config.service';
+import { CreditUpgradeService } from './services/credit-upgrade.service';
 
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
@@ -265,6 +269,9 @@ container.register('UserManagementService', { useClass: UserManagementService })
 container.register('BillingPaymentsService', { useClass: BillingPaymentsService });
 container.register('CreditManagementService', { useClass: CreditManagementService });
 container.register('PlatformAnalyticsService', { useClass: PlatformAnalyticsService });
+
+// Register Plan 110 service (Proration)
+container.register('ProrationService', { useClass: ProrationService });
 
 // Register Audit Logging service (Phase 4 P0 Fixes)
 container.registerSingleton(AuditLogService);
@@ -293,6 +300,7 @@ container.registerSingleton(CouponAnalyticsService);
 
 // Register Tier Config Management service (Plan 190)
 container.register('ITierConfigService', { useClass: TierConfigService });
+container.register('ICreditUpgradeService', { useClass: CreditUpgradeService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);

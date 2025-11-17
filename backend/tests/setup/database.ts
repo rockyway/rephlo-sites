@@ -29,10 +29,11 @@ export const cleanDatabase = async (): Promise<void> => {
   const db = getTestDatabase();
 
   // Delete in order to respect foreign key constraints
-  await db.credit.deleteMany();
-  await db.subscription.deleteMany();
-  await db.userPreference.deleteMany();
-  await db.webhookConfig.deleteMany();
+  await db.credits.deleteMany(); // Updated to plural form
+  await db.subscription_monetization.deleteMany(); // Updated to new table name
+  await db.subscriptions.deleteMany(); // Legacy table (still exists for backward compatibility)
+  await db.user_preferences.deleteMany(); // Updated to snake_case plural
+  await db.webhook_configs.deleteMany(); // Updated to snake_case plural
 
   // Delete audit logs and ledger tables
   await db.$executeRawUnsafe('DELETE FROM model_tier_audit_logs');
@@ -42,7 +43,7 @@ export const cleanDatabase = async (): Promise<void> => {
   await db.$executeRawUnsafe('DELETE FROM user_credit_balance');
   await db.$executeRawUnsafe('DELETE FROM pricing_configs');
 
-  await db.user.deleteMany();
+  await db.users.deleteMany(); // Updated to plural form
   // Don't delete models, oauth_clients, providers, or model_provider_pricing as they are seeded
 };
 

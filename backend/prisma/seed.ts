@@ -291,6 +291,199 @@ async function seedUserPersonas() {
 }
 
 /**
+ * Seed Tier Configurations (Plan 189 + Plan 190)
+ * Creates the subscription_tier_config records for all 6 tiers per Plan 189
+ */
+async function seedTierConfigs() {
+  console.log('Creating tier configurations...');
+
+  const tierConfigs = [
+    // Free Tier - Loss leader
+    {
+      id: randomUUID(),
+      tier_name: 'free',
+      monthly_price_usd: 0,
+      annual_price_usd: 0,
+      monthly_credit_allocation: 200,  // Plan 189: Updated from 100
+      max_credit_rollover: 0,
+      features: {
+        maxProjects: 1,
+        apiAccess: false,
+        prioritySupport: false,
+        customModels: false,
+        rateLimit: 10,  // req/min
+        concurrentRequests: 1,
+        processingSpeed: 1.0,
+        historyRetentionDays: 30,
+        supportSLA: 'Community',
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro Tier - Break-even
+    {
+      id: randomUUID(),
+      tier_name: 'pro',
+      monthly_price_usd: 15.00,  // Plan 189: Updated from $99.99
+      annual_price_usd: 150.00,  // Annual: ~$12.50/month
+      monthly_credit_allocation: 1500,  // Plan 189: Updated from 10,000
+      max_credit_rollover: 750,  // 1 month rollover
+      features: {
+        maxProjects: 10,
+        apiAccess: false,
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 30,  // req/min
+        concurrentRequests: 3,
+        processingSpeed: 1.5,
+        historyRetentionDays: 90,
+        supportSLA: '24-48h',
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro+ Tier - NEW (11% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'pro_plus',
+      monthly_price_usd: 45.00,
+      annual_price_usd: 450.00,
+      monthly_credit_allocation: 5000,
+      max_credit_rollover: 2500,  // 3 months rollover
+      features: {
+        maxProjects: 50,
+        apiAccess: true,  // API access (beta)
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 60,  // req/min
+        concurrentRequests: 5,
+        processingSpeed: 2.0,
+        historyRetentionDays: 180,
+        supportSLA: '12-24h',
+        advancedAnalytics: true,
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro Max Tier - Premium (26% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'pro_max',
+      monthly_price_usd: 199.00,  // Plan 189: Updated from $49
+      annual_price_usd: 1990.00,
+      monthly_credit_allocation: 25000,  // Plan 189: Updated
+      max_credit_rollover: 12500,  // 6 months rollover
+      features: {
+        maxProjects: -1,  // unlimited
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: true,
+        rateLimit: 120,  // req/min
+        concurrentRequests: 10,
+        processingSpeed: 3.0,
+        historyRetentionDays: 365,
+        supportSLA: '4-8h',
+        dedicatedAccountManager: true,
+        advancedAnalytics: true,
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Enterprise Pro - Coming Soon (17% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'enterprise_pro',
+      monthly_price_usd: 30.00,
+      annual_price_usd: 300.00,
+      monthly_credit_allocation: 3500,
+      max_credit_rollover: 1750,  // 3 months
+      features: {
+        maxProjects: -1,
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 60,
+        concurrentRequests: 5,
+        processingSpeed: 2.0,
+        historyRetentionDays: 180,
+        supportSLA: '8h',
+        teamManagement: true,
+        maxTeamSize: 5,
+        sso: true,
+        slaUptime: '99.5%',
+      },
+      is_active: false,  // Coming Soon
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Enterprise Pro+ - Coming Soon (22% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'enterprise_pro_plus',
+      monthly_price_usd: 90.00,
+      annual_price_usd: 900.00,
+      monthly_credit_allocation: 11000,
+      max_credit_rollover: 5500,  // 6 months
+      features: {
+        maxProjects: -1,
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: true,
+        rateLimit: 120,
+        concurrentRequests: 10,
+        processingSpeed: 3.0,
+        historyRetentionDays: 365,
+        supportSLA: '4h',
+        teamManagement: true,
+        maxTeamSize: 15,
+        sso: true,
+        slaUptime: '99.9%',
+        advancedSecurity: true,
+        customRateLimits: true,
+        dedicatedInfrastructure: true,
+      },
+      is_active: false,  // Coming Soon
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+  ];
+
+  for (const config of tierConfigs) {
+    await prisma.subscription_tier_config.upsert({
+      where: { tier_name: config.tier_name },
+      create: config,
+      update: {
+        monthly_price_usd: config.monthly_price_usd,
+        annual_price_usd: config.annual_price_usd,
+        monthly_credit_allocation: config.monthly_credit_allocation,
+        max_credit_rollover: config.max_credit_rollover,
+        features: config.features,
+        is_active: config.is_active,
+        updated_at: new Date(),
+      },
+    });
+  }
+
+  console.log(`✓ Created/Updated ${tierConfigs.length} tier configurations\n`);
+}
+
+/**
  * Seed Subscriptions for users
  */
 async function seedSubscriptions(users: any[]) {
@@ -1965,6 +2158,7 @@ async function main() {
 
   const oauthClients = await seedOAuthClients();
   const users = await seedUserPersonas();
+  await seedTierConfigs(); // Plan 190: Seed tier configurations before subscriptions
 
   let subscriptions: any[] = [];
   let credits: any[] = [];

@@ -14,7 +14,7 @@
  * Reference: docs/plan/115-master-orchestration-plan-109-110-111.md
  */
 
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject, container } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import logger from '../utils/logger';
@@ -220,7 +220,7 @@ export class SubscriptionManagementService {
           : Number(newTierConfig.monthly_price_usd);
 
       // Update subscription
-      await this.prisma.subscription_monetization.update({
+      const updatedSubscription = await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
@@ -230,8 +230,113 @@ export class SubscriptionManagementService {
         },
       });
 
-      // TODO: Implement proration logic (integration with Plan 110)
-      // For now, upgrade takes effect immediately at renewal
+      // Calculate and record MONETARY proration (payment/invoice)
+      // This calculates how much to charge the user for the prorated upgrade
+      try {
+        const prorationService = container.resolve<import('./proration.service').ProrationService>(
+          'ProrationService'
+        );
+
+        // Calculate monetary proration (in USD)
+        const monetaryProration = await prorationService.calculateProration(subscriptionId, newTier);
+
+        // Create proration event record
+        await this.prisma.proration_event.create({
+          data: {
+            id: crypto.randomUUID(),
+            user_id: updatedSubscription.user_id,
+            subscription_id: subscriptionId,
+            from_tier: monetaryProration.fromTier,
+            to_tier: monetaryProration.toTier,
+            change_type: 'upgrade',
+            days_remaining: monetaryProration.daysRemaining,
+            days_in_cycle: monetaryProration.daysInCycle,
+            unused_credit_value_usd: monetaryProration.unusedCreditValueUsd,
+            new_tier_prorated_cost_usd: monetaryProration.newTierProratedCostUsd,
+            net_charge_usd: monetaryProration.netChargeUsd,
+            effective_date: new Date(),
+            status: 'pending',
+            updated_at: new Date(),
+          },
+        });
+
+        logger.info('Monetary proration calculated and recorded for upgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          fromTier: monetaryProration.fromTier,
+          toTier: monetaryProration.toTier,
+          netChargeUsd: monetaryProration.netChargeUsd,
+          unusedCreditValueUsd: monetaryProration.unusedCreditValueUsd,
+          newTierProratedCostUsd: monetaryProration.newTierProratedCostUsd,
+        });
+      } catch (error) {
+        logger.error('Failed to calculate/record monetary proration for upgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        // Don't throw - continue with credit allocation even if proration fails
+        // This ensures credits are allocated even if monetary proration recording fails
+      }
+
+      // Allocate PRORATED credits for tier upgrade
+      // User gets credits proportional to remaining time in billing cycle
+      try {
+        const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+
+        // Get current tier's credit allocation for proration calculation
+        const currentTierConfig = await this.prisma.subscription_tier_config.findUnique({
+          where: { tier_name: subscription.tier },
+        });
+
+        if (!currentTierConfig) {
+          throw new Error(`Current tier config not found: ${subscription.tier}`);
+        }
+
+        // Calculate prorated credits based on remaining time in billing cycle
+        const proration = await creditService.calculateProratedCreditsForTierChange(
+          updatedSubscription.user_id,
+          currentTierConfig.monthly_credit_allocation,
+          newTierConfig.monthly_credit_allocation,
+          updatedSubscription.current_period_start,
+          updatedSubscription.current_period_end
+        );
+
+        logger.info('Upgrade proration calculated', {
+          userId: updatedSubscription.user_id,
+          currentTier: subscription.tier,
+          newTier: newTier,
+          currentTierCredits: currentTierConfig.monthly_credit_allocation,
+          newTierCredits: newTierConfig.monthly_credit_allocation,
+          daysRemaining: proration.daysRemaining,
+          daysInCycle: proration.daysInCycle,
+          proratedCredits: proration.proratedCredits,
+          currentUsedCredits: proration.currentUsedCredits,
+        });
+
+        // Allocate prorated credits (not full monthly amount)
+        await creditService.allocateCredits({
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          totalCredits: proration.proratedCredits,
+          billingPeriodStart: updatedSubscription.current_period_start,
+          billingPeriodEnd: updatedSubscription.current_period_end,
+        });
+
+        logger.info('Prorated credits allocated for upgraded subscription', {
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          proratedCredits: proration.proratedCredits,
+          daysRemaining: proration.daysRemaining,
+        });
+      } catch (error) {
+        logger.error('Failed to allocate prorated credits for upgraded subscription', {
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error; // Re-throw to fail the upgrade if credit allocation fails
+      }
 
       // Fetch updated subscription with user relation
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({
@@ -307,8 +412,8 @@ export class SubscriptionManagementService {
           ? Number(newTierConfig.annual_price_usd)
           : Number(newTierConfig.monthly_price_usd);
 
-      // Update subscription (downgrade takes effect at period end)
-      await this.prisma.subscription_monetization.update({
+      // Update subscription (downgrade takes effect immediately)
+      const updatedSubscription = await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
@@ -317,6 +422,142 @@ export class SubscriptionManagementService {
           updated_at: new Date(),
         },
       });
+
+      // Calculate and record MONETARY proration (payment/invoice)
+      // For downgrades, this calculates the credit/refund the user should receive
+      try {
+        const prorationService = container.resolve<import('./proration.service').ProrationService>(
+          'ProrationService'
+        );
+
+        // Calculate monetary proration (in USD)
+        const monetaryProration = await prorationService.calculateProration(subscriptionId, newTier);
+
+        // Create proration event record
+        await this.prisma.proration_event.create({
+          data: {
+            id: crypto.randomUUID(),
+            user_id: updatedSubscription.user_id,
+            subscription_id: subscriptionId,
+            from_tier: monetaryProration.fromTier,
+            to_tier: monetaryProration.toTier,
+            change_type: 'downgrade',
+            days_remaining: monetaryProration.daysRemaining,
+            days_in_cycle: monetaryProration.daysInCycle,
+            unused_credit_value_usd: monetaryProration.unusedCreditValueUsd,
+            new_tier_prorated_cost_usd: monetaryProration.newTierProratedCostUsd,
+            net_charge_usd: monetaryProration.netChargeUsd,
+            effective_date: new Date(),
+            status: 'pending',
+            updated_at: new Date(),
+          },
+        });
+
+        logger.info('Monetary proration calculated and recorded for downgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          fromTier: monetaryProration.fromTier,
+          toTier: monetaryProration.toTier,
+          netChargeUsd: monetaryProration.netChargeUsd,
+          unusedCreditValueUsd: monetaryProration.unusedCreditValueUsd,
+          newTierProratedCostUsd: monetaryProration.newTierProratedCostUsd,
+        });
+      } catch (error) {
+        logger.error('Failed to calculate/record monetary proration for downgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        // Don't throw - continue with credit allocation even if proration fails
+        // This ensures credits are allocated even if monetary proration recording fails
+      }
+
+      // Allocate PRORATED credits for tier downgrade
+      // User gets reduced credits proportional to remaining time in billing cycle
+      // EDGE CASE: User may have already consumed more than the prorated amount
+      try {
+        const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+
+        // Get current tier's credit allocation for proration calculation
+        const currentTierConfig = await this.prisma.subscription_tier_config.findUnique({
+          where: { tier_name: subscription.tier },
+        });
+
+        if (!currentTierConfig) {
+          throw new Error(`Current tier config not found: ${subscription.tier}`);
+        }
+
+        // Calculate prorated credits based on remaining time in billing cycle
+        const proration = await creditService.calculateProratedCreditsForTierChange(
+          updatedSubscription.user_id,
+          currentTierConfig.monthly_credit_allocation,
+          newTierConfig.monthly_credit_allocation,
+          updatedSubscription.current_period_start,
+          updatedSubscription.current_period_end
+        );
+
+        logger.info('Downgrade proration calculated', {
+          userId: updatedSubscription.user_id,
+          currentTier: subscription.tier,
+          newTier: newTier,
+          currentTierCredits: currentTierConfig.monthly_credit_allocation,
+          newTierCredits: newTierConfig.monthly_credit_allocation,
+          daysRemaining: proration.daysRemaining,
+          daysInCycle: proration.daysInCycle,
+          proratedCredits: proration.proratedCredits,
+          currentUsedCredits: proration.currentUsedCredits,
+          isDowngradeWithOveruse: proration.isDowngradeWithOveruse,
+        });
+
+        // Handle edge case: user already used more than prorated amount
+        if (proration.isDowngradeWithOveruse) {
+          logger.warn('Downgrade with overuse detected', {
+            userId: updatedSubscription.user_id,
+            proratedCredits: proration.proratedCredits,
+            currentUsedCredits: proration.currentUsedCredits,
+            deficit: Math.abs(proration.remainingCreditsAfterChange),
+          });
+
+          // Allocate 0 credits for remaining period (user has overused)
+          // They'll get the new tier's full allocation at next billing cycle
+          await creditService.allocateCredits({
+            userId: updatedSubscription.user_id,
+            subscriptionId: updatedSubscription.id,
+            totalCredits: proration.currentUsedCredits, // Set total = used (0 remaining)
+            billingPeriodStart: updatedSubscription.current_period_start,
+            billingPeriodEnd: updatedSubscription.current_period_end,
+          });
+
+          logger.info('Downgrade with overuse: 0 credits remaining for current cycle', {
+            userId: updatedSubscription.user_id,
+            currentUsedCredits: proration.currentUsedCredits,
+          });
+        } else {
+          // Normal downgrade: allocate prorated credits
+          await creditService.allocateCredits({
+            userId: updatedSubscription.user_id,
+            subscriptionId: updatedSubscription.id,
+            totalCredits: proration.proratedCredits,
+            billingPeriodStart: updatedSubscription.current_period_start,
+            billingPeriodEnd: updatedSubscription.current_period_end,
+          });
+
+          logger.info('Prorated credits allocated for downgraded subscription', {
+            userId: updatedSubscription.user_id,
+            subscriptionId: updatedSubscription.id,
+            proratedCredits: proration.proratedCredits,
+            daysRemaining: proration.daysRemaining,
+            remainingAfterChange: proration.remainingCreditsAfterChange,
+          });
+        }
+      } catch (error) {
+        logger.error('Failed to allocate prorated credits for downgraded subscription', {
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error; // Re-throw to fail the downgrade if credit allocation fails
+      }
 
       // Fetch updated subscription with user relation
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({

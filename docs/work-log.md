@@ -206,3 +206,50 @@
 3. Execute integration tests with test database
 4. Run E2E tests for complete workflows
 5. Generate coverage reports
+
+## 2025-01-17 - Plan 190 Implementation Complete
+
+**Tier Configuration Management System - Full Implementation**
+
+✅ All 16 tasks completed successfully:
+- Backend: CreditUpgradeService, background worker, TierConfigService integration
+- Testing: Unit tests (54 cases), integration tests (26 cases), E2E tests (8 cases)
+- Frontend: 5 components (AdminTierManagement, TierConfigTable, EditTierModal, TierHistoryModal, formatters)
+- Router integration and sidebar navigation
+- API documentation (700+ lines) and admin user guide (500+ lines)
+- CHANGELOG updated with v1.2.0 release notes
+
+**Build Status:**
+- ✅ Backend: All Plan 190 code compiles (only pre-existing seed.ts errors)
+- ✅ Frontend: All Plan 190 components compile (only pre-existing ENTERPRISE_MAX errors)
+- All Plan 190-specific files: tierConfig.ts, EditTierModal, TierHistoryModal, TierConfigTable, AdminTierManagement - **ZERO errors**
+
+**Key Deliverables:**
+- 6 tier management API endpoints with impact preview
+- Preview-first workflow preventing costly mistakes
+- Upgrade-only policy (users never lose credits)
+- Flexible rollout options (immediate/scheduled/new subscribers only)
+- Complete audit trail with versioning
+- Material-UI components with proper imports (@mui/lab for Timeline)
+- Type-safe API client with proper error handling
+
+**Files Modified:** 3 frontend components fixed for MUI compatibility
+- Replaced Grid components with Box+flexbox (EditTierModal)
+- Fixed Timeline imports to use @mui/lab (TierHistoryModal)
+- Fixed type definitions for API responses (tierConfig.ts)
+2025-11-17 11:51:53 - Fixed tier management page showing 'No tier configurations found'. Root cause: seedTierConfigs() function was added to wrong file (src/db/seed.ts instead of prisma/seed.ts which is the actual seed file executed by npm run seed). Solution: Created seedTierConfigs() function in prisma/seed.ts with all 6 tiers per Plan 189 (Free: 200 credits \/usr/bin/bash, Pro: 1500 credits \5, Pro+: 5000 credits \5, Pro Max: 25000 credits \99, Enterprise Pro: 3500 credits \0 Coming Soon, Enterprise Pro+: 11000 credits \0 Coming Soon). Added call to seedTierConfigs() in main() before seedSubscriptions(). Database verification confirmed all 6 tier configs successfully seeded with correct active/inactive status. Admin tier management page now has data to display.
+2025-11-17 11:59:54 - Fixed tier management page (/admin/tier-management) to match admin theme. Root cause: Page was using Material-UI (@mui/material) components instead of Tailwind CSS design system used by other admin pages like /admin/users. Solution: Rewrote AdminTierManagement page and TierConfigTable component to use Tailwind CSS with consistent styling: (1) Replaced MUI Container/Box with Tailwind div + space-y-6, (2) Added Breadcrumbs component matching admin pattern, (3) Replaced MUI Table with native HTML table + Tailwind classes (bg-deep-navy-50 dark:bg-deep-navy-700/50 header, hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 rows), (4) Replaced MUI Alert/Snackbar with styled success/error divs, (5) Replaced MUI icons with lucide-react icons, (6) Used custom Button and LoadingSpinner components. Theme now matches /admin/users page with proper dark mode support and deep-navy color scheme. Build verified with 0 component-specific errors (only pre-existing ENTERPRISE_MAX errors).
+
+## 2025-01-17 - Fixed User Credit Balance Data Integrity
+- **Issue**: Admin account showed incorrect credit balance (user_credit_balance.amount was 0 instead of Plan 189 values)
+- **Root Cause**: API returns user_credit_balance.amount field, which was not synced with Plan 189 allocations
+- **Fix**: Created fix-user-credit-balance.js one-time migration script to update all users (Free=200, Pro=1500)
+- **Verification**: All 3 active users now have correct balances matching their tiers per Plan 189
+- **Scripts**: check-user-credit-balance.js (diagnostic), fix-user-credit-balance.js (migration)
+
+## 2025-01-17 - Fixed /api/user/credits API Response for Plan 189 Compliance
+- **Issue**: Pro users seeing freeCredits.monthlyAllocation=2000 instead of 0
+- **Root Cause**: getFreeCreditsBreakdown() returned hardcoded 2000 default when no credit_type='free' record exists
+- **Fix**: Updated getFreeCreditsBreakdown() to check subscription tier, returns 0 for paid tiers, 200 for free tier
+- **Remaining**: Schema defaults (credit_type, monthly_allocation) + allocateCredits() implementation need fixes
+- **Documentation**: docs/troubleshooting/001-credit-system-api-fix.md

@@ -284,22 +284,244 @@ async function seedUserPersonas() {
 }
 
 /**
+ * Seed Tier Configurations (Plan 189 + Plan 190)
+ * Creates the subscription_tier_config records for all 6 tiers per Plan 189
+ */
+async function seedTierConfigs() {
+  console.log('Creating tier configurations...');
+
+  const tierConfigs = [
+    // Free Tier - Loss leader
+    {
+      id: randomUUID(),
+      tier_name: 'free',
+      monthly_price_usd: 0,
+      annual_price_usd: 0,
+      monthly_credit_allocation: 200,  // Plan 189: Updated from 100
+      max_credit_rollover: 0,
+      features: {
+        maxProjects: 1,
+        apiAccess: false,
+        prioritySupport: false,
+        customModels: false,
+        rateLimit: 10,  // req/min
+        concurrentRequests: 1,
+        processingSpeed: 1.0,
+        historyRetentionDays: 30,
+        supportSLA: 'Community',
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro Tier - Break-even
+    {
+      id: randomUUID(),
+      tier_name: 'pro',
+      monthly_price_usd: 15.00,  // Plan 189: Updated from $99.99
+      annual_price_usd: 150.00,  // Annual: ~$12.50/month
+      monthly_credit_allocation: 1500,  // Plan 189: Updated from 10,000
+      max_credit_rollover: 750,  // 1 month rollover
+      features: {
+        maxProjects: 10,
+        apiAccess: false,
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 30,  // req/min
+        concurrentRequests: 3,
+        processingSpeed: 1.5,
+        historyRetentionDays: 90,
+        supportSLA: '24-48h',
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro+ Tier - NEW (11% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'pro_plus',
+      monthly_price_usd: 45.00,
+      annual_price_usd: 450.00,
+      monthly_credit_allocation: 5000,
+      max_credit_rollover: 2500,  // 3 months rollover
+      features: {
+        maxProjects: 50,
+        apiAccess: true,  // API access (beta)
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 60,  // req/min
+        concurrentRequests: 5,
+        processingSpeed: 2.0,
+        historyRetentionDays: 180,
+        supportSLA: '12-24h',
+        advancedAnalytics: true,
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro Max Tier - Premium (26% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'pro_max',
+      monthly_price_usd: 199.00,  // Plan 189: Updated from $49
+      annual_price_usd: 1990.00,
+      monthly_credit_allocation: 25000,  // Plan 189: Updated
+      max_credit_rollover: 12500,  // 6 months rollover
+      features: {
+        maxProjects: -1,  // unlimited
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: true,
+        rateLimit: 120,  // req/min
+        concurrentRequests: 10,
+        processingSpeed: 3.0,
+        historyRetentionDays: 365,
+        supportSLA: '4-8h',
+        dedicatedAccountManager: true,
+        advancedAnalytics: true,
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Enterprise Pro - Coming Soon (17% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'enterprise_pro',
+      monthly_price_usd: 30.00,
+      annual_price_usd: 300.00,
+      monthly_credit_allocation: 3500,
+      max_credit_rollover: 1750,  // 3 months
+      features: {
+        maxProjects: -1,
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 60,
+        concurrentRequests: 5,
+        processingSpeed: 2.0,
+        historyRetentionDays: 180,
+        supportSLA: '8h',
+        teamManagement: true,
+        maxTeamSize: 5,
+        sso: true,
+        slaUptime: '99.5%',
+      },
+      is_active: false,  // Coming Soon
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Enterprise Pro+ - Coming Soon (22% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'enterprise_pro_plus',
+      monthly_price_usd: 90.00,
+      annual_price_usd: 900.00,
+      monthly_credit_allocation: 11000,
+      max_credit_rollover: 5500,  // 6 months
+      features: {
+        maxProjects: -1,
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: true,
+        rateLimit: 120,
+        concurrentRequests: 10,
+        processingSpeed: 3.0,
+        historyRetentionDays: 365,
+        supportSLA: '4h',
+        teamManagement: true,
+        maxTeamSize: 15,
+        sso: true,
+        slaUptime: '99.9%',
+        advancedSecurity: true,
+        customRateLimits: true,
+        dedicatedInfrastructure: true,
+      },
+      is_active: false,  // Coming Soon
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+  ];
+
+  console.log(`DEBUG: Starting to seed ${tierConfigs.length} tier configurations`);
+
+  for (const config of tierConfigs) {
+    console.log(`DEBUG: Upserting tier: ${config.tier_name} (${config.monthly_credit_allocation} credits, $${config.monthly_price_usd})`);
+    try {
+      const result = await prisma.subscription_tier_config.upsert({
+        where: { tier_name: config.tier_name },
+        create: config,
+        update: {
+          monthly_price_usd: config.monthly_price_usd,
+          annual_price_usd: config.annual_price_usd,
+          monthly_credit_allocation: config.monthly_credit_allocation,
+          max_credit_rollover: config.max_credit_rollover,
+          features: config.features,
+          is_active: config.is_active,
+          updated_at: new Date(),
+        },
+      });
+      console.log(`DEBUG: Successfully upserted ${config.tier_name}, id: ${result.id}, active: ${result.is_active}`);
+    } catch (error) {
+      console.error(`ERROR: Failed to upsert ${config.tier_name}:`, error);
+      throw error; // Re-throw to stop seeding on error
+    }
+  }
+
+  console.log(`✓ Created/Updated ${tierConfigs.length} tier configurations\n`);
+}
+
+/**
  * Seed Subscriptions for users
  */
 async function seedSubscriptions(users: any[]) {
   console.log('Creating subscriptions...');
   const createdSubscriptions = [];
 
-  // Subscription tier configuration
+  // Subscription tier configuration (Plan 189)
   const tierConfig = {
     free: {
-      creditsPerMonth: 100,
+      creditsPerMonth: 200,  // Plan 189: Updated from 100
       priceCents: 0,
       billingInterval: 'monthly',
     },
     pro: {
-      creditsPerMonth: 10000,
-      priceCents: 9999, // $99.99
+      creditsPerMonth: 1500,  // Plan 189: Updated from 10,000
+      priceCents: 1500,  // Plan 189: $15 (updated from $99.99)
+      billingInterval: 'monthly',
+    },
+    pro_plus: {
+      creditsPerMonth: 5000,
+      priceCents: 4500,  // $45
+      billingInterval: 'monthly',
+    },
+    pro_max: {
+      creditsPerMonth: 25000,
+      priceCents: 19900,  // $199
+      billingInterval: 'monthly',
+    },
+    enterprise_pro: {
+      creditsPerMonth: 3500,
+      priceCents: 3000,  // $30
+      billingInterval: 'monthly',
+    },
+    enterprise_pro_plus: {
+      creditsPerMonth: 11000,
+      priceCents: 9000,  // $90
       billingInterval: 'monthly',
     },
   };
@@ -415,6 +637,7 @@ async function main() {
 
   const oauthClients = await seedOAuthClients();
   const users = await seedUserPersonas();
+  await seedTierConfigs(); // Plan 190: Seed tier configurations before subscriptions
   const subscriptions = await seedSubscriptions(users);
   const credits = await seedCredits(users);
 
@@ -428,40 +651,40 @@ async function main() {
       data: {
         id: randomUUID(),
         os: 'windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
     prisma.downloads.create({
       data: {
         id: randomUUID(),
         os: 'macos',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
     prisma.downloads.create({
       data: {
         id: randomUUID(),
         os: 'linux',
-        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
     prisma.downloads.create({
       data: {
         id: randomUUID(),
         os: 'windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
     prisma.downloads.create({
       data: {
         id: randomUUID(),
         os: 'macos',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
   ]);
@@ -472,7 +695,7 @@ async function main() {
     prisma.feedbacks.create({
       data: {
         id: randomUUID(),
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Love the app! The AI rewriting feature is incredibly helpful for my daily writing tasks.',
         email: 'user1@example.com',
       },
@@ -480,7 +703,7 @@ async function main() {
     prisma.feedbacks.create({
       data: {
         id: randomUUID(),
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Great tool, but would love to see more customization options for the rewriting styles.',
         email: 'user2@example.com',
       },
@@ -494,7 +717,7 @@ async function main() {
     prisma.feedbacks.create({
       data: {
         id: randomUUID(),
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Found a bug with the clipboard integration on Linux. Submitted diagnostic logs.',
         email: 'user3@example.com',
       },
@@ -514,24 +737,24 @@ async function main() {
     prisma.diagnostics.create({
       data: {
         id: randomUUID(),
-        userId: 'user_' + Math.random().toString(36).substring(7),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
-        fileSize: 15240, // ~15KB
+        user_id: 'user_' + Math.random().toString(36).substring(7),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
+        file_size: 15240, // ~15KB
       },
     }),
     prisma.diagnostics.create({
       data: {
         id: randomUUID(),
-        userId: 'user_' + Math.random().toString(36).substring(7),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
-        fileSize: 28900, // ~29KB
+        user_id: 'user_' + Math.random().toString(36).substring(7),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
+        file_size: 28900, // ~29KB
       },
     }),
     prisma.diagnostics.create({
       data: {
         id: randomUUID(),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
-        fileSize: 45120, // ~45KB
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
+        file_size: 45120, // ~45KB
       },
     }),
   ]);

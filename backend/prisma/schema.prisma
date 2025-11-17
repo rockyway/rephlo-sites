@@ -349,8 +349,8 @@ model credits {
   is_current           Boolean        @default(true)
   created_at           DateTime       @default(now())
   updated_at           DateTime
-  credit_type          String         @default("free") @db.VarChar(10)
-  monthly_allocation   Int            @default(2000)
+  credit_type          String         @db.VarChar(10)
+  monthly_allocation   Int
   reset_day_of_month   Int            @default(1)
   subscriptions        subscriptions? @relation(fields: [subscription_id], references: [id])
   users                users          @relation(fields: [user_id], references: [id], onDelete: Cascade)

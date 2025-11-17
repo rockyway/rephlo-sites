@@ -188,6 +188,42 @@ export class MockCreditService implements ICreditService {
     return Math.max(0, days);
   }
 
+  async calculateProratedCreditsForTierChange(
+    userId: string,
+    currentTierCredits: number,
+    newTierCredits: number,
+    billingPeriodStart: Date,
+    billingPeriodEnd: Date
+  ): Promise<{
+    proratedCredits: number;
+    daysRemaining: number;
+    daysInCycle: number;
+    currentUsedCredits: number;
+    remainingCreditsAfterChange: number;
+    isDowngradeWithOveruse: boolean;
+  }> {
+    // Mock implementation - simplified proration calculation
+    const now = new Date();
+    const totalDaysMs = billingPeriodEnd.getTime() - billingPeriodStart.getTime();
+    const daysInCycle = Math.ceil(totalDaysMs / (1000 * 60 * 60 * 24));
+    const remainingDaysMs = Math.max(0, billingPeriodEnd.getTime() - now.getTime());
+    const daysRemaining = Math.ceil(remainingDaysMs / (1000 * 60 * 60 * 24));
+    const proratedCredits = Math.floor((daysRemaining / daysInCycle) * newTierCredits);
+
+    const currentCredit = await this.getCurrentCredits(userId);
+    const currentUsedCredits = currentCredit?.used_credits || 0;
+    const remainingCreditsAfterChange = proratedCredits - currentUsedCredits;
+
+    return {
+      proratedCredits,
+      daysRemaining,
+      daysInCycle,
+      currentUsedCredits,
+      remainingCreditsAfterChange,
+      isDowngradeWithOveruse: newTierCredits < currentTierCredits && remainingCreditsAfterChange < 0,
+    };
+  }
+
   // Test helpers
   clear() {
     this.credits.clear();

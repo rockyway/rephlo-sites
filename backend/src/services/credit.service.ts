@@ -107,6 +107,28 @@ export class CreditService {
 
     // Use transaction to ensure atomicity
     const credit = await this.prisma.$transaction(async (tx) => {
+      // Fetch subscription to determine tier and credit_type
+      const subscription = await tx.subscription_monetization.findUnique({
+        where: { id: input.subscriptionId },
+      });
+
+      if (!subscription) {
+        throw new Error(
+          `Subscription ${input.subscriptionId} not found when allocating credits`
+        );
+      }
+
+      // Determine credit_type based on tier
+      // Free tier gets 'free' credits, all paid tiers get 'pro' credits
+      const creditType = subscription.tier === 'free' ? 'free' : 'pro';
+
+      logger.debug('CreditService: Determined credit type from subscription', {
+        userId: input.userId,
+        subscriptionId: input.subscriptionId,
+        tier: subscription.tier,
+        creditType,
+      });
+
       // Mark all existing current credits as not current
       await tx.credits.updateMany({
         where: {
@@ -118,7 +140,7 @@ export class CreditService {
         },
       });
 
-      // Create new credit record
+      // Create new credit record with required fields
       const newCredit = await tx.credits.create({
         data: {
           id: randomUUID(),
@@ -129,6 +151,24 @@ export class CreditService {
           billing_period_start: input.billingPeriodStart,
           billing_period_end: input.billingPeriodEnd,
           is_current: true,
+          credit_type: creditType, // Set based on subscription tier
+          monthly_allocation: input.totalCredits, // Match total_credits for Plan 189 compliance
+          reset_day_of_month: 1, // Default to 1st of month
+          updated_at: new Date(),
+        },
+      });
+
+      // Also update user_credit_balance table for API responses
+      await tx.user_credit_balance.upsert({
+        where: { user_id: input.userId },
+        create: {
+          id: randomUUID(),
+          user_id: input.userId,
+          amount: input.totalCredits,
+          updated_at: new Date(),
+        },
+        update: {
+          amount: input.totalCredits,
           updated_at: new Date(),
         },
       });
@@ -137,6 +177,8 @@ export class CreditService {
         userId: input.userId,
         creditId: newCredit.id,
         totalCredits: newCredit.total_credits,
+        creditType: newCredit.credit_type,
+        monthlyAllocation: newCredit.monthly_allocation,
       });
 
       return newCredit;
@@ -427,16 +469,44 @@ export class CreditService {
     });
 
     if (!freeCredit) {
-      // No free credits exist - return default for free tier
+      // No free credits exist - check user's subscription tier to determine appropriate response
+      const subscription = await this.prisma.subscription_monetization.findFirst({
+        where: {
+          user_id: userId,
+          status: {
+            in: ['active', 'trialing', 'past_due'],
+          },
+        },
+        orderBy: { created_at: 'desc' },
+      });
+
       const defaultResetDate = this.calculateNextMonthlyReset(1);
 
-      logger.debug('CreditService: No free credits found, returning defaults', {
+      // If user has paid tier subscription (Pro, Pro+, etc.), they don't get "free" monthly credits
+      // Return monthlyAllocation: 0 to reflect this correctly
+      if (subscription && subscription.tier !== 'free') {
+        logger.debug('CreditService: Paid tier user has no free credits, returning zeros', {
+          userId,
+          tier: subscription.tier,
+        });
+
+        return {
+          remaining: 0,
+          monthlyAllocation: 0, // Paid tiers don't get free monthly credits
+          used: 0,
+          resetDate: defaultResetDate,
+          daysUntilReset: this.calculateDaysUntilReset(defaultResetDate),
+        };
+      }
+
+      // Free tier user with no credit record - return Plan 189 free tier allocation (200)
+      logger.debug('CreditService: Free tier user with no credit record, returning Plan 189 defaults', {
         userId,
       });
 
       return {
         remaining: 0,
-        monthlyAllocation: 2000, // Default free tier allocation
+        monthlyAllocation: 200, // Plan 189: Free tier allocation
         used: 0,
         resetDate: defaultResetDate,
         daysUntilReset: this.calculateDaysUntilReset(defaultResetDate),
@@ -571,6 +641,98 @@ export class CreditService {
 
     // Return 0 if already past reset date
     return Math.max(0, days);
+  }
+
+  // ===========================================================================
+  // Credit Proration for Tier Changes
+  // ===========================================================================
+
+  /**
+   * Calculate prorated credits for a tier change (upgrade or downgrade)
+   *
+   * Formula:
+   * - For upgrades: (days_remaining / total_days) * new_tier_credits
+   * - For downgrades: (days_remaining / total_days) * new_tier_credits (may be less than used)
+   *
+   * @param userId - User ID
+   * @param currentTierCredits - Monthly credit allocation for current tier
+   * @param newTierCredits - Monthly credit allocation for new tier
+   * @param billingPeriodStart - Start of current billing period
+   * @param billingPeriodEnd - End of current billing period
+   * @returns Prorated credit allocation for the tier change
+   */
+  async calculateProratedCreditsForTierChange(
+    userId: string,
+    currentTierCredits: number,
+    newTierCredits: number,
+    billingPeriodStart: Date,
+    billingPeriodEnd: Date
+  ): Promise<{
+    proratedCredits: number;
+    daysRemaining: number;
+    daysInCycle: number;
+    currentUsedCredits: number;
+    remainingCreditsAfterChange: number;
+    isDowngradeWithOveruse: boolean;
+  }> {
+    logger.debug('CreditService: Calculating prorated credits for tier change', {
+      userId,
+      currentTierCredits,
+      newTierCredits,
+    });
+
+    // Get current credit record to see how much user has already used
+    const currentCredit = await this.prisma.credits.findFirst({
+      where: {
+        user_id: userId,
+        is_current: true,
+      },
+    });
+
+    const now = new Date();
+
+    // Calculate days in billing cycle
+    const totalDaysMs = billingPeriodEnd.getTime() - billingPeriodStart.getTime();
+    const daysInCycle = Math.ceil(totalDaysMs / (1000 * 60 * 60 * 24));
+
+    // Calculate days remaining
+    const remainingDaysMs = Math.max(0, billingPeriodEnd.getTime() - now.getTime());
+    const daysRemaining = Math.ceil(remainingDaysMs / (1000 * 60 * 60 * 24));
+
+    // Calculate prorated credits for new tier based on remaining time
+    const proratedCredits = Math.floor((daysRemaining / daysInCycle) * newTierCredits);
+
+    // Get current used credits
+    const currentUsedCredits = currentCredit?.used_credits || 0;
+
+    // Calculate remaining credits after the tier change
+    // If user already used more than the prorated amount, this will be negative
+    const remainingCreditsAfterChange = proratedCredits - currentUsedCredits;
+
+    // Flag if this is a downgrade where user has overused
+    const isDowngradeWithOveruse =
+      newTierCredits < currentTierCredits && remainingCreditsAfterChange < 0;
+
+    logger.info('CreditService: Prorated credits calculated', {
+      userId,
+      currentTierCredits,
+      newTierCredits,
+      daysInCycle,
+      daysRemaining,
+      proratedCredits,
+      currentUsedCredits,
+      remainingCreditsAfterChange,
+      isDowngradeWithOveruse,
+    });
+
+    return {
+      proratedCredits,
+      daysRemaining,
+      daysInCycle,
+      currentUsedCredits,
+      remainingCreditsAfterChange,
+      isDowngradeWithOveruse,
+    };
   }
 
   // ===========================================================================

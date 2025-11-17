@@ -42,6 +42,9 @@ const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
 // Plan 180: Analytics Dashboard
 const AnalyticsDashboard = lazy(() => import('../pages/admin/AnalyticsDashboard'));
 
+// Plan 190: Tier Configuration Management
+const AdminTierManagement = lazy(() => import('../pages/AdminTierManagement'));
+
 // Admin route configuration
 export const adminRoutes: RouteObject[] = [
   {
@@ -76,6 +79,12 @@ export const adminRoutes: RouteObject[] = [
       {
         path: 'credits',
         element: <CreditManagement />,
+      },
+
+      // Tier configuration management (Plan 190)
+      {
+        path: 'tier-management',
+        element: <AdminTierManagement />,
       },
 
       // License management (Plan 110)

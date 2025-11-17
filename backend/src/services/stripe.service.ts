@@ -475,6 +475,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, pris
 
 /**
  * Handle subscription.deleted event
+ * When a paid subscription is cancelled, revert user to free tier
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription, prisma: PrismaClient): Promise<void> {
   logger.info('Handling subscription.deleted event', {
@@ -482,31 +483,81 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, pris
   });
 
   try {
-    // Find and mark subscription as cancelled
-    const dbSubscription = await prisma.subscriptions.findFirst({
+    // Find and mark subscription as cancelled in subscription_monetization table
+    const dbSubscription = await prisma.subscription_monetization.findFirst({
       where: { stripe_subscription_id: subscription.id },
     });
 
-    if (dbSubscription) {
-      await prisma.subscriptions.update({
-        where: { id: dbSubscription.id },
-        data: {
-          status: 'cancelled',
-          cancelled_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-      logger.info('Subscription marked as cancelled in database', {
-        subscriptionId: subscription.id,
-        dbSubscriptionId: dbSubscription.id,
-      });
-    } else {
-      logger.warn('Subscription not found in database', {
+    if (!dbSubscription) {
+      logger.warn('Subscription not found in subscription_monetization table', {
         subscriptionId: subscription.id,
       });
+      return;
     }
+
+    const userId = dbSubscription.user_id;
+
+    // Mark the paid subscription as cancelled
+    await prisma.subscription_monetization.update({
+      where: { id: dbSubscription.id },
+      data: {
+        status: 'cancelled',
+        cancelled_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
+    logger.info('Paid subscription marked as cancelled', {
+      subscriptionId: subscription.id,
+      userId,
+      previousTier: dbSubscription.tier,
+    });
+
+    // Create a new free tier subscription for the user
+    const now = new Date();
+    const freeSubEnd = new Date(now);
+    freeSubEnd.setFullYear(freeSubEnd.getFullYear() + 10); // Free tier never expires
+
+    const freeSubscription = await prisma.subscription_monetization.create({
+      data: {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        tier: 'free',
+        billing_cycle: 'monthly',
+        status: 'active',
+        base_price_usd: 0,
+        monthly_credit_allocation: 200, // Plan 189: Free tier allocation
+        current_period_start: now,
+        current_period_end: freeSubEnd,
+        created_at: now,
+        updated_at: now,
+      },
+    });
+
+    logger.info('Free tier subscription created after cancellation', {
+      userId,
+      freeSubscriptionId: freeSubscription.id,
+    });
+
+    // Allocate free tier credits (200 credits per Plan 189)
+    const { container } = await import('tsyringe');
+    const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+
+    await creditService.allocateCredits({
+      userId,
+      subscriptionId: freeSubscription.id,
+      totalCredits: 200, // Plan 189: Free tier allocation
+      billingPeriodStart: now,
+      billingPeriodEnd: freeSubEnd,
+    });
+
+    logger.info('Free tier credits allocated after subscription cancellation', {
+      userId,
+      credits: 200,
+    });
+
   } catch (error) {
-    logger.error('Failed to mark subscription as cancelled', {
+    logger.error('Failed to handle subscription deletion', {
       subscriptionId: subscription.id,
       error: error instanceof Error ? error.message : 'Unknown error',
     });

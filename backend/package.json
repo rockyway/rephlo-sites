@@ -13,6 +13,8 @@
     "seed": "ts-node prisma/seed.ts",
     "db:reset": "npx prisma migrate reset && npm run seed",
     "worker:webhook": "ts-node src/workers/webhook.worker.ts",
+    "worker:tier-upgrade": "ts-node src/workers/tier-credit-upgrade.worker.ts",
+    "worker:tier-upgrade:once": "TIER_UPGRADE_WORKER_MODE=once ts-node src/workers/tier-credit-upgrade.worker.ts",
     "test": "jest",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
