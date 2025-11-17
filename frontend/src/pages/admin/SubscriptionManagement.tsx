@@ -11,7 +11,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
   RefreshCw,
   Search,
@@ -66,6 +65,7 @@ function SubscriptionManagement() {
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [cancelAtPeriodEnd] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [creditsUsedInCurrentPeriod, setCreditsUsedInCurrentPeriod] = useState(0);
 
   // Load data
   useEffect(() => {
@@ -162,6 +162,21 @@ function SubscriptionManagement() {
       setSelectedSubscription(null);
     } catch (err: any) {
       throw new Error(err.response?.data?.message || 'Failed to cancel subscription with refund');
+    }
+  };
+
+  const handleOpenRefundModal = async (subscription: Subscription) => {
+    try {
+      setSelectedSubscription(subscription);
+      // Fetch credit usage for current billing period
+      const creditUsageData = await refundApi.getSubscriptionCreditUsage(subscription.id);
+      setCreditsUsedInCurrentPeriod(creditUsageData.creditsUsed);
+      setShowRefundModal(true);
+    } catch (err: any) {
+      // If fetch fails, default to 0 (will show full refund)
+      console.error('Failed to fetch credit usage:', err);
+      setCreditsUsedInCurrentPeriod(0);
+      setShowRefundModal(true);
     }
   };
 
@@ -285,9 +300,10 @@ function SubscriptionManagement() {
                 <option value="">All Tiers</option>
                 <option value={SubscriptionTier.FREE}>Free</option>
                 <option value={SubscriptionTier.PRO}>Pro</option>
+                <option value={SubscriptionTier.PRO_PLUS}>Pro Plus</option>
                 <option value={SubscriptionTier.PRO_MAX}>Pro Max</option>
                 <option value={SubscriptionTier.ENTERPRISE_PRO}>Enterprise Pro</option>
-                <option value={SubscriptionTier.ENTERPRISE_MAX}>Enterprise Max</option>
+                <option value={SubscriptionTier.ENTERPRISE_PRO_PLUS}>Enterprise Pro Plus</option>
                 <option value={SubscriptionTier.PERPETUAL}>Perpetual</option>
               </select>
             </div>
@@ -532,17 +548,11 @@ function SubscriptionManagement() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => {
-                                    setSelectedSubscription(subscription);
-                                    setShowRefundModal(true);
-                                  }}
+                                  onClick={() => handleOpenRefundModal(subscription)}
                                   className="text-orange-600 hover:text-orange-700"
                                 >
                                   Cancel + Refund
                                 </Button>
-                                <Link to={`/admin/subscriptions/${subscription.id}`}>
-                                  <Button size="sm">View</Button>
-                                </Link>
                               </>
                             )}
                           </div>
@@ -612,7 +622,7 @@ function SubscriptionManagement() {
           onConfirm={handleCancelWithRefund}
           subscription={selectedSubscription}
           defaultRefundAmount={Number(selectedSubscription.basePriceUsd)}
-          creditsUsedInCurrentPeriod={0} // TODO: Fetch actual credit usage from API
+          creditsUsedInCurrentPeriod={creditsUsedInCurrentPeriod}
         />
       )}
     </div>

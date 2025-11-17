@@ -724,13 +724,14 @@ export class SubscriptionManagementService {
   }
 
   /**
-   * Cancel subscription with full refund (admin-initiated)
+   * Cancel subscription with refund (admin-initiated)
    * Section 3.1.2 of Plan 192
    */
   async cancelWithRefund(
     subscriptionId: string,
     adminUserId: string,
     refundReason: string,
+    refundAmount: number,
     adminNotes?: string
   ): Promise<{
     subscription: Subscription;
@@ -740,6 +741,7 @@ export class SubscriptionManagementService {
       subscriptionId,
       adminUserId,
       refundReason,
+      refundAmount,
     });
 
     try {
@@ -766,19 +768,31 @@ export class SubscriptionManagementService {
         throw badRequestError('Subscription is already cancelled');
       }
 
+      // Server-side validation: Refund amount must be > 0
+      if (refundAmount <= 0) {
+        throw badRequestError('Refund amount must be greater than 0');
+      }
+
+      const basePriceUsd = Number(subscription.base_price_usd);
+
+      // Server-side validation: Refund amount cannot exceed base price
+      if (refundAmount > basePriceUsd) {
+        throw badRequestError(`Refund amount ($${refundAmount.toFixed(2)}) cannot exceed subscription price ($${basePriceUsd.toFixed(2)})`);
+      }
+
       // Get RefundService from container
       const { RefundService } = await import('./refund.service');
       const refundService = new RefundService(this.prisma);
 
-      // Create refund request
+      // Create refund request with admin-specified amount
       const refund = await refundService.createRefundRequest({
         userId: subscription.user_id,
         subscriptionId: subscription.id,
         refundType: 'manual_admin',
         refundReason,
         requestedBy: adminUserId,
-        originalChargeAmountUsd: Number(subscription.base_price_usd),
-        refundAmountUsd: Number(subscription.base_price_usd),
+        originalChargeAmountUsd: basePriceUsd,
+        refundAmountUsd: refundAmount,
         stripeChargeId: subscription.stripe_subscription_id || undefined,
         adminNotes,
       });
@@ -796,7 +810,7 @@ export class SubscriptionManagementService {
           cancellation_reason: refundReason,
           cancellation_requested_by: adminUserId,
           refunded_at: new Date(),
-          refund_amount_usd: Number(subscription.base_price_usd),
+          refund_amount_usd: refundAmount,
           updated_at: new Date(),
         },
       });
@@ -804,7 +818,7 @@ export class SubscriptionManagementService {
       logger.info('SubscriptionManagementService: Subscription cancelled with refund', {
         subscriptionId,
         refundId: processedRefund.id,
-        refundAmount: subscription.base_price_usd,
+        refundAmount,
       });
 
       return {

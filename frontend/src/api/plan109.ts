@@ -719,6 +719,16 @@ export const refundApi = {
     );
     return response.data.data;
   },
+
+  /**
+   * Get credit usage for subscription's current billing period
+   */
+  getSubscriptionCreditUsage: async (subscriptionId: string) => {
+    const response = await apiClient.get<{ status: string; data: { subscriptionId: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; creditsUsed: number }; meta?: any }>(
+      `/admin/subscriptions/${subscriptionId}/credit-usage`
+    );
+    return response.data.data;
+  },
 };
 
 // ============================================================================

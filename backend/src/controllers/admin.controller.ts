@@ -1156,7 +1156,7 @@ export class AdminController {
   async cancelSubscriptionWithRefund(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { refundReason, adminNotes } = req.body;
+      const { refundReason, adminNotes, refundAmount } = req.body;
       const adminUserId = (req as any).user?.sub || (req as any).user?.id;
 
       if (!adminUserId) {
@@ -1169,11 +1169,63 @@ export class AdminController {
         return;
       }
 
-      if (!refundReason || typeof refundReason !== 'string') {
+      // Validation: Refund reason is required
+      if (!refundReason || typeof refundReason !== 'string' || refundReason.trim().length === 0) {
         res.status(400).json({
           error: {
             code: 'invalid_input',
-            message: 'Refund reason is required',
+            message: 'Refund reason is required and cannot be empty',
+          },
+        });
+        return;
+      }
+
+      // Validation: Refund amount must be provided and valid
+      if (refundAmount === undefined || refundAmount === null) {
+        res.status(400).json({
+          error: {
+            code: 'invalid_input',
+            message: 'Refund amount is required',
+          },
+        });
+        return;
+      }
+
+      const refundAmountNum = Number(refundAmount);
+      if (isNaN(refundAmountNum) || refundAmountNum <= 0) {
+        res.status(400).json({
+          error: {
+            code: 'invalid_input',
+            message: 'Refund amount must be greater than 0',
+          },
+        });
+        return;
+      }
+
+      // Get subscription to validate refund amount against base price
+      const subscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id },
+        select: { base_price_usd: true },
+      });
+
+      if (!subscription) {
+        res.status(404).json({
+          error: {
+            code: 'not_found',
+            message: 'Subscription not found',
+          },
+        });
+        return;
+      }
+
+      const basePriceUsd = Number(subscription.base_price_usd);
+
+      // Validation: Refund amount cannot exceed base price (last charge)
+      if (refundAmountNum > basePriceUsd) {
+        res.status(400).json({
+          error: {
+            code: 'invalid_input',
+            message: `Refund amount ($${refundAmountNum.toFixed(2)}) cannot exceed the subscription price ($${basePriceUsd.toFixed(2)})`,
           },
         });
         return;
@@ -1184,6 +1236,7 @@ export class AdminController {
         id,
         adminUserId,
         refundReason,
+        refundAmountNum,
         adminNotes
       );
 
@@ -1237,6 +1290,119 @@ export class AdminController {
         error: {
           code: statusCode === 404 ? 'not_found' : statusCode === 400 ? 'invalid_status' : 'internal_error',
           message: error instanceof Error ? error.message : 'Failed to cancel subscription with refund',
+          details:
+            process.env.NODE_ENV === 'development' && error instanceof Error
+              ? error.stack
+              : undefined,
+        },
+      });
+    }
+  }
+
+  /**
+   * GET /admin/subscriptions/:id/credit-usage
+   * Get credit usage for current billing period
+   *
+   * Path Parameters:
+   * - id: string (subscription ID)
+   *
+   * Response 200:
+   * {
+   *   "status": "success",
+   *   "data": {
+   *     "subscriptionId": "string",
+   *     "currentPeriodStart": "ISO date",
+   *     "currentPeriodEnd": "ISO date",
+   *     "creditsUsed": number
+   *   }
+   * }
+   *
+   * Response 404: Subscription not found
+   * Response 500: Server error
+   */
+  async getSubscriptionCreditUsage(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      // Get subscription with period dates
+      const subscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          user_id: true,
+          current_period_start: true,
+          current_period_end: true,
+        },
+      });
+
+      if (!subscription) {
+        res.status(404).json({
+          error: {
+            code: 'not_found',
+            message: 'Subscription not found',
+          },
+        });
+        return;
+      }
+
+      // Get credit usage for current billing period
+      const currentPeriodStart = subscription.current_period_start;
+      const currentPeriodEnd = subscription.current_period_end;
+
+      if (!currentPeriodStart || !currentPeriodEnd) {
+        // No billing period data, return 0 usage
+        res.json(
+          successResponse({
+            subscriptionId: subscription.id,
+            currentPeriodStart: null,
+            currentPeriodEnd: null,
+            creditsUsed: 0,
+          })
+        );
+        return;
+      }
+
+      // Sum up credits used from token_usage_ledger table for this user in current period
+      const usageSum = await this.prisma.token_usage_ledger.aggregate({
+        _sum: {
+          credits_deducted: true,
+        },
+        where: {
+          user_id: subscription.user_id,
+          request_started_at: {
+            gte: currentPeriodStart,
+            lte: currentPeriodEnd,
+          },
+        },
+      });
+
+      const creditsUsed = usageSum._sum.credits_deducted || 0;
+
+      logger.info('AdminController.getSubscriptionCreditUsage: Retrieved credit usage', {
+        subscriptionId: id,
+        userId: subscription.user_id,
+        creditsUsed,
+        periodStart: currentPeriodStart,
+        periodEnd: currentPeriodEnd,
+      });
+
+      res.json(
+        successResponse({
+          subscriptionId: subscription.id,
+          currentPeriodStart: currentPeriodStart.toISOString(),
+          currentPeriodEnd: currentPeriodEnd.toISOString(),
+          creditsUsed: Number(creditsUsed),
+        })
+      );
+    } catch (error) {
+      logger.error('AdminController.getSubscriptionCreditUsage: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      res.status(500).json({
+        error: {
+          code: 'internal_error',
+          message: 'Failed to retrieve credit usage',
           details:
             process.env.NODE_ENV === 'development' && error instanceof Error
               ? error.stack

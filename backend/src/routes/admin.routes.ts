@@ -1090,4 +1090,25 @@ router.post(
   asyncHandler(adminController.cancelSubscriptionWithRefund.bind(adminController))
 );
 
+/**
+ * GET /admin/subscriptions/:id/credit-usage
+ * Get credit usage for current billing period
+ *
+ * Returns credit usage statistics for the subscription's current billing period.
+ * Used to calculate prorated refund amounts.
+ *
+ * Response:
+ * - subscriptionId
+ * - currentPeriodStart
+ * - currentPeriodEnd
+ * - creditsUsed (number of credits consumed in current period)
+ *
+ * Reference: Refund proration calculation
+ */
+router.get(
+  '/subscriptions/:id/credit-usage',
+  auditLog({ action: 'read', resourceType: 'subscription' }),
+  asyncHandler(adminController.getSubscriptionCreditUsage.bind(adminController))
+);
+
 export default router;
