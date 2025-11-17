@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Menu } from '@headlessui/react';
 import { ChevronRight, Menu as MenuIcon, Search, User, LogOut } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
@@ -21,7 +21,6 @@ import { revokeToken } from '@/utils/oauth';
  */
 const AdminHeader: React.FC = () => {
   const breadcrumbs = useAdminUIStore((state) => state.breadcrumbs);
-  const navigate = useNavigate();
 
   // Toggle mobile sidebar
   const handleMobileMenuClick = () => {

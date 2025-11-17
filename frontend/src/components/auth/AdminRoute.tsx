@@ -9,7 +9,7 @@
  */
 
 import { ReactNode, useEffect, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { authHelpers } from '@/services/api';
 import { revokeToken } from '@/utils/oauth';
@@ -20,7 +20,6 @@ interface AdminRouteProps {
 
 export function AdminRoute({ children }: AdminRouteProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [authStatus, setAuthStatus] = useState<'unauthenticated' | 'authenticated_non_admin' | 'admin'>('unauthenticated');
 

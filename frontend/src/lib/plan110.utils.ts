@@ -386,12 +386,14 @@ export function getTierDisplayName(tier: SubscriptionTier): string {
       return 'Free';
     case 'pro':
       return 'Pro';
+    case 'pro_plus':
+      return 'Pro Plus';
     case 'pro_max':
       return 'Pro Max';
     case 'enterprise_pro':
       return 'Enterprise Pro';
-    case 'enterprise_max':
-      return 'Enterprise Max';
+    case 'enterprise_pro_plus':
+      return 'Enterprise Pro Plus';
     case 'perpetual':
       return 'Perpetual';
     default:

@@ -79,9 +79,10 @@ const COUPON_TYPES: { value: CouponType; label: string; description: string }[] 
 const TIERS: { value: SubscriptionTier; label: string }[] = [
   { value: SubscriptionTier.FREE, label: 'Free' },
   { value: SubscriptionTier.PRO, label: 'Pro' },
+  { value: SubscriptionTier.PRO_PLUS, label: 'Pro Plus' },
   { value: SubscriptionTier.PRO_MAX, label: 'Pro Max' },
   { value: SubscriptionTier.ENTERPRISE_PRO, label: 'Enterprise Pro' },
-  { value: SubscriptionTier.ENTERPRISE_MAX, label: 'Enterprise Max' },
+  { value: SubscriptionTier.ENTERPRISE_PRO_PLUS, label: 'Enterprise Pro Plus' },
   { value: SubscriptionTier.PERPETUAL, label: 'Perpetual' },
 ];
 

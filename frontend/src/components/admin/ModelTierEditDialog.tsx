@@ -46,7 +46,7 @@ function ModelTierEditDialog({
   const [restrictionMode, setRestrictionMode] =
     useState<TierRestrictionMode>('minimum');
   const [allowedTiers, setAllowedTiers] = useState<Set<SubscriptionTier>>(
-    new Set([SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_MAX, SubscriptionTier.ENTERPRISE_PRO, SubscriptionTier.ENTERPRISE_MAX])
+    new Set([SubscriptionTier.FREE, SubscriptionTier.PRO, SubscriptionTier.PRO_PLUS, SubscriptionTier.PRO_MAX, SubscriptionTier.ENTERPRISE_PRO, SubscriptionTier.ENTERPRISE_PRO_PLUS])
   );
   const [reason, setReason] = useState('');
 
