@@ -270,3 +270,4 @@ Implemented RefundService, enhanced StripeService/ProrationService/SubscriptionM
 - Created comprehensive progress report: docs/progress/196-refund-management-frontend-implementation-report.md
 
 Files modified: 7 | Files created: 3 | Lines of code: ~1,350
+2025-11-17 15:36:24 - Revised proration calculation for refund system with three-tiered logic: (1) If no credits used in billing period → full refund, (2) If credits used → prorated refund based on remaining days, (3) Allow admin to input any amount between \/usr/bin/bash.01 and billing amount. Updated ManualCancelRefundModal.tsx with calculateRefundAmount() function, dynamic label (Full/Prorated), improved validation with specific error messages, and creditsUsedInCurrentPeriod prop. Updated SubscriptionManagement.tsx to pass credit usage prop (defaults to 0 for now - TODO: fetch from API). Build verified - no new errors.

@@ -10,11 +10,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, Search, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { RefreshCw, Search, CheckCircle, XCircle, AlertCircle, X as XIcon } from 'lucide-react';
 import Button from '@/components/common/Button';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { refundApi } from '@/api/plan109';
 import { formatCurrency, formatDate } from '@/lib/plan109.utils';
+import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 import type {
   SubscriptionRefund,
@@ -40,12 +41,12 @@ function RefundStatusBadge({ status }: { status: RefundStatus }) {
 
   const getStatusColor = (status: RefundStatus): string => {
     const colors: Record<RefundStatus, string> = {
-      pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-      approved: 'bg-blue-100 text-blue-700 border-blue-300',
-      processing: 'bg-purple-100 text-purple-700 border-purple-300',
-      completed: 'bg-green-100 text-green-700 border-green-300',
-      failed: 'bg-red-100 text-red-700 border-red-300',
-      cancelled: 'bg-gray-100 text-gray-700 border-gray-300',
+      pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700',
+      approved: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700',
+      processing: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700',
+      completed: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700',
+      failed: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700',
+      cancelled: 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-400 border-gray-300 dark:border-gray-700',
     };
     return colors[status];
   };
@@ -74,9 +75,9 @@ function RefundTypeBadge({ type }: { type: RefundType }) {
 
   const getTypeColor = (type: RefundType): string => {
     const colors: Record<RefundType, string> = {
-      manual_admin: 'bg-indigo-100 text-indigo-700 border-indigo-300',
-      proration_credit: 'bg-cyan-100 text-cyan-700 border-cyan-300',
-      chargeback: 'bg-red-100 text-red-700 border-red-300',
+      manual_admin: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-300 dark:border-indigo-700',
+      proration_credit: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 border-cyan-300 dark:border-cyan-700',
+      chargeback: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-300 dark:border-red-700',
     };
     return colors[type];
   };
@@ -117,16 +118,16 @@ function ConfirmationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-gray-600 mb-6">{message}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 dark:bg-opacity-70">
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6 border border-deep-navy-200 dark:border-deep-navy-700">
+        <h3 className="text-lg font-semibold text-deep-navy-900 dark:text-white mb-2">{title}</h3>
+        <p className="text-deep-navy-600 dark:text-deep-navy-300 mb-6">{message}</p>
         <div className="flex gap-3 justify-end">
           <Button variant="secondary" onClick={onClose}>
             {cancelLabel}
           </Button>
           <Button
-            variant={isDestructive ? 'primary' : 'primary'}
+            variant={isDestructive ? 'destructive' : 'primary'}
             onClick={() => {
               onConfirm();
               onClose();
@@ -145,6 +146,7 @@ export default function RefundManagement() {
   const [refunds, setRefunds] = useState<SubscriptionRefund[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState<RefundStatus | ''>('');
@@ -211,9 +213,11 @@ export default function RefundManagement() {
   const handleApprove = async (refund: SubscriptionRefund) => {
     try {
       await refundApi.approveRefund(refund.id);
+      setSuccessMessage('Refund approved successfully. Processing through Stripe.');
+      setTimeout(() => setSuccessMessage(null), 5000);
       loadRefunds(); // Reload data
     } catch (err: any) {
-      alert(`Failed to approve refund: ${err.message}`);
+      setError(err.message || 'Failed to approve refund');
     }
   };
 
@@ -224,9 +228,11 @@ export default function RefundManagement() {
         refundId: refund.id,
         reason: 'Cancelled by admin',
       });
+      setSuccessMessage('Refund request cancelled successfully.');
+      setTimeout(() => setSuccessMessage(null), 5000);
       loadRefunds(); // Reload data
     } catch (err: any) {
-      alert(`Failed to cancel refund: ${err.message}`);
+      setError(err.message || 'Failed to cancel refund');
     }
   };
 
@@ -249,52 +255,52 @@ export default function RefundManagement() {
       />
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Refund Management</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Refund Management</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Manage subscription refund requests and history
           </p>
         </div>
         <Button
-          variant="secondary"
+          variant="ghost"
           onClick={loadRefunds}
           disabled={isLoading}
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
           Refresh
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 p-4 shadow-sm">
+        <div className="grid gap-4 md:grid-cols-5">
           {/* Search */}
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
               Search
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-deep-navy-400 dark:text-deep-navy-500" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by user email or ID..."
-                className="pl-10 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 pl-10 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
               />
             </div>
           </div>
 
           {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
               Status
             </label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as RefundStatus | '')}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -308,13 +314,13 @@ export default function RefundManagement() {
 
           {/* Type Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
               Type
             </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as RefundType | '')}
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
             >
               <option value="">All Types</option>
               <option value="manual_admin">Manual (Admin)</option>
@@ -322,104 +328,140 @@ export default function RefundManagement() {
               <option value="chargeback">Chargeback</option>
             </select>
           </div>
+
+          {/* Clear Button */}
+          <div className="flex items-end">
+            <Button variant="ghost" onClick={handleReset} className="w-full">
+              <XIcon className="mr-2 h-4 w-4" />
+              Clear
+            </Button>
+          </div>
         </div>
 
-        {/* Filter Actions */}
-        <div className="flex justify-between items-center pt-2 border-t">
-          <p className="text-sm text-gray-600">
+        {/* Filter Summary */}
+        <div className="mt-4 flex justify-between items-center pt-3 border-t border-deep-navy-200 dark:border-deep-navy-700">
+          <p className="text-sm text-deep-navy-600 dark:text-deep-navy-300">
             Showing {refunds.length} of {total} refund requests
           </p>
-          <Button variant="ghost" onClick={handleReset} size="sm">
-            Reset Filters
-          </Button>
         </div>
       </div>
 
-      {/* Refunds Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4">
-            <p className="text-red-700">{error}</p>
+      {/* Error/Success Messages */}
+      {error && (
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <div>
+              <p className="font-medium text-red-900 dark:text-red-200">Error</p>
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
+      {successMessage && (
+        <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-green-100 dark:bg-green-800 p-1">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <p className="font-medium text-green-900 dark:text-green-200">Success</p>
+              <p className="text-sm text-green-700 dark:text-green-300">{successMessage}</p>
+            </div>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="ml-auto text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Refunds Table */}
+      <div className="rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-white dark:bg-deep-navy-800 shadow-sm">
         {isLoading ? (
           <div className="flex justify-center items-center p-12">
             <LoadingSpinner size="lg" />
           </div>
         ) : refunds.length === 0 ? (
           <div className="text-center py-12">
-            <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No refund requests</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <AlertCircle className="mx-auto h-12 w-12 text-deep-navy-400 dark:text-deep-navy-500" />
+            <h3 className="mt-2 text-sm font-medium text-deep-navy-900 dark:text-deep-navy-100">No refund requests</h3>
+            <p className="mt-1 text-sm text-deep-navy-500 dark:text-deep-navy-400">
               No refund requests match your current filters.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="w-full">
+              <thead className="border-b border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                     User
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                     Requested
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-deep-navy-600 dark:text-deep-navy-200">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-deep-navy-200 dark:divide-deep-navy-700">
                 {refunds.map((refund) => (
-                  <tr key={refund.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {refund.user?.email || 'Unknown'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {refund.user?.firstName} {refund.user?.lastName}
-                          </div>
+                  <tr key={refund.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-900/50">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-deep-navy-900 dark:text-deep-navy-100">
+                          {refund.user?.email || 'Unknown'}
+                        </div>
+                        <div className="text-sm text-deep-navy-500 dark:text-deep-navy-400">
+                          {refund.user?.firstName} {refund.user?.lastName}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-deep-navy-900 dark:text-deep-navy-100">
                         {formatCurrency(refund.refundAmountUsd)}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-deep-navy-500 dark:text-deep-navy-400">
                         of {formatCurrency(refund.originalChargeAmountUsd)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <RefundTypeBadge type={refund.refundType} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <RefundStatusBadge status={refund.status} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-deep-navy-500 dark:text-deep-navy-400">
                       {formatDate(refund.requestedAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       {refund.status === 'pending' && (
                         <>
                           <button
                             onClick={() =>
                               setApproveModal({ isOpen: true, refund })
                             }
-                            className="text-green-600 hover:text-green-900"
+                            className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200"
                             title="Approve refund"
                           >
                             <CheckCircle size={18} />
@@ -428,7 +470,7 @@ export default function RefundManagement() {
                             onClick={() =>
                               setCancelModal({ isOpen: true, refund })
                             }
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
                             title="Cancel refund"
                           >
                             <XCircle size={18} />
@@ -436,7 +478,7 @@ export default function RefundManagement() {
                         </>
                       )}
                       {refund.status !== 'pending' && (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-deep-navy-400 dark:text-deep-navy-500">-</span>
                       )}
                     </td>
                   </tr>
@@ -448,17 +490,17 @@ export default function RefundManagement() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+          <div className="px-4 py-3 border-t border-deep-navy-200 dark:border-deep-navy-700 sm:px-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-deep-navy-700 dark:text-deep-navy-300">
                   Page <span className="font-medium">{page}</span> of{' '}
                   <span className="font-medium">{totalPages}</span>
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setPage(page - 1)}
                   disabled={page === 1}
@@ -466,7 +508,7 @@ export default function RefundManagement() {
                   Previous
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setPage(page + 1)}
                   disabled={page === totalPages}

@@ -612,6 +612,7 @@ function SubscriptionManagement() {
           onConfirm={handleCancelWithRefund}
           subscription={selectedSubscription}
           defaultRefundAmount={Number(selectedSubscription.basePriceUsd)}
+          creditsUsedInCurrentPeriod={0} // TODO: Fetch actual credit usage from API
         />
       )}
     </div>
