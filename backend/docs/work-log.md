@@ -61,3 +61,20 @@ const monthlyAllocation = tier === 'free' ? 100 : 10000; // WRONG!
 **Commit**: 4377987 - fix(seed): correct credit allocations per Plan 189 pricing structure
 **Branch**: feature/update-model-tier-management
 
+
+## 2025-11-17 13:49:44 - Proration System Implementation
+
+**Summary:** Implemented complete proration system for subscription tier changes (both credit and monetary)
+
+**What was done:**
+- Created calculateProratedCreditsForTierChange() method in CreditService
+- Integrated ProrationService for monetary proration calculation  
+- Updated upgradeTier() and downgradeTier() to use prorated allocations
+- Handled downgrade overuse edge case
+- Registered ProrationService in DI container
+- Fixed MockCreditService compilation error
+
+**Key formula:** (daysRemaining / daysInCycle) * newTierCredits
+
+**Result:** Both credit allocation and payment charges are now prorated correctly when users change subscription tiers mid-cycle.
+

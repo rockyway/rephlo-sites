@@ -728,6 +728,8 @@ model proration_event {
   created_at                 DateTime                  @default(now())
   updated_at                 DateTime
   change_type                proration_event_type
+  invoice_created_at         DateTime?
+  invoice_paid_at            DateTime?
   subscription_monetization  subscription_monetization @relation(fields: [subscription_id], references: [id], onDelete: Cascade)
   users                      users                     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -802,20 +804,24 @@ model role_change_log {
 }
 
 model subscription_monetization {
-  id                        String                @id @db.Uuid
-  user_id                   String                @db.Uuid
+  id                        String                 @id @db.Uuid
+  user_id                   String                 @db.Uuid
   tier                      subscription_tier
-  billing_cycle             String                @db.VarChar(20)
-  status                    String                @db.VarChar(20)
-  base_price_usd            Decimal               @db.Decimal(10, 2)
+  billing_cycle             String                 @db.VarChar(20)
+  status                    String                 @db.VarChar(20)
+  base_price_usd            Decimal                @db.Decimal(10, 2)
   monthly_credit_allocation Int
-  stripe_customer_id        String?               @unique @db.VarChar(255)
-  stripe_subscription_id    String?               @unique @db.VarChar(255)
+  stripe_customer_id        String?                @unique @db.VarChar(255)
+  stripe_subscription_id    String?                @unique @db.VarChar(255)
   current_period_start      DateTime
   current_period_end        DateTime
   trial_ends_at             DateTime?
   cancelled_at              DateTime?
-  created_at                DateTime              @default(now())
+  cancellation_reason       String?
+  cancellation_requested_by String?                @db.Uuid
+  refunded_at               DateTime?
+  refund_amount_usd         Decimal?               @db.Decimal(10, 2)
+  created_at                DateTime               @default(now())
   updated_at                DateTime
   billing_invoice           billing_invoice[]
   coupon_redemption         coupon_redemption[]
@@ -823,7 +829,8 @@ model subscription_monetization {
   dunning_attempt           dunning_attempt[]
   payment_transaction       payment_transaction[]
   proration_event           proration_event[]
-  users                     users                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  subscription_refund       subscription_refund[]
+  users                     users                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([status, billing_cycle, base_price_usd], map: "idx_subscription_mrr")
   @@index([current_period_end])
@@ -832,6 +839,37 @@ model subscription_monetization {
   @@index([stripe_subscription_id])
   @@index([tier])
   @@index([user_id])
+}
+
+model subscription_refund {
+  id                         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                    String                    @db.Uuid
+  subscription_id            String                    @db.Uuid
+  refund_type                refund_type
+  refund_reason              String?
+  requested_by               String                    @db.Uuid
+  requested_at               DateTime                  @default(now())
+  original_charge_amount_usd Decimal                   @db.Decimal(10, 2)
+  refund_amount_usd          Decimal                   @db.Decimal(10, 2)
+  stripe_charge_id           String?                   @db.VarChar(255)
+  stripe_refund_id           String?                   @unique @db.VarChar(255)
+  status                     refund_status             @default(pending)
+  processed_at               DateTime?
+  stripe_processed_at        DateTime?
+  failure_reason             String?
+  admin_notes                String?
+  ip_address                 String?                   @db.VarChar(45)
+  created_at                 DateTime                  @default(now())
+  updated_at                 DateTime
+  users                      users                     @relation("subscription_refund_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade)
+  subscription_monetization  subscription_monetization @relation(fields: [subscription_id], references: [id])
+  admin_user                 users                     @relation("subscription_refund_requested_byTousers", fields: [requested_by], references: [id])
+
+  @@index([user_id])
+  @@index([subscription_id])
+  @@index([status])
+  @@index([requested_at])
+  @@index([refund_type])
 }
 
 model subscription_tier_config {
@@ -1101,6 +1139,8 @@ model users {
   role_change_log_role_change_log_changed_byTousers                  role_change_log[]            @relation("role_change_log_changed_byTousers")
   role_change_log_role_change_log_target_user_idTousers              role_change_log[]            @relation("role_change_log_target_user_idTousers")
   subscription_monetization                                          subscription_monetization[]
+  subscription_refund_subscription_refund_user_idTousers             subscription_refund[]        @relation("subscription_refund_user_idTousers")
+  subscription_refund_subscription_refund_requested_byTousers        subscription_refund[]        @relation("subscription_refund_requested_byTousers")
   subscriptions                                                      subscriptions[]
   token_usage_daily_summary                                          token_usage_daily_summary[]
   token_usage_ledger                                                 token_usage_ledger[]
@@ -1334,6 +1374,21 @@ enum redemption_status {
   failed
   reversed
   pending
+}
+
+enum refund_type {
+  manual_admin
+  proration_credit
+  chargeback
+}
+
+enum refund_status {
+  pending
+  approved
+  processing
+  completed
+  failed
+  cancelled
 }
 
 enum request_status {
