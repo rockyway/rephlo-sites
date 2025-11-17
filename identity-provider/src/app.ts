@@ -35,10 +35,6 @@ export async function createApp(prisma: PrismaClient) {
     })
   );
 
-  // Body parsing
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-
   // Create OIDC provider
   const oidcProvider = await createOIDCProvider(prisma);
 
@@ -54,10 +50,13 @@ export async function createApp(prisma: PrismaClient) {
     });
   });
 
+  // Body parsing middleware (only for interaction routes that need it)
+  const bodyParser = [express.json(), express.urlencoded({ extended: true })];
+
   // Interaction routes (must be before OIDC provider middleware)
   app.get('/interaction/:uid', authController.interaction);
-  app.post('/interaction/:uid/login', authController.login);
-  app.post('/interaction/:uid/consent', authController.consent);
+  app.post('/interaction/:uid/login', bodyParser, authController.login);
+  app.post('/interaction/:uid/consent', bodyParser, authController.consent);
   app.get('/interaction/:uid/abort', authController.abort);
   app.get('/interaction/:uid/data', authController.getInteractionData);
 
