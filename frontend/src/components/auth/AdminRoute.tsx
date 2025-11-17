@@ -46,13 +46,18 @@ export function AdminRoute({ children }: AdminRouteProps) {
       // Clear local auth data
       authHelpers.clearAuth('user_logout_from_access_denied');
 
-      // Redirect to login
-      navigate('/login');
+      // Redirect to identity provider logout to clear session cookies
+      // Then redirect back to login page
+      const idpLogoutUrl = 'http://localhost:7151/logout';
+      const postLogoutRedirectUri = encodeURIComponent('http://localhost:7052/login');
+      window.location.href = `${idpLogoutUrl}?post_logout_redirect_uri=${postLogoutRedirectUri}`;
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if token revocation fails, clear local auth and redirect
+      // Even if token revocation fails, clear local auth and redirect to IDP logout
       authHelpers.clearAuth('user_logout_with_error');
-      navigate('/login');
+      const idpLogoutUrl = 'http://localhost:7151/logout';
+      const postLogoutRedirectUri = encodeURIComponent('http://localhost:7052/login');
+      window.location.href = `${idpLogoutUrl}?post_logout_redirect_uri=${postLogoutRedirectUri}`;
     }
   };
 
