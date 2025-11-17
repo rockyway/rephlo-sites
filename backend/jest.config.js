@@ -7,6 +7,15 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  globals: {
+    'ts-jest': {
+      isolatedModules: true,
+      tsconfig: {
+        skipLibCheck: true,
+        esModuleInterop: true,
+      },
+    },
+  },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
