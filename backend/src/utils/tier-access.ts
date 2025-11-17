@@ -85,12 +85,8 @@ export function checkTierAccess(
 ): TierAccessResult {
   const { requiredTier, tierRestrictionMode, allowedTiers } = modelConfig;
 
-  logger.debug('Tier access check', {
-    userTier,
-    requiredTier,
-    tierRestrictionMode,
-    allowedTiers,
-  });
+  // Note: Debug logging removed to avoid verbose output in batch operations
+  // Individual tier checks are logged at higher levels (e.g., ModelService.canUserAccessModel)
 
   switch (tierRestrictionMode) {
     case 'minimum': {
