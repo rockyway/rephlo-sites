@@ -26,6 +26,7 @@ import { createSocialAuthRouter } from './social-auth.routes';
 import { createPlan109Router } from './plan109.routes';
 import { createPlan110Router } from './plan110.routes';
 import { createPlan111Router } from './plan111.routes';
+import { createPlan190Router } from './plan190.routes';
 import { createMFARouter } from './mfa.routes';
 import adminModelsRoutes from './admin-models.routes';
 
@@ -248,6 +249,10 @@ router.use('/', createPlan110Router()); // Admin routes are mounted at /admin
 // ===== Plan 111: Coupon & Discount Code System Routes =====
 // Public endpoints for coupon validation/redemption and admin endpoints for campaign management
 router.use('/', createPlan111Router());
+
+// ===== Plan 190: Tier Credit Management Routes =====
+// Admin endpoints for tier configuration management, credit allocation updates, and pricing adjustments
+router.use('/', createPlan190Router());
 
 // ===== Authentication Routes =====
 // User registration, email verification, password reset
