@@ -17,6 +17,7 @@ import type {
   CreditAllocation,
   UsageStats,
   PaginationData,
+  SubscriptionRefund,
 } from '@rephlo/shared-types';
 
 // Import enums as runtime values (not type-only)
@@ -28,6 +29,8 @@ import {
   InvoiceStatus,
   PaymentStatus,
   CreditSource,
+  RefundType,
+  RefundStatus,
 } from '@rephlo/shared-types';
 
 // Re-export commonly used types for convenience
@@ -48,6 +51,8 @@ export {
   InvoiceStatus,
   PaymentStatus,
   CreditSource,
+  RefundType,
+  RefundStatus,
 };
 
 // Re-export with alias for backward compatibility
@@ -342,4 +347,39 @@ export interface AnalyticsFilters {
   period?: 'last_7_days' | 'last_30_days' | 'last_90_days' | 'last_12_months';
   startDate?: string;
   endDate?: string;
+}
+
+// ============================================================================
+// Refund Types (Plan 192)
+// ============================================================================
+
+// Re-export SubscriptionRefund from shared-types
+export type { SubscriptionRefund };
+
+export interface RefundFilters {
+  status?: RefundStatus;
+  refundType?: RefundType;
+  userId?: string;
+  subscriptionId?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ManualCancelRefundRequest {
+  subscriptionId: string;
+  refundReason: string;
+  adminNotes?: string;
+  refundAmount?: number; // Optional: defaults to last charge
+}
+
+export interface ApproveRefundRequest {
+  refundId: string;
+  adminNotes?: string;
+}
+
+export interface CancelRefundRequest {
+  refundId: string;
+  reason: string;
 }

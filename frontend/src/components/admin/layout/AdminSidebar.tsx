@@ -64,6 +64,7 @@ const navigationItems: NavigationItem[] = [
       { name: 'Billing Dashboard', href: '/admin/billing' },
       { name: 'Credit Management', href: '/admin/credits' },
       { name: 'Tier Management', href: '/admin/tier-management' },
+      { name: 'Refund Management', href: '/admin/refunds' },
     ],
   },
 

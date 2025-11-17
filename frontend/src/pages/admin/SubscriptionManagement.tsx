@@ -27,7 +27,8 @@ import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { TierBadge, StatusBadge, ConfirmationModal } from '@/components/plan109';
-import { subscriptionApi } from '@/api/plan109';
+import { subscriptionApi, refundApi } from '@/api/plan109';
+import ManualCancelRefundModal from '@/components/admin/ManualCancelRefundModal';
 import {
   SubscriptionTier,
   SubscriptionStatus,
@@ -62,6 +63,7 @@ function SubscriptionManagement() {
   // Modals
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
   const [cancelAtPeriodEnd] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -147,6 +149,19 @@ function SubscriptionManagement() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to reactivate subscription');
       setTimeout(() => setError(null), 5000);
+    }
+  };
+
+  const handleCancelWithRefund = async (data: any) => {
+    try {
+      await refundApi.cancelSubscriptionWithRefund(data.subscriptionId, data);
+      setSuccessMessage('Subscription cancelled and refund request created successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      loadData();
+      setShowRefundModal(false);
+      setSelectedSubscription(null);
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to cancel subscription with refund');
     }
   };
 
@@ -514,6 +529,17 @@ function SubscriptionManagement() {
                                 >
                                   Cancel
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setSelectedSubscription(subscription);
+                                    setShowRefundModal(true);
+                                  }}
+                                  className="text-orange-600 hover:text-orange-700"
+                                >
+                                  Cancel + Refund
+                                </Button>
                                 <Link to={`/admin/subscriptions/${subscription.id}`}>
                                   <Button size="sm">View</Button>
                                 </Link>
@@ -574,6 +600,20 @@ function SubscriptionManagement() {
         variant="danger"
         isProcessing={isProcessing}
       />
+
+      {/* Manual Cancel with Refund Modal */}
+      {selectedSubscription && (
+        <ManualCancelRefundModal
+          isOpen={showRefundModal}
+          onClose={() => {
+            setShowRefundModal(false);
+            setSelectedSubscription(null);
+          }}
+          onConfirm={handleCancelWithRefund}
+          subscription={selectedSubscription}
+          defaultRefundAmount={Number(selectedSubscription.basePriceUsd)}
+        />
+      )}
     </div>
   );
 }

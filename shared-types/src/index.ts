@@ -59,6 +59,7 @@ export type {
   CreditAllocation,
   UserCreditBalance,
   ProrationEvent,
+  SubscriptionRefund,
 } from './billing.types';
 
 export type {
@@ -119,6 +120,8 @@ export {
   CreditSource,
   ProrationEventType,
   ProrationStatus,
+  RefundType,
+  RefundStatus,
 } from './billing.types';
 
 export {
@@ -162,6 +165,8 @@ export {
 export {
   // Billing schemas
   SubscriptionStatsSchema,
+  RefundTypeSchema,
+  RefundStatusSchema,
 } from './billing.types';
 
 export {

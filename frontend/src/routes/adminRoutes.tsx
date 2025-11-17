@@ -45,6 +45,9 @@ const AnalyticsDashboard = lazy(() => import('../pages/admin/AnalyticsDashboard'
 // Plan 190: Tier Configuration Management
 const AdminTierManagement = lazy(() => import('../pages/AdminTierManagement'));
 
+// Plan 192: Refund Management
+const RefundManagement = lazy(() => import('../pages/admin/RefundManagement'));
+
 // Admin route configuration
 export const adminRoutes: RouteObject[] = [
   {
@@ -85,6 +88,12 @@ export const adminRoutes: RouteObject[] = [
       {
         path: 'tier-management',
         element: <AdminTierManagement />,
+      },
+
+      // Refund management (Plan 192)
+      {
+        path: 'refunds',
+        element: <RefundManagement />,
       },
 
       // License management (Plan 110)
