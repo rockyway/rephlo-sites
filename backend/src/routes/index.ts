@@ -228,16 +228,17 @@ router.use('/api', createAPIRouter());
 // ===== API Documentation (Swagger UI) =====
 router.use('/api-docs', createSwaggerRouter());
 
+// ===== Plan 109: Subscription Monetization Routes =====
+// Additional admin endpoints for subscription, user, billing, and analytics management
+// IMPORTANT: Mounted BEFORE adminRoutes to prevent route conflicts with /analytics
+router.use('/admin', createPlan109Router());
+
 // ===== Admin Routes =====
 router.use('/admin', adminRoutes);
 
 // ===== Admin Model Lifecycle Routes =====
 // Admin endpoints for model lifecycle management (create, mark legacy, archive, etc.)
 router.use('/admin/models', adminModelsRoutes);
-
-// ===== Plan 109: Subscription Monetization Routes =====
-// Additional admin endpoints for subscription, user, billing, and analytics management
-router.use('/admin', createPlan109Router());
 
 // ===== Plan 110: Perpetual Licensing & Proration Routes =====
 // Public and admin endpoints for perpetual licenses, version upgrades, proration, and migrations

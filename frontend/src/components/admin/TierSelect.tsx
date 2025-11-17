@@ -63,9 +63,10 @@ const TierSelect = forwardRef<HTMLSelectElement, TierSelectProps>(
           {allowEmpty && <option value="">Select tier...</option>}
           <option value="free">Free</option>
           <option value="pro">Pro</option>
+          <option value="pro_plus">Pro Plus</option>
           <option value="pro_max">Pro Max</option>
           <option value="enterprise_pro">Enterprise Pro</option>
-          <option value="enterprise_max">Enterprise Max</option>
+          <option value="enterprise_pro_plus">Enterprise Pro Plus</option>
         </select>
       </div>
     );

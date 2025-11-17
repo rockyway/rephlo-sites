@@ -16,9 +16,10 @@ export enum UserStatus {
 export enum SubscriptionTier {
   FREE = 'free',
   PRO = 'pro',
+  PRO_PLUS = 'pro_plus',
   PRO_MAX = 'pro_max',
   ENTERPRISE_PRO = 'enterprise_pro',
-  ENTERPRISE_MAX = 'enterprise_max',
+  ENTERPRISE_PRO_PLUS = 'enterprise_pro_plus',
   PERPETUAL = 'perpetual',
 }
 

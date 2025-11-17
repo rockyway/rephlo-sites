@@ -461,7 +461,7 @@ async function seedModels() {
         creditsPer1kTokens: 28,
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           openai: {
             modelFamily: 'gpt-5',
@@ -489,7 +489,7 @@ async function seedModels() {
         creditsPer1kTokens: 6,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           openai: {
             modelFamily: 'gpt-5',
@@ -517,7 +517,7 @@ async function seedModels() {
         creditsPer1kTokens: 1,
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           openai: {
             modelFamily: 'gpt-5',
@@ -547,7 +547,7 @@ async function seedModels() {
         creditsPer1kTokens: 180,
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           anthropic: {
             modelSeries: 'claude-4',
@@ -575,7 +575,7 @@ async function seedModels() {
         creditsPer1kTokens: 40,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           anthropic: {
             modelSeries: 'claude-4',
@@ -603,7 +603,7 @@ async function seedModels() {
         creditsPer1kTokens: 15,
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           anthropic: {
             modelSeries: 'claude-4',
@@ -632,7 +632,7 @@ async function seedModels() {
         creditsPer1kTokens: 40,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         legacyReplacementModelId: 'claude-sonnet-4-5',
         deprecationNotice: 'Claude 3.5 Sonnet will be deprecated on 2025-12-31. Please migrate to Claude Sonnet 4.5 for improved performance.',
         sunsetDate: '2025-12-31T23:59:59Z',
@@ -665,7 +665,7 @@ async function seedModels() {
         creditsPer1kTokens: 20,
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           google: {
             modelType: 'gemini-pro',
@@ -693,7 +693,7 @@ async function seedModels() {
         creditsPer1kTokens: 3,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           google: {
             modelType: 'gemini-flash',
@@ -720,7 +720,7 @@ async function seedModels() {
         creditsPer1kTokens: 1,
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           google: {
             modelType: 'gemini-flash',
@@ -749,7 +749,7 @@ async function seedModels() {
         creditsPer1kTokens: 8,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Strong coding capabilities',
         complianceTags: ['SOC2'],
@@ -772,7 +772,7 @@ async function seedModels() {
         creditsPer1kTokens: 3,
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Multilingual support',
         complianceTags: [],
@@ -797,7 +797,7 @@ async function seedModels() {
         creditsPer1kTokens: 5,
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Massive 10M context window',
         complianceTags: [],
@@ -820,7 +820,7 @@ async function seedModels() {
         creditsPer1kTokens: 2,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Cost-effective large model',
         complianceTags: [],
@@ -843,7 +843,7 @@ async function seedModels() {
         creditsPer1kTokens: 6,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Largest parameter count',
         complianceTags: [],
@@ -868,7 +868,7 @@ async function seedModels() {
         creditsPer1kTokens: 40,
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Real-time search capabilities',
         complianceTags: [],
@@ -891,7 +891,7 @@ async function seedModels() {
         creditsPer1kTokens: 2,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: '2M context - very large',
         complianceTags: [],
@@ -914,7 +914,7 @@ async function seedModels() {
         creditsPer1kTokens: 5,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
         internalNotes: 'Agentic coding specialist',
         complianceTags: [],
@@ -939,7 +939,7 @@ async function seedModels() {
         creditsPer1kTokens: 5,
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           openai: {
             modelFamily: 'gpt-3.5',
@@ -1895,7 +1895,7 @@ async function seedPricingConfigs(providers: any[]) {
     // Enterprise Max tier: 10% margin (1.10× multiplier)
     findOrCreateConfig({
       scopeType: 'tier',
-      subscriptionTier: 'enterprise_max',
+      subscriptionTier: 'enterprise_pro_plus',
       marginMultiplier: 1.1,
       targetGrossMarginPercent: 10.0,
       effectiveFrom,

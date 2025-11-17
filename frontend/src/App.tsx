@@ -14,7 +14,7 @@ import PricingSimulation from '@/pages/admin/PricingSimulation'
 import VendorPriceMonitoring from '@/pages/admin/VendorPriceMonitoring'
 import MarginTracking from '@/pages/admin/MarginTracking'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AdminRoute } from '@/components/auth/AdminRoute'
 import { adminRoutes } from '@/routes/adminRoutes'
 
 // Route configuration using RouteObject[]
@@ -27,12 +27,12 @@ const routes: RouteObject[] = [
   { path: '/oauth/callback', element: <OAuthCallback /> },
 
   // Legacy admin routes (TODO: migrate to AdminLayout)
-  { path: '/admin-legacy', element: <ProtectedRoute><Admin /></ProtectedRoute> },
-  { path: '/admin/model-tiers', element: <ProtectedRoute><ModelManagement /></ProtectedRoute> },
-  { path: '/admin/pricing-configuration', element: <ProtectedRoute><PricingConfiguration /></ProtectedRoute> },
-  { path: '/admin/pricing-simulation', element: <ProtectedRoute><PricingSimulation /></ProtectedRoute> },
-  { path: '/admin/vendor-price-monitoring', element: <ProtectedRoute><VendorPriceMonitoring /></ProtectedRoute> },
-  { path: '/admin/margin-tracking', element: <ProtectedRoute><MarginTracking /></ProtectedRoute> },
+  { path: '/admin-legacy', element: <AdminRoute><Admin /></AdminRoute> },
+  { path: '/admin/model-tiers', element: <AdminRoute><ModelManagement /></AdminRoute> },
+  { path: '/admin/pricing-configuration', element: <AdminRoute><PricingConfiguration /></AdminRoute> },
+  { path: '/admin/pricing-simulation', element: <AdminRoute><PricingSimulation /></AdminRoute> },
+  { path: '/admin/vendor-price-monitoring', element: <AdminRoute><VendorPriceMonitoring /></AdminRoute> },
+  { path: '/admin/margin-tracking', element: <AdminRoute><MarginTracking /></AdminRoute> },
 
   // Unified Admin Dashboard (Plan 121)
   ...adminRoutes,

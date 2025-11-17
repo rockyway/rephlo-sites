@@ -241,18 +241,8 @@ router.get('/cost-distribution', vendorAnalyticsController.getCostDistribution);
  */
 router.post('/export-csv', vendorAnalyticsController.exportCSV);
 
-// ===== Error Handling =====
-
-/**
- * Handle 404 for unmatched analytics routes
- */
-router.use((req, res) => {
-  res.status(404).json({
-    error: {
-      code: 'NOT_FOUND',
-      message: `Analytics endpoint not found: ${req.method} ${req.path}`,
-    },
-  });
-});
+// Note: No catch-all 404 handler here to allow unmatched routes to fall through
+// to other analytics routers (e.g., plan109Router for revenue analytics).
+// Global 404 handling is done in routes/index.ts
 
 export default router;

@@ -14,7 +14,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           // Base styles
           'flex h-10 w-full rounded-md border bg-white dark:bg-deep-navy-800 px-lg py-md text-body',
           'text-deep-navy-900 dark:text-deep-navy-100',
-          'placeholder:text-deep-navy-600 dark:placeholder:text-deep-navy-300',
+          'placeholder:text-deep-navy-400 dark:placeholder:text-deep-navy-500',
           // File input styles
           'file:border-0 file:bg-transparent file:text-body file:font-medium',
           // Enhanced focus state with glow effect

@@ -19,9 +19,10 @@ export interface TierBadgeProps {
  * Color Mapping:
  * - free: Gray
  * - pro: Blue
+ * - pro_plus: Indigo
  * - pro_max: Purple
- * - enterprise_pro: Indigo
- * - enterprise_max: Pink
+ * - enterprise_pro: Amber
+ * - enterprise_pro_plus: Rose
  * - perpetual: Green
  */
 const TierBadge: React.FC<TierBadgeProps> = ({ tier, size = 'md' }) => {
@@ -29,9 +30,10 @@ const TierBadge: React.FC<TierBadgeProps> = ({ tier, size = 'md' }) => {
   const tierLabels: Record<SubscriptionTier, string> = {
     [SubscriptionTier.FREE]: 'FREE',
     [SubscriptionTier.PRO]: 'PRO',
+    [SubscriptionTier.PRO_PLUS]: 'PRO PLUS',
     [SubscriptionTier.PRO_MAX]: 'PRO MAX',
     [SubscriptionTier.ENTERPRISE_PRO]: 'ENTERPRISE PRO',
-    [SubscriptionTier.ENTERPRISE_MAX]: 'ENTERPRISE MAX',
+    [SubscriptionTier.ENTERPRISE_PRO_PLUS]: 'ENTERPRISE PRO PLUS',
     [SubscriptionTier.PERPETUAL]: 'PERPETUAL',
   };
 
@@ -39,9 +41,10 @@ const TierBadge: React.FC<TierBadgeProps> = ({ tier, size = 'md' }) => {
   const tierColors: Record<SubscriptionTier, string> = {
     [SubscriptionTier.FREE]: 'bg-deep-navy-100 dark:bg-deep-navy-700 text-deep-navy-600 dark:text-deep-navy-200',
     [SubscriptionTier.PRO]: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+    [SubscriptionTier.PRO_PLUS]: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300',
     [SubscriptionTier.PRO_MAX]: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
-    [SubscriptionTier.ENTERPRISE_PRO]: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300',
-    [SubscriptionTier.ENTERPRISE_MAX]: 'bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-300',
+    [SubscriptionTier.ENTERPRISE_PRO]: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300',
+    [SubscriptionTier.ENTERPRISE_PRO_PLUS]: 'bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300',
     [SubscriptionTier.PERPETUAL]: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
   };
 
