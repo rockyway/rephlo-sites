@@ -6,6 +6,79 @@
   },
   "openapi": "3.0.3",
   "paths": {
+    "/api/user/credits": {
+      "get": {
+        "operationId": "UserCreditsApiSpec_get_/api/user/credits",
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Get detailed credit information",
+        "description": "Retrieve authenticated user's detailed credit breakdown including:\n- Monthly subscription credits\n- Purchased credits\n- Lifetime usage statistics\n- Total available credits\n\n**Caching Recommendation**: Cache this response for 5 minutes on the client side.\nRe-fetch after API requests that consume credits.\n\n**Rate Limit**: 60 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Detailed Credits Response\nComprehensive breakdown of user's credit allocation and usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedCreditsResponse",
+                  "description": "Successful response with detailed credits"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient scope (requires credits.read)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Rate limit exceeded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user/profile": {
       "get": {
         "operationId": "UserProfileApiSpec_get_/api/user/profile",
@@ -82,6 +155,71 @@
   },
   "components": {
     "schemas": {
+      "DetailedCreditsResponse": {
+        "description": "Detailed Credits Response\nComprehensive breakdown of user's credit allocation and usage",
+        "type": "object",
+        "properties": {
+          "allocation": {
+            "description": "Current credit allocation",
+            "type": "object",
+            "properties": {
+              "monthlyTotal": {
+                "description": "Monthly allocated credits from subscription",
+                "type": "number"
+              },
+              "purchasedTotal": {
+                "description": "One-time purchased credits",
+                "type": "number"
+              },
+              "lifetimeUsed": {
+                "description": "Total credits used over lifetime",
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "lifetimeUsed",
+              "monthlyTotal",
+              "purchasedTotal"
+            ]
+          },
+          "totalAvailable": {
+            "description": "Total available credits (monthly remaining + purchased)",
+            "type": "number"
+          },
+          "lastUpdated": {
+            "description": "Last credit balance update timestamp",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "allocation",
+          "lastUpdated",
+          "totalAvailable"
+        ]
+      },
+      "ApiError": {
+        "description": "API Error Structure",
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {},
+          "field": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ]
+      },
       "UserProfileResponse": {
         "description": "User Profile Response\nComplete user profile with subscription and preferences",
         "type": "object",
@@ -174,27 +312,6 @@
           "preferences",
           "subscription",
           "userId"
-        ]
-      },
-      "ApiError": {
-        "description": "API Error Structure",
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {},
-          "field": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "code",
-          "message"
         ]
       }
     },
