@@ -109,3 +109,55 @@
 
 **Status**: Plan 193 complete. All schema standardized, endpoints verified.
 
+
+
+## 2025-11-17 01:41:09 - Logout Functionality Implementation
+
+**Issue:** User stuck in authentication loop - non-admin users hitting Access Denied page with no way to logout and switch credentials.
+
+**Solution:** Implemented complete logout functionality with OAuth token revocation in two locations:
+1. AdminHeader component - logout button in user menu dropdown
+2. AdminRoute Access Denied page - dedicated logout button alongside "Return to Home"
+
+**Technical Details:**
+- Proper OAuth token revocation (access + refresh tokens) via identity provider
+- Session storage cleanup (tokens, user data, expiry)
+- Graceful error handling (logout succeeds even if server revocation fails)
+- Navigation to /login page for credential switching
+
+**Files Modified:**
+- frontend/src/components/admin/layout/AdminHeader.tsx
+- frontend/src/components/auth/AdminRoute.tsx
+
+**Commits:** e495efe, f2473b9
+
+
+
+## 2025-11-17 01:44:28 - Fixed Identity Provider Session Logout
+
+**Critical Bug:** Logout was incomplete - only cleared frontend tokens but identity provider session remained active via cookies.
+
+**Impact:** Users stuck in authentication loop - clicking logout → login would auto-login with same (non-admin) credentials without showing login form.
+
+**Root Cause Analysis:**
+- Frontend logout cleared sessionStorage (access_token, refresh_token, user)
+- Identity provider maintained separate session via HttpOnly cookies (_session, _session.sig)
+- On next login attempt, IDP detected active session cookies
+- IDP auto-authenticated user without prompting for credentials
+- User redirected back to admin dashboard with same non-admin account
+- Result: Access Denied loop with no way to switch credentials
+
+**Solution:** Complete logout flow including IDP session termination
+1. Revoke OAuth tokens (access + refresh)
+2. Clear frontend sessionStorage
+3. **Redirect to IDP logout endpoint:** http://localhost:7151/logout
+4. IDP clears session cookies (_session, _session.sig)
+5. IDP redirects back to login via post_logout_redirect_uri parameter
+6. User sees fresh login form and can switch to admin credentials
+
+**Files Modified:**
+- frontend/src/components/admin/layout/AdminHeader.tsx (logout handler)
+- frontend/src/components/auth/AdminRoute.tsx (logout handler)
+
+**Commit:** 970b3b4
+
