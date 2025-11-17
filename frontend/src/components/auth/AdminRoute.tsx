@@ -9,9 +9,10 @@
  */
 
 import { ReactNode, useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { authHelpers } from '@/services/api';
+import { revokeToken } from '@/utils/oauth';
 
 interface AdminRouteProps {
   children: ReactNode;
@@ -19,12 +20,41 @@ interface AdminRouteProps {
 
 export function AdminRoute({ children }: AdminRouteProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [authStatus, setAuthStatus] = useState<'unauthenticated' | 'authenticated_non_admin' | 'admin'>('unauthenticated');
 
   useEffect(() => {
     checkAdminAccess();
   }, []);
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      // Get tokens before clearing
+      const accessToken = authHelpers.getAccessToken();
+      const refreshToken = authHelpers.getRefreshToken();
+
+      // Revoke tokens on the server
+      if (accessToken) {
+        await revokeToken(accessToken);
+      }
+      if (refreshToken) {
+        await revokeToken(refreshToken);
+      }
+
+      // Clear local auth data
+      authHelpers.clearAuth('user_logout_from_access_denied');
+
+      // Redirect to login
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if token revocation fails, clear local auth and redirect
+      authHelpers.clearAuth('user_logout_with_error');
+      navigate('/login');
+    }
+  };
 
   async function checkAdminAccess() {
     try {
@@ -135,12 +165,20 @@ export function AdminRoute({ children }: AdminRouteProps) {
           <p className="text-body text-deep-navy-600 dark:text-deep-navy-300 mb-6">
             You need administrator privileges to access this page.
           </p>
-          <button
-            onClick={() => window.location.href = '/'}
-            className="px-6 py-3 bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 rounded-lg hover:bg-rephlo-blue/90 dark:hover:bg-electric-cyan/90 transition-colors"
-          >
-            Return to Home
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => window.location.href = '/'}
+              className="px-6 py-3 bg-deep-navy-200 dark:bg-deep-navy-700 text-deep-navy-900 dark:text-deep-navy-100 rounded-lg hover:bg-deep-navy-300 dark:hover:bg-deep-navy-600 transition-colors"
+            >
+              Return to Home
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-6 py-3 bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 rounded-lg hover:bg-rephlo-blue/90 dark:hover:bg-electric-cyan/90 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     );
