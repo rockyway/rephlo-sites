@@ -27,6 +27,8 @@ import http from 'http';
 import { createApp } from './app';
 import logger, { loggers } from './utils/logger';
 import { PrismaClient } from '@prisma/client';
+import { billingReminderWorker } from './workers/billing-reminder.worker';
+import { prorationInvoiceWorker } from './workers/proration-invoice.worker';
 
 // ===== Configuration =====
 
@@ -85,11 +87,18 @@ const startServer = async (): Promise<void> => {
 
       logger.info('Server: Ready to accept requests');
 
+      // Start background workers (Plan 192: Billing & Proration)
+      logger.info('Server: Starting background workers...');
+      billingReminderWorker.start();
+      prorationInvoiceWorker.start();
+      logger.info('Server: Background workers started successfully');
+
       console.log(`🚀 Rephlo Backend API running on http://${HOST}:${PORT}`);
       console.log(`📍 Environment: ${NODE_ENV}`);
       console.log(`🔍 Health check: http://${HOST}:${PORT}/health`);
       console.log(`📚 API overview: http://${HOST}:${PORT}/`);
       console.log(`🔐 OIDC Discovery: http://${HOST}:${PORT}/.well-known/openid-configuration`);
+      console.log(`⏰ Background workers: Billing reminder (daily 9AM UTC), Proration invoices (hourly)`);
       console.log('');
       console.log('Press Ctrl+C to stop the server');
     });
@@ -160,7 +169,19 @@ function setupGracefulShutdown(server: http.Server): void {
         console.log(`✓ Closed ${connectionsClosed} active connection(s)`);
       }
 
-      // Step 3: Close Redis connection (used for rate limiting)
+      // Step 3: Stop background workers (Plan 192)
+      try {
+        billingReminderWorker.stop();
+        prorationInvoiceWorker.stop();
+        loggers.system('Server: Background workers stopped');
+        console.log('✓ Background workers stopped');
+      } catch (error) {
+        logger.error('Server: Error stopping background workers', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      // Step 4: Close Redis connection (used for rate limiting)
       try {
         const { closeRedisForRateLimiting } = await import('./middleware/ratelimit.middleware');
         await closeRedisForRateLimiting();
@@ -172,11 +193,11 @@ function setupGracefulShutdown(server: http.Server): void {
         });
       }
 
-      // Step 4: Dispose DI container resources (handles Prisma, Redis, etc.)
+      // Step 5: Dispose DI container resources (handles Prisma, Redis, etc.)
       await disposeContainer();
       console.log('✓ DI container disposed');
 
-      // Step 5: Wait a moment to ensure port is fully released
+      // Step 6: Wait a moment to ensure port is fully released
       await new Promise(resolve => setTimeout(resolve, 500));
 
       loggers.system('Server: Graceful shutdown complete');

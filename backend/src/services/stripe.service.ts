@@ -664,3 +664,183 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: Prism
     throw error;
   }
 }
+
+// ============================================================================
+// Plan 192: Billing & Refund Operations
+// ============================================================================
+
+/**
+ * Create invoice item for proration
+ * @param customerId - Stripe customer ID
+ * @param amount - Amount in USD
+ * @param description - Invoice item description
+ * @param metadata - Optional metadata
+ * @returns Created invoice item
+ */
+export async function createInvoiceItem(
+  customerId: string,
+  amount: number,
+  description: string,
+  metadata?: Record<string, string>
+): Promise<Stripe.InvoiceItem> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.info('Creating Stripe invoice item', {
+    customerId,
+    amount,
+    description,
+  });
+
+  try {
+    // Convert USD to cents for Stripe
+    const amountCents = Math.round(amount * 100);
+
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: amountCents,
+      currency: 'usd',
+      description,
+      metadata: metadata || {},
+    });
+
+    logger.info('Created Stripe invoice item', {
+      invoiceItemId: invoiceItem.id,
+      customerId,
+      amount: amountCents,
+    });
+
+    return invoiceItem;
+  } catch (error) {
+    logger.error('Failed to create Stripe invoice item', {
+      customerId,
+      amount,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create and finalize invoice
+ * @param customerId - Stripe customer ID
+ * @returns Created and finalized invoice
+ */
+export async function createAndFinalizeInvoice(customerId: string): Promise<Stripe.Invoice> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.info('Creating and finalizing Stripe invoice', { customerId });
+
+  try {
+    // Create draft invoice
+    const invoice = await stripe.invoices.create({
+      customer: customerId,
+      auto_advance: true, // Automatically finalize and attempt payment
+      collection_method: 'charge_automatically',
+    });
+
+    // Finalize invoice
+    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+
+    logger.info('Created and finalized Stripe invoice', {
+      invoiceId: finalizedInvoice.id,
+      customerId,
+      status: finalizedInvoice.status,
+    });
+
+    return finalizedInvoice;
+  } catch (error) {
+    logger.error('Failed to create and finalize Stripe invoice', {
+      customerId,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create refund for a charge
+ * @param chargeId - Stripe charge ID
+ * @param amount - Refund amount in USD
+ * @param reason - Refund reason
+ * @param metadata - Optional metadata
+ * @returns Created refund
+ */
+export async function createRefund(
+  chargeId: string,
+  amount: number,
+  reason: string,
+  metadata?: Record<string, string>
+): Promise<Stripe.Refund> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.info('Creating Stripe refund', {
+    chargeId,
+    amount,
+    reason,
+  });
+
+  try {
+    // Convert USD to cents for Stripe
+    const amountCents = Math.round(amount * 100);
+
+    const refund = await stripe.refunds.create({
+      charge: chargeId,
+      amount: amountCents,
+      reason: reason as any, // Cast to Stripe's reason type
+      metadata: metadata || {},
+    });
+
+    logger.info('Created Stripe refund', {
+      refundId: refund.id,
+      chargeId,
+      amount: amountCents,
+      status: refund.status,
+    });
+
+    return refund;
+  } catch (error) {
+    logger.error('Failed to create Stripe refund', {
+      chargeId,
+      amount,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get charge details
+ * @param chargeId - Stripe charge ID
+ * @returns Charge object
+ */
+export async function getCharge(chargeId: string): Promise<Stripe.Charge> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.debug('Retrieving Stripe charge', { chargeId });
+
+  try {
+    const charge = await stripe.charges.retrieve(chargeId);
+
+    logger.debug('Retrieved Stripe charge', {
+      chargeId,
+      amount: charge.amount,
+      status: charge.status,
+    });
+
+    return charge;
+  } catch (error) {
+    logger.error('Failed to retrieve Stripe charge', {
+      chargeId,
+      error,
+    });
+    throw error;
+  }
+}

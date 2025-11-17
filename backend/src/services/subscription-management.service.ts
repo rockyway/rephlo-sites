@@ -605,6 +605,16 @@ export class SubscriptionManagementService {
     try {
       const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
       });
 
       if (!subscription) {
@@ -618,6 +628,25 @@ export class SubscriptionManagementService {
       const now = new Date();
       const newStatus = cancelAtPeriodEnd ? subscription.status : 'cancelled';
 
+      // Cancel Stripe subscription if exists
+      if (subscription.stripe_subscription_id) {
+        try {
+          const { cancelStripeSubscription } = await import('./stripe.service');
+          await cancelStripeSubscription(subscription.stripe_subscription_id, cancelAtPeriodEnd);
+          logger.info('SubscriptionManagementService: Stripe subscription cancelled', {
+            subscriptionId,
+            stripeSubscriptionId: subscription.stripe_subscription_id,
+          });
+        } catch (stripeError) {
+          logger.error('SubscriptionManagementService: Failed to cancel Stripe subscription', {
+            subscriptionId,
+            error: stripeError,
+          });
+          // Continue with local cancellation even if Stripe fails
+        }
+      }
+
+      // Update subscription
       await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
@@ -626,6 +655,45 @@ export class SubscriptionManagementService {
           updated_at: now,
         },
       });
+
+      // Revoke remaining credits if immediate cancellation
+      if (!cancelAtPeriodEnd) {
+        try {
+          // TODO: Implement credit revocation logic
+          // const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+          // await creditService.revokeRemainingCredits(subscription.user_id);
+          logger.info('SubscriptionManagementService: Credits revocation pending implementation', {
+            subscriptionId,
+            userId: subscription.user_id,
+          });
+        } catch (creditError) {
+          logger.error('SubscriptionManagementService: Failed to revoke credits', {
+            subscriptionId,
+            error: creditError,
+          });
+        }
+      }
+
+      // Send cancellation confirmation email
+      try {
+        const emailService = container.resolve<import('./email/email.service.interface').IEmailService>('IEmailService');
+        const username = subscription.users.first_name || subscription.users.email.split('@')[0];
+        await emailService.sendCancellationConfirmationEmail(
+          subscription.users.email,
+          username,
+          cancelAtPeriodEnd,
+          cancelAtPeriodEnd ? subscription.current_period_end : undefined
+        );
+        logger.info('SubscriptionManagementService: Cancellation email sent', {
+          subscriptionId,
+          email: subscription.users.email,
+        });
+      } catch (emailError) {
+        logger.error('SubscriptionManagementService: Failed to send cancellation email', {
+          subscriptionId,
+          error: emailError,
+        });
+      }
 
       // Fetch updated subscription with user relation
       const finalSubscription = await this.prisma.subscription_monetization.findUnique({
@@ -651,6 +719,100 @@ export class SubscriptionManagementService {
       return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.cancelSubscription: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel subscription with full refund (admin-initiated)
+   * Section 3.1.2 of Plan 192
+   */
+  async cancelWithRefund(
+    subscriptionId: string,
+    adminUserId: string,
+    refundReason: string,
+    adminNotes?: string
+  ): Promise<{
+    subscription: Subscription;
+    refund: any;
+  }> {
+    logger.info('SubscriptionManagementService.cancelWithRefund', {
+      subscriptionId,
+      adminUserId,
+      refundReason,
+    });
+
+    try {
+      // Get subscription with user details
+      const subscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw notFoundError('Subscription');
+      }
+
+      if (subscription.status === 'cancelled') {
+        throw badRequestError('Subscription is already cancelled');
+      }
+
+      // Get RefundService from container
+      const { RefundService } = await import('./refund.service');
+      const refundService = new RefundService(this.prisma);
+
+      // Create refund request
+      const refund = await refundService.createRefundRequest({
+        userId: subscription.user_id,
+        subscriptionId: subscription.id,
+        refundType: 'manual_admin',
+        refundReason,
+        requestedBy: adminUserId,
+        originalChargeAmountUsd: Number(subscription.base_price_usd),
+        refundAmountUsd: Number(subscription.base_price_usd),
+        stripeChargeId: subscription.stripe_subscription_id || undefined,
+        adminNotes,
+      });
+
+      // Approve and process refund
+      const processedRefund = await refundService.approveAndProcessRefund(refund.id, adminUserId);
+
+      // Cancel subscription immediately
+      const cancelledSubscription = await this.cancelSubscription(subscriptionId, false);
+
+      // Update subscription with refund metadata
+      await this.prisma.subscription_monetization.update({
+        where: { id: subscriptionId },
+        data: {
+          cancellation_reason: refundReason,
+          cancellation_requested_by: adminUserId,
+          refunded_at: new Date(),
+          refund_amount_usd: Number(subscription.base_price_usd),
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('SubscriptionManagementService: Subscription cancelled with refund', {
+        subscriptionId,
+        refundId: processedRefund.id,
+        refundAmount: subscription.base_price_usd,
+      });
+
+      return {
+        subscription: cancelledSubscription,
+        refund: processedRefund,
+      };
+    } catch (error) {
+      logger.error('SubscriptionManagementService.cancelWithRefund: Error', { error });
       throw error;
     }
   }

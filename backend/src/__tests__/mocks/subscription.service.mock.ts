@@ -34,6 +34,10 @@ export class MockSubscriptionService implements ISubscriptionService {
       current_period_end: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
       trial_ends_at: null,
       cancelled_at: null,
+      cancellation_reason: null,
+      cancellation_requested_by: null,
+      refunded_at: null,
+      refund_amount_usd: null,
       created_at: now,
       updated_at: now,
     };

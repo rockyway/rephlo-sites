@@ -759,4 +759,151 @@ export class ProrationService {
       status: event.status,
     };
   }
+
+  // ===========================================================================
+  // Plan 192: Stripe Invoice Generation
+  // ===========================================================================
+
+  /**
+   * Create Stripe invoice for proration charge
+   * Called after tier upgrade/downgrade to generate invoice
+   * @param prorationEventId - Proration event ID
+   * @returns Created Stripe invoice
+   */
+  async createProrationInvoice(prorationEventId: string): Promise<any> {
+    logger.info('ProrationService.createProrationInvoice', { prorationEventId });
+
+    try {
+      // 1. Get proration event
+      const prorationEvent = await this.getProrationEventById(prorationEventId);
+
+      if (!prorationEvent) {
+        throw new NotFoundError('Proration event not found');
+      }
+
+      // Check if invoice already exists
+      if (prorationEvent.stripe_invoice_id) {
+        logger.warn('Proration invoice already created', {
+          prorationEventId,
+          stripeInvoiceId: prorationEvent.stripe_invoice_id,
+        });
+        throw new Error('Proration invoice already exists');
+      }
+
+      // Only create invoices for charges (net_charge_usd > 0)
+      const netChargeUsd = Number(prorationEvent.net_charge_usd);
+      if (netChargeUsd <= 0) {
+        logger.info('No invoice needed for proration (no charge)', {
+          prorationEventId,
+          netChargeUsd,
+        });
+        return null;
+      }
+
+      // 2. Get subscription with user details
+      const subscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: prorationEvent.subscription_id },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw new NotFoundError('Subscription not found');
+      }
+
+      if (!subscription.stripe_customer_id) {
+        throw new Error('No Stripe customer ID found for subscription');
+      }
+
+      // 3. Create Stripe invoice item
+      const { createInvoiceItem, createAndFinalizeInvoice } = await import('./stripe.service');
+
+      const description = `Proration charge: ${prorationEvent.from_tier} → ${prorationEvent.to_tier} (${prorationEvent.days_remaining} days remaining)`;
+
+      await createInvoiceItem(
+        subscription.stripe_customer_id,
+        netChargeUsd,
+        description,
+        {
+          proration_event_id: prorationEventId,
+          user_id: subscription.user_id,
+          subscription_id: subscription.id,
+          from_tier: prorationEvent.from_tier || '',
+          to_tier: prorationEvent.to_tier || '',
+        }
+      );
+
+      // 4. Create and finalize invoice
+      const invoice = await createAndFinalizeInvoice(subscription.stripe_customer_id);
+
+      // 5. Update proration_event with stripe_invoice_id and invoice_created_at
+      await this.prisma.proration_event.update({
+        where: { id: prorationEventId },
+        data: {
+          stripe_invoice_id: invoice.id,
+          invoice_created_at: new Date(),
+          status: 'pending', // Invoice created, waiting for payment
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('ProrationService: Invoice created for proration', {
+        prorationEventId,
+        stripeInvoiceId: invoice.id,
+        amount: netChargeUsd,
+        status: invoice.status,
+      });
+
+      return invoice;
+    } catch (error) {
+      logger.error('ProrationService.createProrationInvoice: Error', {
+        prorationEventId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark proration as paid (called from webhook)
+   * @param prorationEventId - Proration event ID
+   * @param stripeInvoiceId - Stripe invoice ID
+   */
+  async markProrationPaid(prorationEventId: string, stripeInvoiceId: string): Promise<void> {
+    logger.info('ProrationService.markProrationPaid', {
+      prorationEventId,
+      stripeInvoiceId,
+    });
+
+    try {
+      // Update proration_event: status='applied', invoice_paid_at=now()
+      await this.prisma.proration_event.update({
+        where: { id: prorationEventId },
+        data: {
+          status: 'applied', // Payment received, proration applied
+          invoice_paid_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('ProrationService: Proration marked as applied', {
+        prorationEventId,
+        stripeInvoiceId,
+      });
+    } catch (error) {
+      logger.error('ProrationService.markProrationPaid: Error', {
+        prorationEventId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
 }

@@ -384,6 +384,11 @@ export class BillingPaymentsService {
           await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
 
+        // Plan 192: Refund webhook handler
+        case 'charge.refunded':
+          await this.handleChargeRefunded(event.data.object as Stripe.Charge);
+          break;
+
         default:
           logger.debug('BillingPaymentsService: Unhandled webhook event type', { type: event.type });
       }
@@ -428,6 +433,38 @@ export class BillingPaymentsService {
       });
 
       // TODO: Allocate credits for the billing period
+
+      // Plan 192: Check if this is a proration invoice
+      // If invoice metadata contains proration_event_id, mark proration as paid
+      if (invoice.metadata && invoice.metadata.proration_event_id) {
+        const prorationEventId = invoice.metadata.proration_event_id;
+
+        logger.info('BillingPaymentsService: Proration invoice paid, updating proration event', {
+          invoiceId: invoice.id,
+          prorationEventId,
+        });
+
+        try {
+          // Dynamically resolve ProrationService to avoid circular dependencies
+          const { ProrationService } = await import('./proration.service');
+          const prorationService = this.prisma.constructor.name === 'PrismaClient'
+            ? new ProrationService(this.prisma as any)
+            : new ProrationService(this.prisma);
+
+          await prorationService.markProrationPaid(prorationEventId, invoice.id);
+
+          logger.info('BillingPaymentsService: Proration marked as paid', {
+            prorationEventId,
+            invoiceId: invoice.id,
+          });
+        } catch (error) {
+          logger.error('BillingPaymentsService: Failed to mark proration as paid', {
+            prorationEventId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          // Don't throw - invoice payment succeeded, proration update is secondary
+        }
+      }
 
       logger.info('BillingPaymentsService: Payment succeeded handled', { invoice_id: invoice.id });
     } catch (error) {
@@ -516,6 +553,84 @@ export class BillingPaymentsService {
       logger.info('BillingPaymentsService: Subscription deleted', { subscription_id: subscription.id });
     } catch (error) {
       logger.error('BillingPaymentsService.handleSubscriptionDeleted: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Handle charge refunded (Plan 192)
+   * Updates subscription_refund record when Stripe processes a refund
+   * @param charge - Stripe charge object
+   */
+  async handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+    logger.info('BillingPaymentsService.handleChargeRefunded', {
+      charge_id: charge.id,
+      amount_refunded: charge.amount_refunded,
+    });
+
+    try {
+      // Get all refunds for this charge
+      const refunds = charge.refunds?.data || [];
+
+      if (refunds.length === 0) {
+        logger.warn('BillingPaymentsService: No refunds found in charge object', {
+          charge_id: charge.id,
+        });
+        return;
+      }
+
+      // Process each refund
+      for (const stripeRefund of refunds) {
+        logger.debug('BillingPaymentsService: Processing refund', {
+          refund_id: stripeRefund.id,
+          amount: stripeRefund.amount / 100,
+          status: stripeRefund.status,
+        });
+
+        // Find refund record in database by stripe_refund_id
+        const refundRecord = await this.prisma.subscription_refund.findUnique({
+          where: { stripe_refund_id: stripeRefund.id },
+        });
+
+        if (!refundRecord) {
+          logger.warn('BillingPaymentsService: Refund record not found in database', {
+            stripe_refund_id: stripeRefund.id,
+          });
+          continue;
+        }
+
+        // Update refund record to completed
+        await this.prisma.subscription_refund.update({
+          where: { id: refundRecord.id },
+          data: {
+            status: stripeRefund.status === 'succeeded' ? 'completed' : 'failed',
+            stripe_processed_at: new Date(stripeRefund.created * 1000),
+            processed_at: new Date(),
+            failure_reason:
+              stripeRefund.status === 'failed' && stripeRefund.failure_reason
+                ? stripeRefund.failure_reason
+                : null,
+            updated_at: new Date(),
+          },
+        });
+
+        logger.info('BillingPaymentsService: Refund record updated', {
+          refund_id: refundRecord.id,
+          stripe_refund_id: stripeRefund.id,
+          status: stripeRefund.status,
+          amount: stripeRefund.amount / 100,
+        });
+      }
+
+      logger.info('BillingPaymentsService: Charge refunded handled', {
+        charge_id: charge.id,
+        refunds_processed: refunds.length,
+      });
+    } catch (error) {
+      logger.error('BillingPaymentsService.handleChargeRefunded: Error', {
+        error,
+        charge_id: charge.id,
+      });
       throw error;
     }
   }

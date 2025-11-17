@@ -24,6 +24,8 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { successResponse } from '../utils/responses';
+import { IRefundService } from '../interfaces/services/refund.interface';
+import { SubscriptionManagementService } from '../services/subscription-management.service';
 
 // =============================================================================
 // Admin Controller Class
@@ -31,7 +33,11 @@ import { successResponse } from '../utils/responses';
 
 @injectable()
 export class AdminController {
-  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+  constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
+    @inject('IRefundService') private refundService: IRefundService,
+    private subscriptionManagementService: SubscriptionManagementService
+  ) {
     logger.debug('AdminController: Initialized');
   }
 
@@ -755,6 +761,486 @@ export class AdminController {
           message: 'Failed to send test webhook',
           details:
             process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
+        },
+      });
+    }
+  }
+
+  // ===========================================================================
+  // Refund Management Endpoints (Plan 192 Section 7)
+  // ===========================================================================
+
+  /**
+   * GET /admin/refunds
+   * List all pending refund requests (admin review queue)
+   *
+   * Query Parameters:
+   * - page: number (default: 1)
+   * - limit: number (default: 20, max: 100)
+   * - status: 'pending' | 'approved' | 'processing' | 'completed' | 'failed' | 'cancelled'
+   * - refundType: 'manual_admin' | 'proration_credit' | 'chargeback'
+   *
+   * Response 200:
+   * {
+   *   "status": "success",
+   *   "data": {
+   *     "refunds": [...],
+   *     "pagination": {
+   *       "page": 1,
+   *       "limit": 20,
+   *       "total": 5,
+   *       "totalPages": 1
+   *     }
+   *   }
+   * }
+   */
+  async listRefunds(req: Request, res: Response): Promise<void> {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+      const status = req.query.status as string | undefined;
+      const refundType = req.query.refundType as string | undefined;
+
+      const skip = (page - 1) * limit;
+
+      // Build where clause for filtering
+      const where: any = {};
+
+      if (status) {
+        where.status = status;
+      }
+
+      if (refundType) {
+        where.refund_type = refundType;
+      }
+
+      // Get total count for pagination
+      const total = await this.prisma.subscription_refund.count({ where });
+
+      // Get refunds with user and subscription details
+      const refunds = await this.prisma.subscription_refund.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+          subscription_monetization: {
+            select: {
+              id: true,
+              tier: true,
+              status: true,
+              base_price_usd: true,
+            },
+          },
+          admin_user: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+        orderBy: { requested_at: 'desc' },
+      });
+
+      logger.info('AdminController.listRefunds: Refunds retrieved', {
+        page,
+        limit,
+        total,
+        status,
+        refundType,
+      });
+
+      // Transform to camelCase
+      res.json(
+        successResponse(
+          refunds.map((refund) => ({
+            id: refund.id,
+            userId: refund.user_id,
+            subscriptionId: refund.subscription_id,
+            refundType: refund.refund_type,
+            refundReason: refund.refund_reason,
+            requestedBy: refund.requested_by,
+            requestedAt: refund.requested_at.toISOString(),
+            originalChargeAmountUsd: Number(refund.original_charge_amount_usd),
+            refundAmountUsd: Number(refund.refund_amount_usd),
+            stripeChargeId: refund.stripe_charge_id,
+            stripeRefundId: refund.stripe_refund_id,
+            status: refund.status,
+            processedAt: refund.processed_at?.toISOString() || null,
+            stripeProcessedAt: refund.stripe_processed_at?.toISOString() || null,
+            failureReason: refund.failure_reason,
+            adminNotes: refund.admin_notes,
+            ipAddress: refund.ip_address,
+            createdAt: refund.created_at.toISOString(),
+            updatedAt: refund.updated_at.toISOString(),
+            user: {
+              id: refund.users.id,
+              email: refund.users.email,
+              firstName: refund.users.first_name,
+              lastName: refund.users.last_name,
+            },
+            subscription: {
+              id: refund.subscription_monetization.id,
+              tier: refund.subscription_monetization.tier,
+              status: refund.subscription_monetization.status,
+              basePriceUsd: Number(refund.subscription_monetization.base_price_usd),
+            },
+            adminUser: {
+              id: refund.admin_user.id,
+              email: refund.admin_user.email,
+              firstName: refund.admin_user.first_name,
+              lastName: refund.admin_user.last_name,
+            },
+          })),
+          {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+            hasMore: page * limit < total,
+          }
+        )
+      );
+    } catch (error) {
+      logger.error('AdminController.listRefunds: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      res.status(500).json({
+        error: {
+          code: 'internal_error',
+          message: 'Failed to retrieve refunds',
+          details:
+            process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
+        },
+      });
+    }
+  }
+
+  /**
+   * POST /admin/refunds/:id/approve
+   * Approve a pending refund request and process with Stripe
+   *
+   * Path Parameters:
+   * - id: string (refund ID)
+   *
+   * Response 200:
+   * {
+   *   "status": "success",
+   *   "data": {
+   *     "refund": { ... }
+   *   }
+   * }
+   *
+   * Response 404: Refund not found
+   * Response 400: Invalid refund status
+   * Response 500: Server error
+   */
+  async approveRefund(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const adminUserId = (req as any).user?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'Admin user ID not found in request',
+          },
+        });
+        return;
+      }
+
+      // Call RefundService to approve and process
+      const refund = await this.refundService.approveAndProcessRefund(id, adminUserId);
+
+      logger.info('AdminController.approveRefund: Refund approved', {
+        refundId: id,
+        adminUserId,
+        stripeRefundId: refund.stripe_refund_id,
+      });
+
+      // Transform to camelCase
+      res.json(
+        successResponse({
+          id: refund.id,
+          userId: refund.user_id,
+          subscriptionId: refund.subscription_id,
+          refundType: refund.refund_type,
+          refundReason: refund.refund_reason,
+          requestedBy: refund.requested_by,
+          requestedAt: refund.requested_at.toISOString(),
+          originalChargeAmountUsd: Number(refund.original_charge_amount_usd),
+          refundAmountUsd: Number(refund.refund_amount_usd),
+          stripeChargeId: refund.stripe_charge_id,
+          stripeRefundId: refund.stripe_refund_id,
+          status: refund.status,
+          processedAt: refund.processed_at?.toISOString() || null,
+          stripeProcessedAt: refund.stripe_processed_at?.toISOString() || null,
+          failureReason: refund.failure_reason,
+          adminNotes: refund.admin_notes,
+          createdAt: refund.created_at.toISOString(),
+          updatedAt: refund.updated_at.toISOString(),
+        })
+      );
+    } catch (error) {
+      logger.error('AdminController.approveRefund: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Determine error status code
+      const statusCode =
+        error instanceof Error && error.message.includes('not found')
+          ? 404
+          : error instanceof Error && error.message.includes('Cannot approve')
+          ? 400
+          : 500;
+
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 404 ? 'not_found' : statusCode === 400 ? 'invalid_status' : 'internal_error',
+          message: error instanceof Error ? error.message : 'Failed to approve refund',
+          details:
+            process.env.NODE_ENV === 'development' && error instanceof Error
+              ? error.stack
+              : undefined,
+        },
+      });
+    }
+  }
+
+  /**
+   * POST /admin/refunds/:id/cancel
+   * Cancel a pending refund request
+   *
+   * Path Parameters:
+   * - id: string (refund ID)
+   *
+   * Request Body:
+   * {
+   *   "reason": "string"
+   * }
+   *
+   * Response 200:
+   * {
+   *   "status": "success",
+   *   "data": {
+   *     "refund": { ... }
+   *   }
+   * }
+   *
+   * Response 404: Refund not found
+   * Response 400: Invalid refund status
+   * Response 500: Server error
+   */
+  async cancelRefund(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const adminUserId = (req as any).user?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'Admin user ID not found in request',
+          },
+        });
+        return;
+      }
+
+      if (!reason || typeof reason !== 'string') {
+        res.status(400).json({
+          error: {
+            code: 'invalid_input',
+            message: 'Cancellation reason is required',
+          },
+        });
+        return;
+      }
+
+      // Call RefundService to cancel refund
+      const refund = await this.refundService.cancelRefund(id, adminUserId, reason);
+
+      logger.info('AdminController.cancelRefund: Refund cancelled', {
+        refundId: id,
+        adminUserId,
+        reason,
+      });
+
+      // Transform to camelCase
+      res.json(
+        successResponse({
+          id: refund.id,
+          userId: refund.user_id,
+          subscriptionId: refund.subscription_id,
+          refundType: refund.refund_type,
+          refundReason: refund.refund_reason,
+          requestedBy: refund.requested_by,
+          requestedAt: refund.requested_at.toISOString(),
+          originalChargeAmountUsd: Number(refund.original_charge_amount_usd),
+          refundAmountUsd: Number(refund.refund_amount_usd),
+          stripeChargeId: refund.stripe_charge_id,
+          stripeRefundId: refund.stripe_refund_id,
+          status: refund.status,
+          processedAt: refund.processed_at?.toISOString() || null,
+          stripeProcessedAt: refund.stripe_processed_at?.toISOString() || null,
+          failureReason: refund.failure_reason,
+          adminNotes: refund.admin_notes,
+          createdAt: refund.created_at.toISOString(),
+          updatedAt: refund.updated_at.toISOString(),
+        })
+      );
+    } catch (error) {
+      logger.error('AdminController.cancelRefund: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Determine error status code
+      const statusCode =
+        error instanceof Error && error.message.includes('not found')
+          ? 404
+          : error instanceof Error && error.message.includes('Cannot cancel')
+          ? 400
+          : 500;
+
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 404 ? 'not_found' : statusCode === 400 ? 'invalid_status' : 'internal_error',
+          message: error instanceof Error ? error.message : 'Failed to cancel refund',
+          details:
+            process.env.NODE_ENV === 'development' && error instanceof Error
+              ? error.stack
+              : undefined,
+        },
+      });
+    }
+  }
+
+  /**
+   * POST /admin/subscriptions/:id/cancel-with-refund
+   * Manual cancel subscription with full refund
+   * (For users who forgot to cancel before billing)
+   *
+   * Path Parameters:
+   * - id: string (subscription ID)
+   *
+   * Request Body:
+   * {
+   *   "refundReason": "string",
+   *   "adminNotes": "string (optional)"
+   * }
+   *
+   * Response 200:
+   * {
+   *   "status": "success",
+   *   "data": {
+   *     "subscription": { ... },
+   *     "refund": { ... }
+   *   }
+   * }
+   *
+   * Response 404: Subscription not found
+   * Response 400: Invalid subscription status
+   * Response 500: Server error
+   */
+  async cancelSubscriptionWithRefund(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { refundReason, adminNotes } = req.body;
+      const adminUserId = (req as any).user?.sub || (req as any).user?.id;
+
+      if (!adminUserId) {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'Admin user ID not found in request',
+          },
+        });
+        return;
+      }
+
+      if (!refundReason || typeof refundReason !== 'string') {
+        res.status(400).json({
+          error: {
+            code: 'invalid_input',
+            message: 'Refund reason is required',
+          },
+        });
+        return;
+      }
+
+      // Call SubscriptionManagementService to cancel with refund
+      const result = await this.subscriptionManagementService.cancelWithRefund(
+        id,
+        adminUserId,
+        refundReason,
+        adminNotes
+      );
+
+      logger.info('AdminController.cancelSubscriptionWithRefund: Subscription cancelled with refund', {
+        subscriptionId: id,
+        adminUserId,
+        refundId: result.refund.id,
+      });
+
+      // Transform to camelCase (subscription is already mapped by service)
+      res.json(
+        successResponse({
+          subscription: result.subscription,
+          refund: {
+            id: result.refund.id,
+            userId: result.refund.user_id,
+            subscriptionId: result.refund.subscription_id,
+            refundType: result.refund.refund_type,
+            refundReason: result.refund.refund_reason,
+            requestedBy: result.refund.requested_by,
+            requestedAt: result.refund.requested_at.toISOString(),
+            originalChargeAmountUsd: Number(result.refund.original_charge_amount_usd),
+            refundAmountUsd: Number(result.refund.refund_amount_usd),
+            stripeChargeId: result.refund.stripe_charge_id,
+            stripeRefundId: result.refund.stripe_refund_id,
+            status: result.refund.status,
+            processedAt: result.refund.processed_at?.toISOString() || null,
+            stripeProcessedAt: result.refund.stripe_processed_at?.toISOString() || null,
+            failureReason: result.refund.failure_reason,
+            adminNotes: result.refund.admin_notes,
+            createdAt: result.refund.created_at.toISOString(),
+            updatedAt: result.refund.updated_at.toISOString(),
+          },
+        })
+      );
+    } catch (error) {
+      logger.error('AdminController.cancelSubscriptionWithRefund: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Determine error status code
+      const statusCode =
+        error instanceof Error && error.message.includes('not found')
+          ? 404
+          : error instanceof Error &&
+            (error.message.includes('already cancelled') || error.message.includes('Invalid'))
+          ? 400
+          : 500;
+
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 404 ? 'not_found' : statusCode === 400 ? 'invalid_status' : 'internal_error',
+          message: error instanceof Error ? error.message : 'Failed to cancel subscription with refund',
+          details:
+            process.env.NODE_ENV === 'development' && error instanceof Error
+              ? error.stack
+              : undefined,
         },
       });
     }

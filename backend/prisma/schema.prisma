@@ -804,24 +804,24 @@ model role_change_log {
 }
 
 model subscription_monetization {
-  id                        String                 @id @db.Uuid
-  user_id                   String                 @db.Uuid
+  id                        String                @id @db.Uuid
+  user_id                   String                @db.Uuid
   tier                      subscription_tier
-  billing_cycle             String                 @db.VarChar(20)
-  status                    String                 @db.VarChar(20)
-  base_price_usd            Decimal                @db.Decimal(10, 2)
+  billing_cycle             String                @db.VarChar(20)
+  status                    String                @db.VarChar(20)
+  base_price_usd            Decimal               @db.Decimal(10, 2)
   monthly_credit_allocation Int
-  stripe_customer_id        String?                @unique @db.VarChar(255)
-  stripe_subscription_id    String?                @unique @db.VarChar(255)
+  stripe_customer_id        String?               @unique @db.VarChar(255)
+  stripe_subscription_id    String?               @unique @db.VarChar(255)
   current_period_start      DateTime
   current_period_end        DateTime
   trial_ends_at             DateTime?
   cancelled_at              DateTime?
   cancellation_reason       String?
-  cancellation_requested_by String?                @db.Uuid
+  cancellation_requested_by String?               @db.Uuid
   refunded_at               DateTime?
-  refund_amount_usd         Decimal?               @db.Decimal(10, 2)
-  created_at                DateTime               @default(now())
+  refund_amount_usd         Decimal?              @db.Decimal(10, 2)
+  created_at                DateTime              @default(now())
   updated_at                DateTime
   billing_invoice           billing_invoice[]
   coupon_redemption         coupon_redemption[]
@@ -830,7 +830,7 @@ model subscription_monetization {
   payment_transaction       payment_transaction[]
   proration_event           proration_event[]
   subscription_refund       subscription_refund[]
-  users                     users                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  users                     users                 @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([status, billing_cycle, base_price_usd], map: "idx_subscription_mrr")
   @@index([current_period_end])
@@ -873,24 +873,24 @@ model subscription_refund {
 }
 
 model subscription_tier_config {
-  id                        String   @id @db.Uuid
-  tier_name                 String   @unique @db.VarChar(50)
-  monthly_price_usd         Decimal  @db.Decimal(10, 2)
-  annual_price_usd          Decimal  @db.Decimal(10, 2)
+  id                        String  @id @db.Uuid
+  tier_name                 String  @unique @db.VarChar(50)
+  monthly_price_usd         Decimal @db.Decimal(10, 2)
+  annual_price_usd          Decimal @db.Decimal(10, 2)
   monthly_credit_allocation Int
   max_credit_rollover       Int
-  features                  Json     @default("{}")
-  is_active                 Boolean  @default(true)
+  features                  Json    @default("{}")
+  is_active                 Boolean @default(true)
 
   // Plan 190: Tier Credit Management - Version tracking and rollout control
-  config_version            Int      @default(1)
-  last_modified_by          String?  @db.Uuid
-  last_modified_at          DateTime @default(now())
-  apply_to_existing_users   Boolean  @default(false)
-  rollout_start_date        DateTime?
+  config_version          Int       @default(1)
+  last_modified_by        String?   @db.Uuid
+  last_modified_at        DateTime  @default(now())
+  apply_to_existing_users Boolean   @default(false)
+  rollout_start_date      DateTime?
 
-  created_at                DateTime @default(now())
-  updated_at                DateTime
+  created_at DateTime @default(now())
+  updated_at DateTime
 
   @@index([tier_name])
   @@map("subscription_tier_config")
@@ -898,25 +898,25 @@ model subscription_tier_config {
 
 // Plan 190: Tier Credit Management - Configuration change history
 model tier_config_history {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tier_config_id        String   @db.Uuid
-  tier_name             String   @db.VarChar(50)
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier_config_id String @db.Uuid
+  tier_name      String @db.VarChar(50)
 
   // Historical values
-  previous_credits      Int
-  new_credits           Int
-  previous_price_usd    Decimal  @db.Decimal(10, 2)
-  new_price_usd         Decimal  @db.Decimal(10, 2)
+  previous_credits   Int
+  new_credits        Int
+  previous_price_usd Decimal @db.Decimal(10, 2)
+  new_price_usd      Decimal @db.Decimal(10, 2)
 
   // Change metadata
-  change_reason         String   @db.Text
-  change_type           String   @db.VarChar(50) // 'credit_increase', 'credit_decrease', 'price_change'
-  affected_users_count  Int      @default(0)
+  change_reason        String @db.Text
+  change_type          String @db.VarChar(50) // 'credit_increase', 'credit_decrease', 'price_change'
+  affected_users_count Int    @default(0)
 
   // Audit fields
-  changed_by            String   @db.Uuid
-  changed_at            DateTime @default(now())
-  applied_at            DateTime?
+  changed_by String    @db.Uuid
+  changed_at DateTime  @default(now())
+  applied_at DateTime?
 
   @@index([tier_name, changed_at(sort: Desc)])
   @@index([changed_by])

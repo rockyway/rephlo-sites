@@ -1000,4 +1000,94 @@ router.post(
  */
 router.use('/analytics', vendorAnalyticsRoutes);
 
+// =============================================================================
+// Refund Management Endpoints (Plan 192 Section 7)
+// =============================================================================
+
+/**
+ * GET /admin/refunds
+ * List all refund requests with pagination and filtering
+ *
+ * Query parameters:
+ * - page: number (default: 1)
+ * - limit: number (default: 20, max: 100)
+ * - status: 'pending' | 'approved' | 'processing' | 'completed' | 'failed' | 'cancelled' (optional)
+ * - refundType: 'manual_admin' | 'proration_credit' | 'chargeback' (optional)
+ *
+ * Returns:
+ * - refunds: Array of refund records with user and subscription details
+ * - pagination: { total, page, limit, totalPages }
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.get(
+  '/refunds',
+  auditLog({ action: 'read', resourceType: 'refund' }),
+  asyncHandler(adminController.listRefunds.bind(adminController))
+);
+
+/**
+ * POST /admin/refunds/:id/approve
+ * Approve a pending refund request and process with Stripe
+ *
+ * Path parameters:
+ * - id: string (refund ID)
+ *
+ * Returns:
+ * - Updated refund record with 'processing' status
+ * - Stripe refund ID
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.post(
+  '/refunds/:id/approve',
+  auditLog({ action: 'update', resourceType: 'refund', captureRequestBody: true }),
+  asyncHandler(adminController.approveRefund.bind(adminController))
+);
+
+/**
+ * POST /admin/refunds/:id/cancel
+ * Cancel a pending refund request
+ *
+ * Path parameters:
+ * - id: string (refund ID)
+ *
+ * Request body:
+ * - reason: string (cancellation reason)
+ *
+ * Returns:
+ * - Updated refund record with 'cancelled' status
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.post(
+  '/refunds/:id/cancel',
+  auditLog({ action: 'update', resourceType: 'refund', captureRequestBody: true }),
+  asyncHandler(adminController.cancelRefund.bind(adminController))
+);
+
+/**
+ * POST /admin/subscriptions/:id/cancel-with-refund
+ * Manual cancel subscription with full refund
+ * (For users who forgot to cancel before billing)
+ *
+ * Path parameters:
+ * - id: string (subscription ID)
+ *
+ * Request body:
+ * - refundReason: string (required)
+ * - adminNotes: string (optional)
+ *
+ * Returns:
+ * - subscription: Cancelled subscription record
+ * - refund: Created refund record
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.post(
+  '/subscriptions/:id/cancel-with-refund',
+  auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true }),
+  asyncHandler(adminController.cancelSubscriptionWithRefund.bind(adminController))
+);
+
 export default router;

@@ -246,6 +246,9 @@ import { CouponAnalyticsService } from './services/coupon-analytics.service';
 import { TierConfigService } from './services/tier-config.service';
 import { CreditUpgradeService } from './services/credit-upgrade.service';
 
+// Plan 192: Refund Service
+import { RefundService } from './services/refund.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -301,6 +304,9 @@ container.registerSingleton(CouponAnalyticsService);
 // Register Tier Config Management service (Plan 190)
 container.register('ITierConfigService', { useClass: TierConfigService });
 container.register('ICreditUpgradeService', { useClass: CreditUpgradeService });
+
+// Register Refund service (Plan 192)
+container.register('IRefundService', { useClass: RefundService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
