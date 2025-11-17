@@ -239,6 +239,9 @@ import { AdminProfitabilityService } from './services/admin-profitability.servic
 // Plan 111: Coupon Analytics Service
 import { CouponAnalyticsService } from './services/coupon-analytics.service';
 
+// Plan 190: Tier Config Management Service
+import { TierConfigService } from './services/tier-config.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -287,6 +290,9 @@ container.register('AdminProfitabilityService', { useClass: AdminProfitabilitySe
 
 // Register Coupon Analytics service (Plan 111)
 container.registerSingleton(CouponAnalyticsService);
+
+// Register Tier Config Management service (Plan 190)
+container.register('ITierConfigService', { useClass: TierConfigService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
