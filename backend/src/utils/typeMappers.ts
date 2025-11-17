@@ -481,3 +481,66 @@ export function dateToIsoString(date: Date | null | undefined): string | null {
 export function isoStringToDate(isoString: string | null | undefined): Date | null {
   return isoString ? new Date(isoString) : null;
 }
+
+// =============================================================================
+// TIER CONFIG MAPPERS (Plan 190)
+// =============================================================================
+
+/**
+ * Map database subscription_tier_config to API TierConfig type
+ * Transforms snake_case database fields to camelCase API fields
+ */
+export function mapTierConfigToApiType(
+  dbConfig: Prisma.subscription_tier_configGetPayload<{}>
+): import('@rephlo/shared-types').TierConfig {
+  return {
+    id: dbConfig.id,
+    tierName: dbConfig.tier_name as any, // SubscriptionTier enum
+    monthlyPriceUsd: decimalToNumber(dbConfig.monthly_price_usd),
+    annualPriceUsd: decimalToNumber(dbConfig.annual_price_usd),
+    monthlyCreditAllocation: dbConfig.monthly_credit_allocation,
+    maxCreditRollover: dbConfig.max_credit_rollover,
+    features: dbConfig.features as Record<string, any>,
+    isActive: dbConfig.is_active,
+
+    // Version tracking fields
+    configVersion: dbConfig.config_version,
+    lastModifiedBy: dbConfig.last_modified_by,
+    lastModifiedAt: dbConfig.last_modified_at.toISOString(),
+    applyToExistingUsers: dbConfig.apply_to_existing_users,
+    rolloutStartDate: dateToIsoString(dbConfig.rollout_start_date),
+
+    createdAt: dbConfig.created_at.toISOString(),
+    updatedAt: dbConfig.updated_at.toISOString(),
+  };
+}
+
+/**
+ * Map database tier_config_history to API TierConfigHistory type
+ * Transforms snake_case database fields to camelCase API fields
+ */
+export function mapTierConfigHistoryToApiType(
+  dbHistory: Prisma.tier_config_historyGetPayload<{}>
+): import('@rephlo/shared-types').TierConfigHistory {
+  return {
+    id: dbHistory.id,
+    tierConfigId: dbHistory.tier_config_id,
+    tierName: dbHistory.tier_name,
+
+    // Historical values
+    previousCredits: dbHistory.previous_credits,
+    newCredits: dbHistory.new_credits,
+    previousPriceUsd: decimalToNumber(dbHistory.previous_price_usd),
+    newPriceUsd: decimalToNumber(dbHistory.new_price_usd),
+
+    // Change metadata
+    changeReason: dbHistory.change_reason,
+    changeType: dbHistory.change_type as any, // TierChangeType enum
+    affectedUsersCount: dbHistory.affected_users_count,
+
+    // Audit fields
+    changedBy: dbHistory.changed_by,
+    changedAt: dbHistory.changed_at.toISOString(),
+    appliedAt: dateToIsoString(dbHistory.applied_at),
+  };
+}

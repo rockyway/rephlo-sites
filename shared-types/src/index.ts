@@ -15,6 +15,9 @@ export * from './billing.types';
 // Credit & Token Types
 export * from './credit.types';
 
+// Tier Configuration Types (Plan 190)
+export * from './tier-config.types';
+
 // Response Types
 export * from './response.types';
 
@@ -68,6 +71,19 @@ export type {
 } from './credit.types';
 
 export type {
+  // Tier Config (Plan 190)
+  TierConfig,
+  TierConfigHistory,
+  UpdateImpact,
+  ValidationResult,
+  UpgradeResult,
+  UpdateTierCreditsRequest,
+  UpdateTierPriceRequest,
+  PreviewUpdateRequest,
+  TierConfigUpdateResponse,
+} from './tier-config.types';
+
+export type {
   // Response
   ApiResponse,
   ApiError,
@@ -116,6 +132,11 @@ export {
   PricingConfigApprovalStatus,
 } from './credit.types';
 
+export {
+  // Tier Config enums (Plan 190)
+  TierChangeType,
+} from './tier-config.types';
+
 // Re-export commonly used Zod schemas
 export {
   // User schemas
@@ -142,6 +163,16 @@ export {
   // Billing schemas
   SubscriptionStatsSchema,
 } from './billing.types';
+
+export {
+  // Tier Config schemas (Plan 190)
+  TierChangeTypeSchema,
+  TierConfigSchema,
+  TierConfigHistorySchema,
+  UpdateTierCreditsRequestSchema,
+  UpdateTierPriceRequestSchema,
+  PreviewUpdateRequestSchema,
+} from './tier-config.types';
 
 export {
   // Response schemas

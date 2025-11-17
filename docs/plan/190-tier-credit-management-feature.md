@@ -197,6 +197,184 @@ interface UpgradeResult {
 }
 ```
 
+### Type Transformation Layer
+
+**Critical Architecture Component**: This project follows a strict naming convention pattern that requires transformation between database and API layers.
+
+#### Naming Convention Standards
+
+| Context | Convention | Example |
+|---------|-----------|---------|
+| Database (Prisma) | `snake_case` | `monthly_credit_allocation`, `last_modified_by` |
+| API Responses (JSON) | `camelCase` | `monthlyCreditAllocation`, `lastModifiedBy` |
+| TypeScript Interfaces | `camelCase` | `interface TierConfig { monthlyCreditAllocation: number }` |
+
+#### Shared Types Package
+
+**Location**: `shared-types/src/tier-config.types.ts`
+
+All TypeScript interfaces are defined in the shared-types package to ensure consistency between backend and frontend:
+
+```typescript
+// ✅ CORRECT - API/Service types in camelCase
+export interface TierConfig {
+  id: string;
+  tierName: SubscriptionTier;
+  monthlyPriceUsd: number;
+  annualPriceUsd: number;
+  monthlyCreditAllocation: number;
+  maxCreditRollover: number;
+  features: Record<string, any>;
+  isActive: boolean;
+  configVersion: number;
+  lastModifiedBy: string | null;
+  lastModifiedAt: string; // ISO 8601
+  applyToExistingUsers: boolean;
+  rolloutStartDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TierConfigHistory {
+  id: string;
+  tierConfigId: string;
+  tierName: string;
+  previousCredits: number;
+  newCredits: number;
+  previousPriceUsd: number;
+  newPriceUsd: number;
+  changeReason: string;
+  changeType: TierChangeType;
+  affectedUsersCount: number;
+  changedBy: string;
+  changedAt: string;
+  appliedAt: string | null;
+}
+
+export enum TierChangeType {
+  CREDIT_INCREASE = 'credit_increase',
+  CREDIT_DECREASE = 'credit_decrease',
+  PRICE_CHANGE = 'price_change',
+  FEATURE_UPDATE = 'feature_update',
+  ROLLOVER_CHANGE = 'rollover_change',
+}
+```
+
+#### Type Mapper Functions
+
+**Location**: `backend/src/utils/typeMappers.ts`
+
+All database-to-API transformations MUST use centralized mapper functions:
+
+```typescript
+/**
+ * Map database subscription_tier_config to API TierConfig type
+ * Transforms snake_case database fields to camelCase API fields
+ */
+export function mapTierConfigToApiType(
+  dbConfig: Prisma.subscription_tier_configGetPayload<{}>
+): TierConfig {
+  return {
+    id: dbConfig.id,
+    tierName: dbConfig.tier_name as any,
+    monthlyPriceUsd: decimalToNumber(dbConfig.monthly_price_usd),
+    annualPriceUsd: decimalToNumber(dbConfig.annual_price_usd),
+    monthlyCreditAllocation: dbConfig.monthly_credit_allocation,
+    maxCreditRollover: dbConfig.max_credit_rollover,
+    features: dbConfig.features as Record<string, any>,
+    isActive: dbConfig.is_active,
+    configVersion: dbConfig.config_version,
+    lastModifiedBy: dbConfig.last_modified_by,
+    lastModifiedAt: dbConfig.last_modified_at.toISOString(),
+    applyToExistingUsers: dbConfig.apply_to_existing_users,
+    rolloutStartDate: dateToIsoString(dbConfig.rollout_start_date),
+    createdAt: dbConfig.created_at.toISOString(),
+    updatedAt: dbConfig.updated_at.toISOString(),
+  };
+}
+
+/**
+ * Map database tier_config_history to API TierConfigHistory type
+ */
+export function mapTierConfigHistoryToApiType(
+  dbHistory: Prisma.tier_config_historyGetPayload<{}>
+): TierConfigHistory {
+  return {
+    id: dbHistory.id,
+    tierConfigId: dbHistory.tier_config_id,
+    tierName: dbHistory.tier_name,
+    previousCredits: dbHistory.previous_credits,
+    newCredits: dbHistory.new_credits,
+    previousPriceUsd: decimalToNumber(dbHistory.previous_price_usd),
+    newPriceUsd: decimalToNumber(dbHistory.new_price_usd),
+    changeReason: dbHistory.change_reason,
+    changeType: dbHistory.change_type as any,
+    affectedUsersCount: dbHistory.affected_users_count,
+    changedBy: dbHistory.changed_by,
+    changedAt: dbHistory.changed_at.toISOString(),
+    appliedAt: dateToIsoString(dbHistory.applied_at),
+  };
+}
+```
+
+#### Usage Pattern in Services
+
+**✅ CORRECT Pattern:**
+```typescript
+class TierConfigService {
+  async getTierConfigByName(tierName: string): Promise<TierConfig> {
+    // 1. Query database (snake_case fields)
+    const dbConfig = await this.prisma.subscription_tier_config.findUnique({
+      where: { tier_name: tierName }
+    });
+
+    if (!dbConfig) {
+      throw new Error(`Tier config not found: ${tierName}`);
+    }
+
+    // 2. Transform to API type (camelCase fields)
+    return mapTierConfigToApiType(dbConfig);
+  }
+
+  async getAllTierConfigs(): Promise<TierConfig[]> {
+    const dbConfigs = await this.prisma.subscription_tier_config.findMany();
+
+    // Transform array of database results
+    return dbConfigs.map(mapTierConfigToApiType);
+  }
+}
+```
+
+**❌ WRONG Pattern (Direct Prisma Return):**
+```typescript
+// DON'T DO THIS - Exposes snake_case to API
+async getTierConfigByName(tierName: string) {
+  return await this.prisma.subscription_tier_config.findUnique({
+    where: { tier_name: tierName }
+  });
+  // Returns: { monthly_credit_allocation: 1500 } ❌
+}
+```
+
+#### Key Transformation Helpers
+
+Located in `backend/src/utils/typeMappers.ts`:
+
+- **`decimalToNumber()`** - Converts Prisma Decimal to JavaScript number
+- **`dateToIsoString()`** - Converts Date | null to string | null (ISO 8601)
+- **`mapTierConfigToApiType()`** - Transforms subscription_tier_config
+- **`mapTierConfigHistoryToApiType()`** - Transforms tier_config_history
+
+#### References
+
+For complete API development standards including response formats, error handling, and testing requirements:
+
+- 📖 **[API Development Standards](docs/reference/156-api-standards.md)**
+- 📖 **[DTO Pattern Guide](docs/reference/155-dto-pattern-guide.md)**
+- 📖 **[camelCase Standardization Report](docs/progress/161-camelcase-standardization-completion-report.md)**
+
+---
+
 ### API Endpoints
 
 #### Admin Tier Management API
