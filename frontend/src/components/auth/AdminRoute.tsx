@@ -92,10 +92,10 @@ export function AdminRoute({ children }: AdminRouteProps) {
   // Show loading spinner while checking authentication
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
+      <div className="min-h-screen flex items-center justify-center bg-cream dark:bg-deep-navy-900">
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-body text-deep-navy-300">
+          <p className="text-body text-deep-navy-600 dark:text-deep-navy-300">
             Verifying admin access...
           </p>
         </div>
@@ -112,11 +112,11 @@ export function AdminRoute({ children }: AdminRouteProps) {
   // If authenticated but not admin, show forbidden message and redirect to home
   if (authStatus === 'authenticated_non_admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
+      <div className="min-h-screen flex items-center justify-center bg-cream dark:bg-deep-navy-900">
         <div className="max-w-md mx-auto text-center p-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-red-600"
+              className="w-8 h-8 text-red-600 dark:text-red-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -129,15 +129,15 @@ export function AdminRoute({ children }: AdminRouteProps) {
               />
             </svg>
           </div>
-          <h1 className="text-h3 font-bold text-deep-navy-900 mb-2">
+          <h1 className="text-h3 font-bold text-deep-navy-900 dark:text-deep-navy-50 mb-2">
             Access Denied
           </h1>
-          <p className="text-body text-deep-navy-600 mb-6">
+          <p className="text-body text-deep-navy-600 dark:text-deep-navy-300 mb-6">
             You need administrator privileges to access this page.
           </p>
           <button
             onClick={() => window.location.href = '/'}
-            className="px-6 py-3 bg-rephlo-blue text-white rounded-lg hover:bg-rephlo-blue/90 transition-colors"
+            className="px-6 py-3 bg-rephlo-blue dark:bg-electric-cyan text-white dark:text-deep-navy-900 rounded-lg hover:bg-rephlo-blue/90 dark:hover:bg-electric-cyan/90 transition-colors"
           >
             Return to Home
           </button>
