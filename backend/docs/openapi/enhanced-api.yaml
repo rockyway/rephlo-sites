@@ -1244,6 +1244,370 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /api/user/invoices:
+    get:
+      tags:
+        - Users
+      summary: Get user invoices
+      description: |
+        Retrieve invoice history for the authenticated user.
+
+        Returns paginated list of invoices from Stripe with download URLs.
+        Includes information about subscription renewals, credit purchases, and other billing events.
+
+        **Use Case**: Desktop app billing history tab
+
+        **Caching Recommendation**: Cache this response for 1 hour on the client side.
+        Re-fetch when user navigates to billing history or after a new payment.
+
+        **Rate Limit**: 30 requests per minute
+
+      operationId: getUserInvoices
+      security:
+        - bearerAuth: [user.info]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: Number of invoices to return (default 10, max 50)
+      responses:
+        '200':
+          description: Successful response with invoice list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: Stripe invoice ID
+                          example: "in_1AbCdEfGhIjKlMnO"
+                        date:
+                          type: string
+                          format: date-time
+                          description: Invoice date
+                          example: "2025-11-01T00:00:00.000Z"
+                        amount:
+                          type: integer
+                          description: Amount in cents (USD)
+                          example: 2900
+                        currency:
+                          type: string
+                          description: Currency code
+                          example: "usd"
+                        status:
+                          type: string
+                          enum: [draft, open, paid, uncollectible, void]
+                          description: Invoice status
+                          example: "paid"
+                        invoiceUrl:
+                          type: string
+                          format: uri
+                          description: Stripe hosted invoice URL
+                          example: "https://invoice.stripe.com/i/acct_xxx/invst_xxx"
+                        pdfUrl:
+                          type: string
+                          format: uri
+                          description: PDF download URL
+                          example: "https://invoice.stripe.com/i/acct_xxx/invst_xxx/pdf"
+                        description:
+                          type: string
+                          description: Invoice description
+                          example: "Subscription renewal - Pro Plan"
+                  hasMore:
+                    type: boolean
+                    description: Whether more invoices exist
+                    example: false
+                  count:
+                    type: integer
+                    description: Total number of invoices returned
+                    example: 2
+              examples:
+                withInvoices:
+                  summary: User with invoice history
+                  value:
+                    invoices:
+                      - id: "in_1AbCdEfGhIjKlMnO"
+                        date: "2025-11-01T00:00:00.000Z"
+                        amount: 2900
+                        currency: "usd"
+                        status: "paid"
+                        invoiceUrl: "https://invoice.stripe.com/i/acct_xxx/invst_xxx"
+                        pdfUrl: "https://invoice.stripe.com/i/acct_xxx/invst_xxx/pdf"
+                        description: "Subscription renewal - Pro Plan"
+                      - id: "in_2BcDeFgHiJkLmNoP"
+                        date: "2025-10-01T00:00:00.000Z"
+                        amount: 2900
+                        currency: "usd"
+                        status: "paid"
+                        invoiceUrl: "https://invoice.stripe.com/i/acct_xxx/invst_yyy"
+                        pdfUrl: "https://invoice.stripe.com/i/acct_xxx/invst_yyy/pdf"
+                        description: "Subscription renewal - Pro Plan"
+                    hasMore: false
+                    count: 2
+                noInvoices:
+                  summary: Free tier user (no invoices)
+                  value:
+                    invoices: []
+                    hasMore: false
+                    count: 0
+        '400':
+          description: Invalid query parameter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "invalid_parameter"
+                      message:
+                        type: string
+                        example: "limit must be between 1 and 50"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/user/usage/summary:
+    get:
+      tags:
+        - Credits
+      summary: Get monthly usage summary
+      description: |
+        Retrieve comprehensive usage statistics for the authenticated user.
+
+        Returns detailed breakdown of:
+        - Credit usage (free vs pro)
+        - API request count
+        - Token consumption
+        - Model usage distribution
+
+        **Use Case**: Desktop app usage analytics dashboard
+
+        **Caching Recommendation**: Cache this response for 15 minutes on the client side.
+        Re-fetch when user navigates to usage analytics or after making API calls.
+
+        **Rate Limit**: 60 requests per minute
+
+      operationId: getMonthlySummary
+      security:
+        - bearerAuth: [user.info]
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            pattern: '^(current_month|\\d{4}-\\d{2})$'
+            default: current_month
+          description: |
+            Period filter:
+            - "current_month" (default) - Current calendar month
+            - "YYYY-MM" format - Specific month (e.g., "2025-11")
+          example: "2025-11"
+      responses:
+        '200':
+          description: Successful response with usage summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                    description: Period identifier (YYYY-MM format)
+                    example: "2025-11"
+                  periodStart:
+                    type: string
+                    format: date-time
+                    description: Start of period (inclusive)
+                    example: "2025-11-01T00:00:00.000Z"
+                  periodEnd:
+                    type: string
+                    format: date-time
+                    description: End of period (inclusive)
+                    example: "2025-11-30T23:59:59.999Z"
+                  summary:
+                    type: object
+                    properties:
+                      creditsUsed:
+                        type: integer
+                        description: Total credits consumed
+                        example: 45230
+                      apiRequests:
+                        type: integer
+                        description: Number of API requests made
+                        example: 1287
+                      totalTokens:
+                        type: integer
+                        description: Total tokens processed (input + output)
+                        example: 2145678
+                      averageTokensPerRequest:
+                        type: integer
+                        description: Average tokens per request
+                        example: 1668
+                      mostUsedModel:
+                        type: string
+                        description: Model ID with highest usage
+                        example: "gpt-4"
+                      mostUsedModelPercentage:
+                        type: integer
+                        description: Percentage of requests using most popular model
+                        example: 67
+                  creditBreakdown:
+                    type: object
+                    description: Credit usage breakdown by source
+                    properties:
+                      freeCreditsUsed:
+                        type: integer
+                        description: Free tier credits consumed
+                        example: 0
+                      freeCreditsLimit:
+                        type: integer
+                        description: Monthly free credit allocation
+                        example: 10000
+                      proCreditsUsed:
+                        type: integer
+                        description: Pro/subscription credits consumed
+                        example: 45230
+                      purchasedCreditsUsed:
+                        type: integer
+                        description: One-time purchased credits consumed
+                        example: 0
+                  modelBreakdown:
+                    type: array
+                    description: Usage breakdown by model
+                    items:
+                      type: object
+                      properties:
+                        model:
+                          type: string
+                          description: Model identifier
+                          example: "gpt-4"
+                        provider:
+                          type: string
+                          description: Provider name
+                          example: "openai"
+                        requests:
+                          type: integer
+                          description: Number of requests
+                          example: 867
+                        tokens:
+                          type: integer
+                          description: Total tokens processed
+                          example: 1456789
+                        credits:
+                          type: integer
+                          description: Credits consumed
+                          example: 30234
+                        percentage:
+                          type: integer
+                          description: Percentage of total requests
+                          example: 67
+              examples:
+                proUser:
+                  summary: Pro user with active usage
+                  value:
+                    period: "2025-11"
+                    periodStart: "2025-11-01T00:00:00.000Z"
+                    periodEnd: "2025-11-30T23:59:59.999Z"
+                    summary:
+                      creditsUsed: 45230
+                      apiRequests: 1287
+                      totalTokens: 2145678
+                      averageTokensPerRequest: 1668
+                      mostUsedModel: "gpt-4"
+                      mostUsedModelPercentage: 67
+                    creditBreakdown:
+                      freeCreditsUsed: 0
+                      freeCreditsLimit: 10000
+                      proCreditsUsed: 45230
+                      purchasedCreditsUsed: 0
+                    modelBreakdown:
+                      - model: "gpt-4"
+                        provider: "openai"
+                        requests: 867
+                        tokens: 1456789
+                        credits: 30234
+                        percentage: 67
+                      - model: "claude-3-opus"
+                        provider: "anthropic"
+                        requests: 320
+                        tokens: 534221
+                        credits: 11076
+                        percentage: 25
+                      - model: "gpt-3.5-turbo"
+                        provider: "openai"
+                        requests: 100
+                        tokens: 154668
+                        credits: 3920
+                        percentage: 8
+                freeUser:
+                  summary: Free tier user
+                  value:
+                    period: "2025-11"
+                    periodStart: "2025-11-01T00:00:00.000Z"
+                    periodEnd: "2025-11-30T23:59:59.999Z"
+                    summary:
+                      creditsUsed: 2340
+                      apiRequests: 45
+                      totalTokens: 89234
+                      averageTokensPerRequest: 1983
+                      mostUsedModel: "gpt-3.5-turbo"
+                      mostUsedModelPercentage: 100
+                    creditBreakdown:
+                      freeCreditsUsed: 2340
+                      freeCreditsLimit: 10000
+                      proCreditsUsed: 0
+                      purchasedCreditsUsed: 0
+                    modelBreakdown:
+                      - model: "gpt-3.5-turbo"
+                        provider: "openai"
+                        requests: 45
+                        tokens: 89234
+                        credits: 2340
+                        percentage: 100
+        '400':
+          description: Invalid period parameter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "invalid_period"
+                      message:
+                        type: string
+                        example: "period must be 'current_month' or YYYY-MM format"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
   /v1/users/me:
     get:
       tags:

@@ -528,7 +528,17 @@ When reviewing API endpoint code, verify:
 - [ ] ✅ HTTP status codes are appropriate
 - [ ] ✅ Type assertions are avoided (use explicit typing)
 
-### 6.2 Code Quality Review
+### 6.2 Documentation Review
+
+- [ ] ✅ **OpenAPI Spec Updated** - If adding/modifying endpoints, update `docs/openapi/enhanced-api.yaml`
+  - Request/response schemas match implementation
+  - Authentication and rate limits documented
+  - Query parameters and validation rules included
+  - HTTP status codes and error responses documented
+  - Operation ID and tags assigned
+  - Run `npm run validate:openapi` to verify coverage
+
+### 6.3 Code Quality Review
 
 - [ ] ✅ TypeScript return types are explicit
 - [ ] ✅ Function has clear, single responsibility
@@ -537,7 +547,7 @@ When reviewing API endpoint code, verify:
 - [ ] ✅ No sensitive data in logs (passwords, tokens)
 - [ ] ✅ Business logic in service layer, not controller
 
-### 6.3 Testing Review
+### 6.4 Testing Review
 
 - [ ] ✅ Unit tests for DTO transformations
 - [ ] ✅ Integration tests for endpoint responses
