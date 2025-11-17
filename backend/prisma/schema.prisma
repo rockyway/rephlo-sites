@@ -843,8 +843,46 @@ model subscription_tier_config {
   max_credit_rollover       Int
   features                  Json     @default("{}")
   is_active                 Boolean  @default(true)
+
+  // Plan 190: Tier Credit Management - Version tracking and rollout control
+  config_version            Int      @default(1)
+  last_modified_by          String?  @db.Uuid
+  last_modified_at          DateTime @default(now())
+  apply_to_existing_users   Boolean  @default(false)
+  rollout_start_date        DateTime?
+
   created_at                DateTime @default(now())
   updated_at                DateTime
+
+  @@index([tier_name])
+  @@map("subscription_tier_config")
+}
+
+// Plan 190: Tier Credit Management - Configuration change history
+model tier_config_history {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier_config_id        String   @db.Uuid
+  tier_name             String   @db.VarChar(50)
+
+  // Historical values
+  previous_credits      Int
+  new_credits           Int
+  previous_price_usd    Decimal  @db.Decimal(10, 2)
+  new_price_usd         Decimal  @db.Decimal(10, 2)
+
+  // Change metadata
+  change_reason         String   @db.Text
+  change_type           String   @db.VarChar(50) // 'credit_increase', 'credit_decrease', 'price_change'
+  affected_users_count  Int      @default(0)
+
+  // Audit fields
+  changed_by            String   @db.Uuid
+  changed_at            DateTime @default(now())
+  applied_at            DateTime?
+
+  @@index([tier_name, changed_at(sort: Desc)])
+  @@index([changed_by])
+  @@map("tier_config_history")
 }
 
 model subscriptions {

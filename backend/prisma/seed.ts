@@ -386,14 +386,32 @@ async function seedCredits(users: any[]) {
   console.log('Creating credit allocations...');
   const createdCredits = [];
 
+  // Tier configuration - MUST match seedSubscriptions tierConfig
+  // Updated 2025-11-15: New pricing structure with x100 credit conversion (1 credit = $0.01)
+  const tierConfig = {
+    free: { creditsPerMonth: 200 },        // $2 worth of API usage
+    pro: { creditsPerMonth: 1500 },        // $15 worth of API usage
+    pro_plus: { creditsPerMonth: 5000 },   // $50 worth of API usage
+    pro_max: { creditsPerMonth: 25000 },   // $250 worth of API usage
+    enterprise_pro: { creditsPerMonth: 3500 },       // $35 worth of API usage
+    enterprise_pro_plus: { creditsPerMonth: 11000 }, // $110 worth of API usage
+  };
+
   for (const user of users) {
     // Find persona to determine tier
     const persona = USER_PERSONAS.find((p) => p.email.startsWith(user.email));
     if (!persona) continue;
 
     const tier = persona.subscriptionTier;
+    const config = tierConfig[tier];
+
+    if (!config) {
+      console.warn(`⚠️  Unknown tier '${tier}' for user ${user.email}, skipping credit allocation`);
+      continue;
+    }
+
     const creditType = tier === 'free' ? 'free' : 'pro';
-    const monthlyAllocation = tier === 'free' ? 100 : 10000;
+    const monthlyAllocation = config.creditsPerMonth;
 
     const now = new Date();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -2516,12 +2534,12 @@ Download and run the installer for your platform.`,
   console.log('Free Tier User:');
   console.log('   Email:    free.user@example.com');
   console.log('   Password: TestPassword123!');
-  console.log('   Credits:  100 monthly\n');
+  console.log('   Credits:  200 monthly\n');
 
   console.log('Pro Tier User (Local Auth):');
   console.log('   Email:    pro.user@example.com');
   console.log('   Password: TestPassword123!');
-  console.log('   Credits:  10,000 + 5,000 bonus monthly\n');
+  console.log('   Credits:  1,500 monthly\n');
 
   console.log('Admin User (MFA Enabled):');
   console.log('   Email:    admin.test@rephlo.ai');
