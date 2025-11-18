@@ -30,7 +30,11 @@
       { "name": "Models", "description": "Available AI models and inference endpoints" },
       { "name": "Subscriptions", "description": "Subscription plans and management" },
       { "name": "Webhooks", "description": "User webhook configuration" },
-      { "name": "Admin", "description": "Administrative endpoints (admin only)" }
+      { "name": "Admin", "description": "Administrative endpoints (admin only)" },
+      { "name": "Prorations", "description": "Subscription tier change proration management (admin only)" },
+      { "name": "Coupons", "description": "Coupon management and redemption tracking (admin only)" },
+      { "name": "Campaigns", "description": "Marketing campaign management (admin only)" },
+      { "name": "Device Management", "description": "Device activation management (Phase 3 - admin only)" }
     ],
     "securityDefinitions": {
       "bearerAuth": {

@@ -6,6 +6,1423 @@
   },
   "openapi": "3.0.3",
   "paths": {
+    "/admin/metrics": {
+      "get": {
+        "operationId": "AdminCoreApiSpec_get_/admin/metrics",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get system metrics",
+        "description": "Get aggregated system metrics and analytics including downloads, feedback, diagnostics, and timestamps.\n\n**Authentication**: Requires Bearer token with admin role\n\n**Response Format**: Legacy format with `{success: true, data: {...}}`\n\n**Rate Limit**: 30 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Admin Metrics Response\nLegacy format with success flag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminMetricsResponse",
+                  "description": "System metrics retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid admin token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "AdminCoreApiSpec_get_/admin/users",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List users",
+        "description": "List and manage users with pagination and filtering.\n\n**Authentication**: Requires Bearer token with admin role\n\n**Query Parameters**:\n- `page`: Page number (default: 1, min: 1)\n- `limit`: Items per page (default: 50, min: 1, max: 100)\n- `search`: Search by email or username (case-insensitive)\n- `tier`: Filter by subscription tier (free, pro, enterprise)\n\n**Response Format**: Modern format\n\n**Rate Limit**: 30 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Page number for pagination",
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Number of users per page (max 100)",
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Search by email or username (case-insensitive)",
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by subscription tier",
+            "name": "tier",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "enterprise",
+                "free",
+                "pro"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin Users List Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUsersListResponse",
+                  "description": "Users retrieved successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid query parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid admin token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/{id}/suspend": {
+      "post": {
+        "operationId": "AdminCoreApiSpec_post_/admin/users/{id}/suspend",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Suspend user account",
+        "description": "Suspend a user account with optional reason.\n\n**Authentication**: Requires Bearer token with admin role\n\n**Response Format**: Modern format\n\n**Note**: This is a placeholder implementation. Full suspension functionality requires User model updates.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request body for suspending a user",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Request body for suspending a user",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "Optional reason for suspension",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Suspend User Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuspendUserResponse",
+                  "description": "User suspended successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid request body"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid admin token"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserNotFoundError",
+                  "description": "User not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/subscriptions": {
+      "get": {
+        "operationId": "AdminCoreApiSpec_get_/admin/subscriptions",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get subscription overview",
+        "description": "Get subscription overview and statistics grouped by tier and status.\n\n**Authentication**: Requires Bearer token with admin role\n\n**Response Format**: Modern format\n\n**Rate Limit**: 30 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Admin Subscription Overview Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSubscriptionOverviewResponse",
+                  "description": "Subscription statistics retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid admin token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/usage": {
+      "get": {
+        "operationId": "AdminCoreApiSpec_get_/admin/usage",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get system usage statistics",
+        "description": "Get system-wide usage statistics with optional date range filtering.\n\n**Authentication**: Requires Bearer token with admin role\n\n**Query Parameters**:\n- `startDate`: Start date for usage data (ISO-8601 format, e.g., \"2025-10-01T00:00:00Z\")\n- `endDate`: End date for usage data (ISO-8601 format, e.g., \"2025-11-01T00:00:00Z\")\n\n**Validation**:\n- Both dates must be in ISO-8601 format\n- Start date must be before end date\n\n**Error Codes**:\n- `invalid_date`: Invalid date format\n- `invalid_range`: Start date must be before end date\n\n**Response Format**: Modern format\n\n**Rate Limit**: 30 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Start date for usage data (ISO-8601 format)",
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "End date for usage data (ISO-8601 format)",
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin Usage Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUsageResponse",
+                  "description": "Usage statistics retrieved successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid date error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidDateError",
+                  "description": "Invalid date format or range"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid admin token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/webhooks/test": {
+      "post": {
+        "operationId": "AdminCoreApiSpec_post_/admin/webhooks/test",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Test webhook delivery",
+        "description": "Test webhook delivery by sending a test payload to a specified URL.\n\n**Authentication**: Requires Bearer token with admin role\n\n**Request Body**:\n- `url`: Webhook endpoint URL to test (required, must be valid URI)\n- `event`: Event type to simulate (required, string)\n\n**Validation**:\n- URL must be a valid URI format\n- Both fields are required\n\n**Error Codes**:\n- `invalid_url`: Invalid URL format\n- `invalid_input`: Missing required field\n\n**Response Format**: Modern format\n\n**Note**: This is a placeholder implementation. Full functionality requires WebhookService.sendTestWebhook implementation.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Test webhook request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Test webhook request body",
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "description": "Webhook endpoint URL to test",
+                    "type": "string"
+                  },
+                  "event": {
+                    "description": "Event type to simulate",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "event",
+                  "url"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test webhook response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestWebhookResponse",
+                  "description": "Test webhook processed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid URL error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidUrlError",
+                  "description": "Invalid URL or event"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid admin token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/licenses/devices": {
+      "get": {
+        "operationId": "AdminDeviceManagementApiSpec_get_/admin/licenses/devices",
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "List all device activations",
+        "description": "Get paginated list of all device activations across all licenses with filtering options.\n\n**Phase 3 Addition**: Device activation management backend infrastructure\n\n**Authentication**: Requires Bearer token and admin role\n\n**Response Format**: Modern format with pagination\n\n**Rate Limit**: 30 requests per minute\n\n**Query Filters**:\n- `status` - Filter by activation status (active, inactive, revoked)\n- `os` - Filter by operating system (windows, macos, linux)\n- `suspicious` - Filter by suspicious flag (boolean)\n- `search` - Search by device name, device ID, or user email\n\n**Pagination**:\n- `page` - Page number (default: 1, min: 1)\n- `limit` - Items per page (default: 20, min: 1, max: 100)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Page number for pagination (default: 1, min: 1)",
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Number of devices per page (default: 20, min: 1, max: 100)",
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Filter by activation status",
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "active",
+                "inactive",
+                "revoked"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by operating system",
+            "name": "os",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "linux",
+                "macos",
+                "windows"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by suspicious flag",
+            "name": "suspicious",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Search by device name, device ID, or user email",
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device List Response\nResponse for GET /admin/licenses/devices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceListResponse",
+                  "description": "Device activations retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/licenses/devices/stats": {
+      "get": {
+        "operationId": "AdminDeviceManagementApiSpec_get_/admin/licenses/devices/stats",
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Get device activation statistics",
+        "description": "Get dashboard statistics for device activations including counts by status and OS.\n\n**Phase 3 Addition**: Device management dashboard metrics\n\n**Authentication**: Requires Bearer token and admin role\n\n**Response Format**: Modern format\n\n**Rate Limit**: 30 requests per minute\n\n**Statistics Included**:\n- Total device activations\n- Active devices count\n- Suspicious devices count\n- Device count breakdown by operating system (Windows, macOS, Linux)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Device Statistics Response\nResponse for GET /admin/licenses/devices/stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceStatsResponse",
+                  "description": "Device statistics retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/licenses/devices/{id}/deactivate": {
+      "post": {
+        "operationId": "AdminDeviceManagementApiSpec_post_/admin/licenses/devices/{id}/deactivate",
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Deactivate a device",
+        "description": "Deactivate a device activation (user-initiated or admin action).\n\n**Phase 3 Addition**: Device deactivation management\n\n**Authentication**: Requires Bearer token and admin role\n\n**Audit**: Creates audit log entry\n\n**Note**: Deactivation is reversible (device can be reactivated by user). For permanent revocation, use the revoke endpoint.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deactivate Device Response\nResponse for POST /admin/licenses/devices/{id}/deactivate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeactivateDeviceResponse",
+                  "description": "Device deactivated successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Device activation not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/licenses/devices/{id}/revoke": {
+      "post": {
+        "operationId": "AdminDeviceManagementApiSpec_post_/admin/licenses/devices/{id}/revoke",
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Revoke a device permanently",
+        "description": "Permanently revoke a device activation (admin only). This action cannot be undone.\n\n**Phase 3 Addition**: Permanent device revocation for security/fraud cases\n\n**Authentication**: Requires Bearer token and admin role\n\n**Audit**: Creates audit log entry with reason\n\n**Required**: `reason` field in request body for audit trail\n\n**Use Cases**:\n- Suspected fraud or license abuse\n- Multiple suspicious activations from same device\n- Security policy violations\n\n**Note**: This action is permanent and cannot be reversed. The device will not be able to reactivate.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Revoke Device Request\nUsed for POST /admin/licenses/devices/{id}/revoke",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Revoke Device Request\nUsed for POST /admin/licenses/devices/{id}/revoke",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "Reason for revoking device (required for audit log entry)",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revoke Device Response\nResponse for POST /admin/licenses/devices/{id}/revoke",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeDeviceResponse",
+                  "description": "Device revoked successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Bad request - Missing or invalid reason"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Device activation not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/licenses/devices/bulk-action": {
+      "post": {
+        "operationId": "AdminDeviceManagementApiSpec_post_/admin/licenses/devices/bulk-action",
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Perform bulk actions on devices",
+        "description": "Perform bulk operations on multiple device activations (deactivate, revoke, flag as suspicious).\n\n**Phase 3 Addition**: Bulk device management for administrative efficiency\n\n**Authentication**: Requires Bearer token and admin role\n\n**Audit**: Creates audit log entries for each action\n\n**Supported Actions**:\n- `deactivate` - Deactivate multiple devices (reversible)\n- `revoke` - Permanently revoke multiple devices (requires reason)\n- `flag_suspicious` - Flag multiple devices as suspicious (requires flags array)\n\n**Constraints**:\n- Minimum 1 activation ID\n- Maximum 100 activation IDs per request\n- `reason` field required for revoke action\n\n**Response**: Returns success/failure counts and detailed errors for failed operations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Bulk Action Request\nUsed for POST /admin/licenses/devices/bulk-action",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Bulk Action Request\nUsed for POST /admin/licenses/devices/bulk-action",
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "description": "Action to perform on selected devices",
+                    "enum": [
+                      "deactivate",
+                      "flag_suspicious",
+                      "revoke"
+                    ],
+                    "type": "string"
+                  },
+                  "activationIds": {
+                    "description": "Array of device activation IDs (min: 1, max: 100)",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "description": "Reason for action (required for revoke action)",
+                    "type": "string"
+                  },
+                  "flags": {
+                    "description": "Suspicious flags for flag_suspicious action",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "action",
+                  "activationIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk Action Response\nResponse for POST /admin/licenses/devices/bulk-action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkActionResponse",
+                  "description": "Bulk action completed (may include partial failures)"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Bad request - Invalid action or missing parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/prorations/{id}/reverse": {
+      "post": {
+        "operationId": "AdminProrationsCouponsApiSpec_post_/admin/prorations/{id}/reverse",
+        "tags": [
+          "Prorations",
+          "Coupons",
+          "Campaigns"
+        ],
+        "summary": "Reverse a proration event",
+        "description": "Reverse a proration event, restoring the subscription to its original tier.\nThis creates a compensating proration event and marks the original as reversed.\n\n**Phase 3 Addition**: Fixed 501 Not Implemented status\n\n**Authentication**: Requires Bearer token and admin role\n\n**Audit**: Creates audit log entry with reason\n\n**Transaction**: Atomic operation - all changes committed or rolled back together\n\n**Error Cases**:\n- 400 if proration already reversed\n- 400 if reason is missing\n- 404 if proration not found",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Request body for reversing a proration event",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Request body for reversing a proration event",
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "description": "Reason for reversing proration (required for audit log)",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard success response wrapper",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProrationEventResponse",
+                  "description": "Proration reversed successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Invalid request or already reversed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Proration event not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/prorations/{id}/calculation": {
+      "get": {
+        "operationId": "AdminProrationsCouponsApiSpec_get_/admin/prorations/{id}/calculation",
+        "tags": [
+          "Prorations",
+          "Coupons",
+          "Campaigns"
+        ],
+        "summary": "Get calculation breakdown for proration",
+        "description": "Get detailed calculation breakdown for a proration event showing formulas and amounts.\n\n**Phase 3 Addition**: New endpoint for proration transparency\n\n**Authentication**: Requires Bearer token and admin role\n\n**Response Format**: Modern format with calculation details including:\n- Unused credit formula: \"(25 days / 30 days) × $29.00 = $24.17\"\n- New tier cost formula: \"(25 days / 30 days) × $99.00 = $82.50\"\n- Net charge formula: \"$82.50 - $24.17 = $58.33\"\n\nThis endpoint helps admins understand exactly how proration charges are calculated.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proration Calculation Breakdown\nDetailed formulas and amounts for transparency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProrationCalculationResponse",
+                  "description": "Calculation breakdown retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Proration event not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/coupons/{id}": {
+      "get": {
+        "operationId": "AdminProrationsCouponsApiSpec_get_/admin/coupons/{id}",
+        "tags": [
+          "Prorations",
+          "Coupons",
+          "Campaigns"
+        ],
+        "summary": "Get single coupon details",
+        "description": "Get full details for a single coupon by ID including usage limits and campaign relations.\n\n**Phase 3 Addition**: Single-item detail endpoint to avoid unnecessary list queries\n\n**Authentication**: Requires Bearer token and admin role\n\n**Response Format**: Modern format with full coupon object including:\n- Discount type and value (percentage or fixed amount)\n- Validity period (validFrom/validUntil)\n- Usage limits (maxRedemptions)\n- Current redemption count\n- Campaign association (if applicable)\n\n**Use Cases**:\n- Viewing coupon details for editing\n- Monitoring coupon usage and redemptions\n- Verifying campaign associations",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Standard success response wrapper for coupon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CouponResponse",
+                  "description": "Coupon retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Coupon not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/campaigns/{id}": {
+      "get": {
+        "operationId": "AdminProrationsCouponsApiSpec_get_/admin/campaigns/{id}",
+        "tags": [
+          "Prorations",
+          "Coupons",
+          "Campaigns"
+        ],
+        "summary": "Get single campaign details",
+        "description": "Get full details for a single campaign by ID including computed status and coupon count.\n\n**Phase 3 Addition**: Single-item detail endpoint for campaign management\n\n**Authentication**: Requires Bearer token and admin role\n\n**Response Format**: Modern format with computed fields:\n- **Status computed from dates**:\n  - \"planning\": startDate in future\n  - \"active\": between startDate and endDate, isActive=true\n  - \"ended\": past endDate\n  - \"paused\": isActive=false\n- **Aggregated metrics**:\n  - couponCount: Number of coupons in campaign\n  - redemptionCount: Total redemptions across all coupons\n  - currentSpend: Current budget spend\n\n**Use Cases**:\n- Viewing campaign details for editing\n- Monitoring campaign performance\n- Budget tracking",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Standard success response wrapper for campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignResponse",
+                  "description": "Campaign retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient permissions (admin role required)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Campaign not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/reset-password": {
       "post": {
         "operationId": "AuthPasswordResetApiSpec_post_/auth/reset-password",
@@ -2282,7 +3699,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TestWebhookResponse",
+                  "$ref": "#/components/schemas/TestWebhookResponse_1",
                   "description": "Test webhook sent successfully"
                 }
               }
@@ -2926,6 +4343,1480 @@
   },
   "components": {
     "schemas": {
+      "AdminMetricsResponse": {
+        "description": "Admin Metrics Response\nLegacy format with success flag",
+        "type": "object",
+        "properties": {
+          "success": {
+            "description": "Legacy success flag",
+            "type": "boolean"
+          },
+          "data": {
+            "description": "Aggregated system metrics",
+            "type": "object",
+            "properties": {
+              "downloads": {
+                "description": "Download statistics by platform",
+                "type": "object",
+                "properties": {
+                  "windows": {
+                    "description": "Windows download count",
+                    "type": "number"
+                  },
+                  "macos": {
+                    "description": "macOS download count",
+                    "type": "number"
+                  },
+                  "linux": {
+                    "description": "Linux download count",
+                    "type": "number"
+                  },
+                  "total": {
+                    "description": "Total download count",
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "linux",
+                  "macos",
+                  "total",
+                  "windows"
+                ]
+              },
+              "feedback": {
+                "description": "Feedback submission statistics",
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "description": "Total feedback submissions",
+                    "type": "number"
+                  },
+                  "recentCount": {
+                    "description": "Feedback submissions in last 7 days",
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "recentCount",
+                  "total"
+                ]
+              },
+              "diagnostics": {
+                "description": "Diagnostic upload statistics",
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "description": "Total diagnostic uploads",
+                    "type": "number"
+                  },
+                  "totalSize": {
+                    "description": "Total size of diagnostics in bytes",
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "total",
+                  "totalSize"
+                ]
+              },
+              "timestamps": {
+                "description": "Timestamp information",
+                "type": "object",
+                "properties": {
+                  "firstDownload": {
+                    "description": "Timestamp of first download (nullable)",
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "lastDownload": {
+                    "description": "Timestamp of last download (nullable)",
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "firstDownload",
+                  "lastDownload"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "diagnostics",
+              "downloads",
+              "feedback",
+              "timestamps"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "success"
+        ]
+      },
+      "ApiError": {
+        "description": "API Error Structure",
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {},
+          "field": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "AdminUsersListResponse": {
+        "description": "Admin Users List Response",
+        "type": "object",
+        "properties": {
+          "users": {
+            "description": "List of users",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminUserListItem"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationMeta",
+            "description": "Pagination metadata"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pagination",
+          "users"
+        ]
+      },
+      "AdminUserListItem": {
+        "description": "Admin user list item",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "User ID",
+            "type": "string"
+          },
+          "email": {
+            "description": "User email address",
+            "type": "string"
+          },
+          "emailVerified": {
+            "description": "Email verification status",
+            "type": "boolean"
+          },
+          "username": {
+            "description": "Username (nullable)",
+            "type": "string",
+            "nullable": true
+          },
+          "firstName": {
+            "description": "First name (nullable)",
+            "type": "string",
+            "nullable": true
+          },
+          "lastName": {
+            "description": "Last name (nullable)",
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "description": "Account creation date",
+            "type": "string"
+          },
+          "lastLoginAt": {
+            "description": "Last login timestamp (nullable)",
+            "type": "string",
+            "nullable": true
+          },
+          "subscription": {
+            "description": "Active subscription (nullable)",
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserSubscription"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "createdAt",
+          "email",
+          "emailVerified",
+          "id"
+        ]
+      },
+      "AdminUserSubscription": {
+        "description": "User subscription information",
+        "type": "object",
+        "properties": {
+          "tier": {
+            "description": "Subscription tier",
+            "enum": [
+              "enterprise",
+              "free",
+              "pro"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "description": "Subscription status",
+            "enum": [
+              "active",
+              "cancelled",
+              "expired",
+              "trialing"
+            ],
+            "type": "string"
+          },
+          "currentPeriodStart": {
+            "description": "Start of current billing period",
+            "type": "string"
+          },
+          "currentPeriodEnd": {
+            "description": "End of current billing period",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "currentPeriodEnd",
+          "currentPeriodStart",
+          "status",
+          "tier"
+        ]
+      },
+      "PaginationMeta": {
+        "description": "Pagination metadata",
+        "type": "object",
+        "properties": {
+          "page": {
+            "description": "Current page number",
+            "type": "number"
+          },
+          "limit": {
+            "description": "Users per page",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total number of users",
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "page",
+          "total",
+          "totalPages"
+        ]
+      },
+      "SuspendUserResponse": {
+        "description": "Suspend User Response",
+        "type": "object",
+        "properties": {
+          "success": {
+            "description": "Success flag",
+            "type": "boolean"
+          },
+          "message": {
+            "description": "Status message",
+            "type": "string"
+          },
+          "userId": {
+            "description": "User ID that was suspended",
+            "type": "string"
+          },
+          "note": {
+            "description": "Implementation note",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "message",
+          "note",
+          "success",
+          "userId"
+        ]
+      },
+      "UserNotFoundError": {
+        "description": "User not found error response",
+        "type": "object",
+        "properties": {
+          "error": {
+            "description": "Error details",
+            "type": "object",
+            "properties": {
+              "code": {
+                "description": "Error code",
+                "type": "string"
+              },
+              "message": {
+                "description": "Error message",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ]
+      },
+      "SuspendUserRequest": {
+        "description": "Request body for suspending a user",
+        "type": "object",
+        "properties": {
+          "reason": {
+            "description": "Optional reason for suspension",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminSubscriptionOverviewResponse": {
+        "description": "Admin Subscription Overview Response",
+        "type": "object",
+        "properties": {
+          "subscriptionStats": {
+            "description": "Detailed breakdown of subscriptions",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionStatItem"
+            }
+          },
+          "totalActive": {
+            "description": "Total active subscriptions across all tiers",
+            "type": "number"
+          },
+          "byTier": {
+            "$ref": "#/components/schemas/Record_string_number_",
+            "description": "Subscription counts grouped by tier"
+          },
+          "byStatus": {
+            "$ref": "#/components/schemas/Record_string_number_",
+            "description": "Subscription counts grouped by status"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "byStatus",
+          "byTier",
+          "subscriptionStats",
+          "totalActive"
+        ]
+      },
+      "SubscriptionStatItem": {
+        "description": "Subscription statistics item",
+        "type": "object",
+        "properties": {
+          "tier": {
+            "description": "Subscription tier",
+            "enum": [
+              "enterprise",
+              "free",
+              "pro"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "description": "Subscription status",
+            "enum": [
+              "active",
+              "cancelled",
+              "expired",
+              "trialing"
+            ],
+            "type": "string"
+          },
+          "count": {
+            "description": "Number of subscriptions with this tier/status",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "count",
+          "status",
+          "tier"
+        ]
+      },
+      "Record_string_number_": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "AdminUsageResponse": {
+        "description": "Admin Usage Response",
+        "type": "object",
+        "properties": {
+          "totalOperations": {
+            "description": "Total number of operations",
+            "type": "number"
+          },
+          "totalCreditsUsed": {
+            "description": "Total credits consumed",
+            "type": "number"
+          },
+          "byModel": {
+            "description": "Usage breakdown by AI model",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageByModelItem"
+            }
+          },
+          "byOperation": {
+            "description": "Usage breakdown by operation type",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageByOperationItem"
+            }
+          },
+          "dateRange": {
+            "$ref": "#/components/schemas/UsageDateRange",
+            "description": "Date range for the query"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "byModel",
+          "byOperation",
+          "dateRange",
+          "totalCreditsUsed",
+          "totalOperations"
+        ]
+      },
+      "UsageByModelItem": {
+        "description": "Usage by model item",
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "description": "Model identifier",
+            "type": "string"
+          },
+          "operations": {
+            "description": "Number of operations with this model",
+            "type": "number"
+          },
+          "creditsUsed": {
+            "description": "Credits used by this model",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "creditsUsed",
+          "modelId",
+          "operations"
+        ]
+      },
+      "UsageByOperationItem": {
+        "description": "Usage by operation type item",
+        "type": "object",
+        "properties": {
+          "operationType": {
+            "description": "Operation type",
+            "type": "string"
+          },
+          "operations": {
+            "description": "Number of operations of this type",
+            "type": "number"
+          },
+          "creditsUsed": {
+            "description": "Credits used by this operation type",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "creditsUsed",
+          "operationType",
+          "operations"
+        ]
+      },
+      "UsageDateRange": {
+        "description": "Date range information",
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "description": "Start date of the query range (nullable)",
+            "type": "string",
+            "nullable": true
+          },
+          "endDate": {
+            "description": "End date of the query range (nullable)",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "endDate",
+          "startDate"
+        ]
+      },
+      "InvalidDateError": {
+        "description": "Invalid date error response",
+        "type": "object",
+        "properties": {
+          "error": {
+            "description": "Error details",
+            "type": "object",
+            "properties": {
+              "code": {
+                "description": "Error code (invalid_date or invalid_range)",
+                "type": "string"
+              },
+              "message": {
+                "description": "Error message",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ]
+      },
+      "TestWebhookResponse": {
+        "description": "Test webhook response",
+        "type": "object",
+        "properties": {
+          "success": {
+            "description": "Success flag",
+            "type": "boolean"
+          },
+          "message": {
+            "description": "Status message",
+            "type": "string"
+          },
+          "note": {
+            "description": "Implementation note",
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/TestWebhookPayload",
+            "description": "Test webhook payload that would be sent"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "message",
+          "note",
+          "payload",
+          "success"
+        ]
+      },
+      "TestWebhookPayload": {
+        "description": "Test webhook payload",
+        "type": "object",
+        "properties": {
+          "event": {
+            "description": "Event type",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "Timestamp of the test",
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Record_string_unknown_",
+            "description": "Test data"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "event",
+          "timestamp"
+        ]
+      },
+      "Record_string_unknown_": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "InvalidUrlError": {
+        "description": "Invalid URL error response",
+        "type": "object",
+        "properties": {
+          "error": {
+            "description": "Error details",
+            "type": "object",
+            "properties": {
+              "code": {
+                "description": "Error code",
+                "type": "string"
+              },
+              "message": {
+                "description": "Error message",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ]
+      },
+      "TestWebhookRequest": {
+        "description": "Test webhook request body",
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "Webhook endpoint URL to test",
+            "type": "string"
+          },
+          "event": {
+            "description": "Event type to simulate",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "url"
+        ]
+      },
+      "DeviceListResponse": {
+        "description": "Device List Response\nResponse for GET /admin/licenses/devices",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Status indicator",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "description": "Array of device activations",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceActivation"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta_1",
+            "description": "Pagination metadata"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "meta",
+          "status"
+        ]
+      },
+      "DeviceActivation": {
+        "description": "Device Activation\nRepresents a single device activation record",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Device activation ID (UUID)",
+            "type": "string"
+          },
+          "userId": {
+            "description": "User ID who activated the device",
+            "type": "string"
+          },
+          "deviceId": {
+            "description": "Device unique identifier",
+            "type": "string"
+          },
+          "deviceName": {
+            "description": "Device name/hostname",
+            "type": "string"
+          },
+          "os": {
+            "description": "Operating system",
+            "type": "string"
+          },
+          "status": {
+            "description": "Activation status",
+            "type": "string"
+          },
+          "activatedAt": {
+            "description": "Timestamp when device was activated",
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "description": "Timestamp of last device activity",
+            "type": "string"
+          },
+          "suspicious": {
+            "description": "Whether device is flagged as suspicious",
+            "type": "boolean"
+          },
+          "suspiciousFlags": {
+            "description": "Array of suspicious flags (if flagged)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "activatedAt",
+          "deviceId",
+          "deviceName",
+          "id",
+          "lastSeenAt",
+          "os",
+          "status",
+          "suspicious",
+          "userId"
+        ]
+      },
+      "PaginationMeta_1": {
+        "description": "Pagination Metadata\nStandard pagination information for list endpoints",
+        "type": "object",
+        "properties": {
+          "page": {
+            "description": "Current page number",
+            "type": "number"
+          },
+          "limit": {
+            "description": "Items per page",
+            "type": "number"
+          },
+          "total": {
+            "description": "Total number of items",
+            "type": "number"
+          },
+          "totalPages": {
+            "description": "Total number of pages",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "page",
+          "total",
+          "totalPages"
+        ]
+      },
+      "DeviceStatsResponse": {
+        "description": "Device Statistics Response\nResponse for GET /admin/licenses/devices/stats",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Status indicator",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "description": "Statistics data",
+            "type": "object",
+            "properties": {
+              "total": {
+                "description": "Total device activations",
+                "type": "number"
+              },
+              "active": {
+                "description": "Active devices count",
+                "type": "number"
+              },
+              "suspicious": {
+                "description": "Suspicious devices count",
+                "type": "number"
+              },
+              "byOS": {
+                "description": "Device count by operating system",
+                "type": "object",
+                "properties": {
+                  "windows": {
+                    "description": "Windows devices",
+                    "type": "number"
+                  },
+                  "macos": {
+                    "description": "macOS devices",
+                    "type": "number"
+                  },
+                  "linux": {
+                    "description": "Linux devices",
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "linux",
+                  "macos",
+                  "windows"
+                ]
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "active",
+              "byOS",
+              "suspicious",
+              "total"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "DeactivateDeviceResponse": {
+        "description": "Deactivate Device Response\nResponse for POST /admin/licenses/devices/{id}/deactivate",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Status indicator",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "description": "Response data",
+            "type": "object",
+            "properties": {
+              "message": {
+                "description": "Success message",
+                "type": "string"
+              },
+              "activationId": {
+                "description": "Activation ID of deactivated device",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "activationId",
+              "message"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "RevokeDeviceResponse": {
+        "description": "Revoke Device Response\nResponse for POST /admin/licenses/devices/{id}/revoke",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Status indicator",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "description": "Response data",
+            "type": "object",
+            "properties": {
+              "message": {
+                "description": "Success message",
+                "type": "string"
+              },
+              "activationId": {
+                "description": "Activation ID of revoked device",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Reason for revocation (audit trail)",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "activationId",
+              "message",
+              "reason"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "RevokeDeviceRequest": {
+        "description": "Revoke Device Request\nUsed for POST /admin/licenses/devices/{id}/revoke",
+        "type": "object",
+        "properties": {
+          "reason": {
+            "description": "Reason for revoking device (required for audit log entry)",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ]
+      },
+      "BulkActionResponse": {
+        "description": "Bulk Action Response\nResponse for POST /admin/licenses/devices/bulk-action",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Status indicator",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "description": "Response data",
+            "type": "object",
+            "properties": {
+              "action": {
+                "description": "Action performed",
+                "type": "string"
+              },
+              "successCount": {
+                "description": "Number of successful operations",
+                "type": "number"
+              },
+              "failedCount": {
+                "description": "Number of failed operations",
+                "type": "number"
+              },
+              "errors": {
+                "description": "Array of errors for failed operations",
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/BulkActionError"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "errors",
+              "failedCount",
+              "successCount"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "BulkActionError": {
+        "description": "Bulk Action Error\nIndividual error details for bulk operations",
+        "type": "object",
+        "properties": {
+          "activationId": {
+            "description": "Activation ID that failed",
+            "type": "string"
+          },
+          "error": {
+            "description": "Error message",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "activationId",
+          "error"
+        ]
+      },
+      "BulkActionRequest": {
+        "description": "Bulk Action Request\nUsed for POST /admin/licenses/devices/bulk-action",
+        "type": "object",
+        "properties": {
+          "action": {
+            "description": "Action to perform on selected devices",
+            "enum": [
+              "deactivate",
+              "flag_suspicious",
+              "revoke"
+            ],
+            "type": "string"
+          },
+          "activationIds": {
+            "description": "Array of device activation IDs (min: 1, max: 100)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "description": "Reason for action (required for revoke action)",
+            "type": "string"
+          },
+          "flags": {
+            "description": "Suspicious flags for flag_suspicious action",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "activationIds"
+        ]
+      },
+      "ProrationEventResponse": {
+        "description": "Standard success response wrapper",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Response status",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ProrationEvent",
+            "description": "Proration event data"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "ProrationEvent": {
+        "description": "Proration Event\nRepresents a tier change proration with charge calculations",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Proration event ID",
+            "type": "string"
+          },
+          "subscriptionId": {
+            "description": "Related subscription ID",
+            "type": "string"
+          },
+          "fromTier": {
+            "description": "Original tier before change",
+            "type": "string"
+          },
+          "toTier": {
+            "description": "New tier after change",
+            "type": "string"
+          },
+          "unusedCredit": {
+            "description": "Unused credit amount from old tier",
+            "type": "number"
+          },
+          "newTierCost": {
+            "description": "Prorated cost for new tier",
+            "type": "number"
+          },
+          "netCharge": {
+            "description": "Net charge (newTierCost - unusedCredit)",
+            "type": "number"
+          },
+          "status": {
+            "description": "Proration status",
+            "enum": [
+              "applied",
+              "failed",
+              "pending",
+              "reversed"
+            ],
+            "type": "string"
+          },
+          "reversedBy": {
+            "description": "Admin user who reversed this proration (if reversed)",
+            "type": "string"
+          },
+          "reversalReason": {
+            "description": "Reason for reversal (if reversed)",
+            "type": "string"
+          },
+          "stripeInvoiceId": {
+            "description": "Stripe invoice ID (if applicable)",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "When proration was created",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "createdAt",
+          "fromTier",
+          "id",
+          "netCharge",
+          "newTierCost",
+          "status",
+          "subscriptionId",
+          "toTier",
+          "unusedCredit"
+        ]
+      },
+      "ReverseProrationRequest": {
+        "description": "Request body for reversing a proration event",
+        "type": "object",
+        "properties": {
+          "reason": {
+            "description": "Reason for reversing proration (required for audit log)",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ]
+      },
+      "ProrationCalculationResponse": {
+        "description": "Proration Calculation Breakdown\nDetailed formulas and amounts for transparency",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Response status",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "description": "Calculation data",
+            "type": "object",
+            "properties": {
+              "prorationId": {
+                "description": "Proration event ID",
+                "type": "string"
+              },
+              "subscriptionId": {
+                "description": "Related subscription ID",
+                "type": "string"
+              },
+              "calculation": {
+                "description": "Detailed calculation breakdown",
+                "type": "object",
+                "properties": {
+                  "unusedCreditFormula": {
+                    "description": "Formula for unused credit calculation",
+                    "type": "string"
+                  },
+                  "unusedCreditAmount": {
+                    "description": "Calculated unused credit amount",
+                    "type": "number"
+                  },
+                  "newTierCostFormula": {
+                    "description": "Formula for new tier cost calculation",
+                    "type": "string"
+                  },
+                  "newTierCostAmount": {
+                    "description": "Calculated new tier cost amount",
+                    "type": "number"
+                  },
+                  "netChargeFormula": {
+                    "description": "Formula for net charge calculation",
+                    "type": "string"
+                  },
+                  "netChargeAmount": {
+                    "description": "Calculated net charge amount",
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "netChargeAmount",
+                  "netChargeFormula",
+                  "newTierCostAmount",
+                  "newTierCostFormula",
+                  "unusedCreditAmount",
+                  "unusedCreditFormula"
+                ]
+              },
+              "fromTier": {
+                "description": "Original tier",
+                "type": "string"
+              },
+              "toTier": {
+                "description": "New tier",
+                "type": "string"
+              },
+              "daysRemaining": {
+                "description": "Days remaining in billing cycle",
+                "type": "number"
+              },
+              "daysInCycle": {
+                "description": "Total days in billing cycle",
+                "type": "number"
+              },
+              "status": {
+                "description": "Current proration status",
+                "type": "string"
+              },
+              "stripeInvoiceUrl": {
+                "description": "Stripe invoice URL (if available)",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "calculation",
+              "daysInCycle",
+              "daysRemaining",
+              "fromTier",
+              "prorationId",
+              "status",
+              "subscriptionId",
+              "toTier"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "CouponResponse": {
+        "description": "Standard success response wrapper for coupon",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Response status",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Coupon",
+            "description": "Coupon data"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "Coupon": {
+        "description": "Coupon Detail Response\nComplete coupon information with usage statistics",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Coupon ID",
+            "type": "string"
+          },
+          "code": {
+            "description": "Unique coupon code",
+            "type": "string"
+          },
+          "type": {
+            "description": "Coupon type",
+            "enum": [
+              "bonus_duration",
+              "fixed_amount_discount",
+              "percentage_discount",
+              "trial_extension"
+            ],
+            "type": "string"
+          },
+          "discountType": {
+            "description": "Discount type (for discount coupons)",
+            "enum": [
+              "fixed_amount",
+              "percentage"
+            ],
+            "type": "string"
+          },
+          "discountPercentage": {
+            "description": "Discount percentage (0-100, for percentage coupons)",
+            "type": "number"
+          },
+          "discountAmount": {
+            "description": "Fixed discount amount in USD (for fixed_amount coupons)",
+            "type": "number"
+          },
+          "bonusDurationMonths": {
+            "description": "Bonus subscription months (for bonus_duration coupons)",
+            "type": "number"
+          },
+          "maxDiscountAmount": {
+            "description": "Maximum discount cap for percentage coupons",
+            "type": "number"
+          },
+          "validFrom": {
+            "description": "Coupon valid from date",
+            "type": "string"
+          },
+          "validUntil": {
+            "description": "Coupon valid until date (optional)",
+            "type": "string"
+          },
+          "isActive": {
+            "description": "Whether coupon is currently active",
+            "type": "boolean"
+          },
+          "maxRedemptions": {
+            "description": "Maximum number of redemptions allowed",
+            "type": "number"
+          },
+          "redemptionCount": {
+            "description": "Current redemption count",
+            "type": "number"
+          },
+          "campaignId": {
+            "description": "Associated campaign ID (if part of campaign)",
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "When coupon was created",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "createdAt",
+          "id",
+          "isActive",
+          "redemptionCount",
+          "type",
+          "validFrom"
+        ]
+      },
+      "CampaignResponse": {
+        "description": "Standard success response wrapper for campaign",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Response status",
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Campaign",
+            "description": "Campaign data"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "status"
+        ]
+      },
+      "Campaign": {
+        "description": "Campaign Detail Response\nComplete campaign information with computed status and metrics",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Campaign ID",
+            "type": "string"
+          },
+          "name": {
+            "description": "Campaign name",
+            "type": "string"
+          },
+          "type": {
+            "description": "Campaign type",
+            "enum": [
+              "behavioral",
+              "holiday",
+              "marketing",
+              "referral"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "description": "Campaign status (computed from dates and isActive flag)",
+            "enum": [
+              "active",
+              "ended",
+              "paused",
+              "planning"
+            ],
+            "type": "string"
+          },
+          "startsAt": {
+            "description": "Campaign start date",
+            "type": "string"
+          },
+          "endsAt": {
+            "description": "Campaign end date (optional)",
+            "type": "string"
+          },
+          "budgetCap": {
+            "description": "Budget limit in USD (optional)",
+            "type": "number"
+          },
+          "currentSpend": {
+            "description": "Current spend amount",
+            "type": "number"
+          },
+          "couponCount": {
+            "description": "Number of coupons in this campaign",
+            "type": "number"
+          },
+          "redemptionCount": {
+            "description": "Total redemptions across all coupons",
+            "type": "number"
+          },
+          "createdAt": {
+            "description": "When campaign was created",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "couponCount",
+          "createdAt",
+          "currentSpend",
+          "id",
+          "name",
+          "redemptionCount",
+          "startsAt",
+          "status",
+          "type"
+        ]
+      },
       "ResetPasswordResponse": {
         "description": "Reset Password Response\nPassword reset successfully",
         "type": "object",
@@ -3024,27 +5915,6 @@
         "additionalProperties": false,
         "required": [
           "error"
-        ]
-      },
-      "ApiError": {
-        "description": "API Error Structure",
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {},
-          "field": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false,
-        "required": [
-          "code",
-          "message"
         ]
       },
       "ResetPasswordRequest": {
@@ -3702,10 +6572,6 @@
           "name",
           "version"
         ]
-      },
-      "Record_string_unknown_": {
-        "type": "object",
-        "additionalProperties": false
       },
       "HealthResponse": {
         "description": "Health Check Response\nComprehensive server health status with diagnostics",
@@ -4616,10 +7482,6 @@
           "text"
         ]
       },
-      "Record_string_number_": {
-        "type": "object",
-        "additionalProperties": false
-      },
       "TextCompletionRequest": {
         "description": "Text Completion Request Body",
         "type": "object",
@@ -5331,7 +8193,7 @@
           "reset"
         ]
       },
-      "TestWebhookResponse": {
+      "TestWebhookResponse_1": {
         "description": "Test Webhook Response\nResult of webhook test request",
         "type": "object",
         "properties": {
