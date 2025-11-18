@@ -762,17 +762,28 @@ export async function createOIDCProvider(
     });
   });
 
+  // Extract TTL values for logging (all are numbers in our config)
+  const ttlValues = {
+    AccessToken: configuration.ttl?.AccessToken as number || 0,
+    AuthorizationCode: configuration.ttl?.AuthorizationCode as number || 0,
+    IdToken: configuration.ttl?.IdToken as number || 0,
+    RefreshToken: configuration.ttl?.RefreshToken as number || 0,
+    Grant: configuration.ttl?.Grant as number || 0,
+    Interaction: configuration.ttl?.Interaction as number || 0,
+    Session: configuration.ttl?.Session as number || 0,
+  };
+
   logger.info('OIDC Provider initialized', {
     issuer: OIDC_ISSUER,
     features: Array.from(Object.keys(configuration.features || {})),
     ttl: {
-      AccessToken: `${configuration.ttl?.AccessToken}s (${Math.floor((configuration.ttl?.AccessToken || 0) / 3600)}h)`,
-      AuthorizationCode: `${configuration.ttl?.AuthorizationCode}s (${Math.floor((configuration.ttl?.AuthorizationCode || 0) / 60)}m)`,
-      IdToken: `${configuration.ttl?.IdToken}s (${Math.floor((configuration.ttl?.IdToken || 0) / 3600)}h)`,
-      RefreshToken: `${configuration.ttl?.RefreshToken}s (${Math.floor((configuration.ttl?.RefreshToken || 0) / 86400)}d)`,
-      Grant: `${configuration.ttl?.Grant}s (${Math.floor((configuration.ttl?.Grant || 0) / 86400)}d)`,
-      Interaction: `${configuration.ttl?.Interaction}s (${Math.floor((configuration.ttl?.Interaction || 0) / 3600)}h)`,
-      Session: `${configuration.ttl?.Session}s (${Math.floor((configuration.ttl?.Session || 0) / 3600)}h)`,
+      AccessToken: `${ttlValues.AccessToken}s (${Math.floor(ttlValues.AccessToken / 3600)}h)`,
+      AuthorizationCode: `${ttlValues.AuthorizationCode}s (${Math.floor(ttlValues.AuthorizationCode / 60)}m)`,
+      IdToken: `${ttlValues.IdToken}s (${Math.floor(ttlValues.IdToken / 3600)}h)`,
+      RefreshToken: `${ttlValues.RefreshToken}s (${Math.floor(ttlValues.RefreshToken / 86400)}d)`,
+      Grant: `${ttlValues.Grant}s (${Math.floor(ttlValues.Grant / 86400)}d)`,
+      Interaction: `${ttlValues.Interaction}s (${Math.floor(ttlValues.Interaction / 3600)}h)`,
+      Session: `${ttlValues.Session}s (${Math.floor(ttlValues.Session / 3600)}h)`,
     },
   });
 
