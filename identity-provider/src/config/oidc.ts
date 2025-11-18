@@ -271,14 +271,15 @@ export async function createOIDCProvider(
     // Async functions are not supported in this version.
     // Session duration differentiation by role can be implemented via
     // session management hooks or through frontend client behavior.
+    // All TTLs are configurable via environment variables (see .env.example)
     ttl: {
-      AccessToken: 3600, // 1 hour
-      AuthorizationCode: 600, // 10 minutes
-      IdToken: 3600, // 1 hour
-      RefreshToken: 5184000, // 60 days (can be shortened by clients if needed)
-      Grant: 5184000, // 60 days (matches RefreshToken lifetime)
-      Interaction: 3600, // 1 hour
-      Session: 86400, // 24 hours (can be enforced via logout on client side for admins)
+      AccessToken: parseInt(process.env.OIDC_TTL_ACCESS_TOKEN || '3600', 10), // Default: 1 hour
+      AuthorizationCode: parseInt(process.env.OIDC_TTL_AUTHORIZATION_CODE || '600', 10), // Default: 10 minutes
+      IdToken: parseInt(process.env.OIDC_TTL_ID_TOKEN || '3600', 10), // Default: 1 hour
+      RefreshToken: parseInt(process.env.OIDC_TTL_REFRESH_TOKEN || '5184000', 10), // Default: 60 days
+      Grant: parseInt(process.env.OIDC_TTL_GRANT || '5184000', 10), // Default: 60 days (must match or exceed RefreshToken)
+      Interaction: parseInt(process.env.OIDC_TTL_INTERACTION || '3600', 10), // Default: 1 hour
+      Session: parseInt(process.env.OIDC_TTL_SESSION || '86400', 10), // Default: 24 hours
     },
 
     // Cookie configuration
@@ -764,6 +765,15 @@ export async function createOIDCProvider(
   logger.info('OIDC Provider initialized', {
     issuer: OIDC_ISSUER,
     features: Array.from(Object.keys(configuration.features || {})),
+    ttl: {
+      AccessToken: `${configuration.ttl?.AccessToken}s (${Math.floor((configuration.ttl?.AccessToken || 0) / 3600)}h)`,
+      AuthorizationCode: `${configuration.ttl?.AuthorizationCode}s (${Math.floor((configuration.ttl?.AuthorizationCode || 0) / 60)}m)`,
+      IdToken: `${configuration.ttl?.IdToken}s (${Math.floor((configuration.ttl?.IdToken || 0) / 3600)}h)`,
+      RefreshToken: `${configuration.ttl?.RefreshToken}s (${Math.floor((configuration.ttl?.RefreshToken || 0) / 86400)}d)`,
+      Grant: `${configuration.ttl?.Grant}s (${Math.floor((configuration.ttl?.Grant || 0) / 86400)}d)`,
+      Interaction: `${configuration.ttl?.Interaction}s (${Math.floor((configuration.ttl?.Interaction || 0) / 3600)}h)`,
+      Session: `${configuration.ttl?.Session}s (${Math.floor((configuration.ttl?.Session || 0) / 3600)}h)`,
+    },
   });
 
   return provider;

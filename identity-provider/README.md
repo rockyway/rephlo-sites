@@ -53,6 +53,16 @@ ALLOWED_ORIGINS=http://localhost:8080,http://localhost:7150,http://localhost:715
 # Default: true
 MFA_ENFORCEMENT_ENABLED=false
 
+# Token TTLs (Time To Live) - in seconds
+# All token lifetimes are configurable
+OIDC_TTL_ACCESS_TOKEN=3600          # 1 hour
+OIDC_TTL_AUTHORIZATION_CODE=600     # 10 minutes
+OIDC_TTL_ID_TOKEN=3600              # 1 hour
+OIDC_TTL_REFRESH_TOKEN=5184000      # 60 days
+OIDC_TTL_GRANT=5184000              # 60 days (must match or exceed refresh token)
+OIDC_TTL_INTERACTION=3600           # 1 hour
+OIDC_TTL_SESSION=86400              # 24 hours
+
 # Logging
 LOG_LEVEL=debug
 LOG_DIR=logs
@@ -71,6 +81,49 @@ The `MFA_ENFORCEMENT_ENABLED` environment variable controls whether MFA verifica
   - Admin access during testing
 
 **Security Note:** In production environments, set `MFA_ENFORCEMENT_ENABLED=true` once MFA verification is properly implemented in the OAuth flow.
+
+### TTL Configuration
+
+All OAuth/OIDC token lifetimes are configurable via environment variables. Configure them in seconds:
+
+| Environment Variable | Default | Duration | Purpose |
+|---------------------|---------|----------|---------|
+| `OIDC_TTL_ACCESS_TOKEN` | 3600 | 1 hour | Short-lived access tokens for API calls |
+| `OIDC_TTL_AUTHORIZATION_CODE` | 600 | 10 minutes | Authorization code exchange window |
+| `OIDC_TTL_ID_TOKEN` | 3600 | 1 hour | ID token lifetime (user identity claims) |
+| `OIDC_TTL_REFRESH_TOKEN` | 5184000 | 60 days | Long-lived refresh tokens for desktop apps |
+| `OIDC_TTL_GRANT` | 5184000 | 60 days | Authorization grant lifetime (must ≥ refresh token) |
+| `OIDC_TTL_INTERACTION` | 3600 | 1 hour | Login/consent interaction window |
+| `OIDC_TTL_SESSION` | 86400 | 24 hours | Browser session lifetime |
+
+**Important Notes:**
+
+1. **Grant TTL:** Must match or exceed `OIDC_TTL_REFRESH_TOKEN`. Refresh tokens reference grants, so the grant must exist for the entire refresh token lifetime.
+
+2. **Refresh Token Independence:** When combined with the `offline_access` scope, refresh tokens work independently of browser sessions. This is critical for desktop applications that need long-term access without requiring frequent re-authentication.
+
+3. **Access Token Lifetime:** Keep access tokens short-lived (1 hour recommended) for security. Desktop apps use refresh tokens to obtain new access tokens seamlessly in the background.
+
+4. **Session vs Refresh Token:** Browser sessions (`OIDC_TTL_SESSION`) expire after 24 hours, but refresh tokens can be valid for 60 days. This allows desktop apps to maintain API access even after the browser session expires.
+
+**Example Configuration for Different Environments:**
+
+```bash
+# Development - Longer tokens for convenience
+OIDC_TTL_ACCESS_TOKEN=7200          # 2 hours
+OIDC_TTL_REFRESH_TOKEN=7776000      # 90 days
+OIDC_TTL_GRANT=7776000              # 90 days
+
+# Production - Balanced security and UX
+OIDC_TTL_ACCESS_TOKEN=3600          # 1 hour
+OIDC_TTL_REFRESH_TOKEN=5184000      # 60 days
+OIDC_TTL_GRANT=5184000              # 60 days
+
+# High Security - Shorter tokens
+OIDC_TTL_ACCESS_TOKEN=1800          # 30 minutes
+OIDC_TTL_REFRESH_TOKEN=2592000      # 30 days
+OIDC_TTL_GRANT=2592000              # 30 days
+```
 
 ## Installation
 
