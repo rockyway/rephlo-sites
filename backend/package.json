@@ -24,7 +24,8 @@
     "validate:openapi": "tsx scripts/validate-openapi-coverage.ts",
     "generate:openapi": "npx tspec generate --outputPath docs/openapi/generated-api.json",
     "validate:openapi:generated": "swagger-cli validate docs/openapi/generated-api.json",
-    "serve:openapi:generated": "npx tspec server --port 3001"
+    "serve:openapi:generated": "npx tspec server --port 3001",
+    "analyze:tables": "ts-node scripts/analyze-table-references.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
