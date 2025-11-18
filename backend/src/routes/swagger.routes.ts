@@ -8,7 +8,7 @@
  * - GET /api-docs - Swagger UI interface
  * - GET /api-docs/swagger.json - OpenAPI spec in JSON format
  *
- * Reference: backend/docs/openapi/generated-api.json (auto-generated from backend/specs/**/*.spec.ts)
+ * Reference: backend/docs/openapi/generated-api.json (auto-generated from Tspec spec files)
  * Generation: npm run generate:openapi
  * Validation: npm run validate:openapi:generated
  */
