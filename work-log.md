@@ -1336,3 +1336,5 @@ Enhanced error logging in LLM service and OpenAI provider to diagnose streaming 
 - `src/controllers/social-auth.controller.ts`
 - `src/utils/typeMappers.ts`
 
+2025-11-17 17:31:17 - Migrated 3 auth endpoints (register, verify-email, forgot-password) to Tspec specs in auth-public.spec.ts. Validated OpenAPI generation and build successful.
+2025-11-17 18:09:51 - Fixed pricing_config table name bug: Changed all occurrences of 'pricing_config' to 'pricing_configs' in backend/src/services/pricing-config.service.ts (9 fixes in raw SQL queries). The service was querying a non-existent table causing 'relation does not exist' errors.

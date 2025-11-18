@@ -82,7 +82,7 @@ export class PricingConfigService implements IPricingConfigService {
       // Priority 1: Check for Combination multiplier (tier + provider + model)
       let config = await this.prisma.$queryRaw<any[]>`
         SELECT margin_multiplier
-        FROM pricing_config
+        FROM pricing_configs
         WHERE scope_type = 'combination'
           AND subscription_tier = ${tier}
           AND provider_id = ${providerId}::uuid
@@ -110,7 +110,7 @@ export class PricingConfigService implements IPricingConfigService {
       // Priority 2: Check for Model multiplier (provider + model, any tier)
       config = await this.prisma.$queryRaw<any[]>`
         SELECT margin_multiplier
-        FROM pricing_config
+        FROM pricing_configs
         WHERE scope_type = 'model'
           AND provider_id = ${providerId}::uuid
           AND model_id = ${modelId}
@@ -136,7 +136,7 @@ export class PricingConfigService implements IPricingConfigService {
       // Priority 3: Check for Provider multiplier (provider, any model/tier)
       config = await this.prisma.$queryRaw<any[]>`
         SELECT margin_multiplier
-        FROM pricing_config
+        FROM pricing_configs
         WHERE scope_type = 'provider'
           AND provider_id = ${providerId}::uuid
           AND subscription_tier IS NULL
@@ -161,7 +161,7 @@ export class PricingConfigService implements IPricingConfigService {
       // Priority 4: Check for Tier multiplier (tier, any provider/model)
       config = await this.prisma.$queryRaw<any[]>`
         SELECT margin_multiplier
-        FROM pricing_config
+        FROM pricing_configs
         WHERE scope_type = 'tier'
           AND subscription_tier = ${tier}
           AND provider_id IS NULL
@@ -220,7 +220,7 @@ export class PricingConfigService implements IPricingConfigService {
 
     try {
       const created = await this.prisma.$queryRaw<any[]>`
-        INSERT INTO pricing_config (
+        INSERT INTO pricing_configs (
           scope_type,
           subscription_tier,
           provider_id,
@@ -325,7 +325,7 @@ export class PricingConfigService implements IPricingConfigService {
       setClauses.push(`updated_at = NOW()`);
 
       const updated = await this.prisma.$queryRawUnsafe<any[]>(
-        `UPDATE pricing_config
+        `UPDATE pricing_configs
          SET ${setClauses.join(', ')}
          WHERE id = $1::uuid
          RETURNING *`,
@@ -391,7 +391,7 @@ export class PricingConfigService implements IPricingConfigService {
       }
 
       const configs = await this.prisma.$queryRawUnsafe<any[]>(
-        `SELECT * FROM pricing_config
+        `SELECT * FROM pricing_configs
          WHERE ${whereClauses.join(' AND ')}
          ORDER BY created_at DESC`,
         ...values
@@ -510,7 +510,7 @@ export class PricingConfigService implements IPricingConfigService {
 
     try {
       const configs = await this.prisma.$queryRaw<any[]>`
-        SELECT * FROM pricing_config WHERE id = ${id}::uuid LIMIT 1
+        SELECT * FROM pricing_configs WHERE id = ${id}::uuid LIMIT 1
       `;
 
       if (!configs || configs.length === 0) {
@@ -537,7 +537,7 @@ export class PricingConfigService implements IPricingConfigService {
 
     try {
       await this.prisma.$queryRaw`
-        UPDATE pricing_config
+        UPDATE pricing_configs
         SET is_active = false, updated_at = NOW()
         WHERE id = ${id}::uuid
       `;
