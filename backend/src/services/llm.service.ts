@@ -32,6 +32,7 @@ import {
 } from '../types/model-validation';
 import logger from '../utils/logger';
 import { randomUUID } from 'crypto';
+import { InsufficientCreditsError } from './credit-deduction.service';
 
 @injectable()
 export class LLMService {
@@ -75,6 +76,20 @@ export class LLMService {
       );
     }
     return provider;
+  }
+
+  /**
+   * Estimate input tokens from messages (rough approximation)
+   * GPT tokenization: ~4 characters per token on average
+   * Using conservative estimate: 3 chars per token (slightly higher than average)
+   */
+  private estimateInputTokens(messages: any[]): number {
+    const totalChars = messages.reduce((sum, msg) => {
+      return sum + (msg.content?.length || 0);
+    }, 0);
+
+    // Conservative estimate: 3 chars per token (slightly higher than average)
+    return Math.ceil(totalChars / 3);
   }
 
   /**

@@ -36,6 +36,89 @@ export class CreditDeductionService implements ICreditDeductionService {
   }
 
   /**
+   * Estimate credit cost for a request (pre-flight check)
+   * Uses conservative estimation to prevent undercharging
+   * Formula: credits = ceil(estimatedTokens × maxPricePerToken × marginMultiplier × 100)
+   */
+  async estimateCreditsForRequest(
+    userId: string,
+    modelId: string,
+    providerName: string,
+    estimatedInputTokens: number,
+    estimatedOutputTokens: number
+  ): Promise<number> {
+    try {
+      // Get provider ID
+      const provider = await this.prisma.providers.findUnique({
+        where: { name: providerName },
+        select: { id: true },
+      });
+
+      if (!provider) {
+        // Conservative fallback: assume high cost
+        logger.warn('CreditDeductionService: Provider not found for estimation, using fallback', {
+          providerName,
+          modelId,
+        });
+        return Math.ceil(((estimatedInputTokens + estimatedOutputTokens) / 1000) * 20);
+      }
+
+      // Get pricing config for this model
+      const pricing = await this.prisma.pricing_configs.findFirst({
+        where: {
+          provider_id: provider.id,
+          model_id: modelId,
+        },
+      });
+
+      if (!pricing) {
+        // Conservative fallback
+        logger.warn('CreditDeductionService: Pricing config not found, using fallback', {
+          providerId: provider.id,
+          modelId,
+        });
+        return Math.ceil(((estimatedInputTokens + estimatedOutputTokens) / 1000) * 20);
+      }
+
+      // Calculate with token pricing
+      const inputCost = (estimatedInputTokens / 1_000_000) * Number(pricing.input_price_per_million);
+      const outputCost = (estimatedOutputTokens / 1_000_000) * Number(pricing.output_price_per_million);
+      const vendorCost = inputCost + outputCost;
+
+      // Get margin multiplier from pricing config service
+      // Note: This requires IPricingConfigService to be injected
+      // For now, use a conservative default multiplier of 1.5
+      // TODO: Inject IPricingConfigService and call getApplicableMultiplier
+      const marginMultiplier = 1.5; // Conservative default
+
+      // Apply formula with 10% safety margin
+      const estimatedCredits = Math.ceil(vendorCost * marginMultiplier * 100 * 1.1);
+
+      logger.debug('CreditDeductionService: Estimated credits', {
+        userId,
+        modelId,
+        providerName,
+        estimatedInputTokens,
+        estimatedOutputTokens,
+        vendorCost,
+        marginMultiplier,
+        estimatedCredits,
+      });
+
+      return estimatedCredits;
+    } catch (error) {
+      logger.error('CreditDeductionService: Error estimating credits', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        modelId,
+        providerName,
+      });
+      // Conservative fallback on error
+      return Math.ceil(((estimatedInputTokens + estimatedOutputTokens) / 1000) * 20);
+    }
+  }
+
+  /**
    * Pre-check: Does user have sufficient credits?
    */
   async validateSufficientCredits(

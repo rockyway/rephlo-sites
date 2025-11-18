@@ -28,18 +28,20 @@ npm run analyze:tables
 
 1. **Table Name Validation**: Ensures all tables referenced in raw SQL exist in your Prisma schema
 2. **Singular/Plural Detection**: Warns about potential singular/plural mismatches (e.g., `pricing_config` vs `pricing_configs`)
-3. **False Positive Filtering**: Automatically ignores SQL keywords and common column patterns
+3. **Enum Type Casting**: Detects missing PostgreSQL enum type casts (e.g., `subscription_tier = ${tier}` should be `subscription_tier = ${tier}::subscription_tier`)
+4. **False Positive Filtering**: Automatically ignores SQL keywords and common column patterns
 
 ### Output Example
 
 **Clean codebase:**
 ```
-✅ All table references are valid!
+✅ All table references and enum casts are valid!
 
 📊 ANALYSIS RESULTS
 ✅ Valid references: 20
 ⚠️  Suspicious references: 0
 ❌ Invalid references: 0
+🔧 Missing enum casts: 0
 ```
 
 **Issues detected:**
@@ -54,15 +56,28 @@ npm run analyze:tables
       SELECT margin_multiplier
       FROM pricing_config
       WHERE scope_type = 'combination'
+
+🔧 MISSING ENUM CASTS (Type Casting Required):
+
+📍 src/services/pricing-config.service.ts:87
+   Column: "subscription_tier"
+   Required enum type: "subscription_tier"
+   Fix: Add ::subscription_tier after the parameter
+   Example: subscription_tier = ${value}::subscription_tier
+   Context:
+      SELECT margin_multiplier
+      FROM pricing_configs
+      WHERE subscription_tier = ${tier}
 ```
 
 ### How It Works
 
-1. **Extract Schema Tables**: Parses `prisma/schema.prisma` to find all model names
+1. **Extract Schema Information**: Parses `prisma/schema.prisma` to find all model names and enum column definitions
 2. **Find TypeScript Files**: Recursively searches `src/` for `.ts` files
 3. **Detect Raw SQL**: Identifies `$queryRaw`, `$executeRaw`, and unsafe variants
 4. **Extract Table Names**: Uses regex to find table references in SQL queries
-5. **Validate**: Compares found tables against schema, categorizing as valid, suspicious, or invalid
+5. **Detect Missing Enum Casts**: Finds enum column comparisons without PostgreSQL type casts (e.g., `column = ${var}` without `::enum_type`)
+6. **Validate**: Compares found tables against schema and checks for missing enum casts, categorizing issues
 
 ### Filtered Patterns
 

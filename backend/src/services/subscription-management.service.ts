@@ -944,8 +944,26 @@ export class SubscriptionManagementService {
         },
       });
 
-      // TODO: Integrate with Plan 112's user_credit_balance table
-      // await this.updateUserCreditBalance(userId, allocation.amount);
+      // Integrate with user_credit_balance table (Fixed Bug #2)
+      await this.prisma.user_credit_balance.upsert({
+        where: { user_id: userId },
+        create: {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          amount: allocation.amount,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        update: {
+          amount: { increment: allocation.amount },
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('SubscriptionManagementService: User credit balance updated', {
+        userId,
+        amount: allocation.amount,
+      });
 
       logger.info('SubscriptionManagementService: Credits allocated', {
         allocationId: allocation.id,

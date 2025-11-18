@@ -24,11 +24,21 @@ interface TableReference {
   context: string;
 }
 
+interface EnumCastIssue {
+  file: string;
+  line: number;
+  columnName: string;
+  enumType: string;
+  context: string;
+}
+
 interface AnalysisResult {
   schemaTableNames: string[];
+  schemaEnumColumns: Map<string, string>; // column -> enum type
   validReferences: TableReference[];
   invalidReferences: TableReference[];
   suspiciousReferences: TableReference[];
+  missingEnumCasts: EnumCastIssue[];
 }
 
 /**
@@ -45,6 +55,53 @@ function extractSchemaTableNames(schemaPath: string): string[] {
   }
 
   return tableNames;
+}
+
+/**
+ * Extract enum column mappings from Prisma schema
+ * Returns Map of column name -> enum type
+ */
+function extractEnumColumns(schemaPath: string): Map<string, string> {
+  const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+  const enumColumns = new Map<string, string>();
+
+  // First, extract all enum type names
+  const enumRegex = /^enum\s+(\w+)\s*\{/gm;
+  const enumTypes = new Set<string>();
+  let match;
+
+  while ((match = enumRegex.exec(schemaContent)) !== null) {
+    enumTypes.add(match[1]);
+  }
+
+  // Then find all columns with enum types
+  const lines = schemaContent.split('\n');
+  let inModel = false;
+
+  for (const line of lines) {
+    if (/^model\s+\w+\s*\{/.test(line)) {
+      inModel = true;
+      continue;
+    }
+
+    if (inModel && line.trim() === '}') {
+      inModel = false;
+      continue;
+    }
+
+    if (inModel) {
+      // Match: column_name EnumType or column_name EnumType?
+      const columnMatch = /^\s+(\w+)\s+(\w+)\??/.exec(line);
+      if (columnMatch) {
+        const [, columnName, typeName] = columnMatch;
+        if (enumTypes.has(typeName)) {
+          enumColumns.set(columnName, typeName);
+        }
+      }
+    }
+  }
+
+  return enumColumns;
 }
 
 /**
@@ -92,6 +149,86 @@ function extractTableReferencesFromFile(filePath: string): TableReference[] {
   });
 
   return references;
+}
+
+/**
+ * Detect missing enum type casts in raw SQL queries
+ */
+function extractEnumCastIssuesFromFile(
+  filePath: string,
+  enumColumns: Map<string, string>
+): EnumCastIssue[] {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
+  const issues: EnumCastIssue[] = [];
+
+  // Patterns to match raw SQL queries
+  const rawSqlPatterns = [
+    /prisma\.\$queryRaw/,
+    /prisma\.\$executeRaw/,
+    /prisma\.\$queryRawUnsafe/,
+    /prisma\.\$executeRawUnsafe/,
+  ];
+
+  let inRawQuery = false;
+  let queryStartLine = -1;
+  let queryBuffer: string[] = [];
+
+  lines.forEach((line, index) => {
+    const isQueryStart = rawSqlPatterns.some(pattern => pattern.test(line));
+
+    if (isQueryStart) {
+      inRawQuery = true;
+      queryStartLine = index + 1;
+      queryBuffer = [line];
+    } else if (inRawQuery) {
+      queryBuffer.push(line);
+
+      if (line.includes('`;') || line.includes(');') || line.trim() === '`') {
+        const fullQuery = queryBuffer.join('\n');
+        const queryIssues = detectMissingEnumCasts(fullQuery, filePath, queryStartLine, enumColumns);
+        issues.push(...queryIssues);
+
+        inRawQuery = false;
+        queryBuffer = [];
+      }
+    }
+  });
+
+  return issues;
+}
+
+/**
+ * Detect missing enum casts in a SQL query
+ */
+function detectMissingEnumCasts(
+  query: string,
+  filePath: string,
+  lineNumber: number,
+  enumColumns: Map<string, string>
+): EnumCastIssue[] {
+  const issues: EnumCastIssue[] = [];
+
+  // Check for enum column comparisons without type casts
+  // Pattern: column_name = ${variable} without ::enum_type
+  enumColumns.forEach((enumType, columnName) => {
+    // Match: column_name = ${variable} (not followed by ::)
+    const regex = new RegExp(`${columnName}\\s*=\\s*\\$\\{[^}]+\\}(?!::)`, 'g');
+
+    if (regex.test(query)) {
+      const contextLines = query.split('\n').slice(0, 5).join('\n');
+
+      issues.push({
+        file: filePath,
+        line: lineNumber,
+        columnName,
+        enumType,
+        context: contextLines.trim(),
+      });
+    }
+  });
+
+  return issues;
 }
 
 /**
@@ -193,30 +330,36 @@ function findTypeScriptFiles(dir: string, fileList: string[] = []): string[] {
 function analyzeTableReferences(rootDir: string, schemaPath: string): AnalysisResult {
   console.log('🔍 Analyzing table references in codebase...\n');
 
-  // Step 1: Extract schema table names
-  console.log('📋 Step 1: Extracting table names from Prisma schema...');
+  // Step 1: Extract schema table names and enum columns
+  console.log('📋 Step 1: Extracting table names and enum columns from Prisma schema...');
   const schemaTableNames = extractSchemaTableNames(schemaPath);
-  console.log(`   Found ${schemaTableNames.length} tables in schema\n`);
+  const schemaEnumColumns = extractEnumColumns(schemaPath);
+  console.log(`   Found ${schemaTableNames.length} tables and ${schemaEnumColumns.size} enum columns in schema\n`);
 
   // Step 2: Find all TypeScript files
   console.log('📁 Step 2: Finding TypeScript files...');
   const tsFiles = findTypeScriptFiles(rootDir);
   console.log(`   Found ${tsFiles.length} TypeScript files\n`);
 
-  // Step 3: Extract table references from all files
-  console.log('🔎 Step 3: Extracting table references from raw SQL queries...');
+  // Step 3: Extract table references and enum cast issues from all files
+  console.log('🔎 Step 3: Extracting table references and checking enum casts...');
   const allReferences: TableReference[] = [];
+  const allEnumIssues: EnumCastIssue[] = [];
   let filesWithRawSQL = 0;
 
   tsFiles.forEach(file => {
     const references = extractTableReferencesFromFile(file);
-    if (references.length > 0) {
+    const enumIssues = extractEnumCastIssuesFromFile(file, schemaEnumColumns);
+
+    if (references.length > 0 || enumIssues.length > 0) {
       filesWithRawSQL++;
       allReferences.push(...references);
+      allEnumIssues.push(...enumIssues);
     }
   });
 
-  console.log(`   Found ${allReferences.length} table references in ${filesWithRawSQL} files\n`);
+  console.log(`   Found ${allReferences.length} table references in ${filesWithRawSQL} files`);
+  console.log(`   Found ${allEnumIssues.length} potential enum cast issues\n`);
 
   // Step 4: Categorize references
   console.log('✅ Step 4: Validating table references...\n');
@@ -245,9 +388,11 @@ function analyzeTableReferences(rootDir: string, schemaPath: string): AnalysisRe
 
   return {
     schemaTableNames,
+    schemaEnumColumns,
     validReferences,
     invalidReferences,
     suspiciousReferences,
+    missingEnumCasts: allEnumIssues,
   };
 }
 
@@ -261,7 +406,8 @@ function printResults(results: AnalysisResult): void {
 
   console.log(`✅ Valid references: ${results.validReferences.length}`);
   console.log(`⚠️  Suspicious references: ${results.suspiciousReferences.length}`);
-  console.log(`❌ Invalid references: ${results.invalidReferences.length}\n`);
+  console.log(`❌ Invalid references: ${results.invalidReferences.length}`);
+  console.log(`🔧 Missing enum casts: ${results.missingEnumCasts.length}\n`);
 
   if (results.suspiciousReferences.length > 0) {
     console.log('⚠️  SUSPICIOUS REFERENCES (Singular/Plural Mismatch):');
@@ -295,8 +441,24 @@ function printResults(results: AnalysisResult): void {
     });
   }
 
-  if (results.suspiciousReferences.length === 0 && results.invalidReferences.length === 0) {
-    console.log('🎉 No issues found! All table references are valid.\n');
+  if (results.missingEnumCasts.length > 0) {
+    console.log('🔧 MISSING ENUM CASTS (Type Casting Required):');
+    console.log('───────────────────────────────────────────────────────────────\n');
+
+    results.missingEnumCasts.forEach(issue => {
+      const relativePath = path.relative(process.cwd(), issue.file);
+
+      console.log(`📍 ${relativePath}:${issue.line}`);
+      console.log(`   Column: "${issue.columnName}"`);
+      console.log(`   Required enum type: "${issue.enumType}"`);
+      console.log(`   Fix: Add ::${issue.enumType} after the parameter`);
+      console.log(`   Example: ${issue.columnName} = \${value}::${issue.enumType}`);
+      console.log(`   Context:\n${issue.context.split('\n').map(l => '      ' + l).join('\n')}\n`);
+    });
+  }
+
+  if (results.suspiciousReferences.length === 0 && results.invalidReferences.length === 0 && results.missingEnumCasts.length === 0) {
+    console.log('🎉 No issues found! All table references and enum casts are valid.\n');
   }
 
   // Print summary statistics
@@ -337,11 +499,11 @@ function main() {
   printResults(results);
 
   // Exit with error code if issues found
-  if (results.suspiciousReferences.length > 0 || results.invalidReferences.length > 0) {
+  if (results.suspiciousReferences.length > 0 || results.invalidReferences.length > 0 || results.missingEnumCasts.length > 0) {
     console.log('⚠️  Issues detected! Please review and fix the references above.\n');
     process.exit(1);
   } else {
-    console.log('✅ All table references are valid!\n');
+    console.log('✅ All table references and enum casts are valid!\n');
     process.exit(0);
   }
 }

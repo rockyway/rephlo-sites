@@ -1339,3 +1339,87 @@ Enhanced error logging in LLM service and OpenAI provider to diagnose streaming 
 2025-11-17 17:31:17 - Migrated 3 auth endpoints (register, verify-email, forgot-password) to Tspec specs in auth-public.spec.ts. Validated OpenAPI generation and build successful.
 2025-11-17 18:09:51 - Fixed pricing_config table name bug: Changed all occurrences of 'pricing_config' to 'pricing_configs' in backend/src/services/pricing-config.service.ts (9 fixes in raw SQL queries). The service was querying a non-existent table causing 'relation does not exist' errors.
 2025-11-17 18:13:27 - Created table reference analyzer script (backend/scripts/analyze-table-references.ts) to prevent similar bugs. Script validates all raw SQL queries against Prisma schema, detects singular/plural mismatches, and filters false positives. Analyzed 227 files with 20 valid table references. Added npm run analyze:tables command.
+
+## 2025-11-17 - Enhanced Table Analyzer Script
+- Added enum type cast detection to analyze-table-references.ts script
+- Script now detects missing PostgreSQL enum casts (e.g., subscription_tier = ${tier}::subscription_tier)
+- Updated documentation in backend/scripts/README.md with enum cast examples
+- Script validates 21 enum columns from Prisma schema against 227 TypeScript files
+- Current codebase clean: 20 valid table references, 0 enum cast issues
+
+## 2025-11-17 - Tspec Migration Project Complete (Phase 5)
+- ✅ Updated swagger.routes.ts to serve auto-generated spec (backend/docs/openapi/generated-api.json)
+- ✅ Archived manual YAML (enhanced-api.yaml.backup, 159 KB)
+- ✅ Created final completion report (docs/progress/204-tspec-migration-final-completion-report.md)
+- ✅ Committed Phase 5 deployment changes (da32a0b)
+- **Project Status**: 100% complete - 50/50 endpoints migrated, 8.75 hours total, 97% annual savings
+
+## 2025-11-17 - Build Validation and Fix
+- ✅ Fixed TypeScript build error in swagger.routes.ts (glob pattern `/**` in JSDoc confused parser)
+- ✅ Backend build: PASSED (tsc completed successfully)
+- ✅ Frontend build: PASSED (vite build completed with warnings only)
+- ✅ Identity Provider build: PASSED (tsc completed successfully)
+- ✅ Committed fix (2c8223b)
+
+## 2025-11-17: Fixed Insufficient Credits Bug
+
+**Problem**: Admin user (admin.test@rephlo.ai) encountered false "Insufficient credits" error when testing completion API despite having Pro tier subscription.
+
+**Root Cause**: User had active subscription but NO record in `user_credit_balance` table. The `CreditDeductionService.getCurrentBalance()` method returns 0 when no balance record exists.
+
+**Fix Applied**:
+```sql
+INSERT INTO user_credit_balance (user_id, amount, updated_at, created_at)
+VALUES ('8da94cb8-6de6-4859-abf8-7e6fed14d9c0', 1500, NOW(), NOW())
+ON CONFLICT (user_id) DO UPDATE 
+SET amount = 1500, updated_at = NOW();
+```
+
+**Verification**:
+- User ID: 8da94cb8-6de6-4859-abf8-7e6fed14d9c0
+- Subscription Tier: pro (active)
+- Credit Balance: 1500 (after fix)
+- Backend server restarted successfully on port 7150
+
+**Testing Status**: Blocked on token expiration. Both access and refresh tokens expired. Generated OAuth helper page at `get_token.html` for manual token acquisition.
+
+**Files Modified**:
+- Direct SQL execution to `user_credit_balance` table
+
+**Files Created**:
+- `get_token.html` - OAuth authorization code flow helper with PKCE
+- `backend/scripts/get-access-token.ts` - Password grant attempt (not supported by IDP)
+- `refresh_token.sh` - Refresh token script (expired)
+- `test_completion.sh` - API test script
+
+
+## 2025-11-17: Discovered Three Critical Bugs in Credit System
+
+After investigating the 'Insufficient credits' error, discovered THREE critical bugs:
+
+**Bug #1: Missing Seed Data (Medium Severity)**
+- Seed script doesn't create `user_credit_balance` records
+- Location: `backend/prisma/seed.ts`
+- Impact: All test users have zero balance
+
+**Bug #2: Commented-Out Code (Critical - Recurring)**
+- Subscription creation doesn't create balance records
+- Location: `backend/src/services/subscription-management.service.ts:947-948`
+- Code: `// TODO: Integrate with Plan 112's user_credit_balance table`
+- Impact: EVERY new subscription will have this bug
+
+**Bug #3: Credit Validation Timing (Critical - Security)**
+- Credit validation happens AFTER LLM API call completes
+- Location: `backend/src/services/llm.service.ts:215,317`
+- Flow: 1) Call LLM → 2) Get response → 3) Validate credits → 4) Fail silently
+- Impact: Users get FREE LLM API calls if they have insufficient credits
+- Evidence: User reported receiving data despite 'Insufficient credits' error
+
+**Documentation Created:**
+- `docs/troubleshooting/001-credit-system-critical-bugs.md` - Full analysis report with fix recommendations
+
+**Recommended Fix Priority:**
+1. URGENT: Fix Bug #3 (pre-validate credits before LLM call)
+2. HIGH: Fix Bug #2 (uncomment and implement balance creation)
+3. MEDIUM: Fix Bug #1 (add balance creation to seed script)
+

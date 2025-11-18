@@ -842,3 +842,8 @@ Ensure consistent type transformations between **database (snake_case)** and **A
 - 📖 DTO Pattern Guide (`docs/reference/155-dto-pattern-guide.md`)  
 - 📖 camelCase Standardization Report (`docs/progress/161-camelcase-standardization-completion-report.md`)  
 
+---
+
+## Launch Plan
+- The application is scheduled to launch in March 2026.
+- It is currently in the development phase and undergoing local testing.

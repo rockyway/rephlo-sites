@@ -631,6 +631,22 @@ async function seedCredits(users: any[]) {
       },
     });
 
+    // Create user credit balance (Bug #1 fix)
+    await prisma.user_credit_balance.upsert({
+      where: { user_id: user.user_id },
+      create: {
+        id: randomUUID(),
+        user_id: user.user_id,
+        amount: monthlyAllocation,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      update: {
+        amount: monthlyAllocation,
+        updated_at: new Date(),
+      },
+    });
+
     createdCredits.push({
       creditId: credit.id,
       user_id: credit.user_id,
