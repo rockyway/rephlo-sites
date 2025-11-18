@@ -8,15 +8,19 @@
 import { generatePKCE, storePKCEVerifier, retrievePKCEVerifier, generateAndStoreState, verifyState } from './pkce';
 import { OAuthConfig, TokenResponse, UserinfoResponse } from '@/types/auth';
 
+// Environment variables with fallback to development defaults
+const IDP_URL = import.meta.env.VITE_IDP_URL || 'http://localhost:7151';
+const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:7152';
+
 /**
  * OAuth Configuration for Identity Provider
  */
 export const OAUTH_CONFIG: OAuthConfig = {
   clientId: 'web-app-test',
-  redirectUri: 'http://localhost:7152/oauth/callback',
-  authorizationEndpoint: 'http://localhost:7151/oauth/authorize',
-  tokenEndpoint: 'http://localhost:7151/oauth/token',
-  userinfoEndpoint: 'http://localhost:7151/oauth/userinfo',
+  redirectUri: `${APP_URL}/oauth/callback`,
+  authorizationEndpoint: `${IDP_URL}/oauth/authorize`,
+  tokenEndpoint: `${IDP_URL}/oauth/token`,
+  userinfoEndpoint: `${IDP_URL}/oauth/userinfo`,
   scope: 'openid email profile offline_access admin',
   responseType: 'code',
   codeChallengeMethod: 'S256',
