@@ -574,8 +574,9 @@ async function seedSubscriptions(users: any[]) {
 
 /**
  * Seed Credit Allocations
+ * Links credits to their subscriptions for proper categorization (Plan 189)
  */
-async function seedCredits(users: any[]) {
+async function seedCredits(users: any[], subscriptions: any[]) {
   console.log('Creating credit allocations...');
   const createdCredits = [];
 
@@ -603,6 +604,9 @@ async function seedCredits(users: any[]) {
       continue;
     }
 
+    // Find subscription for this user to link credits
+    const userSubscription = subscriptions.find((s) => s.user_id === user.user_id);
+
     const creditType = tier === 'free' ? 'free' : 'pro';
     const monthlyAllocation = config.creditsPerMonth;
 
@@ -614,11 +618,12 @@ async function seedCredits(users: any[]) {
       where: { user_id: user.user_id },
     });
 
-    // Create new credit allocation
+    // Create new credit allocation linked to subscription (Plan 189 requirement)
     const credit = await prisma.credits.create({
       data: {
         id: randomUUID(),
         user_id: user.user_id,
+        subscription_id: userSubscription?.subscription_id || null, // Link to subscription
         total_credits: monthlyAllocation,
         used_credits: 0,
         credit_type: creditType,
@@ -1232,9 +1237,32 @@ async function seedProrations(users: any[], subscriptions: any[]) {
   const now = new Date();
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
+  // Helper function to get tier pricing - Plan 189
+  const getTierPricing = (tier: string): { basePrice: string; credits: number } => {
+    switch (tier) {
+      case 'free':
+        return { basePrice: '0.00', credits: 200 };
+      case 'pro':
+        return { basePrice: '15.00', credits: 1500 };
+      case 'pro_plus':
+        return { basePrice: '45.00', credits: 5000 };
+      case 'pro_max':
+        return { basePrice: '199.00', credits: 25000 };
+      case 'enterprise_pro':
+        return { basePrice: '30.00', credits: 3500 };
+      case 'enterprise_pro_plus':
+        return { basePrice: '90.00', credits: 11000 };
+      default:
+        return { basePrice: '15.00', credits: 1500 }; // Default to Pro
+    }
+  };
+
   for (let i = 0; i < Math.min(users.length, 3); i++) {
     const user = users[i];
     const persona = USER_PERSONAS[i];
+    if (!persona) continue;
+
+    const tierPricing = getTierPricing(persona.subscriptionTier);
 
     // Delete existing monetization subscription
     await prisma.subscription_monetization.deleteMany({
@@ -1248,10 +1276,27 @@ async function seedProrations(users: any[], subscriptions: any[]) {
         tier: persona.subscriptionTier, // Plain string - schema defines tier as String, not enum
         billing_cycle: 'monthly',
         status: 'active',
-        base_price_usd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
-        monthly_credit_allocation: persona.subscriptionTier === 'free' ? 100 : 10000,
+        base_price_usd: tierPricing.basePrice,
+        monthly_credit_allocation: tierPricing.credits,
         current_period_start: now,
         current_period_end: endOfMonth,
+        updated_at: new Date(),
+      },
+    });
+
+    // Create user credit balance (Bug #1 fix) - Updated to Plan 189 pricing
+    const monthlyAllocation = tierPricing.credits;
+    await prisma.user_credit_balance.upsert({
+      where: { user_id: user.user_id },
+      create: {
+        id: randomUUID(),
+        user_id: user.user_id,
+        amount: monthlyAllocation,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      update: {
+        amount: monthlyAllocation,
         updated_at: new Date(),
       },
     });
@@ -2185,7 +2230,7 @@ async function main() {
 
   try {
     subscriptions = await seedSubscriptions(users);
-    credits = await seedCredits(users);
+    credits = await seedCredits(users, subscriptions); // Pass subscriptions to link credits
     models = await seedModels();
     await seedProrations(users, subscriptions);
   } catch (err: any) {

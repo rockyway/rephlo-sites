@@ -162,7 +162,7 @@ export class TokenTrackingService implements ITokenTrackingService {
       await this.prisma.$queryRaw`
         INSERT INTO token_usage_ledger (
           request_id, user_id, model_id, provider_id,
-          input_tokens, output_tokens, cached_input_tokens, total_tokens,
+          input_tokens, output_tokens, cached_input_tokens,
           vendor_cost, margin_multiplier, credit_value_usd, credits_deducted, gross_margin_usd,
           request_type, streaming_segments,
           request_started_at, request_completed_at, processing_time_ms,
@@ -170,7 +170,7 @@ export class TokenTrackingService implements ITokenTrackingService {
           created_at
         ) VALUES (
           ${record.requestId}::uuid, ${record.userId}::uuid, ${record.modelId}, ${record.providerId}::uuid,
-          ${record.inputTokens}, ${record.outputTokens}, ${record.cachedInputTokens || 0}, ${record.totalTokens},
+          ${record.inputTokens}, ${record.outputTokens}, ${record.cachedInputTokens || 0},
           ${record.vendorCost}, ${record.marginMultiplier}, ${record.vendorCost * record.marginMultiplier}, ${record.creditDeducted}, ${record.grossMargin},
           ${record.requestType}, ${record.streamingSegments},
           ${record.requestStartedAt}, ${record.requestCompletedAt}, ${record.processingTime},

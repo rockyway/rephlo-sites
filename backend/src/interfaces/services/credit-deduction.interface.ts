@@ -45,6 +45,23 @@ export interface CreditDeductionRecord {
 
 export interface ICreditDeductionService {
   /**
+   * Estimate credit cost for a request (pre-flight check)
+   * @param userId - User ID
+   * @param modelId - Model identifier
+   * @param providerName - Provider name
+   * @param estimatedInputTokens - Estimated input tokens
+   * @param estimatedOutputTokens - Estimated output tokens
+   * @returns Estimated credits
+   */
+  estimateCreditsForRequest(
+    userId: string,
+    modelId: string,
+    providerName: string,
+    estimatedInputTokens: number,
+    estimatedOutputTokens: number
+  ): Promise<number>;
+
+  /**
    * Pre-check: Does user have sufficient credits?
    * @param userId - User ID
    * @param creditsNeeded - Credits required

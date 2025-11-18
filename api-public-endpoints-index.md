@@ -1,6 +1,6 @@
 # API Endpoints Analysis Report (Simple Format)
 
-**Generated:** 2025-11-17T20:14:17.539Z
+**Generated:** 2025-11-18T05:25:11.678Z
 **Format:** Simple
 **Include Tests:** No
 **Exclude Admin Routes:** Yes
@@ -15,12 +15,12 @@
 
 **Base URL:** `http://localhost:7150`
 
-**Total Endpoints:** 71
+**Total Endpoints:** 72
 
 | Method | Endpoint | File | Handler | Response Schema | Error Schemas | Middleware | Usages |
 |--------|----------|------|---------|-----------------|---------------|------------|--------|
-| GET | `/api-docs/` | `backend\src\routes\swagger.routes.ts L:62` | `-` | - | - | `-` | - |
-| GET | `/api-docs/swagger.json` | `backend\src\routes\swagger.routes.ts L:65` | `-` | - | - | `-` | - |
+| GET | `/api-docs/` | `backend\src\routes\swagger.routes.ts L:66` | `-` | - | - | `-` | - |
+| GET | `/api-docs/swagger.json` | `backend\src\routes\swagger.routes.ts L:69` | `-` | - | - | `-` | - |
 | POST | `/api/coupons/redeem` | `backend\src\routes\plan111.routes.ts L:65` | `couponController.redeemCoupon` | `CouponRedemption` | `401: unauthorized`<br>`404: coupon_not_found`<br>`400: redemption_failed` | `authMiddleware` | - |
 | POST | `/api/coupons/validate` | `backend\src\routes\plan111.routes.ts L:56` | `couponController.validateCoupon` | `ValidationResult` | `500: validation_error` | `-` | - |
 | POST | `/api/diagnostics` | `backend\src\routes\branding.routes.ts L:159` | `brandingController.uploadDiagnostic` | `brandingController_uploadDiagnostic_Response` | `400: VALIDATION_ERROR`<br>`500: INTERNAL_SERVER_ERROR` | `-` | - |
@@ -66,6 +66,7 @@
 | GET | `/health/ready` | `backend\src\routes\index.ts L:175` | `-` | - | - | `-` | - |
 | GET | `/oauth/google/authorize` | `backend\src\routes\social-auth.routes.ts L:64` | `socialAuthController.googleAuthorize` | `Redirect` | - | `-` | frontend\src\components\auth\GoogleLoginButton.tsx L:56 |
 | GET | `/oauth/google/callback` | `backend\src\routes\social-auth.routes.ts L:109` | `socialAuthController.googleCallback` | `Redirect` | - | `-` | - |
+| GET | `/user/profile` | `backend\src\routes\api.routes.jsdoc-example.ts L:222` | `usersController.getUserProfile` | - | - | `authMiddleware` | backend\coverage\lcov-report\src\routes\index.ts.html L:606<br>backend\coverage\src\routes\index.ts.html L:606<br>backend\src\routes\api.routes.jsdoc-example.ts L:254<br>backend\src\routes\index.ts L:101 |
 | POST | `/v1/chat/completions` | `backend\src\routes\v1.routes.ts L:172` | `modelsController.chatCompletion` | `GetModelForInference_Response` | - | `authMiddleware` | - |
 | POST | `/v1/completions` | `backend\src\routes\v1.routes.ts L:159` | `modelsController.textCompletion` | `GetModelForInference_Response` | - | `authMiddleware` | - |
 | GET | `/v1/credits/me` | `backend\src\routes\v1.routes.ts L:247` | `creditsController.getCurrentCredits` | - | - | `authMiddleware` | - |
@@ -102,18 +103,18 @@
 | Method | Endpoint | File | Handler | Response Schema | Error Schemas | Middleware | Usages |
 |--------|----------|------|---------|-----------------|---------------|------------|--------|
 | GET | `/.well-known/openid-configuration` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
-| GET | `/health` | `identity-provider\src\app.ts L:49` | `-` | - | - | `-` | frontend\src\services\api.ts L:252 |
-| GET | `/interaction/:uid` | `identity-provider\src\app.ts L:58` | `authController.interaction` | - | - | `-` | identity-provider\src\views\consent.html L:294;358;374<br>identity-provider\src\views\login.html L:233;270;277 |
-| GET | `/interaction/:uid/abort` | `identity-provider\src\app.ts L:61` | `authController.abort` | - | - | `-` | identity-provider\src\views\consent.html L:374<br>identity-provider\src\views\login.html L:277 |
-| POST | `/interaction/:uid/consent` | `identity-provider\src\app.ts L:60` | `authController.consent` | - | - | `-` | identity-provider\src\views\consent.html L:358 |
-| GET | `/interaction/:uid/data` | `identity-provider\src\app.ts L:62` | `authController.getInteractionData` | `authController_getInteractionData_Response` | - | `-` | identity-provider\src\views\consent.html L:294<br>identity-provider\src\views\login.html L:233 |
-| POST | `/interaction/:uid/login` | `identity-provider\src\app.ts L:59` | `authController.login` | `Redirect` | - | `-` | identity-provider\src\views\login.html L:270 |
-| GET | `/logout` | `identity-provider\src\app.ts L:65` | `authController.logout` | `Redirect` | - | `-` | - |
+| GET | `/health` | `identity-provider\src\app.ts L:45` | `-` | - | - | `-` | frontend\src\services\api.ts L:252 |
+| GET | `/interaction/:uid` | `identity-provider\src\app.ts L:57` | `authController.interaction` | - | - | `-` | identity-provider\src\views\consent.html L:294;358;374<br>identity-provider\src\views\login.html L:233;270;277 |
+| GET | `/interaction/:uid/abort` | `identity-provider\src\app.ts L:60` | `authController.abort` | - | - | `-` | identity-provider\src\views\consent.html L:374<br>identity-provider\src\views\login.html L:277 |
+| POST | `/interaction/:uid/consent` | `identity-provider\src\app.ts L:59` | `-` | - | - | `-` | identity-provider\src\views\consent.html L:358 |
+| GET | `/interaction/:uid/data` | `identity-provider\src\app.ts L:61` | `authController.getInteractionData` | `authController_getInteractionData_Response` | - | `-` | identity-provider\src\views\consent.html L:294<br>identity-provider\src\views\login.html L:233 |
+| POST | `/interaction/:uid/login` | `identity-provider\src\app.ts L:58` | `-` | - | - | `-` | identity-provider\src\views\login.html L:270 |
+| GET | `/logout` | `identity-provider\src\app.ts L:64` | `authController.logout` | `Redirect` | - | `-` | - |
 | GET | `/oauth/authorize` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
 | POST | `/oauth/introspect` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
 | GET | `/oauth/jwks` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | backend\src\services\token-introspection.service.ts L:126 |
 | POST | `/oauth/revoke` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
-| POST | `/oauth/token` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
+| POST | `/oauth/token` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | backend\scripts\get-access-token.ts L:25 |
 | GET | `/oauth/userinfo` | `identity-provider (OIDC Provider) L:0` | `-` | - | - | `-` | - |
 
 ---
@@ -122,17 +123,17 @@
 
 ### Backend API
 
-- **Total Endpoints:** 72
-- **Endpoints with Usages:** 6
-- **Total Usage References:** 1359
+- **Total Endpoints:** 73
+- **Endpoints with Usages:** 7
+- **Total Usage References:** 1379
 - **Unused Endpoints:** 66
 
 ### Identity Provider (OAuth 2.0/OIDC)
 
 - **Total Endpoints:** 14
-- **Endpoints with Usages:** 7
-- **Total Usage References:** 14
-- **Unused Endpoints:** 7
+- **Endpoints with Usages:** 8
+- **Total Usage References:** 15
+- **Unused Endpoints:** 6
 
 ---
 
@@ -142,10 +143,10 @@ Referenced TypeScript types and interfaces used in API responses:
 
 ### authController_getInteractionData_Response
 
-**Source:** `identity-provider\src\app.ts` (Line 62)
+**Source:** `identity-provider\src\app.ts` (Line 61)
 
 ```typescript
-// Inline response from identity-provider\src\app.ts:62
+// Inline response from identity-provider\src\app.ts:61
 type authController_getInteractionData_Response = {
         uid,
         prompt: prompt.name,
@@ -362,7 +363,7 @@ export interface DefaultModelResponse {
 
 ### GetInvoices_Response
 
-**Source:** `backend\src\services\billing-payments.service.ts` (Line 835)
+**Source:** `backend\src\services\billing-payments.service.ts` (Line 950)
 
 ```typescript
 // Service method return type from billing-payments.service.ts

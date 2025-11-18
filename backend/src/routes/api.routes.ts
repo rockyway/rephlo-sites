@@ -111,12 +111,16 @@ export function createAPIRouter(): Router {
   );
 
   // =============================================================================
-  // Enhanced Credits Endpoint
+  // Enhanced Credits Endpoint (Plan 189 - Subscription vs Purchased Split)
   // =============================================================================
 
   /**
    * GET /api/user/credits
-   * Get detailed credit breakdown (free + pro)
+   * Get detailed credit breakdown with subscription vs purchased credit separation
+   *
+   * BREAKING CHANGE (Plan 189): Response structure changed to split subscription credits
+   * from purchased addon credits. Old "proCredits" field replaced with "subscriptionCredits"
+   * and "purchasedCredits".
    *
    * Requires: Authentication, credits.read scope
    * Rate Limit: 60 requests per minute
@@ -124,20 +128,30 @@ export function createAPIRouter(): Router {
    * Response 200:
    * {
    *   "freeCredits": {
-   *     "remaining": 1500,
-   *     "monthlyAllocation": 2000,
-   *     "used": 500,
-   *     "resetDate": "2025-12-01T00:00:00Z",
-   *     "daysUntilReset": 25
+   *     "remaining": 200,              // Free tier monthly credits
+   *     "monthlyAllocation": 200,
+   *     "used": 0,
+   *     "resetDate": "2025-02-01T00:00:00Z",
+   *     "daysUntilReset": 15
    *   },
-   *   "proCredits": {
+   *   "subscriptionCredits": {         // NEW: Monthly credits from subscription tier
+   *     "remaining": 1500,
+   *     "monthlyAllocation": 1500,
+   *     "used": 0,
+   *     "resetDate": "2025-02-01T00:00:00Z",
+   *     "daysUntilReset": 15
+   *   },
+   *   "purchasedCredits": {            // NEW: One-time purchased credit packs (no reset)
    *     "remaining": 5000,
-   *     "purchasedTotal": 10000,
+   *     "totalPurchased": 10000,
    *     "lifetimeUsed": 5000
    *   },
-   *   "totalAvailable": 6500,
-   *   "lastUpdated": "2025-11-06T14:30:00Z"
+   *   "totalAvailable": 6700,          // Sum of all remaining credits
+   *   "lastUpdated": "2025-01-17T14:30:00Z"
    * }
+   *
+   * @see docs/reference/191-desktop-client-credit-api-migration-guide.md
+   * @see docs/reference/190-credit-deduction-flow-documentation.md
    */
   router.get(
     '/user/credits',

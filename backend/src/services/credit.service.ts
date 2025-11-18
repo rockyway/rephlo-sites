@@ -534,10 +534,14 @@ export class CreditService {
 
   /**
    * Get pro/purchased credits breakdown for user
-   * Aggregates all pro credit records for lifetime statistics
+   * Splits subscription-allocated credits from purchased addon credits
+   *
+   * Plan 189 Implementation:
+   * - Subscription credits: Monthly allocated credits from subscription tier (has subscription_id)
+   * - Purchased credits: Addon credits purchased separately (subscription_id is NULL)
    *
    * @param userId - User ID
-   * @returns Pro credits breakdown
+   * @returns Pro credits breakdown with subscription and purchased separated
    */
   async getProCreditsBreakdown(userId: string): Promise<any> {
     logger.debug('CreditService: Getting pro credits breakdown', { userId });
@@ -554,29 +558,64 @@ export class CreditService {
       logger.debug('CreditService: No pro credits found', { userId });
 
       return {
-        remaining: 0,
-        purchasedTotal: 0,
-        lifetimeUsed: 0,
+        subscriptionCredits: {
+          remaining: 0,
+          monthlyAllocation: 0,
+          used: 0,
+          resetDate: this.calculateNextMonthlyReset(1),
+          daysUntilReset: 0,
+        },
+        purchasedCredits: {
+          remaining: 0,
+          totalPurchased: 0,
+          lifetimeUsed: 0,
+        },
+        totalRemaining: 0,
       };
     }
 
-    // Aggregate across all pro credit records
-    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.total_credits, 0);
-    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.used_credits, 0);
-    const remaining = purchasedTotal - lifetimeUsed;
+    // Separate subscription credits from purchased addon credits
+    // Subscription credits have subscription_id, purchased addons have NULL subscription_id
+    const subscriptionCredits = proCredits.filter((c) => c.subscription_id !== null);
+    const purchasedAddonCredits = proCredits.filter((c) => c.subscription_id === null);
+
+    // Calculate subscription credits (monthly allocation from tier)
+    const subTotal = subscriptionCredits.reduce((sum, c) => sum + c.total_credits, 0);
+    const subUsed = subscriptionCredits.reduce((sum, c) => sum + c.used_credits, 0);
+    const subRemaining = subTotal - subUsed;
+    const subMonthlyAllocation = subscriptionCredits[0]?.monthly_allocation || 0;
+    const subResetDate = subscriptionCredits[0]?.billing_period_end || this.calculateNextMonthlyReset(1);
+
+    // Calculate purchased addon credits (one-time purchases, no reset)
+    const purchasedTotal = purchasedAddonCredits.reduce((sum, c) => sum + c.total_credits, 0);
+    const purchasedUsed = purchasedAddonCredits.reduce((sum, c) => sum + c.used_credits, 0);
+    const purchasedRemaining = purchasedTotal - purchasedUsed;
+
+    const totalRemaining = subRemaining + purchasedRemaining;
 
     logger.debug('CreditService: Pro credits breakdown retrieved', {
       userId,
-      remaining,
-      purchasedTotal,
-      lifetimeUsed,
-      recordCount: proCredits.length,
+      totalRemaining,
+      subscriptionRemaining: subRemaining,
+      purchasedRemaining,
+      subscriptionRecords: subscriptionCredits.length,
+      purchasedRecords: purchasedAddonCredits.length,
     });
 
     return {
-      remaining,
-      purchasedTotal,
-      lifetimeUsed,
+      subscriptionCredits: {
+        remaining: subRemaining,
+        monthlyAllocation: subMonthlyAllocation,
+        used: subUsed,
+        resetDate: subResetDate,
+        daysUntilReset: this.calculateDaysUntilReset(subResetDate),
+      },
+      purchasedCredits: {
+        remaining: purchasedRemaining,
+        totalPurchased: purchasedTotal,
+        lifetimeUsed: purchasedUsed,
+      },
+      totalRemaining,
     };
   }
 
@@ -596,13 +635,13 @@ export class CreditService {
       this.getProCreditsBreakdown(userId),
     ]);
 
-    const totalAvailable = freeCredits.remaining + proCredits.remaining;
+    const totalAvailable = freeCredits.remaining + proCredits.totalRemaining;
 
     logger.info('CreditService: Detailed credits retrieved', {
       userId,
       totalAvailable,
       freeRemaining: freeCredits.remaining,
-      proRemaining: proCredits.remaining,
+      proRemaining: proCredits.totalRemaining,
     });
 
     return {

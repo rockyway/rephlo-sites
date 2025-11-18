@@ -237,7 +237,8 @@ export class PricingConfigService implements IPricingConfigService {
           expected_revenue_impact,
           created_by,
           requires_approval,
-          approval_status
+          approval_status,
+          updated_at
         ) VALUES (
           ${config.scopeType},
           ${config.subscriptionTier},
@@ -255,7 +256,8 @@ export class PricingConfigService implements IPricingConfigService {
           ${config.expectedRevenueImpact},
           ${config.createdBy}::uuid,
           ${config.requiresApproval ?? true},
-          ${config.requiresApproval === false ? 'approved' : 'pending'}
+          ${config.requiresApproval === false ? 'approved' : 'pending'},
+          NOW()
         )
         RETURNING *
       `;

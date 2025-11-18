@@ -93,6 +93,15 @@ export class LLMService {
   }
 
   /**
+   * Estimate input tokens from text prompt (rough approximation)
+   * Using conservative estimate: 3 chars per token (slightly higher than average)
+   */
+  private estimateInputTokensFromText(prompt: string): number {
+    // Conservative estimate: 3 chars per token (slightly higher than average)
+    return Math.ceil((prompt?.length || 0) / 3);
+  }
+
+  /**
    * Calculate credit cost and gather all pricing metadata for deduction and tracking
    * Formula: credits = ceil(vendorCost × marginMultiplier × 100)
    * Where 100 is the conversion factor (1 credit = $0.01)
@@ -226,6 +235,56 @@ export class LLMService {
     const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
+      // ============================================================================
+      // PRE-FLIGHT CREDIT VALIDATION (Bug #3 Fix)
+      // ============================================================================
+
+      // Step 1: Estimate tokens from messages
+      const estimatedInputTokens = this.estimateInputTokens(request.messages);
+      const estimatedOutputTokens = request.max_tokens || 1000; // Use max_tokens or default
+
+      // Step 2: Estimate credit cost
+      const estimatedCredits = await this.creditDeductionService.estimateCreditsForRequest(
+        userId,
+        request.model,
+        modelProvider,
+        estimatedInputTokens,
+        estimatedOutputTokens
+      );
+
+      // Step 3: Validate sufficient balance BEFORE calling LLM
+      const validation = await this.creditDeductionService.validateSufficientCredits(
+        userId,
+        estimatedCredits
+      );
+
+      if (!validation.sufficient) {
+        logger.warn('LLMService: Insufficient credits for request', {
+          userId,
+          model: request.model,
+          estimatedCredits,
+          currentBalance: validation.currentBalance,
+          shortfall: validation.shortfall,
+        });
+
+        throw new InsufficientCreditsError(
+          `Insufficient credits. Balance: ${validation.currentBalance}, ` +
+          `Estimated cost: ${estimatedCredits}, ` +
+          `Shortfall: ${validation.shortfall}. ` +
+          `Suggestions: ${validation.suggestions?.join(', ') || 'Upgrade your plan for more credits'}`
+        );
+      }
+
+      logger.debug('LLMService: Pre-flight validation passed', {
+        userId,
+        estimatedCredits,
+        currentBalance: validation.currentBalance,
+      });
+
+      // ============================================================================
+      // LLM API CALL (only executes if credits sufficient)
+      // ============================================================================
+
       // 1. Delegate to provider (Strategy Pattern)
       const { response, usage } = await provider.chatCompletion(request);
 
@@ -286,7 +345,8 @@ export class LLMService {
         userId,
         duration,
         tokens: usage.totalTokens,
-        credits: pricingData.credits,
+        estimatedCredits,
+        actualCredits: pricingData.credits,
         vendorCost: pricingData.vendorCost,
         grossMargin: pricingData.grossMargin,
       });
@@ -328,6 +388,56 @@ export class LLMService {
     const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
+      // ============================================================================
+      // PRE-FLIGHT CREDIT VALIDATION (Bug #3 Fix)
+      // ============================================================================
+
+      // Step 1: Estimate tokens from messages
+      const estimatedInputTokens = this.estimateInputTokens(request.messages);
+      const estimatedOutputTokens = request.max_tokens || 1000; // Use max_tokens or default
+
+      // Step 2: Estimate credit cost
+      const estimatedCredits = await this.creditDeductionService.estimateCreditsForRequest(
+        userId,
+        request.model,
+        modelProvider,
+        estimatedInputTokens,
+        estimatedOutputTokens
+      );
+
+      // Step 3: Validate sufficient balance BEFORE calling LLM
+      const validation = await this.creditDeductionService.validateSufficientCredits(
+        userId,
+        estimatedCredits
+      );
+
+      if (!validation.sufficient) {
+        logger.warn('LLMService: Insufficient credits for streaming request', {
+          userId,
+          model: request.model,
+          estimatedCredits,
+          currentBalance: validation.currentBalance,
+          shortfall: validation.shortfall,
+        });
+
+        throw new InsufficientCreditsError(
+          `Insufficient credits. Balance: ${validation.currentBalance}, ` +
+          `Estimated cost: ${estimatedCredits}, ` +
+          `Shortfall: ${validation.shortfall}. ` +
+          `Suggestions: ${validation.suggestions?.join(', ') || 'Upgrade your plan for more credits'}`
+        );
+      }
+
+      logger.debug('LLMService: Pre-flight validation passed for streaming', {
+        userId,
+        estimatedCredits,
+        currentBalance: validation.currentBalance,
+      });
+
+      // ============================================================================
+      // LLM API CALL (only executes if credits sufficient)
+      // ============================================================================
+
       // 1. Delegate to provider
       const totalTokens = await provider.streamChatCompletion(request, res);
 
@@ -384,7 +494,8 @@ export class LLMService {
         userId,
         duration,
         tokens: totalTokens,
-        credits: pricingData.credits,
+        estimatedCredits,
+        actualCredits: pricingData.credits,
         vendorCost: pricingData.vendorCost,
         grossMargin: pricingData.grossMargin,
       });
@@ -430,6 +541,56 @@ export class LLMService {
     const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
+      // ============================================================================
+      // PRE-FLIGHT CREDIT VALIDATION (Bug #3 Fix)
+      // ============================================================================
+
+      // Step 1: Estimate tokens from prompt
+      const estimatedInputTokens = this.estimateInputTokensFromText(request.prompt);
+      const estimatedOutputTokens = request.max_tokens || 1000; // Use max_tokens or default
+
+      // Step 2: Estimate credit cost
+      const estimatedCredits = await this.creditDeductionService.estimateCreditsForRequest(
+        userId,
+        request.model,
+        modelProvider,
+        estimatedInputTokens,
+        estimatedOutputTokens
+      );
+
+      // Step 3: Validate sufficient balance BEFORE calling LLM
+      const validation = await this.creditDeductionService.validateSufficientCredits(
+        userId,
+        estimatedCredits
+      );
+
+      if (!validation.sufficient) {
+        logger.warn('LLMService: Insufficient credits for text completion', {
+          userId,
+          model: request.model,
+          estimatedCredits,
+          currentBalance: validation.currentBalance,
+          shortfall: validation.shortfall,
+        });
+
+        throw new InsufficientCreditsError(
+          `Insufficient credits. Balance: ${validation.currentBalance}, ` +
+          `Estimated cost: ${estimatedCredits}, ` +
+          `Shortfall: ${validation.shortfall}. ` +
+          `Suggestions: ${validation.suggestions?.join(', ') || 'Upgrade your plan for more credits'}`
+        );
+      }
+
+      logger.debug('LLMService: Pre-flight validation passed for text completion', {
+        userId,
+        estimatedCredits,
+        currentBalance: validation.currentBalance,
+      });
+
+      // ============================================================================
+      // LLM API CALL (only executes if credits sufficient)
+      // ============================================================================
+
       const { response, usage } = await provider.textCompletion(request);
 
       const duration = Date.now() - startTime;
@@ -488,7 +649,8 @@ export class LLMService {
         userId,
         duration,
         tokens: usage.totalTokens,
-        credits: pricingData.credits,
+        estimatedCredits,
+        actualCredits: pricingData.credits,
         vendorCost: pricingData.vendorCost,
         grossMargin: pricingData.grossMargin,
       });
@@ -529,6 +691,56 @@ export class LLMService {
     const requestId = randomUUID(); // Generate unique request ID for tracking
 
     try {
+      // ============================================================================
+      // PRE-FLIGHT CREDIT VALIDATION (Bug #3 Fix)
+      // ============================================================================
+
+      // Step 1: Estimate tokens from prompt
+      const estimatedInputTokens = this.estimateInputTokensFromText(request.prompt);
+      const estimatedOutputTokens = request.max_tokens || 1000; // Use max_tokens or default
+
+      // Step 2: Estimate credit cost
+      const estimatedCredits = await this.creditDeductionService.estimateCreditsForRequest(
+        userId,
+        request.model,
+        modelProvider,
+        estimatedInputTokens,
+        estimatedOutputTokens
+      );
+
+      // Step 3: Validate sufficient balance BEFORE calling LLM
+      const validation = await this.creditDeductionService.validateSufficientCredits(
+        userId,
+        estimatedCredits
+      );
+
+      if (!validation.sufficient) {
+        logger.warn('LLMService: Insufficient credits for streaming text completion', {
+          userId,
+          model: request.model,
+          estimatedCredits,
+          currentBalance: validation.currentBalance,
+          shortfall: validation.shortfall,
+        });
+
+        throw new InsufficientCreditsError(
+          `Insufficient credits. Balance: ${validation.currentBalance}, ` +
+          `Estimated cost: ${estimatedCredits}, ` +
+          `Shortfall: ${validation.shortfall}. ` +
+          `Suggestions: ${validation.suggestions?.join(', ') || 'Upgrade your plan for more credits'}`
+        );
+      }
+
+      logger.debug('LLMService: Pre-flight validation passed for streaming text completion', {
+        userId,
+        estimatedCredits,
+        currentBalance: validation.currentBalance,
+      });
+
+      // ============================================================================
+      // LLM API CALL (only executes if credits sufficient)
+      // ============================================================================
+
       const totalTokens = await provider.streamTextCompletion(request, res);
 
       // Note: Streaming providers only return totalTokens, so we estimate the breakdown
@@ -583,7 +795,8 @@ export class LLMService {
         userId,
         duration,
         tokens: totalTokens,
-        credits: pricingData.credits,
+        estimatedCredits,
+        actualCredits: pricingData.credits,
         vendorCost: pricingData.vendorCost,
         grossMargin: pricingData.grossMargin,
       });

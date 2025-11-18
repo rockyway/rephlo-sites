@@ -20,13 +20,35 @@ export interface FreeCreditsInfo {
 }
 
 /**
- * Pro/purchased credits breakdown information
- * Tracks lifetime purchased credits and usage
+ * Subscription credits breakdown information (Plan 189)
+ * Monthly allocated credits from subscription tier
+ */
+export interface SubscriptionCreditsInfo {
+  remaining: number;
+  monthlyAllocation: number;
+  used: number;
+  resetDate: Date;
+  daysUntilReset: number;
+}
+
+/**
+ * Purchased addon credits breakdown information (Plan 189)
+ * One-time purchased credits (no monthly reset)
+ */
+export interface PurchasedCreditsInfo {
+  remaining: number;
+  totalPurchased: number;
+  lifetimeUsed: number;
+}
+
+/**
+ * Pro/purchased credits breakdown information (Plan 189)
+ * Splits subscription credits from purchased addon credits
  */
 export interface ProCreditsInfo {
-  remaining: number;
-  purchasedTotal: number;
-  lifetimeUsed: number;
+  subscriptionCredits: SubscriptionCreditsInfo;
+  purchasedCredits: PurchasedCreditsInfo;
+  totalRemaining: number;
 }
 
 /**
@@ -108,11 +130,11 @@ export interface ICreditService {
   getFreeCreditsBreakdown(userId: string): Promise<FreeCreditsInfo>;
 
   /**
-   * Get pro/purchased credits breakdown for user
-   * Aggregates all pro credit records for lifetime statistics
+   * Get pro/purchased credits breakdown for user (Plan 189)
+   * Splits subscription-allocated credits from purchased addon credits
    *
    * @param userId - User ID
-   * @returns Pro credits breakdown
+   * @returns Pro credits breakdown with subscription and purchased separated
    */
   getProCreditsBreakdown(userId: string): Promise<ProCreditsInfo>;
 
