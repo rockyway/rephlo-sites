@@ -84,7 +84,7 @@ export class PricingConfigService implements IPricingConfigService {
         SELECT margin_multiplier
         FROM pricing_configs
         WHERE scope_type = 'combination'
-          AND subscription_tier = ${tier}
+          AND subscription_tier = ${tier}::subscription_tier
           AND provider_id = ${providerId}::uuid
           AND model_id = ${modelId}
           AND is_active = true
@@ -163,7 +163,7 @@ export class PricingConfigService implements IPricingConfigService {
         SELECT margin_multiplier
         FROM pricing_configs
         WHERE scope_type = 'tier'
-          AND subscription_tier = ${tier}
+          AND subscription_tier = ${tier}::subscription_tier
           AND provider_id IS NULL
           AND is_active = true
           AND approval_status = 'approved'
