@@ -14,6 +14,10 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { authHelpers } from '@/services/api';
 import { revokeToken } from '@/utils/oauth';
 
+// Environment variables with fallback to development defaults
+const IDP_URL = import.meta.env.VITE_IDP_URL || 'http://localhost:7151';
+const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:7152';
+
 interface AdminRouteProps {
   children: ReactNode;
 }
@@ -46,16 +50,16 @@ export function AdminRoute({ children }: AdminRouteProps) {
       authHelpers.clearAuth('user_logout_from_access_denied');
 
       // Redirect to identity provider logout to clear session cookies
-      // Then redirect back to login page
-      const idpLogoutUrl = 'http://localhost:7151/logout';
-      const postLogoutRedirectUri = encodeURIComponent('http://localhost:7052/login');
+      // Then redirect back to landing page
+      const idpLogoutUrl = `${IDP_URL}/logout`;
+      const postLogoutRedirectUri = encodeURIComponent(`${APP_URL}/`);
       window.location.href = `${idpLogoutUrl}?post_logout_redirect_uri=${postLogoutRedirectUri}`;
     } catch (error) {
       console.error('Logout error:', error);
       // Even if token revocation fails, clear local auth and redirect to IDP logout
       authHelpers.clearAuth('user_logout_with_error');
-      const idpLogoutUrl = 'http://localhost:7151/logout';
-      const postLogoutRedirectUri = encodeURIComponent('http://localhost:7052/login');
+      const idpLogoutUrl = `${IDP_URL}/logout`;
+      const postLogoutRedirectUri = encodeURIComponent(`${APP_URL}/`);
       window.location.href = `${idpLogoutUrl}?post_logout_redirect_uri=${postLogoutRedirectUri}`;
     }
   };
