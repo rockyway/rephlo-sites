@@ -394,6 +394,20 @@ export async function createOIDCProvider(
               );
             }
 
+            // CRITICAL FIX: Ensure offline_access is in OIDC scope for refresh tokens
+            // When using resource indicators, offline_access can be filtered from params.scope
+            // but it MUST be in the grant's OIDC scope for refresh tokens to work correctly
+            // Without this, refreshTokens get expiresWithSession: true (session-bound)
+            if (client.grantTypeAllowed('refresh_token')) {
+              const scopeString = ctx.oidc.params?.scope as string || '';
+              if (scopeString.includes('offline_access')) {
+                grant.addOIDCScope('offline_access');
+                logger.debug('OIDC: Added offline_access to OIDC scope for refresh token support', {
+                  clientId: client.clientId,
+                });
+              }
+            }
+
             // Save the grant to the database
             await grant.save();
 
