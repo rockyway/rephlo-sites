@@ -2480,11 +2480,107 @@
         }
       }
     },
+    "/api/user/invoices": {
+      "get": {
+        "operationId": "UserProfileApiSpec_get_/api/user/invoices",
+        "tags": [
+          "Users",
+          "Credits"
+        ],
+        "summary": "Get user invoices",
+        "description": "Retrieve invoice history for the authenticated user.\n\nReturns paginated list of invoices from Stripe with download URLs.\nIncludes information about subscription renewals, credit purchases, and other billing events.\n\n**Use Case**: Desktop app billing history tab\n\n**Caching Recommendation**: Cache this response for 1 hour on the client side.\nRe-fetch when user navigates to billing history or after a new payment.\n\n**Rate Limit**: 30 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Number of invoices to return (default 10, max 50)",
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User Invoices Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserInvoicesResponse",
+                  "description": "Successful response with invoice list"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Bad request - Invalid limit parameter"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient scope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Rate limit exceeded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/user/profile": {
       "get": {
         "operationId": "UserProfileApiSpec_get_/api/user/profile",
         "tags": [
-          "Users"
+          "Users",
+          "Credits"
         ],
         "summary": "Get detailed user profile",
         "description": "Retrieve authenticated user's complete profile including:\n- Email and display name\n- Subscription tier and status\n- User preferences (default model, notification settings)\n- Account timestamps\n\n**Caching Recommendation**: Cache this response for 1 hour on the client side.\nRe-fetch only when profile data is explicitly needed (e.g., settings page).\n\n**Rate Limit**: 30 requests per minute",
@@ -2502,6 +2598,101 @@
                 "schema": {
                   "$ref": "#/components/schemas/UserProfileResponse",
                   "description": "Successful response with user profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Unauthorized - Missing or invalid JWT token"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Forbidden - Insufficient scope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Rate limit exceeded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/usage/summary": {
+      "get": {
+        "operationId": "UserProfileApiSpec_get_/api/user/usage/summary",
+        "tags": [
+          "Users",
+          "Credits"
+        ],
+        "summary": "Get monthly usage summary",
+        "description": "Retrieve comprehensive usage statistics for the authenticated user.\n\nReturns detailed breakdown of:\n- Credit usage (free vs pro)\n- API request count\n- Token consumption\n- Model usage distribution\n\n**Use Case**: Desktop app usage analytics dashboard\n\n**Caching Recommendation**: Cache this response for 15 minutes on the client side.\nRe-fetch when user navigates to usage analytics or after making API calls.\n\n**Rate Limit**: 60 requests per minute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "description": "Period filter:\n- \"current_month\" (default) - Current calendar month\n- \"YYYY-MM\" format - Specific month (e.g., \"2025-11\")",
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monthly Usage Summary Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageSummaryResponse",
+                  "description": "Successful response with usage summary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API Error Structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError",
+                  "description": "Bad request - Invalid period parameter"
                 }
               }
             }
@@ -7042,6 +7233,67 @@
           "totalAvailable"
         ]
       },
+      "UserInvoicesResponse": {
+        "description": "User Invoices Response",
+        "type": "object",
+        "properties": {
+          "invoices": {
+            "description": "List of invoices",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Invoice"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoices"
+        ]
+      },
+      "Invoice": {
+        "description": "Invoice item in the list",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Stripe invoice ID",
+            "type": "string"
+          },
+          "date": {
+            "description": "Invoice date (ISO 8601)",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Invoice amount in cents",
+            "type": "number"
+          },
+          "currency": {
+            "description": "Currency code (USD, EUR, etc.)",
+            "type": "string"
+          },
+          "status": {
+            "description": "Invoice status (paid, unpaid, void, etc.)",
+            "type": "string"
+          },
+          "pdfUrl": {
+            "description": "PDF download URL",
+            "type": "string"
+          },
+          "description": {
+            "description": "Description of invoice",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "amount",
+          "currency",
+          "date",
+          "description",
+          "id",
+          "pdfUrl",
+          "status"
+        ]
+      },
       "UserProfileResponse": {
         "description": "User Profile Response\nComplete user profile with subscription and preferences",
         "type": "object",
@@ -7134,6 +7386,117 @@
           "preferences",
           "subscription",
           "userId"
+        ]
+      },
+      "UsageSummaryResponse": {
+        "description": "Monthly Usage Summary Response",
+        "type": "object",
+        "properties": {
+          "period": {
+            "description": "Period identifier (YYYY-MM format)",
+            "type": "string"
+          },
+          "periodStart": {
+            "description": "Period start date (ISO 8601)",
+            "type": "string"
+          },
+          "periodEnd": {
+            "description": "Period end date (ISO 8601)",
+            "type": "string"
+          },
+          "creditUsage": {
+            "description": "Credit usage summary",
+            "type": "object",
+            "properties": {
+              "freeCreditsUsed": {
+                "description": "Free credits used",
+                "type": "number"
+              },
+              "proCreditsUsed": {
+                "description": "Pro credits used",
+                "type": "number"
+              },
+              "totalCreditsUsed": {
+                "description": "Total credits used",
+                "type": "number"
+              },
+              "freeCreditsRemaining": {
+                "description": "Remaining free credits",
+                "type": "number"
+              },
+              "proCreditsRemaining": {
+                "description": "Remaining pro credits",
+                "type": "number"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "freeCreditsRemaining",
+              "freeCreditsUsed",
+              "proCreditsRemaining",
+              "proCreditsUsed",
+              "totalCreditsUsed"
+            ]
+          },
+          "totalRequests": {
+            "description": "Total API requests",
+            "type": "number"
+          },
+          "totalTokens": {
+            "description": "Total tokens consumed",
+            "type": "number"
+          },
+          "modelUsage": {
+            "description": "Usage by model",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelUsageStats"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "creditUsage",
+          "modelUsage",
+          "period",
+          "periodEnd",
+          "periodStart",
+          "totalRequests",
+          "totalTokens"
+        ]
+      },
+      "ModelUsageStats": {
+        "description": "Model usage statistics",
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "description": "Model ID",
+            "type": "string"
+          },
+          "modelName": {
+            "description": "Model name",
+            "type": "string"
+          },
+          "requests": {
+            "description": "Number of requests",
+            "type": "number"
+          },
+          "tokensUsed": {
+            "description": "Total tokens consumed",
+            "type": "number"
+          },
+          "creditsUsed": {
+            "description": "Credits consumed for this model",
+            "type": "number"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "creditsUsed",
+          "modelId",
+          "modelName",
+          "requests",
+          "tokensUsed"
         ]
       },
       "ChatCompletionResponse": {
