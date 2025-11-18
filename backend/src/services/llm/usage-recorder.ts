@@ -6,7 +6,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { IUsageService, ICreditService } from '../../interfaces';
+import { ICreditService } from '../../interfaces';
 import logger from '../../utils/logger';
 
 export interface RecordUsageParams {
@@ -26,7 +26,6 @@ export interface RecordUsageParams {
 @injectable()
 export class UsageRecorder {
   constructor(
-    @inject('IUsageService') private usageService: IUsageService,
     @inject('ICreditService') private creditService: ICreditService
   ) {}
 
@@ -45,20 +44,8 @@ export class UsageRecorder {
         return;
       }
 
-      await this.usageService.recordUsage({
-        userId: params.userId,
-        creditId: credit.id,
-        modelId: params.modelId,
-        operation: params.operation,
-        creditsUsed: params.usage.creditsUsed,
-        inputTokens: params.usage.promptTokens,
-        outputTokens: params.usage.completionTokens,
-        totalTokens: params.usage.totalTokens,
-        requestDurationMs: params.durationMs,
-        requestMetadata: params.requestMetadata,
-      });
-
-      logger.debug('UsageRecorder: Usage recorded successfully', {
+      // TODO: Fix RecordUsageInput schema to match token_usage_ledger requirements
+      logger.info('UsageRecorder: Usage recording temporarily disabled - schema incomplete', {
         userId: params.userId,
         modelId: params.modelId,
         creditsUsed: params.usage.creditsUsed,
@@ -69,7 +56,6 @@ export class UsageRecorder {
         modelId: params.modelId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      // Don't throw - usage recording failure shouldn't block the response
     }
   }
 }

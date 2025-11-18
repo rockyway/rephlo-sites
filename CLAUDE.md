@@ -787,4 +787,63 @@ If delegating tasks to Claude Code agents:
 ---
 
 ## When testing API
+
 - use temporary raw access token in the text file in `temp_token.txt`
+
+## Working Protocol
+
+- Must read the [[working-protocol.md]]
+
+---
+
+## Type Transformation Layer
+### Purpose
+Ensure consistent type transformations between **database (snake_case)** and **API/TypeScript (camelCase)** layers. All conversions must be centralized and standardized.
+
+---
+
+### Naming Convention Standards
+
+| Context              | Convention   | Example                          |
+|----------------------|-------------|----------------------------------|
+| Database (Prisma)    | `snake_case` | `monthly_credit_allocation`      |
+| API Responses (JSON) | `camelCase`  | `monthlyCreditAllocation`        |
+| TypeScript Interfaces| `camelCase`  | `interface TierConfig { monthlyCreditAllocation: number }` |
+
+---
+
+### Shared Types
+- **Location**: `shared-types/src/*.types.ts`  
+- All TypeScript interfaces live in the shared-types package.  
+- Always define API/service types in **camelCase** for consistency across backend and frontend.
+
+---
+
+### Mapper Functions
+- **Location**: `backend/src/utils/typeMappers.ts`  
+- All transformations between DB and API must use centralized mappers.  
+- Never expose raw Prisma objects directly to API consumers.  
+
+**Helpers:**
+- `decimalToNumber()` → Prisma Decimal → JS number  
+- `dateToIsoString()` → Date | null → ISO 8601 string | null  
+- `mapXToApiType()` → snake_case → camelCase  
+
+---
+
+### Correct Usage Pattern
+✅ Query DB → Transform with mapper → Return API type  
+❌ Do not return raw Prisma objects (snake_case leaks into API)
+
+---
+
+### References
+- 📖 API Development Standards (`docs/reference/156-api-standards.md`)  
+- 📖 DTO Pattern Guide (`docs/reference/155-dto-pattern-guide.md`)  
+- 📖 camelCase Standardization Report (`docs/progress/161-camelcase-standardization-completion-report.md`)  
+
+---
+
+## Launch Plan
+- The application is scheduled to launch in March 2026.
+- It is currently in the development phase and undergoing local testing.

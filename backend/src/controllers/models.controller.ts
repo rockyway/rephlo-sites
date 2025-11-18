@@ -32,7 +32,7 @@ import {
   createApiError,
 } from '../middleware/error.middleware';
 import { getUserId, getUserTier } from '../middleware/auth.middleware';
-import { SubscriptionTier } from '@prisma/client';
+import { subscription_tier } from '@prisma/client';
 
 // =============================================================================
 // Models Controller Class
@@ -91,9 +91,9 @@ export class ModelsController {
 
     try {
       // Get user tier if authenticated
-      let userTier: SubscriptionTier | undefined;
+      let userTier: subscription_tier | undefined;
       if (userId) {
-        userTier = (await getUserTier(userId)) as SubscriptionTier;
+        userTier = (await getUserTier(userId)) as subscription_tier;
         logger.debug('ModelsController.listModels: User tier retrieved', {
           userId,
           userTier,
@@ -137,9 +137,9 @@ export class ModelsController {
 
     try {
       // Get user tier if authenticated
-      let userTier: SubscriptionTier | undefined;
+      let userTier: subscription_tier | undefined;
       if (userId) {
-        userTier = (await getUserTier(userId)) as SubscriptionTier;
+        userTier = (await getUserTier(userId)) as subscription_tier;
         logger.debug('ModelsController.getModelDetails: User tier retrieved', {
           userId,
           userTier,
@@ -213,7 +213,7 @@ export class ModelsController {
 
     try {
       // Get user tier for access control
-      const userTier = (await getUserTier(userId)) as SubscriptionTier;
+      const userTier = (await getUserTier(userId)) as subscription_tier;
 
       logger.debug('ModelsController.textCompletion: User tier retrieved', {
         userId,
@@ -265,7 +265,6 @@ export class ModelsController {
         await this.llmService.streamTextCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId,
           res
         );
@@ -274,7 +273,6 @@ export class ModelsController {
         const result = await this.llmService.textCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId
         );
 
@@ -366,7 +364,7 @@ export class ModelsController {
 
     try {
       // Get user tier for access control
-      const userTier = (await getUserTier(userId)) as SubscriptionTier;
+      const userTier = (await getUserTier(userId)) as subscription_tier;
 
       logger.debug('ModelsController.chatCompletion: User tier retrieved', {
         userId,
@@ -418,7 +416,6 @@ export class ModelsController {
         await this.llmService.streamChatCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId,
           res
         );
@@ -427,7 +424,6 @@ export class ModelsController {
         const result = await this.llmService.chatCompletion(
           request,
           modelInfo.provider,
-          modelInfo.creditsPer1kTokens,
           userId
         );
 

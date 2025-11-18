@@ -139,6 +139,7 @@ export class AuthService {
   async findAccount(accountId: string): Promise<{
     accountId: string;
     claims: (use: string, scope: string) => Promise<any>;
+    getOIDCScopeFiltered: (scopes: string[]) => string[];
   } | undefined> {
     try {
       const user = await this.findById(accountId);
@@ -151,6 +152,21 @@ export class AuthService {
         accountId: user.id,
         claims: async (_use: string, scope: string) => {
           return this.getClaimsForUser(user, scope);
+        },
+        /**
+         * Filter OIDC scopes based on what the user has previously granted
+         * This method is called by oidc-provider during consent flow
+         * For now, we return all requested scopes (consent is handled via loadExistingGrant)
+         */
+        getOIDCScopeFiltered: (scopes: string[]) => {
+          logger.debug('AuthService: getOIDCScopeFiltered called', {
+            userId: user.id,
+            requestedScopes: scopes,
+          });
+          // Return all OIDC scopes (openid, email, profile, offline_access)
+          // Non-OIDC scopes are filtered by the provider
+          const oidcScopes = ['openid', 'email', 'profile', 'offline_access'];
+          return scopes.filter(scope => oidcScopes.includes(scope));
         },
       };
     } catch (error) {

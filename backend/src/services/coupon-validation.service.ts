@@ -19,7 +19,8 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Coupon, SubscriptionTier, ValidationRuleType } from '@prisma/client';
+import { PrismaClient, coupon as Coupon, subscription_tier as SubscriptionTier, validation_rule_type as ValidationRuleType } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   ValidationContext,
   ValidationResult,
@@ -160,9 +161,9 @@ export class CouponValidationService {
     const coupon = await this.prisma.coupon.findUnique({
       where: { code: code.toUpperCase() },
       include: {
-        campaign: true,
-        usageLimits: true,
-        validationRules: { where: { isActive: true } },
+        coupon_campaign: true,
+        coupon_usage_limit: true,
+        coupon_validation_rule: { where: { is_active: true } },
       },
     });
 
@@ -174,7 +175,7 @@ export class CouponValidationService {
   // ============================================================================
   async step2_checkIsActive(coupon: Coupon): Promise<boolean> {
     logger.debug('Validation Step 2: Checking coupon is active', { couponId: coupon.id });
-    return coupon.isActive;
+    return coupon.is_active;
   }
 
   // ============================================================================
@@ -184,13 +185,13 @@ export class CouponValidationService {
     logger.debug('Validation Step 3: Checking validity period', { couponId: coupon.id });
 
     const now = new Date();
-    const isValid = now >= coupon.validFrom && now <= coupon.validUntil;
+    const isValid = now >= coupon.valid_from && now <= coupon.valid_until;
 
     if (!isValid) {
       logger.warn('Coupon expired or not yet valid', {
         couponId: coupon.id,
-        validFrom: coupon.validFrom,
-        validUntil: coupon.validUntil,
+        validFrom: coupon.valid_from,
+        validUntil: coupon.valid_until,
         now,
       });
     }
@@ -207,13 +208,13 @@ export class CouponValidationService {
       userTier,
     });
 
-    const isEligible = coupon.tierEligibility.includes(userTier);
+    const isEligible = coupon.tier_eligibility.includes(userTier);
 
     if (!isEligible) {
       logger.warn('User tier not eligible for coupon', {
         couponId: coupon.id,
         userTier,
-        requiredTiers: coupon.tierEligibility,
+        requiredTiers: coupon.tier_eligibility,
       });
     }
 
@@ -227,18 +228,18 @@ export class CouponValidationService {
     logger.debug('Validation Step 5: Checking max uses', { couponId: coupon.id });
 
     // NULL = unlimited uses
-    if (coupon.maxUses === null) {
+    if (coupon.max_uses === null) {
       return true;
     }
 
-    const usageLimits = coupon.usageLimits || (await this.getOrCreateUsageLimits(coupon.id));
-    const hasUsesRemaining = usageLimits.totalUses < coupon.maxUses;
+    const usageLimits = coupon.usage_limits || (await this.getOrCreateUsageLimits(coupon.id));
+    const hasUsesRemaining = usageLimits.total_uses < coupon.max_uses;
 
     if (!hasUsesRemaining) {
       logger.warn('Coupon max uses exceeded', {
         couponId: coupon.id,
-        totalUses: usageLimits.totalUses,
-        maxUses: coupon.maxUses,
+        totalUses: usageLimits.total_uses,
+        maxUses: coupon.max_uses,
       });
     }
 
@@ -254,22 +255,22 @@ export class CouponValidationService {
       userId,
     });
 
-    const userRedemptions = await this.prisma.couponRedemption.count({
+    const userRedemptions = await this.prisma.coupon_redemption.count({
       where: {
-        couponId: coupon.id,
-        userId: userId,
-        redemptionStatus: 'success',
+        coupon_id: coupon.id,
+        user_id: userId,
+        redemption_status: 'success',
       },
     });
 
-    const hasUsesRemaining = userRedemptions < coupon.maxUsesPerUser;
+    const hasUsesRemaining = userRedemptions < coupon.max_uses_per_user;
 
     if (!hasUsesRemaining) {
       logger.warn('User exceeded max uses for coupon', {
         couponId: coupon.id,
         userId,
         userRedemptions,
-        maxUsesPerUser: coupon.maxUsesPerUser,
+        maxUsesPerUser: coupon.max_uses_per_user,
       });
     }
 
@@ -282,18 +283,18 @@ export class CouponValidationService {
   async step7_checkCampaignBudget(coupon: any): Promise<boolean> {
     logger.debug('Validation Step 7: Checking campaign budget', { couponId: coupon.id });
 
-    if (!coupon.campaign || !coupon.campaign.budgetLimitUsd) {
+    if (!coupon.campaign || !coupon.campaign.budget_limit_usd) {
       return true; // No campaign or unlimited budget
     }
 
     const isBudgetAvailable =
-      parseFloat(coupon.campaign.totalSpentUsd) < parseFloat(coupon.campaign.budgetLimitUsd);
+      parseFloat(coupon.campaign.total_spent_usd) < parseFloat(coupon.campaign.budget_limit_usd);
 
     if (!isBudgetAvailable) {
       logger.warn('Campaign budget exhausted', {
         campaignId: coupon.campaign.id,
-        totalSpent: coupon.campaign.totalSpentUsd,
-        budgetLimit: coupon.campaign.budgetLimitUsd,
+        totalSpent: coupon.campaign.total_spent_usd,
+        budgetLimit: coupon.campaign.budget_limit_usd,
       });
     }
 
@@ -309,17 +310,17 @@ export class CouponValidationService {
       cartTotal,
     });
 
-    if (!coupon.minPurchaseAmount) {
+    if (!coupon.min_purchase_amount) {
       return true; // No minimum required
     }
 
-    const meetsMinimum = cartTotal >= parseFloat(coupon.minPurchaseAmount.toString());
+    const meetsMinimum = cartTotal >= parseFloat(coupon.min_purchase_amount.toString());
 
     if (!meetsMinimum) {
       logger.warn('Cart total below minimum purchase amount', {
         couponId: coupon.id,
         cartTotal,
-        minPurchaseAmount: coupon.minPurchaseAmount,
+        minPurchaseAmount: coupon.min_purchase_amount,
       });
     }
 
@@ -335,16 +336,16 @@ export class CouponValidationService {
       userId,
     });
 
-    if (!coupon.validationRules || coupon.validationRules.length === 0) {
+    if (!coupon.validation_rules || coupon.validation_rules.length === 0) {
       return true; // No custom rules
     }
 
-    for (const rule of coupon.validationRules) {
+    for (const rule of coupon.validation_rules) {
       const isValid = await this.validateCustomRule(rule, userId);
       if (!isValid) {
         logger.warn('Custom validation rule failed', {
           couponId: coupon.id,
-          ruleType: rule.ruleType,
+          ruleType: rule.rule_type,
           userId,
         });
         return false;
@@ -363,13 +364,13 @@ export class CouponValidationService {
       userId,
     });
 
-    const criticalFlags = await this.prisma.couponFraudDetection.count({
+    const criticalFlags = await this.prisma.coupon_fraud_detection.count({
       where: {
-        couponId: coupon.id,
-        userId: userId,
+        coupon_id: coupon.id,
+        user_id: userId,
         severity: 'critical',
-        isFlagged: true,
-        reviewedAt: null, // Not yet reviewed
+        is_flagged: true,
+        reviewed_at: null, // Not yet reviewed
       },
     });
 
@@ -391,10 +392,10 @@ export class CouponValidationService {
     logger.debug('Validation Step 11: Checking redemption velocity', { userId });
 
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentAttempts = await this.prisma.couponRedemption.count({
+    const recentAttempts = await this.prisma.coupon_redemption.count({
       where: {
-        userId: userId,
-        redemptionDate: { gte: oneHourAgo },
+        user_id: userId,
+        redemption_date: { gte: oneHourAgo },
       },
     });
 
@@ -402,17 +403,18 @@ export class CouponValidationService {
       logger.warn('Velocity limit exceeded', { userId, recentAttempts });
 
       // Log velocity abuse
-      await this.prisma.couponFraudDetection.create({
+      await this.prisma.coupon_fraud_detection.create({
         data: {
-          couponId: '', // Will be set by caller
-          userId: userId,
-          detectionType: 'velocity_abuse',
+          id: randomUUID(),
+          coupon_id: '', // Will be set by caller
+          user_id: userId,
+          detection_type: 'velocity_abuse',
           severity: 'high',
           details: {
             attempts: recentAttempts,
             timeWindow: '1 hour',
           },
-          isFlagged: true,
+          is_flagged: true,
         },
       });
 
@@ -435,17 +437,17 @@ export class CouponValidationService {
       currentIp,
     });
 
-    const userFingerprints = await this.prisma.couponRedemption.findMany({
+    const userFingerprints = await this.prisma.coupon_redemption.findMany({
       where: {
-        userId: userId,
-        redemptionStatus: 'success',
+        user_id: userId,
+        redemption_status: 'success',
       },
-      select: { ipAddress: true },
-      distinct: ['ipAddress'],
+      select: { ip_address: true },
+      distinct: ['ip_address'],
     });
 
     // If user has > 5 different IPs, flag for review (but don't block)
-    if (userFingerprints.length > 5 && !userFingerprints.some((r) => r.ipAddress === currentIp)) {
+    if (userFingerprints.length > 5 && !userFingerprints.some((r) => r.ip_address === currentIp)) {
       logger.warn('Suspicious IP switching detected', {
         userId,
         uniqueIPs: userFingerprints.length,
@@ -453,18 +455,19 @@ export class CouponValidationService {
       });
 
       // Log for review (don't block)
-      await this.prisma.couponFraudDetection.create({
+      await this.prisma.coupon_fraud_detection.create({
         data: {
-          couponId: '', // Will be set by caller
-          userId: userId,
-          detectionType: 'ip_switching',
+          id: randomUUID(),
+          coupon_id: '', // Will be set by caller
+          user_id: userId,
+          detection_type: 'ip_switching',
           severity: 'medium',
           details: {
             uniqueIPs: userFingerprints.length,
             currentIP: currentIp,
-            previousIPs: userFingerprints.map((r) => r.ipAddress),
+            previousIPs: userFingerprints.map((r) => r.ip_address),
           },
-          isFlagged: false, // Don't block, just log
+          is_flagged: false, // Don't block, just log
         },
       });
     }
@@ -480,12 +483,12 @@ export class CouponValidationService {
 
     let discountAmount = 0;
 
-    switch (coupon.discountType) {
+    switch (coupon.discount_type) {
       case 'percentage':
-        discountAmount = (originalAmount * parseFloat(coupon.discountValue.toString())) / 100;
+        discountAmount = (originalAmount * parseFloat(coupon.discount_value.toString())) / 100;
         break;
       case 'fixed_amount':
-        discountAmount = Math.min(parseFloat(coupon.discountValue.toString()), originalAmount);
+        discountAmount = Math.min(parseFloat(coupon.discount_value.toString()), originalAmount);
         break;
       case 'credits':
         // Credits don't reduce subscription price, they grant credits
@@ -500,8 +503,8 @@ export class CouponValidationService {
     const finalAmount = Math.max(0, originalAmount - discountAmount);
 
     const calculation: DiscountCalculation = {
-      couponType: coupon.couponType,
-      discountType: coupon.discountType,
+      couponType: coupon.coupon_type,
+      discountType: coupon.discount_type,
       originalAmount,
       discountAmount,
       finalAmount,
@@ -510,14 +513,14 @@ export class CouponValidationService {
     };
 
     // Add type-specific fields
-    if (coupon.discountType === 'percentage') {
-      calculation.percentage = parseFloat(coupon.discountValue.toString());
-    } else if (coupon.discountType === 'fixed_amount') {
-      calculation.fixedAmount = parseFloat(coupon.discountValue.toString());
-    } else if (coupon.discountType === 'credits') {
-      calculation.creditAmount = parseFloat(coupon.discountValue.toString());
-    } else if (coupon.discountType === 'months_free') {
-      calculation.bonusMonths = parseFloat(coupon.discountValue.toString());
+    if (coupon.discount_type === 'percentage') {
+      calculation.percentage = parseFloat(coupon.discount_value.toString());
+    } else if (coupon.discount_type === 'fixed_amount') {
+      calculation.fixedAmount = parseFloat(coupon.discount_value.toString());
+    } else if (coupon.discount_type === 'credits') {
+      calculation.creditAmount = parseFloat(coupon.discount_value.toString());
+    } else if (coupon.discount_type === 'months_free') {
+      calculation.bonusMonths = parseFloat(coupon.discount_value.toString());
     }
 
     return calculation;
@@ -545,10 +548,10 @@ export class CouponValidationService {
    */
   async canRetryValidation(userId: string): Promise<boolean> {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentAttempts = await this.prisma.couponRedemption.count({
+    const recentAttempts = await this.prisma.coupon_redemption.count({
       where: {
-        userId: userId,
-        redemptionDate: { gte: oneHourAgo },
+        user_id: userId,
+        redemption_date: { gte: oneHourAgo },
       },
     });
 
@@ -563,40 +566,40 @@ export class CouponValidationService {
    * Validate custom validation rule
    */
   private async validateCustomRule(rule: any, userId: string): Promise<boolean> {
-    switch (rule.ruleType as ValidationRuleType) {
+    switch (rule.rule_type as ValidationRuleType) {
       case 'first_time_user_only':
-        const subscriptions = await this.prisma.subscriptionMonetization.count({
-          where: { userId: userId },
+        const subscriptions = await this.prisma.subscription_monetization.count({
+          where: { user_id: userId },
         });
         return subscriptions === 0;
 
       case 'specific_email_domain':
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        const user = await this.prisma.users.findUnique({ where: { id: userId } });
         if (!user) return false;
         const domain = user.email.split('@')[1];
-        return rule.ruleValue.domains.includes(domain);
+        return rule.rule_value.domains.includes(domain);
 
       case 'minimum_credit_balance':
         // TODO: Implement credit balance check (requires integration with Plan 112)
         return true;
 
       case 'exclude_refunded_users':
-        const refundDays = rule.ruleValue.days || 90;
+        const refundDays = rule.rule_value.days || 90;
         const cutoffDate = new Date(Date.now() - refundDays * 24 * 60 * 60 * 1000);
-        const recentRefunds = await this.prisma.paymentTransaction.count({
+        const recentRefunds = await this.prisma.payment_transaction.count({
           where: {
-            userId: userId,
+            user_id: userId,
             status: 'refunded',
-            createdAt: { gte: cutoffDate },
+            created_at: { gte: cutoffDate },
           },
         });
         return recentRefunds === 0;
 
       case 'require_payment_method':
-        const subscription = await this.prisma.subscriptionMonetization.findFirst({
+        const subscription = await this.prisma.subscription_monetization.findFirst({
           where: {
-            userId: userId,
-            stripeCustomerId: { not: null },
+            user_id: userId,
+            stripe_customer_id: { not: null },
           },
         });
         return subscription !== null;
@@ -610,17 +613,19 @@ export class CouponValidationService {
    * Get or create usage limits for a coupon
    */
   private async getOrCreateUsageLimits(couponId: string) {
-    let usageLimits = await this.prisma.couponUsageLimit.findUnique({
-      where: { couponId },
+    let usageLimits = await this.prisma.coupon_usage_limit.findUnique({
+      where: { coupon_id: couponId },
     });
 
     if (!usageLimits) {
-      usageLimits = await this.prisma.couponUsageLimit.create({
+      usageLimits = await this.prisma.coupon_usage_limit.create({
         data: {
-          couponId,
-          totalUses: 0,
-          uniqueUsers: 0,
-          totalDiscountAppliedUsd: 0,
+          id: randomUUID(),
+          coupon_id: couponId,
+          total_uses: 0,
+          unique_users: 0,
+          total_discount_applied_usd: 0,
+          updated_at: new Date(),
         },
       });
     }

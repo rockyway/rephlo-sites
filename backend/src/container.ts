@@ -63,12 +63,26 @@ container.register('RedisConnection', {
 
 /**
  * Register OpenAI Client
+ * Supports both standard OpenAI and Azure OpenAI endpoints
  */
 if (process.env.OPENAI_API_KEY) {
+  const clientConfig: any = {
+    apiKey: process.env.OPENAI_API_KEY,
+  };
+
+  // Configure for Azure OpenAI if OPENAI_BASE_URL points to Azure
+  if (process.env.OPENAI_BASE_URL) {
+    clientConfig.baseURL = process.env.OPENAI_BASE_URL;
+
+    // Azure OpenAI requires api-version query parameter and api-key header
+    if (process.env.AZURE_OPENAI_API_VERSION) {
+      clientConfig.defaultQuery = { 'api-version': process.env.AZURE_OPENAI_API_VERSION };
+      clientConfig.defaultHeaders = { 'api-key': process.env.OPENAI_API_KEY };
+    }
+  }
+
   container.register('OpenAIClient', {
-    useValue: new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    }),
+    useValue: new OpenAI(clientConfig),
   });
   logger.info('DI Container: OpenAI client registered');
 } else {
@@ -200,6 +214,9 @@ import { BillingPaymentsService } from './services/billing-payments.service';
 import { CreditManagementService } from './services/credit-management.service';
 import { PlatformAnalyticsService } from './services/platform-analytics.service';
 
+// Plan 110: Proration Service
+import { ProrationService } from './services/proration.service';
+
 // Phase 4 P0 Fixes: Audit Logging
 import { AuditLogService } from './services/audit-log.service';
 
@@ -225,6 +242,13 @@ import { AdminProfitabilityService } from './services/admin-profitability.servic
 // Plan 111: Coupon Analytics Service
 import { CouponAnalyticsService } from './services/coupon-analytics.service';
 
+// Plan 190: Tier Config Management Service
+import { TierConfigService } from './services/tier-config.service';
+import { CreditUpgradeService } from './services/credit-upgrade.service';
+
+// Plan 192: Refund Service
+import { RefundService } from './services/refund.service';
+
 // Register core services with interface tokens
 container.register('IAuthService', { useClass: AuthService });
 container.register('IUserService', { useClass: UserService });
@@ -248,6 +272,9 @@ container.register('UserManagementService', { useClass: UserManagementService })
 container.register('BillingPaymentsService', { useClass: BillingPaymentsService });
 container.register('CreditManagementService', { useClass: CreditManagementService });
 container.register('PlatformAnalyticsService', { useClass: PlatformAnalyticsService });
+
+// Register Plan 110 service (Proration)
+container.register('ProrationService', { useClass: ProrationService });
 
 // Register Audit Logging service (Phase 4 P0 Fixes)
 container.registerSingleton(AuditLogService);
@@ -273,6 +300,13 @@ container.register('AdminProfitabilityService', { useClass: AdminProfitabilitySe
 
 // Register Coupon Analytics service (Plan 111)
 container.registerSingleton(CouponAnalyticsService);
+
+// Register Tier Config Management service (Plan 190)
+container.register('ITierConfigService', { useClass: TierConfigService });
+container.register('ICreditUpgradeService', { useClass: CreditUpgradeService });
+
+// Register Refund service (Plan 192)
+container.register('IRefundService', { useClass: RefundService });
 
 // Register LLM-related services
 container.registerSingleton(UsageRecorder);
@@ -314,6 +348,7 @@ import { AdminController } from './controllers/admin.controller';
 import { BrandingController } from './controllers/branding.controller';
 import { AuthManagementController } from './controllers/auth-management.controller';
 import { SocialAuthController } from './controllers/social-auth.controller';
+import { UsageController } from './controllers/usage.controller';
 
 // Plan 109: Subscription Monetization Controllers
 import { SubscriptionManagementController } from './controllers/subscription-management.controller';
@@ -346,6 +381,7 @@ container.registerSingleton(AdminController);
 container.registerSingleton(BrandingController);
 container.registerSingleton(AuthManagementController);
 container.registerSingleton(SocialAuthController);
+container.registerSingleton(UsageController);
 
 // Register Plan 109 controllers
 container.registerSingleton(SubscriptionManagementController);

@@ -1,4 +1,4 @@
-import { Credit } from '@prisma/client';
+import { credits } from '@prisma/client';
 import { ICreditService } from '../../interfaces';
 
 export interface AllocateCreditsInput {
@@ -17,36 +17,36 @@ export interface DeductCreditsInput {
 }
 
 export class MockCreditService implements ICreditService {
-  private credits: Map<string, Credit> = new Map();
+  private credits: Map<string, credits> = new Map();
 
-  async getCurrentCredits(userId: string): Promise<Credit | null> {
+  async getCurrentCredits(userId: string): Promise<credits | null> {
     const userCredits = Array.from(this.credits.values()).filter(
-      (c) => c.userId === userId && c.isCurrent
+      (c) => c.user_id === userId && c.is_current
     );
 
     return userCredits[0] || null;
   }
 
-  async allocateCredits(input: AllocateCreditsInput): Promise<Credit> {
+  async allocateCredits(input: AllocateCreditsInput): Promise<credits> {
     // Mark existing credits as not current
     Array.from(this.credits.values())
-      .filter((c) => c.userId === input.userId && c.isCurrent)
-      .forEach((c) => (c.isCurrent = false));
+      .filter((c) => c.user_id === input.userId && c.is_current)
+      .forEach((c) => (c.is_current = false));
 
-    const credit: Credit = {
+    const credit: credits = {
       id: `mock-credit-${Date.now()}-${Math.random()}`,
-      userId: input.userId,
-      subscriptionId: input.subscriptionId,
-      totalCredits: input.totalCredits,
-      usedCredits: 0,
-      billingPeriodStart: input.billingPeriodStart,
-      billingPeriodEnd: input.billingPeriodEnd,
-      isCurrent: true,
-      creditType: 'free',
-      monthlyAllocation: 2000,
-      resetDayOfMonth: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      user_id: input.userId,
+      subscription_id: input.subscriptionId,
+      total_credits: input.totalCredits,
+      used_credits: 0,
+      billing_period_start: input.billingPeriodStart,
+      billing_period_end: input.billingPeriodEnd,
+      is_current: true,
+      credit_type: 'free',
+      monthly_allocation: 2000,
+      reset_day_of_month: 1,
+      created_at: new Date(),
+      updated_at: new Date(),
     };
 
     this.credits.set(credit.id, credit);
@@ -57,23 +57,23 @@ export class MockCreditService implements ICreditService {
     const credit = await this.getCurrentCredits(userId);
     if (!credit) return false;
 
-    const remaining = credit.totalCredits - credit.usedCredits;
+    const remaining = credit.total_credits - credit.used_credits;
     return remaining >= requiredCredits;
   }
 
-  async deductCredits(input: DeductCreditsInput): Promise<Credit> {
+  async deductCredits(input: DeductCreditsInput): Promise<credits> {
     const credit = await this.getCurrentCredits(input.userId);
     if (!credit) {
       throw new Error('No active credit record found');
     }
 
-    const remaining = credit.totalCredits - credit.usedCredits;
+    const remaining = credit.total_credits - credit.used_credits;
     if (remaining < input.creditsToDeduct) {
       throw new Error('Insufficient credits');
     }
 
-    credit.usedCredits += input.creditsToDeduct;
-    credit.updatedAt = new Date();
+    credit.used_credits += input.creditsToDeduct;
+    credit.updated_at = new Date();
 
     return credit;
   }
@@ -82,34 +82,34 @@ export class MockCreditService implements ICreditService {
     userId: string,
     billingPeriodStart: Date,
     billingPeriodEnd: Date
-  ): Promise<Credit | null> {
+  ): Promise<credits | null> {
     return (
       Array.from(this.credits.values()).find(
         (c) =>
-          c.userId === userId &&
-          c.billingPeriodStart >= billingPeriodStart &&
-          c.billingPeriodEnd <= billingPeriodEnd
+          c.user_id === userId &&
+          c.billing_period_start >= billingPeriodStart &&
+          c.billing_period_end <= billingPeriodEnd
       ) || null
     );
   }
 
-  async getCreditHistory(userId: string, limit = 12): Promise<Credit[]> {
+  async getCreditHistory(userId: string, limit = 12): Promise<credits[]> {
     return Array.from(this.credits.values())
-      .filter((c) => c.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .filter((c) => c.user_id === userId)
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
       .slice(0, limit);
   }
 
-  calculateRemainingCredits(credit: Credit): number {
-    return credit.totalCredits - credit.usedCredits;
+  calculateRemainingCredits(credit: credits): number {
+    return credit.total_credits - credit.used_credits;
   }
 
-  calculateUsagePercentage(credit: Credit): number {
-    if (credit.totalCredits === 0) return 0;
-    return (credit.usedCredits / credit.totalCredits) * 100;
+  calculateUsagePercentage(credit: credits): number {
+    if (credit.total_credits === 0) return 0;
+    return (credit.used_credits / credit.total_credits) * 100;
   }
 
-  isCreditsLow(credit: Credit, thresholdPercentage = 10): boolean {
+  isCreditsLow(credit: credits, thresholdPercentage = 10): boolean {
     const usagePercentage = this.calculateUsagePercentage(credit);
     const remainingPercentage = 100 - usagePercentage;
     return remainingPercentage <= thresholdPercentage;
@@ -118,7 +118,7 @@ export class MockCreditService implements ICreditService {
   // Phase 2 enhanced methods
   async getFreeCreditsBreakdown(userId: string): Promise<any> {
     const freeCredit = Array.from(this.credits.values()).find(
-      (c) => c.userId === userId && c.creditType === 'free' && c.isCurrent
+      (c) => c.user_id === userId && c.credit_type === 'free' && c.is_current
     );
 
     if (!freeCredit) {
@@ -132,17 +132,17 @@ export class MockCreditService implements ICreditService {
     }
 
     return {
-      remaining: freeCredit.totalCredits - freeCredit.usedCredits,
-      monthlyAllocation: freeCredit.monthlyAllocation,
-      used: freeCredit.usedCredits,
-      resetDate: freeCredit.billingPeriodEnd,
-      daysUntilReset: this.calculateDaysUntilReset(freeCredit.billingPeriodEnd),
+      remaining: freeCredit.total_credits - freeCredit.used_credits,
+      monthlyAllocation: freeCredit.monthly_allocation,
+      used: freeCredit.used_credits,
+      resetDate: freeCredit.billing_period_end,
+      daysUntilReset: this.calculateDaysUntilReset(freeCredit.billing_period_end),
     };
   }
 
   async getProCreditsBreakdown(userId: string): Promise<any> {
     const proCredits = Array.from(this.credits.values()).filter(
-      (c) => c.userId === userId && c.creditType === 'pro'
+      (c) => c.user_id === userId && c.credit_type === 'pro'
     );
 
     if (proCredits.length === 0) {
@@ -153,8 +153,8 @@ export class MockCreditService implements ICreditService {
       };
     }
 
-    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.totalCredits, 0);
-    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.usedCredits, 0);
+    const purchasedTotal = proCredits.reduce((sum, c) => sum + c.total_credits, 0);
+    const lifetimeUsed = proCredits.reduce((sum, c) => sum + c.used_credits, 0);
 
     return {
       remaining: purchasedTotal - lifetimeUsed,
@@ -188,16 +188,52 @@ export class MockCreditService implements ICreditService {
     return Math.max(0, days);
   }
 
+  async calculateProratedCreditsForTierChange(
+    userId: string,
+    currentTierCredits: number,
+    newTierCredits: number,
+    billingPeriodStart: Date,
+    billingPeriodEnd: Date
+  ): Promise<{
+    proratedCredits: number;
+    daysRemaining: number;
+    daysInCycle: number;
+    currentUsedCredits: number;
+    remainingCreditsAfterChange: number;
+    isDowngradeWithOveruse: boolean;
+  }> {
+    // Mock implementation - simplified proration calculation
+    const now = new Date();
+    const totalDaysMs = billingPeriodEnd.getTime() - billingPeriodStart.getTime();
+    const daysInCycle = Math.ceil(totalDaysMs / (1000 * 60 * 60 * 24));
+    const remainingDaysMs = Math.max(0, billingPeriodEnd.getTime() - now.getTime());
+    const daysRemaining = Math.ceil(remainingDaysMs / (1000 * 60 * 60 * 24));
+    const proratedCredits = Math.floor((daysRemaining / daysInCycle) * newTierCredits);
+
+    const currentCredit = await this.getCurrentCredits(userId);
+    const currentUsedCredits = currentCredit?.used_credits || 0;
+    const remainingCreditsAfterChange = proratedCredits - currentUsedCredits;
+
+    return {
+      proratedCredits,
+      daysRemaining,
+      daysInCycle,
+      currentUsedCredits,
+      remainingCreditsAfterChange,
+      isDowngradeWithOveruse: newTierCredits < currentTierCredits && remainingCreditsAfterChange < 0,
+    };
+  }
+
   // Test helpers
   clear() {
     this.credits.clear();
   }
 
-  seed(credits: Credit[]) {
+  seed(credits: credits[]) {
     credits.forEach((credit) => this.credits.set(credit.id, credit));
   }
 
-  getAll(): Credit[] {
+  getAll(): credits[] {
     return Array.from(this.credits.values());
   }
 }

@@ -277,8 +277,27 @@
       window.location.href = `/interaction/${uid}/abort`;
     }
 
+    // Check for error parameters in URL and display them
+    function checkForErrors() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorCode = urlParams.get('error');
+      const errorMessage = urlParams.get('message');
+
+      if (errorCode && errorMessage) {
+        // Display the error message
+        showError(decodeURIComponent(errorMessage));
+
+        // Clear the error parameters from URL without page reload
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+
     // Load interaction data on page load
     loadInteractionData();
+
+    // Check for errors after page loads
+    checkForErrors();
   </script>
 </body>
 </html>

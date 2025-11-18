@@ -8,18 +8,30 @@
     "build": "tsc",
     "start": "node dist/server.js"
   },
-  "keywords": ["oauth", "oidc", "poc"],
+  "keywords": [
+    "oauth",
+    "oidc",
+    "poc"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
     "axios": "^1.6.0",
-    "crypto": "^1.0.1"
+    "axios-cookiejar-support": "^6.0.4",
+    "better-sqlite3": "^12.4.1",
+    "cookie-parser": "^1.4.7",
+    "crypto": "^1.0.1",
+    "express": "^4.18.2",
+    "tough-cookie": "^5.1.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.2.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^4.17.20",
     "@types/node": "^20.5.1",
-    "ts-node": "^10.9.1"
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
   }
 }

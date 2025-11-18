@@ -18,7 +18,8 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, UsageHistory, UsageOperation } from '@prisma/client';
+import { PrismaClient, token_usage_ledger as UsageHistory } from '@prisma/client';
+import crypto from 'crypto';
 import logger from '../utils/logger';
 import {
   RecordUsageInput,
@@ -89,18 +90,23 @@ export class UsageService {
       creditsUsed: input.creditsUsed,
     });
 
-    const usageRecord = await this.prisma.usageHistory.create({
+    const usageRecord = await this.prisma.token_usage_ledger.create({
       data: {
-        userId: input.userId,
-        creditId: input.creditId,
-        modelId: input.modelId,
-        operation: input.operation as UsageOperation,
-        creditsUsed: input.creditsUsed,
-        inputTokens: input.inputTokens,
-        outputTokens: input.outputTokens,
-        totalTokens: input.totalTokens,
-        requestDurationMs: input.requestDurationMs,
-        requestMetadata: input.requestMetadata,
+        user_id: input.userId,
+        subscription_id: input.creditId,
+        model_id: input.modelId,
+        provider_id: input.operation as any, // TODO: This needs proper provider_id
+        request_id: crypto.randomUUID(),
+        input_tokens: input.inputTokens || 0,
+        output_tokens: input.outputTokens || 0,
+        vendor_cost: 0, // TODO: Needs actual vendor cost
+        margin_multiplier: 1,
+        credit_value_usd: 0.001,
+        credits_deducted: input.creditsUsed,
+        request_type: 'chat' as any,
+        request_started_at: new Date(),
+        request_completed_at: new Date(),
+        processing_time_ms: input.requestDurationMs,
       },
     });
 
@@ -132,56 +138,57 @@ export class UsageService {
 
     // Build where clause for filtering
     const where: any = {
-      userId,
+      user_id: userId,
     };
 
     // Date range filter
     if (params.start_date || params.end_date) {
-      where.createdAt = {};
+      where.created_at = {};
       if (params.start_date) {
-        where.createdAt.gte = new Date(params.start_date);
+        where.created_at.gte = new Date(params.start_date);
       }
       if (params.end_date) {
-        where.createdAt.lte = new Date(params.end_date);
+        where.created_at.lte = new Date(params.end_date);
       }
     }
 
     // Model filter
     if (params.model_id) {
-      where.modelId = params.model_id;
+      where.model_id = params.model_id;
     }
 
     // Operation filter
     if (params.operation) {
-      where.operation = params.operation;
+      where.request_type = params.operation;
     }
 
     // Get total count for pagination
-    const total = await this.prisma.usageHistory.count({ where });
+    const total = await this.prisma.token_usage_ledger.count({ where });
 
     // Get usage records with pagination
-    const usage = await this.prisma.usageHistory.findMany({
+    const usage = await this.prisma.token_usage_ledger.findMany({
       where,
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
       take: params.limit,
       skip: params.offset,
     });
 
     // Calculate summary statistics
-    const summaryData = await this.prisma.usageHistory.aggregate({
+    const summaryData = await this.prisma.token_usage_ledger.aggregate({
       where,
       _sum: {
-        creditsUsed: true,
-        totalTokens: true,
+        credits_deducted: true,
+        input_tokens: true,
+        output_tokens: true,
       },
     });
 
     const summary = {
-      totalCreditsUsed: summaryData._sum.creditsUsed || 0,
+      totalCreditsUsed: summaryData._sum?.credits_deducted || 0,
       totalRequests: total,
-      totalTokens: summaryData._sum.totalTokens || 0,
+      totalTokens: (summaryData._sum?.input_tokens || 0) + (summaryData._sum?.output_tokens || 0),
     };
 
     const result: UsageHistoryResult = {
@@ -223,17 +230,17 @@ export class UsageService {
 
     // Build where clause for filtering
     const where: any = {
-      userId,
+      user_id: userId,
     };
 
     // Date range filter
     if (params.start_date || params.end_date) {
-      where.createdAt = {};
+      where.created_at = {};
       if (params.start_date) {
-        where.createdAt.gte = new Date(params.start_date);
+        where.created_at.gte = new Date(params.start_date);
       }
       if (params.end_date) {
-        where.createdAt.lte = new Date(params.end_date);
+        where.created_at.lte = new Date(params.end_date);
       }
     }
 
@@ -305,10 +312,10 @@ export class UsageService {
         COUNT(*)::int as requests_count,
         COALESCE(SUM(total_tokens), 0)::int as tokens_total,
         COALESCE(AVG(request_duration_ms), 0)::int as average_duration_ms
-      FROM usage_history
+      FROM token_usage_ledger
       WHERE user_id = ${where.userId}::uuid
-        ${where.createdAt?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.createdAt.gte}` : this.prisma.$queryRaw``}
-        ${where.createdAt?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.createdAt.lte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.created_at.gte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.created_at.lte}` : this.prisma.$queryRaw``}
       GROUP BY DATE(created_at)
       ORDER BY DATE(created_at) DESC
       LIMIT 90
@@ -338,10 +345,10 @@ export class UsageService {
         COUNT(*)::int as requests_count,
         COALESCE(SUM(total_tokens), 0)::int as tokens_total,
         COALESCE(AVG(request_duration_ms), 0)::int as average_duration_ms
-      FROM usage_history
+      FROM token_usage_ledger
       WHERE user_id = ${where.userId}::uuid
-        ${where.createdAt?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.createdAt.gte}` : this.prisma.$queryRaw``}
-        ${where.createdAt?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.createdAt.lte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.gte ? this.prisma.$queryRaw`AND created_at >= ${where.created_at.gte}` : this.prisma.$queryRaw``}
+        ${where.created_at?.lte ? this.prisma.$queryRaw`AND created_at <= ${where.created_at.lte}` : this.prisma.$queryRaw``}
       GROUP BY EXTRACT(HOUR FROM created_at)
       ORDER BY hour ASC
     `;
@@ -363,32 +370,33 @@ export class UsageService {
    * @returns Array of model-grouped statistics
    */
   private async getStatsByModel(where: any): Promise<UsageStatsItem[]> {
-    const results = await this.prisma.usageHistory.groupBy({
-      by: ['modelId'],
+    const results = await this.prisma.token_usage_ledger.groupBy({
+      by: ['model_id'],
       where,
       _sum: {
-        creditsUsed: true,
-        totalTokens: true,
+        credits_deducted: true,
+        input_tokens: true,
+        output_tokens: true,
       },
       _count: {
         id: true,
       },
       _avg: {
-        requestDurationMs: true,
+        processing_time_ms: true,
       },
       orderBy: {
         _sum: {
-          creditsUsed: 'desc',
+          credits_deducted: 'desc',
         },
       },
     });
 
     return results.map((row) => ({
-      modelId: row.modelId,
-      creditsUsed: row._sum.creditsUsed || 0,
-      requestsCount: row._count.id,
-      tokensTotal: row._sum.totalTokens || 0,
-      averageDurationMs: Math.round(row._avg.requestDurationMs || 0),
+      modelId: row.model_id,
+      creditsUsed: row._sum?.credits_deducted || 0,
+      requestsCount: row._count?.id || 0,
+      tokensTotal: (row._sum?.input_tokens || 0) + (row._sum?.output_tokens || 0),
+      averageDurationMs: Math.round(row._avg?.processing_time_ms || 0),
     }));
   }
 
@@ -409,19 +417,19 @@ export class UsageService {
     const where: any = { userId };
 
     if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = startDate;
-      if (endDate) where.createdAt.lte = endDate;
+      where.created_at = {};
+      if (startDate) where.created_at.gte = startDate;
+      if (endDate) where.created_at.lte = endDate;
     }
 
-    const result = await this.prisma.usageHistory.aggregate({
+    const result = await this.prisma.token_usage_ledger.aggregate({
       where,
       _sum: {
-        creditsUsed: true,
+        credits_deducted: true,
       },
     });
 
-    return result._sum.creditsUsed || 0;
+    return result._sum?.credits_deducted || 0;
   }
 
   /**
@@ -433,10 +441,10 @@ export class UsageService {
    * @returns Number of requests for the model
    */
   async getModelUsageCount(userId: string, modelId: string): Promise<number> {
-    const count = await this.prisma.usageHistory.count({
+    const count = await this.prisma.token_usage_ledger.count({
       where: {
-        userId,
-        modelId,
+        user_id: userId,
+        model_id: modelId,
       },
     });
 
@@ -451,9 +459,9 @@ export class UsageService {
    * @returns Most used model ID or null
    */
   async getMostUsedModel(userId: string): Promise<string | null> {
-    const result = await this.prisma.usageHistory.groupBy({
-      by: ['modelId'],
-      where: { userId },
+    const result = await this.prisma.token_usage_ledger.groupBy({
+      by: ['model_id'],
+      where: { user_id: userId },
       _count: {
         id: true,
       },
@@ -465,7 +473,7 @@ export class UsageService {
       take: 1,
     });
 
-    return result[0]?.modelId || null;
+    return result[0]?.model_id || null;
   }
 
   /**
@@ -476,14 +484,20 @@ export class UsageService {
    * @returns Average tokens per request
    */
   async getAverageTokensPerRequest(userId: string): Promise<number> {
-    const result = await this.prisma.usageHistory.aggregate({
-      where: { userId },
-      _avg: {
-        totalTokens: true,
+    const result = await this.prisma.token_usage_ledger.aggregate({
+      where: { user_id: userId },
+      _sum: {
+        input_tokens: true,
+        output_tokens: true,
+      },
+      _count: {
+        id: true,
       },
     });
 
-    return Math.round(result._avg.totalTokens || 0);
+    const totalTokens = (result._sum?.input_tokens || 0) + (result._sum?.output_tokens || 0);
+    const count = result._count?.id || 1;
+    return Math.round(totalTokens / count);
   }
 
   /**
@@ -521,4 +535,227 @@ export class UsageService {
       ((currentUsage - previousUsage) / previousUsage) * 100;
     return Math.round(percentageChange * 100) / 100; // Round to 2 decimals
   }
+
+  /**
+   * Get monthly usage summary for Desktop App
+   * Aggregates usage data from token_usage_ledger table
+   *
+   * Implementation Reference: docs/plan/182-desktop-app-api-backend-requirements.md
+   *
+   * @param userId - User ID
+   * @param period - "current_month" or "YYYY-MM" format
+   * @returns Monthly usage summary with camelCase fields
+   */
+  async getMonthlySummary(userId: string, period: string = 'current_month'): Promise<UsageSummaryResponse> {
+    logger.debug('UsageService: Getting monthly summary', {
+      userId,
+      period,
+    });
+
+    // Parse period
+    const { startDate, endDate } = this.parsePeriod(period);
+
+    // Aggregate from token_usage_ledger table (Prisma client uses camelCase)
+    const usageRecords = await this.prisma.token_usage_ledger.findMany({
+      where: {
+        user_id: userId,
+        created_at: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        providers: true, // Include provider details
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // Handle empty usage case
+    if (usageRecords.length === 0) {
+      return {
+        period: period === 'current_month' ? this.formatPeriod(startDate) : period,
+        periodStart: startDate.toISOString(),
+        periodEnd: endDate.toISOString(),
+        summary: {
+          creditsUsed: 0,
+          apiRequests: 0,
+          totalTokens: 0,
+          averageTokensPerRequest: 0,
+          mostUsedModel: 'N/A',
+          mostUsedModelPercentage: 0,
+        },
+        creditBreakdown: await this.getCreditBreakdown(userId, startDate, endDate),
+        modelBreakdown: [],
+      };
+    }
+
+    // Aggregate totals
+    const summary = {
+      creditsUsed: usageRecords.reduce((sum, r) => sum + r.credits_deducted, 0),
+      apiRequests: usageRecords.length,
+      totalTokens: usageRecords.reduce((sum, r) => sum + (r.input_tokens + r.output_tokens), 0),
+      averageTokensPerRequest: 0,
+      mostUsedModel: '',
+      mostUsedModelPercentage: 0,
+    };
+
+    summary.averageTokensPerRequest = summary.totalTokens > 0
+      ? Math.round(summary.totalTokens / summary.apiRequests)
+      : 0;
+
+    // Model breakdown
+    const modelCounts = usageRecords.reduce((acc, r) => {
+      const key = r.model_id;
+      if (!acc[key]) {
+        acc[key] = {
+          requests: 0,
+          tokens: 0,
+          credits: 0,
+          provider: r.providers.name, // Get provider name from joined table
+        };
+      }
+      acc[key].requests++;
+      acc[key].tokens += r.input_tokens + r.output_tokens;
+      acc[key].credits += r.credits_deducted;
+      return acc;
+    }, {} as Record<string, { requests: number; tokens: number; credits: number; provider: string }>);
+
+    const modelBreakdown = Object.entries(modelCounts)
+      .map(([model, stats]) => ({
+        model,
+        provider: stats.provider,
+        requests: stats.requests,
+        tokens: stats.tokens,
+        credits: stats.credits,
+        percentage: Math.round((stats.requests / summary.apiRequests) * 100),
+      }))
+      .sort((a, b) => b.requests - a.requests);
+
+    // Most used model
+    const mostUsedModel = modelBreakdown[0]?.model || 'N/A';
+    const mostUsedModelPercentage = modelBreakdown[0]?.percentage || 0;
+
+    summary.mostUsedModel = mostUsedModel;
+    summary.mostUsedModelPercentage = mostUsedModelPercentage;
+
+    logger.info('UsageService: Monthly summary retrieved', {
+      userId,
+      period,
+      creditsUsed: summary.creditsUsed,
+      apiRequests: summary.apiRequests,
+    });
+
+    return {
+      period: period === 'current_month' ? this.formatPeriod(startDate) : period,
+      periodStart: startDate.toISOString(),
+      periodEnd: endDate.toISOString(),
+      summary,
+      creditBreakdown: await this.getCreditBreakdown(userId, startDate, endDate),
+      modelBreakdown,
+    };
+  }
+
+  /**
+   * Parse period string to start and end dates
+   * @param period - "current_month" or "YYYY-MM" format
+   * @returns Start and end dates
+   */
+  private parsePeriod(period: string): { startDate: Date; endDate: Date } {
+    if (period === 'current_month') {
+      const now = new Date();
+      return {
+        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+      };
+    }
+
+    // Parse YYYY-MM format
+    const [year, month] = period.split('-').map(Number);
+    return {
+      startDate: new Date(year, month - 1, 1),
+      endDate: new Date(year, month, 0, 23, 59, 59, 999),
+    };
+  }
+
+  /**
+   * Format date to YYYY-MM
+   * @param date - Date to format
+   * @returns Formatted string
+   */
+  private formatPeriod(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
+  /**
+   * Get credit breakdown for a period
+   * Note: This is a simplified version - actual implementation would query credit ledger
+   * @param userId - User ID
+   * @param startDate - Period start
+   * @param endDate - Period end
+   * @returns Credit breakdown
+   */
+  private async getCreditBreakdown(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<CreditBreakdown> {
+    // Get subscription to check tier
+    const subscription = await this.prisma.subscription_monetization.findFirst({
+      where: {
+        user_id: userId,
+        status: 'active',
+      },
+    });
+
+    const freeCreditsLimit = subscription?.tier === 'free' ? 10000 : 0;
+
+    // Calculate total credits used in period
+    const totalCreditsUsed = await this.getTotalCreditsUsed(userId, startDate, endDate);
+
+    // For now, we'll return a simplified breakdown
+    // In production, this would query the credit ledger to see which credit buckets were used
+    return {
+      freeCreditsUsed: 0,
+      freeCreditsLimit,
+      proCreditsUsed: totalCreditsUsed,
+      purchasedCreditsUsed: 0,
+    };
+  }
+}
+
+/**
+ * Type definitions for monthly usage summary
+ */
+export interface UsageSummaryResponse {
+  period: string;
+  periodStart: string;
+  periodEnd: string;
+  summary: {
+    creditsUsed: number;
+    apiRequests: number;
+    totalTokens: number;
+    averageTokensPerRequest: number;
+    mostUsedModel: string;
+    mostUsedModelPercentage: number;
+  };
+  creditBreakdown: CreditBreakdown;
+  modelBreakdown: ModelBreakdownItem[];
+}
+
+export interface CreditBreakdown {
+  freeCreditsUsed: number;
+  freeCreditsLimit: number;
+  proCreditsUsed: number;
+  purchasedCreditsUsed: number;
+}
+
+export interface ModelBreakdownItem {
+  model: string;
+  provider: string;
+  requests: number;
+  tokens: number;
+  credits: number;
+  percentage: number;
 }

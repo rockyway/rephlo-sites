@@ -21,7 +21,7 @@ export const listModelsQuerySchema = z.object({
   available: z
     .string()
     .optional()
-    .transform((val) => val === 'true')
+    .transform((val) => val === undefined ? undefined : val === 'true')
     .pipe(z.boolean().optional()),
   capability: z
     .string()
@@ -272,6 +272,7 @@ export interface CompletionUsage {
   completionTokens: number;
   totalTokens: number;
   creditsUsed: number;
+  cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
 }
 
 export interface TextCompletionResponse {

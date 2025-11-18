@@ -528,7 +528,27 @@ When reviewing API endpoint code, verify:
 - [ ] ✅ HTTP status codes are appropriate
 - [ ] ✅ Type assertions are avoided (use explicit typing)
 
-### 6.2 Code Quality Review
+### 6.2 Documentation Review
+
+- [ ] ✅ **Tspec Specification Created/Updated** - For all new/modified endpoints:
+  - Create Tspec spec file in `backend/specs/routes/` (e.g., `user-profile.spec.ts`)
+  - Define `Tspec.DefineApiSpec` type with endpoint details
+  - Use JSDoc comments on TypeScript interfaces for descriptions
+  - Reuse schemas from `@rephlo/shared-types` (no duplication)
+  - Include all HTTP methods (GET, POST, PUT, PATCH, DELETE)
+  - Document all response status codes (200, 400, 401, 403, 404, 429, 500)
+  - Specify `security: 'bearerAuth'` for protected endpoints
+  - Include rate limits and caching recommendations in description
+  - Run `npm run generate:openapi` to generate OpenAPI spec
+  - Run `npm run validate:openapi:generated` to validate spec
+  - See [Tspec Migration Guide](../guides/018-tspec-migration-guide.md) for examples
+
+- [ ] ✅ **Legacy Manual YAML Check** (During Migration Period Only)
+  - Until all endpoints migrated, also update `docs/openapi/enhanced-api.yaml` manually
+  - Run `npm run validate:openapi` to verify coverage
+  - This requirement will be removed after Phase 5 completion
+
+### 6.3 Code Quality Review
 
 - [ ] ✅ TypeScript return types are explicit
 - [ ] ✅ Function has clear, single responsibility
@@ -537,7 +557,7 @@ When reviewing API endpoint code, verify:
 - [ ] ✅ No sensitive data in logs (passwords, tokens)
 - [ ] ✅ Business logic in service layer, not controller
 
-### 6.3 Testing Review
+### 6.4 Testing Review
 
 - [ ] ✅ Unit tests for DTO transformations
 - [ ] ✅ Integration tests for endpoint responses

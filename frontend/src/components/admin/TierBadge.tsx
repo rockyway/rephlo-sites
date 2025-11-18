@@ -20,6 +20,12 @@ const tierConfig = {
     textColor: 'text-blue-800 dark:text-blue-100',
     borderColor: 'border-blue-300 dark:border-blue-600',
   },
+  pro_plus: {
+    label: 'Pro Plus',
+    bgColor: 'bg-indigo-100 dark:bg-indigo-900',
+    textColor: 'text-indigo-800 dark:text-indigo-100',
+    borderColor: 'border-indigo-300 dark:border-indigo-600',
+  },
   pro_max: {
     label: 'Pro Max',
     bgColor: 'bg-purple-100 dark:bg-purple-900',
@@ -31,6 +37,12 @@ const tierConfig = {
     bgColor: 'bg-amber-100 dark:bg-amber-900',
     textColor: 'text-amber-800 dark:text-amber-100',
     borderColor: 'border-amber-300 dark:border-amber-600',
+  },
+  enterprise_pro_plus: {
+    label: 'Enterprise Pro Plus',
+    bgColor: 'bg-rose-100 dark:bg-rose-900',
+    textColor: 'text-rose-800 dark:text-rose-100',
+    borderColor: 'border-rose-300 dark:border-rose-600',
   },
   enterprise_max: {
     label: 'Enterprise Max',

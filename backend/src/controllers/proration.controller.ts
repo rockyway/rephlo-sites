@@ -110,11 +110,11 @@ export class ProrationController {
       res.status(200).json({
         proration_event_id: prorationEvent.id,
         subscription_id: id,
-        from_tier: prorationEvent.fromTier,
-        to_tier: prorationEvent.toTier,
-        net_charge_usd: prorationEvent.netChargeUsd,
+        from_tier: prorationEvent.from_tier,
+        to_tier: prorationEvent.to_tier,
+        net_charge_usd: prorationEvent.net_charge_usd,
         status: prorationEvent.status,
-        effective_date: prorationEvent.effectiveDate.toISOString(),
+        effective_date: prorationEvent.effective_date.toISOString(),
         message: 'Tier upgrade applied successfully',
       });
     } catch (error) {
@@ -161,12 +161,12 @@ export class ProrationController {
       res.status(200).json({
         proration_event_id: prorationEvent.id,
         subscription_id: id,
-        from_tier: prorationEvent.fromTier,
-        to_tier: prorationEvent.toTier,
-        net_charge_usd: prorationEvent.netChargeUsd,
-        credit_amount: Math.abs(Math.min(0, Number(prorationEvent.netChargeUsd))),
+        from_tier: prorationEvent.from_tier,
+        to_tier: prorationEvent.to_tier,
+        net_charge_usd: prorationEvent.net_charge_usd,
+        credit_amount: Math.abs(Math.min(0, Number(prorationEvent.net_charge_usd))),
         status: prorationEvent.status,
-        effective_date: prorationEvent.effectiveDate.toISOString(),
+        effective_date: prorationEvent.effective_date.toISOString(),
         message: 'Tier downgrade applied successfully',
       });
     } catch (error) {
@@ -213,13 +213,13 @@ export class ProrationController {
         user_id: userId,
         proration_events: history.map((event) => ({
           id: event.id,
-          subscription_id: event.subscriptionId,
-          from_tier: event.fromTier,
-          to_tier: event.toTier,
-          change_type: event.changeType,
-          net_charge_usd: event.netChargeUsd,
+          subscription_id: event.subscription_id,
+          from_tier: event.from_tier,
+          to_tier: event.to_tier,
+          change_type: event.change_type,
+          net_charge_usd: event.net_charge_usd,
           status: event.status,
-          effective_date: event.effectiveDate.toISOString(),
+          effective_date: event.effective_date.toISOString(),
         })),
       });
     } catch (error) {
@@ -326,13 +326,13 @@ export class ProrationController {
         data: {
           id: reversedEvent.id,
           originalProrationId: id,
-          userId: reversedEvent.userId,
-          subscriptionId: reversedEvent.subscriptionId,
-          fromTier: reversedEvent.fromTier,
-          toTier: reversedEvent.toTier,
-          netCharge: Number(reversedEvent.netChargeUsd),
+          userId: reversedEvent.user_id,
+          subscriptionId: reversedEvent.subscription_id,
+          fromTier: reversedEvent.from_tier,
+          toTier: reversedEvent.to_tier,
+          netCharge: Number(reversedEvent.net_charge_usd),
           status: reversedEvent.status,
-          effectiveDate: reversedEvent.effectiveDate.toISOString(),
+          effectiveDate: reversedEvent.effective_date.toISOString(),
           reason,
         },
         meta: {

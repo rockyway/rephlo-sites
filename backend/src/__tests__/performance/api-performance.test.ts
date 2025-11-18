@@ -342,7 +342,7 @@ describe('Enhanced API - Performance Tests', () => {
       const userId = 'perf-test-user';
 
       // In real implementation, this would fetch user, subscription, and preferences
-      // in parallel using Promise.all([prisma.user.findUnique(...), prisma.subscription...])
+      // in parallel using Promise.all([prisma.users.findUnique(...), prisma.subscriptions...])
 
       const start = Date.now();
       const profile = await userService.getDetailedUserProfile(userId);

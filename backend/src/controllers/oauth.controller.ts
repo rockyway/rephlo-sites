@@ -116,9 +116,14 @@ export class OAuthController {
               monthlyAllocation: credits.freeCredits.monthlyAllocation,
               resetDate: credits.freeCredits.resetDate.toISOString(),
             },
-            proCredits: {
-              remaining: credits.proCredits.remaining,
-              purchasedTotal: credits.proCredits.purchasedTotal,
+            subscriptionCredits: {
+              remaining: credits.proCredits.subscriptionCredits.remaining,
+              monthlyAllocation: credits.proCredits.subscriptionCredits.monthlyAllocation,
+              resetDate: credits.proCredits.subscriptionCredits.resetDate.toISOString(),
+            },
+            purchasedCredits: {
+              remaining: credits.proCredits.purchasedCredits.remaining,
+              totalPurchased: credits.proCredits.purchasedCredits.totalPurchased,
             },
             totalAvailable: credits.totalAvailable,
           },
@@ -140,9 +145,14 @@ export class OAuthController {
             monthlyAllocation: credits.freeCredits.monthlyAllocation,
             resetDate: credits.freeCredits.resetDate.toISOString(),
           },
-          proCredits: {
-            remaining: credits.proCredits.remaining,
-            purchasedTotal: credits.proCredits.purchasedTotal,
+          subscriptionCredits: {
+            remaining: credits.proCredits.subscriptionCredits.remaining,
+            monthlyAllocation: credits.proCredits.subscriptionCredits.monthlyAllocation,
+            resetDate: credits.proCredits.subscriptionCredits.resetDate.toISOString(),
+          },
+          purchasedCredits: {
+            remaining: credits.proCredits.purchasedCredits.remaining,
+            totalPurchased: credits.proCredits.purchasedCredits.totalPurchased,
           },
           totalAvailable: credits.totalAvailable,
         };

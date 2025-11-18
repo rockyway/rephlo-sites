@@ -128,11 +128,12 @@ export class BrandingController {
       const ipHash = getHashedClientIp(req);
 
       // Log download to database
-      const download = await this.prisma.download.create({
+      const download = await this.prisma.downloads.create({
         data: {
+          id: crypto.randomUUID(),
           os,
-          userAgent,
-          ipHash,
+          user_agent: userAgent,
+          ip_hash: ipHash,
         },
       });
 
@@ -220,11 +221,12 @@ export class BrandingController {
       const { message, email, userId } = validationResult.data as FeedbackInput;
 
       // Store feedback in database
-      const feedback = await this.prisma.feedback.create({
+      const feedback = await this.prisma.feedbacks.create({
         data: {
+          id: crypto.randomUUID(),
           message,
           email,
-          userId,
+          user_id: userId,
         },
       });
 
@@ -287,7 +289,7 @@ export class BrandingController {
   async getLatestVersion(_req: Request, res: Response): Promise<void> {
     try {
       // Query latest version from database (isLatest = true)
-      const version = await this.prisma.appVersion.findFirst({
+      const version = await this.prisma.app_versions.findFirst({
         where: {
           isLatest: true,
         },
@@ -398,11 +400,12 @@ export class BrandingController {
       const filePath = `diagnostics/${timestamp}-${sanitizedFilename}`;
 
       // Store diagnostic record in database
-      const diagnostic = await this.prisma.diagnostic.create({
+      const diagnostic = await this.prisma.diagnostics.create({
         data: {
-          userId,
-          filePath,
-          fileSize: file.size,
+          id: crypto.randomUUID(),
+          user_id: userId,
+          file_path: filePath,
+          file_size: file.size,
         },
       });
 

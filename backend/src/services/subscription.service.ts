@@ -16,7 +16,8 @@
  * Reference: docs/plan/073-dedicated-api-backend-specification.md (Subscription APIs)
  */
 
-import { PrismaClient, SubscriptionTier, SubscriptionStatus } from '@prisma/client';
+import { PrismaClient, subscription_status as SubscriptionStatus, subscription_tier as SubscriptionTier } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   createOrGetCustomer,
   createStripeSubscription,
@@ -39,13 +40,13 @@ export async function getCurrentSubscription(userId: string, prisma: PrismaClien
   logger.info('Fetching current subscription', { userId });
 
   try {
-    const subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.subscriptions.findFirst({
       where: {
-        userId,
+        user_id: userId,
         status: SubscriptionStatus.active,
       },
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
     });
 
@@ -105,12 +106,12 @@ export async function createSubscription(
     }
 
     // Get user details
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
         email: true,
-        firstName: true,
-        lastName: true,
+        first_name: true,
+        last_name: true,
       },
     });
 
@@ -141,8 +142,8 @@ export async function createSubscription(
 
       // Create or get Stripe customer
       const userName =
-        user.firstName && user.lastName
-          ? `${user.firstName} ${user.lastName}`
+        user.first_name && user.last_name
+          ? `${user.first_name} ${user.last_name}`
           : undefined;
       const customer = await createOrGetCustomer(userId, user.email, userName);
       stripeCustomerId = customer.id;
@@ -162,19 +163,22 @@ export async function createSubscription(
     }
 
     // Create subscription in database
-    const subscription = await prisma.subscription.create({
+    const subscription = await prisma.subscriptions.create({
       data: {
-        userId,
+        id: randomUUID(),
+        user_id: userId,
         tier: planId as SubscriptionTier,
         status: SubscriptionStatus.active,
-        creditsPerMonth: plan.creditsPerMonth,
-        creditsRollover: false,
-        priceCents,
-        billingInterval,
-        stripeSubscriptionId,
-        stripeCustomerId,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
+        credits_per_month: plan.creditsPerMonth,
+        credits_rollover: false,
+        price_cents: priceCents,
+        billing_interval: billingInterval,
+        stripe_subscription_id: stripeSubscriptionId,
+        stripe_customer_id: stripeCustomerId,
+        current_period_start: now,
+        current_period_end: periodEnd,
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -215,7 +219,7 @@ export async function createSubscription(
         userId: userId,
         tier: subscription.tier,
         status: subscription.status,
-        creditsPerMonth: subscription.creditsPerMonth,
+        creditsPerMonth: subscription.credits_per_month,
       });
     } catch (webhookError) {
       // Don't fail subscription creation if webhook fails
@@ -255,16 +259,16 @@ export async function updateSubscription(
     const newPriceCents = calculatePrice(newPlanId, newBillingInterval);
 
     // Update Stripe subscription if exists
-    if (currentSubscription.stripeSubscriptionId) {
+    if (currentSubscription.stripe_subscription_id) {
       await updateStripeSubscription(
-        currentSubscription.stripeSubscriptionId,
+        currentSubscription.stripe_subscription_id,
         newPlanId,
         newBillingInterval
       );
 
       // Get updated subscription details from Stripe
       const stripeSubscription = await getStripeSubscription(
-        currentSubscription.stripeSubscriptionId
+        currentSubscription.stripe_subscription_id
       );
 
       // Update period dates from Stripe
@@ -272,16 +276,16 @@ export async function updateSubscription(
       const periodEnd = new Date(stripeSubscription.current_period_end * 1000);
 
       // Update subscription in database
-      const updatedSubscription = await prisma.subscription.update({
+      const updatedSubscription = await prisma.subscriptions.update({
         where: { id: currentSubscription.id },
         data: {
           tier: newPlanId as SubscriptionTier,
-          creditsPerMonth: newPlan.creditsPerMonth,
-          priceCents: newPriceCents,
-          billingInterval: newBillingInterval,
-          currentPeriodStart: periodStart,
-          currentPeriodEnd: periodEnd,
-          updatedAt: new Date(),
+          credits_per_month: newPlan.creditsPerMonth,
+          price_cents: newPriceCents,
+          billing_interval: newBillingInterval,
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+          updated_at: new Date(),
         },
       });
 
@@ -363,21 +367,21 @@ export async function cancelSubscription(
     }
 
     // Cancel Stripe subscription if exists
-    if (currentSubscription.stripeSubscriptionId) {
+    if (currentSubscription.stripe_subscription_id) {
       await cancelStripeSubscription(
-        currentSubscription.stripeSubscriptionId,
+        currentSubscription.stripe_subscription_id,
         cancelAtPeriodEnd
       );
     }
 
     // Update subscription in database
     const now = new Date();
-    const updatedSubscription = await prisma.subscription.update({
+    const updatedSubscription = await prisma.subscriptions.update({
       where: { id: currentSubscription.id },
       data: {
         status: cancelAtPeriodEnd ? SubscriptionStatus.active : SubscriptionStatus.cancelled,
-        cancelledAt: now,
-        updatedAt: now,
+        cancelled_at: now,
+        updated_at: now,
       },
     });
 
@@ -393,7 +397,7 @@ export async function cancelSubscription(
       await webhookService.queueWebhook(userId, 'subscription.cancelled', {
         subscriptionId: updatedSubscription.id,
         userId: userId,
-        cancelledAt: updatedSubscription.cancelledAt!.toISOString(),
+        cancelledAt: updatedSubscription.cancelled_at!.toISOString(),
         cancelAtPeriodEnd: cancelAtPeriodEnd,
       });
     } catch (webhookError) {
@@ -429,8 +433,8 @@ export async function syncSubscriptionFromStripe(
     const stripeSubscription = await getStripeSubscription(stripeSubscriptionId);
 
     // Find subscription in database
-    const subscription = await prisma.subscription.findFirst({
-      where: { stripeSubscriptionId },
+    const subscription = await prisma.subscriptions.findFirst({
+      where: { stripe_subscription_id: stripeSubscriptionId },
     });
 
     if (!subscription) {
@@ -456,13 +460,13 @@ export async function syncSubscriptionFromStripe(
     }
 
     // Update subscription
-    const updatedSubscription = await prisma.subscription.update({
+    const updatedSubscription = await prisma.subscriptions.update({
       where: { id: subscription.id },
       data: {
         status,
-        currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-        updatedAt: new Date(),
+        current_period_start: new Date(stripeSubscription.current_period_start * 1000),
+        current_period_end: new Date(stripeSubscription.current_period_end * 1000),
+        updated_at: new Date(),
       },
     });
 
@@ -491,10 +495,10 @@ export async function checkExpiredSubscriptions(prisma: PrismaClient) {
     const now = new Date();
 
     // Find active subscriptions that have passed their end date
-    const expiredSubscriptions = await prisma.subscription.findMany({
+    const expiredSubscriptions = await prisma.subscriptions.findMany({
       where: {
         status: SubscriptionStatus.active,
-        currentPeriodEnd: {
+        current_period_end: {
           lt: now,
         },
       },
@@ -504,17 +508,17 @@ export async function checkExpiredSubscriptions(prisma: PrismaClient) {
 
     // Update each expired subscription
     for (const subscription of expiredSubscriptions) {
-      await prisma.subscription.update({
+      await prisma.subscriptions.update({
         where: { id: subscription.id },
         data: {
           status: SubscriptionStatus.expired,
-          updatedAt: now,
+          updated_at: now,
         },
       });
 
       logger.info('Marked subscription as expired', {
         subscriptionId: subscription.id,
-        userId: subscription.userId,
+        userId: subscription.user_id,
       });
     }
 
@@ -532,9 +536,9 @@ export async function getSubscriptionStats(userId: string, prisma: PrismaClient)
   logger.info('Fetching subscription statistics', { userId });
 
   try {
-    const stats = await prisma.subscription.groupBy({
+    const stats = await prisma.subscriptions.groupBy({
       by: ['status'],
-      where: { userId },
+      where: { user_id: userId },
       _count: true,
     });
 

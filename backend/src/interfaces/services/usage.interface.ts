@@ -1,4 +1,4 @@
-import { UsageHistory } from '@prisma/client';
+import type { token_usage_ledger } from '@prisma/client';
 import {
   UsageQueryParams,
   UsageStatsQueryParams,
@@ -8,19 +8,31 @@ export const IUsageService = Symbol('IUsageService');
 
 export interface RecordUsageInput {
   userId: string;
-  creditId: string;
+  subscriptionId?: string;
   modelId: string;
-  operation: string;
-  creditsUsed: number;
+  providerId: string;
+  requestType: string;
   inputTokens: number;
   outputTokens: number;
-  totalTokens: number;
-  requestDurationMs: number;
-  requestMetadata?: any;
+  cachedInputTokens?: number;
+  vendorCost: number;
+  marginMultiplier: number;
+  creditValueUsd: number;
+  creditsDeducted: number;
+  processingTimeMs?: number;
+  requestStartedAt: Date;
+  requestCompletedAt: Date;
+  status?: string;
+  errorMessage?: string;
+  isStreamingComplete?: boolean;
+  streamingSegments?: number;
+  userTierAtRequest?: string;
+  region?: string;
+  deductionRecordId?: string;
 }
 
 export interface UsageHistoryResult {
-  usage: UsageHistory[];
+  usage: token_usage_ledger[];
   pagination: {
     limit: number;
     offset: number;
@@ -58,7 +70,7 @@ export interface IUsageService {
   /**
    * Record a single usage entry
    */
-  recordUsage(data: RecordUsageInput): Promise<UsageHistory>;
+  recordUsage(data: RecordUsageInput): Promise<token_usage_ledger>;
 
   /**
    * Get usage history with filtering and pagination
@@ -79,12 +91,12 @@ export interface IUsageService {
   /**
    * Get usage history for a user
    */
-  getUserUsage(userId: string, limit?: number): Promise<UsageHistory[]>;
+  getUserUsage(userId: string, limit?: number): Promise<token_usage_ledger[]>;
 
   /**
    * Get usage by model for a user
    */
-  getUsageByModel(userId: string, modelId: string): Promise<UsageHistory[]>;
+  getUsageByModel(userId: string, modelId: string): Promise<token_usage_ledger[]>;
 
   /**
    * Get usage statistics for a user

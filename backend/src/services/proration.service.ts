@@ -9,7 +9,8 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, SubscriptionMonetization, ProrationEvent } from '@prisma/client';
+import { PrismaClient, proration_event as ProrationEvent, subscription_monetization as SubscriptionMonetization } from '@prisma/client';
+import crypto from 'crypto';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
 
@@ -101,7 +102,7 @@ export class ProrationService {
   ): Promise<ProrationCalculation> {
     logger.debug('ProrationService: Calculating proration', { subscriptionId, newTier });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -110,8 +111,8 @@ export class ProrationService {
     }
 
     const now = new Date();
-    const periodStart = subscription.currentPeriodStart;
-    const periodEnd = subscription.currentPeriodEnd;
+    const periodStart = subscription.current_period_start;
+    const periodEnd = subscription.current_period_end;
 
     // Calculate days
     const totalDays = this.daysBetween(periodStart, periodEnd);
@@ -121,14 +122,14 @@ export class ProrationService {
     // For old tier: use effective price if provided (for active discounts), otherwise calculate based on billing cycle
     const oldTierPrice =
       options?.currentTierEffectivePrice ||
-      this.getTierPrice(subscription.tier, subscription.billingCycle);
+      this.getTierPrice(subscription.tier, subscription.billing_cycle);
 
     // For new tier: calculate based on current subscription's billing cycle
     // Assumption: tier upgrades/downgrades maintain the same billing cycle
-    const newTierPrice = this.getTierPrice(newTier, subscription.billingCycle);
+    const newTierPrice = this.getTierPrice(newTier, subscription.billing_cycle);
 
     logger.debug('ProrationService: Billing cycle pricing', {
-      billingCycle: subscription.billingCycle,
+      billingCycle: subscription.billing_cycle,
       oldTier: subscription.tier,
       oldTierPrice,
       newTier,
@@ -185,7 +186,7 @@ export class ProrationService {
    */
   async previewTierChange(subscriptionId: string, newTier: string): Promise<ProrationPreview> {
     const calculation = await this.calculateProration(subscriptionId, newTier);
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -202,22 +203,22 @@ export class ProrationService {
       // User will be charged
       message = `You will be charged $${chargeToday.toFixed(
         2
-      )} today for the upgrade. Your next billing on ${subscription.currentPeriodEnd.toISOString().split('T')[0]} will be $${newTierPrice.toFixed(2)}.`;
+      )} today for the upgrade. Your next billing on ${subscription.current_period_end.toISOString().split('T')[0]} will be $${newTierPrice.toFixed(2)}.`;
     } else if (calculation.netChargeUsd < 0) {
       // User will receive credit
       message = `You will receive a $${creditAmount.toFixed(
         2
-      )} credit. Your next billing on ${subscription.currentPeriodEnd.toISOString().split('T')[0]} will be $${Math.max(0, newTierPrice - creditAmount).toFixed(2)}.`;
+      )} credit. Your next billing on ${subscription.current_period_end.toISOString().split('T')[0]} will be $${Math.max(0, newTierPrice - creditAmount).toFixed(2)}.`;
     } else {
       // No charge/credit (edge case)
-      message = `No charge today. Your next billing on ${subscription.currentPeriodEnd.toISOString().split('T')[0]} will be $${newTierPrice.toFixed(2)}.`;
+      message = `No charge today. Your next billing on ${subscription.current_period_end.toISOString().split('T')[0]} will be $${newTierPrice.toFixed(2)}.`;
     }
 
     return {
       calculation,
       chargeToday,
       nextBillingAmount: newTierPrice,
-      nextBillingDate: subscription.currentPeriodEnd,
+      nextBillingDate: subscription.current_period_end,
       message,
     };
   }
@@ -262,7 +263,7 @@ export class ProrationService {
     newTier: string,
     changeType: 'upgrade' | 'downgrade'
   ): Promise<ProrationEvent> {
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -274,29 +275,31 @@ export class ProrationService {
     const calculation = await this.calculateProration(subscriptionId, newTier);
 
     // Create proration event
-    const prorationEvent = await this.prisma.prorationEvent.create({
+    const prorationEvent = await this.prisma.proration_event.create({
       data: {
-        userId: subscription.userId,
-        subscriptionId: subscription.id,
-        fromTier: calculation.fromTier,
-        toTier: calculation.toTier,
-        changeType,
-        daysRemaining: calculation.daysRemaining,
-        daysInCycle: calculation.daysInCycle,
-        unusedCreditValueUsd: calculation.unusedCreditValueUsd,
-        newTierProratedCostUsd: calculation.newTierProratedCostUsd,
-        netChargeUsd: calculation.netChargeUsd,
-        effectiveDate: new Date(),
+        id: crypto.randomUUID(),
+        user_id: subscription.user_id,
+        subscription_id: subscription.id,
+        from_tier: calculation.fromTier,
+        to_tier: calculation.toTier,
+        change_type: changeType,
+        days_remaining: calculation.daysRemaining,
+        days_in_cycle: calculation.daysInCycle,
+        unused_credit_value_usd: calculation.unusedCreditValueUsd,
+        new_tier_prorated_cost_usd: calculation.newTierProratedCostUsd,
+        net_charge_usd: calculation.netChargeUsd,
+        effective_date: new Date(),
         status: 'pending',
+        updated_at: new Date(),
       },
     });
 
     // Update subscription tier
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
       data: {
         tier: newTier as any, // Cast to enum type
-        basePriceUsd: this.TIER_PRICING[newTier] || 0,
+        base_price_usd: this.TIER_PRICING[newTier] || 0,
       },
     });
 
@@ -321,8 +324,8 @@ export class ProrationService {
    */
   async calculateUnusedCredit(subscription: SubscriptionMonetization): Promise<number> {
     const now = new Date();
-    const periodStart = subscription.currentPeriodStart;
-    const periodEnd = subscription.currentPeriodEnd;
+    const periodStart = subscription.current_period_start;
+    const periodEnd = subscription.current_period_end;
 
     const totalDays = this.daysBetween(periodStart, periodEnd);
     const daysRemaining = this.daysBetween(now, periodEnd);
@@ -387,7 +390,7 @@ export class ProrationService {
     // For now, we'll just log it
 
     // Update proration event status
-    await this.prisma.prorationEvent.update({
+    await this.prisma.proration_event.update({
       where: { id: prorationEventId },
       data: { status: 'applied' },
     });
@@ -416,17 +419,17 @@ export class ProrationService {
    * @returns List of proration events
    */
   async getProrationHistory(userId: string): Promise<ProrationEvent[]> {
-    return this.prisma.prorationEvent.findMany({
-      where: { userId },
+    return this.prisma.proration_event.findMany({
+      where: { user_id: userId },
       include: {
-        subscription: {
+        subscription_monetization: {
           select: {
             tier: true,
             status: true,
           },
         },
       },
-      orderBy: { effectiveDate: 'desc' },
+      orderBy: { effective_date: 'desc' },
     });
   }
 
@@ -435,23 +438,23 @@ export class ProrationService {
    * @returns List of pending prorations
    */
   async getPendingProrations(): Promise<ProrationEvent[]> {
-    return this.prisma.prorationEvent.findMany({
+    return this.prisma.proration_event.findMany({
       where: { status: 'pending' },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             email: true,
           },
         },
-        subscription: {
+        subscription_monetization: {
           select: {
             tier: true,
             status: true,
           },
         },
       },
-      orderBy: { effectiveDate: 'desc' },
+      orderBy: { effective_date: 'desc' },
     });
   }
 
@@ -504,27 +507,27 @@ export class ProrationService {
 
     // Get total count and data
     const [total, data] = await Promise.all([
-      this.prisma.prorationEvent.count({ where }),
-      this.prisma.prorationEvent.findMany({
+      this.prisma.proration_event.count({ where }),
+      this.prisma.proration_event.findMany({
         where,
         include: {
-          user: {
+          users: {
             select: {
               id: true,
               email: true,
-              firstName: true,
-              lastName: true,
+              first_name: true,
+              last_name: true,
             },
           },
-          subscription: {
+          subscription_monetization: {
             select: {
               tier: true,
               status: true,
-              basePriceUsd: true,
+              base_price_usd: true,
             },
           },
         },
-        orderBy: { effectiveDate: 'desc' },
+        orderBy: { effective_date: 'desc' },
         skip,
         take: limit,
       }),
@@ -541,16 +544,16 @@ export class ProrationService {
    * @returns Proration event
    */
   async getProrationEventById(eventId: string): Promise<ProrationEvent> {
-    const event = await this.prisma.prorationEvent.findUnique({
+    const event = await this.prisma.proration_event.findUnique({
       where: { id: eventId },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             email: true,
           },
         },
-        subscription: true,
+        subscription_monetization: true,
       },
     });
 
@@ -575,25 +578,25 @@ export class ProrationService {
 
     try {
       // Get aggregate stats
-      const stats = await this.prisma.prorationEvent.aggregate({
+      const stats = await this.prisma.proration_event.aggregate({
         _count: true,
         _sum: {
-          netChargeUsd: true,
+          net_charge_usd: true,
         },
         _avg: {
-          netChargeUsd: true,
+          net_charge_usd: true,
         },
       });
 
       // Get pending prorations count
-      const pendingCount = await this.prisma.prorationEvent.count({
+      const pendingCount = await this.prisma.proration_event.count({
         where: { status: 'pending' },
       });
 
       return {
         totalProrations: stats._count,
-        netRevenue: Number(stats._sum.netChargeUsd || 0),
-        avgNetCharge: Number(stats._avg.netChargeUsd || 0),
+        netRevenue: Number(stats._sum.net_charge_usd || 0),
+        avgNetCharge: Number(stats._avg.net_charge_usd || 0),
         pendingProrations: pendingCount,
       };
     } catch (error) {
@@ -653,36 +656,38 @@ export class ProrationService {
     }
 
     // Create reverse proration event (swap tiers, negate amounts)
-    const reverseEvent = await this.prisma.prorationEvent.create({
+    const reverseEvent = await this.prisma.proration_event.create({
       data: {
-        userId: originalEvent.userId,
-        subscriptionId: originalEvent.subscriptionId,
-        fromTier: originalEvent.toTier, // Swap tiers
-        toTier: originalEvent.fromTier,
-        changeType: 'migration', // Use migration type for reversals
-        daysRemaining: originalEvent.daysRemaining,
-        daysInCycle: originalEvent.daysInCycle,
-        unusedCreditValueUsd: -originalEvent.unusedCreditValueUsd, // Negate amounts
-        newTierProratedCostUsd: -originalEvent.newTierProratedCostUsd,
-        netChargeUsd: -originalEvent.netChargeUsd,
-        effectiveDate: new Date(),
+        id: crypto.randomUUID(),
+        user_id: originalEvent.user_id,
+        subscription_id: originalEvent.subscription_id,
+        from_tier: originalEvent.to_tier, // Swap tiers
+        to_tier: originalEvent.from_tier,
+        change_type: 'migration', // Use migration type for reversals
+        days_remaining: originalEvent.days_remaining,
+        days_in_cycle: originalEvent.days_in_cycle,
+        unused_credit_value_usd: -originalEvent.unused_credit_value_usd, // Negate amounts
+        new_tier_prorated_cost_usd: -originalEvent.new_tier_prorated_cost_usd,
+        net_charge_usd: -originalEvent.net_charge_usd,
+        effective_date: new Date(),
         status: 'applied',
-        stripeInvoiceId: null, // No Stripe invoice for manual reversal
+        stripe_invoice_id: null, // No Stripe invoice for manual reversal
+        updated_at: new Date(),
       },
     });
 
     // Mark original proration as reversed
-    await this.prisma.prorationEvent.update({
+    await this.prisma.proration_event.update({
       where: { id: prorationId },
       data: { status: 'reversed' },
     });
 
     // Restore subscription to original tier
-    await this.prisma.subscriptionMonetization.update({
-      where: { id: originalEvent.subscriptionId },
+    await this.prisma.subscription_monetization.update({
+      where: { id: originalEvent.subscription_id },
       data: {
-        tier: originalEvent.fromTier as any,
-        basePriceUsd: this.TIER_PRICING[originalEvent.fromTier || 'free'] || 0,
+        tier: originalEvent.from_tier as any,
+        base_price_usd: this.TIER_PRICING[originalEvent.from_tier || 'free'] || 0,
       },
     });
 
@@ -719,28 +724,28 @@ export class ProrationService {
   }> {
     const event = await this.getProrationEventById(prorationId);
 
-    const originalPrice = this.TIER_PRICING[event.fromTier || 'free'] || 0;
-    const newPrice = this.TIER_PRICING[event.toTier || 'free'] || 0;
+    const originalPrice = this.TIER_PRICING[event.from_tier || 'free'] || 0;
+    const newPrice = this.TIER_PRICING[event.to_tier || 'free'] || 0;
 
-    const unusedCreditAmount = Number(event.unusedCreditValueUsd);
-    const newTierCostAmount = Number(event.newTierProratedCostUsd);
-    const netChargeAmount = Number(event.netChargeUsd);
+    const unusedCreditAmount = Number(event.unused_credit_value_usd);
+    const newTierCostAmount = Number(event.new_tier_prorated_cost_usd);
+    const netChargeAmount = Number(event.net_charge_usd);
 
     return {
-      originalTier: event.fromTier || 'unknown',
+      originalTier: event.from_tier || 'unknown',
       originalPrice,
-      newTier: event.toTier || 'unknown',
+      newTier: event.to_tier || 'unknown',
       newPrice,
-      billingCycle: event.daysInCycle,
-      changeDate: event.effectiveDate.toISOString(),
-      daysRemaining: event.daysRemaining,
+      billingCycle: event.days_in_cycle,
+      changeDate: event.effective_date.toISOString(),
+      daysRemaining: event.days_remaining,
       steps: {
         unusedCredit: {
-          calculation: `(${event.daysRemaining} / ${event.daysInCycle}) × $${originalPrice.toFixed(2)}`,
+          calculation: `(${event.days_remaining} / ${event.days_in_cycle}) × $${originalPrice.toFixed(2)}`,
           amount: unusedCreditAmount,
         },
         newTierCost: {
-          calculation: `(${event.daysRemaining} / ${event.daysInCycle}) × $${newPrice.toFixed(2)}`,
+          calculation: `(${event.days_remaining} / ${event.days_in_cycle}) × $${newPrice.toFixed(2)}`,
           amount: newTierCostAmount,
         },
         netCharge: {
@@ -748,10 +753,157 @@ export class ProrationService {
           amount: netChargeAmount,
         },
       },
-      stripeInvoiceUrl: event.stripeInvoiceId
-        ? `https://dashboard.stripe.com/invoices/${event.stripeInvoiceId}`
+      stripeInvoiceUrl: event.stripe_invoice_id
+        ? `https://dashboard.stripe.com/invoices/${event.stripe_invoice_id}`
         : undefined,
       status: event.status,
     };
+  }
+
+  // ===========================================================================
+  // Plan 192: Stripe Invoice Generation
+  // ===========================================================================
+
+  /**
+   * Create Stripe invoice for proration charge
+   * Called after tier upgrade/downgrade to generate invoice
+   * @param prorationEventId - Proration event ID
+   * @returns Created Stripe invoice
+   */
+  async createProrationInvoice(prorationEventId: string): Promise<any> {
+    logger.info('ProrationService.createProrationInvoice', { prorationEventId });
+
+    try {
+      // 1. Get proration event
+      const prorationEvent = await this.getProrationEventById(prorationEventId);
+
+      if (!prorationEvent) {
+        throw new NotFoundError('Proration event not found');
+      }
+
+      // Check if invoice already exists
+      if (prorationEvent.stripe_invoice_id) {
+        logger.warn('Proration invoice already created', {
+          prorationEventId,
+          stripeInvoiceId: prorationEvent.stripe_invoice_id,
+        });
+        throw new Error('Proration invoice already exists');
+      }
+
+      // Only create invoices for charges (net_charge_usd > 0)
+      const netChargeUsd = Number(prorationEvent.net_charge_usd);
+      if (netChargeUsd <= 0) {
+        logger.info('No invoice needed for proration (no charge)', {
+          prorationEventId,
+          netChargeUsd,
+        });
+        return null;
+      }
+
+      // 2. Get subscription with user details
+      const subscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: prorationEvent.subscription_id },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw new NotFoundError('Subscription not found');
+      }
+
+      if (!subscription.stripe_customer_id) {
+        throw new Error('No Stripe customer ID found for subscription');
+      }
+
+      // 3. Create Stripe invoice item
+      const { createInvoiceItem, createAndFinalizeInvoice } = await import('./stripe.service');
+
+      const description = `Proration charge: ${prorationEvent.from_tier} → ${prorationEvent.to_tier} (${prorationEvent.days_remaining} days remaining)`;
+
+      await createInvoiceItem(
+        subscription.stripe_customer_id,
+        netChargeUsd,
+        description,
+        {
+          proration_event_id: prorationEventId,
+          user_id: subscription.user_id,
+          subscription_id: subscription.id,
+          from_tier: prorationEvent.from_tier || '',
+          to_tier: prorationEvent.to_tier || '',
+        }
+      );
+
+      // 4. Create and finalize invoice
+      const invoice = await createAndFinalizeInvoice(subscription.stripe_customer_id);
+
+      // 5. Update proration_event with stripe_invoice_id and invoice_created_at
+      await this.prisma.proration_event.update({
+        where: { id: prorationEventId },
+        data: {
+          stripe_invoice_id: invoice.id,
+          invoice_created_at: new Date(),
+          status: 'pending', // Invoice created, waiting for payment
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('ProrationService: Invoice created for proration', {
+        prorationEventId,
+        stripeInvoiceId: invoice.id,
+        amount: netChargeUsd,
+        status: invoice.status,
+      });
+
+      return invoice;
+    } catch (error) {
+      logger.error('ProrationService.createProrationInvoice: Error', {
+        prorationEventId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Mark proration as paid (called from webhook)
+   * @param prorationEventId - Proration event ID
+   * @param stripeInvoiceId - Stripe invoice ID
+   */
+  async markProrationPaid(prorationEventId: string, stripeInvoiceId: string): Promise<void> {
+    logger.info('ProrationService.markProrationPaid', {
+      prorationEventId,
+      stripeInvoiceId,
+    });
+
+    try {
+      // Update proration_event: status='applied', invoice_paid_at=now()
+      await this.prisma.proration_event.update({
+        where: { id: prorationEventId },
+        data: {
+          status: 'applied', // Payment received, proration applied
+          invoice_paid_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('ProrationService: Proration marked as applied', {
+        prorationEventId,
+        stripeInvoiceId,
+      });
+    } catch (error) {
+      logger.error('ProrationService.markProrationPaid: Error', {
+        prorationEventId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
   }
 }

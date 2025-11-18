@@ -1,15 +1,15 @@
-import { User } from '@prisma/client';
+import { users } from '@prisma/client';
 import { IAuthService } from '../../interfaces';
 
 export class MockAuthService implements IAuthService {
-  private users: Map<string, User> = new Map();
-  private emailIndex: Map<string, User> = new Map();
+  private users: Map<string, users> = new Map();
+  private emailIndex: Map<string, users> = new Map();
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<users | null> {
     return this.emailIndex.get(email.toLowerCase()) || null;
   }
 
-  async findById(userId: string): Promise<User | null> {
+  async findById(userId: string): Promise<users | null> {
     return this.users.get(userId) || null;
   }
 
@@ -19,50 +19,50 @@ export class MockAuthService implements IAuthService {
     firstName?: string;
     lastName?: string;
     username?: string;
-  }): Promise<User> {
-    const user: User = {
+  }): Promise<users> {
+    const user: users = {
       id: `mock-user-${Date.now()}-${Math.random()}`,
       email: data.email.toLowerCase(),
-      passwordHash: data.password ? `hashed-${data.password}` : null,
-      firstName: data.firstName || null,
-      lastName: data.lastName || null,
+      password_hash: data.password ? `hashed-${data.password}` : null,
+      first_name: data.firstName || null,
+      last_name: data.lastName || null,
       username: data.username || null,
-      emailVerified: false,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastLoginAt: null,
-      deletedAt: null,
-      profilePictureUrl: null,
+      email_verified: false,
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      last_login_at: null,
+      deleted_at: null,
+      profile_picture_url: null,
       // Email verification fields
-      emailVerificationToken: null,
-      emailVerificationTokenExpiry: null,
+      email_verification_token: null,
+      email_verification_token_expiry: null,
       // Password reset fields
-      passwordResetToken: null,
-      passwordResetTokenExpiry: null,
+      password_reset_token: null,
+      password_reset_token_expiry: null,
       // Account management fields
-      deactivatedAt: null,
+      deactivated_at: null,
       // Social auth fields
-      googleId: null,
-      googleProfileUrl: null,
-      authProvider: 'local',
+      google_id: null,
+      google_profile_url: null,
+      auth_provider: 'local',
       // Security/audit fields
-      lastPasswordChange: null,
-      passwordResetCount: 0,
+      last_password_change: null,
+      password_reset_count: 0,
       // Role-based access control
       role: 'user',
       // Multi-Factor Authentication Fields (Phase 4)
-      mfaEnabled: false,
-      mfaSecret: null,
-      mfaBackupCodes: '',
-      mfaVerifiedAt: null,
-      mfaMethod: 'totp',
+      mfa_enabled: false,
+      mfa_secret: null,
+      mfa_backup_codes: '',
+      mfa_verified_at: null,
+      mfa_method: 'totp',
       // User Status and Suspension Fields (Gap Closure)
       status: 'active',
-      suspendedUntil: null,
-      bannedAt: null,
-      lifetimeValue: 0,
-      hasActivePerpetualLicense: false,
+      suspended_until: null,
+      banned_at: null,
+      lifetime_value: 0,
+      has_active_perpetual_license: false,
     };
 
     this.users.set(user.id, user);
@@ -71,12 +71,12 @@ export class MockAuthService implements IAuthService {
     return user;
   }
 
-  async authenticate(email: string, password: string): Promise<User | null> {
+  async authenticate(email: string, password: string): Promise<users | null> {
     const user = await this.findByEmail(email);
-    if (!user || !user.passwordHash) return null;
+    if (!user || !user.password_hash) return null;
 
     // Simulate password verification
-    if (user.passwordHash === `hashed-${password}`) {
+    if (user.password_hash === `hashed-${password}`) {
       return user;
     }
 
@@ -92,7 +92,7 @@ export class MockAuthService implements IAuthService {
       claims: async (_use: string, _scope: string) => ({
         sub: user.id,
         email: user.email,
-        email_verified: user.emailVerified,
+        email_verified: user.email_verified,
       }),
     };
   }
@@ -108,36 +108,36 @@ export class MockAuthService implements IAuthService {
   async updateLastLogin(userId: string): Promise<void> {
     const user = this.users.get(userId);
     if (user) {
-      user.lastLoginAt = new Date();
+      user.last_login_at = new Date();
     }
   }
 
   async verifyEmail(userId: string): Promise<void> {
     const user = this.users.get(userId);
     if (user) {
-      user.emailVerified = true;
+      user.email_verified = true;
     }
   }
 
   async updatePassword(userId: string, newPassword: string): Promise<void> {
     const user = this.users.get(userId);
     if (user) {
-      user.passwordHash = await this.hashPassword(newPassword);
+      user.password_hash = await this.hashPassword(newPassword);
     }
   }
 
   async deactivateAccount(userId: string): Promise<void> {
     const user = this.users.get(userId);
     if (user) {
-      user.isActive = false;
+      user.is_active = false;
     }
   }
 
   async deleteAccount(userId: string): Promise<void> {
     const user = this.users.get(userId);
     if (user) {
-      user.isActive = false;
-      user.deletedAt = new Date();
+      user.is_active = false;
+      user.deleted_at = new Date();
     }
   }
 
@@ -148,9 +148,9 @@ export class MockAuthService implements IAuthService {
   async getUserStats(): Promise<any> {
     return {
       total: this.users.size,
-      active: Array.from(this.users.values()).filter((u) => u.isActive).length,
-      verified: Array.from(this.users.values()).filter((u) => u.emailVerified).length,
-      inactive: Array.from(this.users.values()).filter((u) => !u.isActive).length,
+      active: Array.from(this.users.values()).filter((u) => u.is_active).length,
+      verified: Array.from(this.users.values()).filter((u) => u.email_verified).length,
+      inactive: Array.from(this.users.values()).filter((u) => !u.is_active).length,
     };
   }
 
@@ -160,14 +160,14 @@ export class MockAuthService implements IAuthService {
     this.emailIndex.clear();
   }
 
-  seed(users: User[]) {
+  seed(users: users[]) {
     users.forEach((user) => {
       this.users.set(user.id, user);
       this.emailIndex.set(user.email.toLowerCase(), user);
     });
   }
 
-  getAll(): User[] {
+  getAll(): users[] {
     return Array.from(this.users.values());
   }
 }

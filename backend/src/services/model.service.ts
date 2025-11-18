@@ -14,7 +14,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, ModelCapability, SubscriptionTier } from '@prisma/client';
+import { PrismaClient, subscription_tier as SubscriptionTier } from '@prisma/client';
 import logger from '../utils/logger';
 import {
   ModelListResponse,
@@ -120,87 +120,103 @@ export class ModelService implements IModelService {
     const where: any = {};
 
     if (filters?.available !== undefined) {
-      where.isAvailable = filters.available;
+      where.is_available = filters.available;
     }
 
     // Exclude archived models by default (unless admin explicitly includes them)
     if (!filters?.includeArchived) {
-      where.isArchived = false;
+      where.is_archived = false;
     }
 
-    if (filters?.capability && filters.capability.length > 0) {
-      // Filter models that have ANY of the specified capabilities
-      where.capabilities = {
-        hasSome: filters.capability as ModelCapability[],
-      };
-    }
+    // TODO: Capability filtering requires querying meta JSONB field
+    // For now, capability filtering is done in-memory after fetching
+    // This can be optimized later with Prisma JSON filtering or raw SQL
 
     if (filters?.provider) {
       where.provider = filters.provider;
     }
 
-    // Query database
-    const models = await this.prisma.model.findMany({
+    // Query database - only select meta JSONB (not deprecated root columns)
+    logger.debug('ModelService.listModels: Executing Prisma query', {
+      where: JSON.stringify(where),
+      filters,
+      userTier,
+    });
+
+    const models = await this.prisma.models.findMany({
       where,
       select: {
         id: true,
-        displayName: true,
         provider: true,
-        description: true,
-        capabilities: true,
-        contextLength: true,
-        maxOutputTokens: true,
-        creditsPer1kTokens: true,
-        isAvailable: true,
-        version: true,
-        // Tier access fields
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
+        is_available: true,
+        meta: true,
       },
-      orderBy: [{ isAvailable: 'desc' }, { displayName: 'asc' }],
+      orderBy: { is_available: 'desc' },
     });
 
+    logger.debug('ModelService.listModels: Query returned', {
+      count: models.length,
+      ids: models.map(m => m.id),
+    });
+
+    // Apply in-memory capability filtering if specified
+    let filteredModels = models;
+    if (filters?.capability && filters.capability.length > 0) {
+      filteredModels = models.filter((model) => {
+        const meta = model.meta as any;
+        const modelCapabilities = meta?.capabilities ?? [];
+        // Check if model has ANY of the requested capabilities
+        return filters.capability!.some(cap => modelCapabilities.includes(cap));
+      });
+      logger.debug('ModelService.listModels: Applied capability filter', {
+        requestedCapabilities: filters.capability,
+        beforeCount: models.length,
+        afterCount: filteredModels.length,
+      });
+    }
+
     const response: ModelListResponse = {
-      models: models.map((model) => {
+      models: filteredModels.map((model) => {
+        const meta = model.meta as any;
+
         // Calculate tier access status if userTier provided
         let accessStatus: 'allowed' | 'restricted' | 'upgrade_required' = 'allowed';
         if (userTier) {
           const accessCheck = checkTierAccess(userTier, {
-            requiredTier: model.requiredTier ?? 'free',
-            tierRestrictionMode: model.tierRestrictionMode ?? 'minimum',
-            allowedTiers: model.allowedTiers,
+            requiredTier: meta?.requiredTier ?? 'free',
+            tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
+            allowedTiers: meta?.allowedTiers ?? ['free'],
           });
           accessStatus = accessCheck.allowed ? 'allowed' : 'upgrade_required';
         }
 
         return {
           id: model.id,
-          name: model.displayName ?? model.id,
+          name: meta?.displayName ?? model.id,
           provider: model.provider,
-          description: model.description ?? '',
-          capabilities: model.capabilities,
-          context_length: model.contextLength ?? 0,
-          max_output_tokens: model.maxOutputTokens ?? 0,
-          credits_per_1k_tokens: model.creditsPer1kTokens ?? 0,
-          is_available: model.isAvailable,
-          version: model.version ?? '',
-          // Tier access fields
-          required_tier: model.requiredTier ?? 'free',
-          tier_restriction_mode: (model.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
-          allowed_tiers: model.allowedTiers,
+          description: meta?.description ?? '',
+          capabilities: meta?.capabilities ?? [],
+          context_length: meta?.contextLength ?? 0,
+          max_output_tokens: meta?.maxOutputTokens ?? 0,
+          credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+          is_available: model.is_available,
+          version: meta?.version ?? '',
+          // Tier access fields from meta JSONB
+          required_tier: meta?.requiredTier ?? 'free',
+          tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
+          allowed_tiers: meta?.allowedTiers ?? ['free'],
           access_status: accessStatus,
         };
       }),
-      total: models.length,
-      user_tier: userTier,
+      total: filteredModels.length,
+      user_tier: userTier as 'free' | 'pro' | 'pro_max' | 'enterprise_pro' | 'enterprise_max' | 'perpetual' | undefined,
     };
 
     // Cache result
     modelCache.set(cacheKey, response);
 
     logger.info('ModelService: Models listed', {
-      total: models.length,
+      total: filteredModels.length,
       filters,
     });
 
@@ -229,29 +245,17 @@ export class ModelService implements IModelService {
       return cached;
     }
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
         name: true,
-        displayName: true,
         provider: true,
-        description: true,
-        capabilities: true,
-        contextLength: true,
-        maxOutputTokens: true,
-        inputCostPerMillionTokens: true,
-        outputCostPerMillionTokens: true,
-        creditsPer1kTokens: true,
-        isAvailable: true,
-        isDeprecated: true,
-        version: true,
-        createdAt: true,
-        updatedAt: true,
-        // Tier access fields
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
+        is_available: true,
+        is_legacy: true,
+        meta: true,
+        created_at: true,
+        updated_at: true,
       },
     });
 
@@ -260,15 +264,17 @@ export class ModelService implements IModelService {
       throw new Error(`Model '${modelId}' not found`);
     }
 
+    const meta = model.meta as any;
+
     // Calculate tier access status if userTier provided
     let accessStatus: 'allowed' | 'restricted' | 'upgrade_required' = 'allowed';
     let upgradeInfo: { required_tier: string; upgrade_url: string } | undefined;
 
     if (userTier) {
       const accessCheck = checkTierAccess(userTier, {
-        requiredTier: model.requiredTier ?? 'free',
-        tierRestrictionMode: model.tierRestrictionMode ?? 'minimum',
-        allowedTiers: model.allowedTiers,
+        requiredTier: meta?.requiredTier ?? 'free',
+        tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
+        allowedTiers: meta?.allowedTiers ?? ['free'],
       });
 
       accessStatus = accessCheck.allowed ? 'allowed' : 'upgrade_required';
@@ -284,24 +290,24 @@ export class ModelService implements IModelService {
     const response: ModelDetailsResponse = {
       id: model.id,
       name: model.name,
-      display_name: model.displayName ?? model.name,
+      display_name: meta?.displayName ?? model.name,
       provider: model.provider,
-      description: model.description ?? '',
-      capabilities: model.capabilities,
-      context_length: model.contextLength ?? 0,
-      max_output_tokens: model.maxOutputTokens ?? 0,
-      input_cost_per_million_tokens: model.inputCostPerMillionTokens ?? 0,
-      output_cost_per_million_tokens: model.outputCostPerMillionTokens ?? 0,
-      credits_per_1k_tokens: model.creditsPer1kTokens ?? 0,
-      is_available: model.isAvailable,
-      is_deprecated: model.isDeprecated ?? false,
-      version: model.version ?? '',
-      created_at: model.createdAt.toISOString(),
-      updated_at: model.updatedAt.toISOString(),
-      // Tier access fields
-      required_tier: model.requiredTier ?? 'free',
-      tier_restriction_mode: (model.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
-      allowed_tiers: model.allowedTiers,
+      description: meta?.description ?? '',
+      capabilities: meta?.capabilities ?? [],
+      context_length: meta?.contextLength ?? 0,
+      max_output_tokens: meta?.maxOutputTokens ?? 0,
+      input_cost_per_million_tokens: meta?.inputCostPerMillionTokens ?? 0,
+      output_cost_per_million_tokens: meta?.outputCostPerMillionTokens ?? 0,
+      credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+      is_available: model.is_available,
+      is_deprecated: model.is_legacy, // Use is_legacy instead of deprecated isDeprecated
+      version: meta?.version ?? '',
+      created_at: model.created_at.toISOString(),
+      updated_at: model.updated_at.toISOString(),
+      // Tier access fields from meta JSONB
+      required_tier: meta?.requiredTier ?? 'free',
+      tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
+      allowed_tiers: meta?.allowedTiers ?? ['free'],
       access_status: accessStatus,
       upgrade_info: upgradeInfo,
     };
@@ -334,12 +340,10 @@ export class ModelService implements IModelService {
       userTier,
     });
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
+        meta: true,
       },
     });
 
@@ -351,10 +355,12 @@ export class ModelService implements IModelService {
       };
     }
 
+    const meta = model.meta as any;
+
     const accessCheck = checkTierAccess(userTier, {
-      requiredTier: model.requiredTier ?? 'free',
-      tierRestrictionMode: model.tierRestrictionMode ?? 'minimum',
-      allowedTiers: model.allowedTiers,
+      requiredTier: meta?.requiredTier ?? 'free',
+      tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
+      allowedTiers: meta?.allowedTiers ?? ['free'],
     });
 
     logger.debug('ModelService: Tier access check completed', {
@@ -375,15 +381,17 @@ export class ModelService implements IModelService {
   async isModelAvailable(modelId: string): Promise<boolean> {
     logger.debug('ModelService: Checking model availability', { modelId });
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
-        isAvailable: true,
-        isDeprecated: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
       },
     });
 
-    const isAvailable = model !== null && model.isAvailable && !model.isDeprecated;
+    // Available if exists, isAvailable is true, and not archived
+    const isAvailable = model !== null && model.is_available && !model.is_archived;
 
     logger.debug('ModelService: Model availability check', {
       modelId,
@@ -408,38 +416,38 @@ export class ModelService implements IModelService {
   } | null> {
     logger.debug('ModelService: Getting model for inference', { modelId });
 
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
         provider: true,
-        creditsPer1kTokens: true,
-        isAvailable: true,
-        isDeprecated: true,
-        isArchived: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
+        meta: true,
       },
     });
 
-    // Reject if model is not available, deprecated, or archived
-    if (!model || !model.isAvailable || model.isDeprecated || model.isArchived) {
+    // Reject if model is not available or archived
+    if (!model || !model.is_available || model.is_archived) {
       logger.warn('ModelService: Model not available for inference', {
         modelId,
         reason: !model
           ? 'not_found'
-          : model.isArchived
+          : model.is_archived
           ? 'archived'
-          : model.isDeprecated
-          ? 'deprecated'
           : 'unavailable',
       });
       return null;
     }
 
+    const meta = model.meta as any;
+
     return {
       id: model.id,
       provider: model.provider,
-      creditsPer1kTokens: model.creditsPer1kTokens ?? 0,
-      isAvailable: model.isAvailable,
+      creditsPer1kTokens: meta?.creditsPer1kTokens ?? 0,
+      isAvailable: model.is_available,
     };
   }
 
@@ -468,8 +476,8 @@ export class ModelService implements IModelService {
       await this.listModels({ available: true });
 
       // Pre-load individual model details for available models
-      const models = await this.prisma.model.findMany({
-        where: { isAvailable: true },
+      const models = await this.prisma.models.findMany({
+        where: { is_available: true },
         select: { id: true },
       });
 
@@ -511,26 +519,27 @@ export class ModelService implements IModelService {
     const where: any = {};
 
     if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = startDate;
-      if (endDate) where.createdAt.lte = endDate;
+      where.created_at = {};
+      if (startDate) where.created_at.gte = startDate;
+      if (endDate) where.created_at.lte = endDate;
     }
 
-    const stats = await this.prisma.usageHistory.groupBy({
-      by: ['modelId'],
+    const stats = await this.prisma.token_usage_ledger.groupBy({
+      by: ['model_id'],
       where,
       _count: {
         id: true,
       },
       _sum: {
-        totalTokens: true,
+        input_tokens: true,
+        output_tokens: true,
       },
     });
 
     return stats.map((stat) => ({
-      modelId: stat.modelId,
+      modelId: stat.model_id,
       requestCount: stat._count.id,
-      totalTokens: stat._sum.totalTokens || 0,
+      totalTokens: (stat._sum.input_tokens || 0) + (stat._sum.output_tokens || 0),
     }));
   }
 
@@ -575,7 +584,7 @@ export class ModelService implements IModelService {
     }
 
     // Check if model already exists
-    const existing = await this.prisma.model.findUnique({
+    const existing = await this.prisma.models.findUnique({
       where: { id: data.id },
     });
 
@@ -584,15 +593,18 @@ export class ModelService implements IModelService {
     }
 
     // Create model in database
-    const model = await this.prisma.model.create({
+    // Tier fields stored ONLY in meta JSONB (not in root columns)
+    const model = await this.prisma.models.create({
       data: {
         id: data.id,
         name: data.name,
         provider: data.provider,
-        isAvailable: true,
-        isLegacy: false,
-        isArchived: false,
-        meta: validatedMeta as any, // Prisma JsonValue
+        is_available: true,
+        is_legacy: false,
+        is_archived: false,
+        meta: validatedMeta as any, // Prisma JsonValue - contains all tier fields
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -630,7 +642,7 @@ export class ModelService implements IModelService {
     });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: { meta: true },
     });
@@ -641,7 +653,7 @@ export class ModelService implements IModelService {
 
     // Validate replacement model if provided
     if (options.replacementModelId) {
-      const replacement = await this.prisma.model.findUnique({
+      const replacement = await this.prisma.models.findUnique({
         where: { id: options.replacementModelId },
       });
       if (!replacement) {
@@ -661,11 +673,12 @@ export class ModelService implements IModelService {
     };
 
     // Persist to database
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isLegacy: true,
+        is_legacy: true,
         meta: updatedMeta as any,
+        updated_at: new Date(),
       },
     });
 
@@ -690,7 +703,7 @@ export class ModelService implements IModelService {
     });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: { meta: true },
     });
@@ -716,11 +729,12 @@ export class ModelService implements IModelService {
     });
 
     // Persist to database
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isLegacy: false,
+        is_legacy: false,
         meta: updatedMeta as any,
+        updated_at: new Date(),
       },
     });
 
@@ -742,7 +756,7 @@ export class ModelService implements IModelService {
     logger.info('ModelService: Archiving model', { modelId, adminUserId });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
     });
 
@@ -751,11 +765,12 @@ export class ModelService implements IModelService {
     }
 
     // Archive model
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isArchived: true,
-        isAvailable: false,
+        is_archived: true,
+        is_available: false,
+        updated_at: new Date(),
       },
     });
 
@@ -777,7 +792,7 @@ export class ModelService implements IModelService {
     logger.info('ModelService: Unarchiving model', { modelId, adminUserId });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
     });
 
@@ -786,11 +801,12 @@ export class ModelService implements IModelService {
     }
 
     // Unarchive model
-    await this.prisma.model.update({
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
-        isArchived: false,
-        isAvailable: true,
+        is_archived: false,
+        is_available: true,
+        updated_at: new Date(),
       },
     });
 
@@ -821,7 +837,7 @@ export class ModelService implements IModelService {
     });
 
     // Validate model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: { meta: true },
     });
@@ -841,10 +857,12 @@ export class ModelService implements IModelService {
     const validatedMeta = validateModelMeta(mergedMeta);
 
     // Update database
-    await this.prisma.model.update({
+    // Tier fields stored ONLY in meta JSONB (not synced to root columns)
+    await this.prisma.models.update({
       where: { id: modelId },
       data: {
         meta: validatedMeta as any,
+        updated_at: new Date(),
       },
     });
 
@@ -863,52 +881,45 @@ export class ModelService implements IModelService {
   async getLegacyModels(): Promise<ModelListResponse> {
     logger.debug('ModelService: Getting legacy models');
 
-    const models = await this.prisma.model.findMany({
-      where: { isLegacy: true },
+    const models = await this.prisma.models.findMany({
+      where: { is_legacy: true },
       select: {
         id: true,
         name: true,
-        displayName: true,
         provider: true,
-        description: true,
-        capabilities: true,
-        contextLength: true,
-        maxOutputTokens: true,
-        creditsPer1kTokens: true,
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
-        version: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
         meta: true,
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
       },
-      orderBy: { displayName: 'asc' },
+      orderBy: { name: 'asc' },
     });
 
     return {
-      models: models.map((model) => ({
-        id: model.id,
-        name: model.displayName ?? model.name,
-        provider: model.provider,
-        description: model.description ?? '',
-        capabilities: model.capabilities,
-        context_length: model.contextLength ?? 0,
-        max_output_tokens: model.maxOutputTokens ?? 0,
-        credits_per_1k_tokens: model.creditsPer1kTokens ?? 0,
-        is_available: model.isAvailable,
-        is_legacy: model.isLegacy,
-        is_archived: model.isArchived,
-        version: model.version ?? '',
-        required_tier: model.requiredTier ?? 'free',
-        tier_restriction_mode: (model.tierRestrictionMode ?? 'minimum') as
-          | 'minimum'
-          | 'exact'
-          | 'whitelist',
-        allowed_tiers: model.allowedTiers,
-        access_status: 'allowed',
-      })),
+      models: models.map((model) => {
+        const meta = model.meta as any;
+        return {
+          id: model.id,
+          name: meta?.displayName ?? model.name,
+          provider: model.provider,
+          description: meta?.description ?? '',
+          capabilities: meta?.capabilities ?? [],
+          context_length: meta?.contextLength ?? 0,
+          max_output_tokens: meta?.maxOutputTokens ?? 0,
+          credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+          is_available: model.is_available,
+          is_legacy: model.is_legacy,
+          is_archived: model.is_archived,
+          version: meta?.version ?? '',
+          required_tier: meta?.requiredTier ?? 'free',
+          tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as
+            | 'minimum'
+            | 'exact'
+            | 'whitelist',
+          allowed_tiers: meta?.allowedTiers ?? ['free'],
+          access_status: 'allowed',
+        };
+      }),
       total: models.length,
     };
   }
@@ -922,52 +933,45 @@ export class ModelService implements IModelService {
   async getArchivedModels(): Promise<ModelListResponse> {
     logger.debug('ModelService: Getting archived models');
 
-    const models = await this.prisma.model.findMany({
-      where: { isArchived: true },
+    const models = await this.prisma.models.findMany({
+      where: { is_archived: true },
       select: {
         id: true,
         name: true,
-        displayName: true,
         provider: true,
-        description: true,
-        capabilities: true,
-        contextLength: true,
-        maxOutputTokens: true,
-        creditsPer1kTokens: true,
-        isAvailable: true,
-        isLegacy: true,
-        isArchived: true,
-        version: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
         meta: true,
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
       },
-      orderBy: { displayName: 'asc' },
+      orderBy: { name: 'asc' },
     });
 
     return {
-      models: models.map((model) => ({
-        id: model.id,
-        name: model.displayName ?? model.name,
-        provider: model.provider,
-        description: model.description ?? '',
-        capabilities: model.capabilities,
-        context_length: model.contextLength ?? 0,
-        max_output_tokens: model.maxOutputTokens ?? 0,
-        credits_per_1k_tokens: model.creditsPer1kTokens ?? 0,
-        is_available: model.isAvailable,
-        is_legacy: model.isLegacy,
-        is_archived: model.isArchived,
-        version: model.version ?? '',
-        required_tier: model.requiredTier ?? 'free',
-        tier_restriction_mode: (model.tierRestrictionMode ?? 'minimum') as
-          | 'minimum'
-          | 'exact'
-          | 'whitelist',
-        allowed_tiers: model.allowedTiers,
-        access_status: 'allowed',
-      })),
+      models: models.map((model) => {
+        const meta = model.meta as any;
+        return {
+          id: model.id,
+          name: meta?.displayName ?? model.name,
+          provider: model.provider,
+          description: meta?.description ?? '',
+          capabilities: meta?.capabilities ?? [],
+          context_length: meta?.contextLength ?? 0,
+          max_output_tokens: meta?.maxOutputTokens ?? 0,
+          credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+          is_available: model.is_available,
+          is_legacy: model.is_legacy,
+          is_archived: model.is_archived,
+          version: meta?.version ?? '',
+          required_tier: meta?.requiredTier ?? 'free',
+          tier_restriction_mode: (meta?.tierRestrictionMode ?? 'minimum') as
+            | 'minimum'
+            | 'exact'
+            | 'whitelist',
+          allowed_tiers: meta?.allowedTiers ?? ['free'],
+          access_status: 'allowed',
+        };
+      }),
       total: models.length,
     };
   }

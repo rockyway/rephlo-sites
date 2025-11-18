@@ -34,29 +34,27 @@ const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.cli(),
-  // winston.format.printf(({ timestamp, level, message, ...metadata }) => {
-  winston.format.printf(({ timestamp, level, message }) => {
+  winston.format.printf(({ timestamp, level, message, ...metadata }) => {
     let msg = `${timestamp} [${level}]: ${message}`;
 
-    // DO NOT NEED META DATA FOR NOW
     // Append metadata if present
-    // const metaKeys = Object.keys(metadata);
-    // if (metaKeys.length > 0) {
-    //   // Filter out empty/internal fields
-    //   const filteredMeta = Object.fromEntries(
-    //     Object.entries(metadata).filter(([key, value]) =>
-    //       key !== 'timestamp' &&
-    //       key !== 'level' &&
-    //       key !== 'message' &&
-    //       value !== undefined &&
-    //       value !== null
-    //     )
-    //   );
+    const metaKeys = Object.keys(metadata);
+    if (metaKeys.length > 0) {
+      // Filter out empty/internal fields
+      const filteredMeta = Object.fromEntries(
+        Object.entries(metadata).filter(([key, value]) =>
+          key !== 'timestamp' &&
+          key !== 'level' &&
+          key !== 'message' &&
+          value !== undefined &&
+          value !== null
+        )
+      );
 
-    //   if (Object.keys(filteredMeta).length > 0) {
-    //     msg += ` ${JSON.stringify(filteredMeta)}`;
-    //   }
-    // }
+      if (Object.keys(filteredMeta).length > 0) {
+        msg += `\n${JSON.stringify(filteredMeta, null, 2)}`;
+      }
+    }
 
     return msg;
   })

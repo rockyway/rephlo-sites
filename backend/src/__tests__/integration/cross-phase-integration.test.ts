@@ -37,12 +37,12 @@ describe('Cross-Phase Integration Tests', () => {
   beforeAll(async () => {
     // Clean up
     await redis.flushdb();
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'cross-phase-test' } },
     });
 
     // Create test users
-    testAdmin = await prisma.user.create({
+    testAdmin = await prisma.users.create({
       data: {
         email: 'cross-phase-admin@example.com',
         passwordHash: '$2b$12$test',
@@ -52,7 +52,7 @@ describe('Cross-Phase Integration Tests', () => {
       },
     });
 
-    testUser = await prisma.user.create({
+    testUser = await prisma.users.create({
       data: {
         email: 'cross-phase-user@example.com',
         passwordHash: '$2b$12$test',
@@ -64,7 +64,7 @@ describe('Cross-Phase Integration Tests', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'cross-phase-test' } },
     });
     await redis.flushdb();
@@ -172,7 +172,7 @@ describe('Cross-Phase Integration Tests', () => {
       expect(cachedBefore).toBe('admin');
 
       // Change role
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testAdmin.id },
         data: { role: 'user' },
       });
@@ -189,7 +189,7 @@ describe('Cross-Phase Integration Tests', () => {
       expect(newRole).toBe('user');
 
       // Restore admin role for other tests
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testAdmin.id },
         data: { role: 'admin' },
       });
@@ -461,7 +461,7 @@ describe('Cross-Phase Integration Tests', () => {
       expect(response.body.success).toBe(true);
 
       // Verify MFA disabled
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testAdmin.id },
         select: { mfaEnabled: true },
       });
@@ -674,7 +674,7 @@ describe('Cross-Phase Integration Tests', () => {
       expect(afterChange.length).toBe(0);
 
       // Restore admin role
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testAdmin.id },
         data: { role: 'admin' },
       });
@@ -712,7 +712,7 @@ describe('Cross-Phase Integration Tests', () => {
       expect(sessionBefore).toBeTruthy();
 
       // Trigger role change
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testAdmin.id },
         data: { role: 'user' },
       });
@@ -732,7 +732,7 @@ describe('Cross-Phase Integration Tests', () => {
       expect(sessionAfter).toBeNull();
 
       // Restore admin role
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testAdmin.id },
         data: { role: 'admin' },
       });

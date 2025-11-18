@@ -147,3 +147,61 @@ export const SubscriptionStatsSchema = z.object({
   pastDueCount: z.number().int().min(0),
   trialConversionsThisMonth: z.number().int().min(0),
 });
+
+// Subscription Refund Interface
+export interface SubscriptionRefund {
+  id: string;
+  userId: string;
+  subscriptionId: string;
+  refundType: RefundType;
+  refundReason: string | null;
+  requestedBy: string; // Admin user ID
+  requestedAt: string; // ISO 8601
+  originalChargeAmountUsd: number;
+  refundAmountUsd: number;
+  stripeChargeId: string | null;
+  stripeRefundId: string | null;
+  status: RefundStatus;
+  processedAt: string | null;
+  stripeProcessedAt: string | null;
+  failureReason: string | null;
+  adminNotes: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  // Optional populated fields from joins
+  user?: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+  subscription?: {
+    tier: string;
+    status: string;
+  };
+  adminUser?: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
+}
+
+export enum RefundType {
+  MANUAL_ADMIN = 'manual_admin',
+  PRORATION_CREDIT = 'proration_credit',
+  CHARGEBACK = 'chargeback',
+}
+
+export enum RefundStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled',
+}
+
+// Zod Schemas
+export const RefundTypeSchema = z.nativeEnum(RefundType);
+export const RefundStatusSchema = z.nativeEnum(RefundStatus);

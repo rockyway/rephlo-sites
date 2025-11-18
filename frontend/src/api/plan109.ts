@@ -48,6 +48,11 @@ import type {
   RefundRequest,
   BulkUpdateUsersRequest,
   AnalyticsFilters,
+  SubscriptionRefund,
+  RefundFilters,
+  ManualCancelRefundRequest,
+  ApproveRefundRequest,
+  CancelRefundRequest,
 } from '@/types/plan109.types';
 
 // Type aliases for compatibility with existing code
@@ -657,6 +662,76 @@ export const analyticsApi = {
 };
 
 // ============================================================================
+// Refund Management API (Plan 192)
+// ============================================================================
+
+export const refundApi = {
+  /**
+   * Get all refund requests with filters and pagination
+   */
+  getAllRefunds: async (filters?: RefundFilters) => {
+    const response = await apiClient.get<PaginatedResponse<SubscriptionRefund>>(
+      '/admin/refunds',
+      { params: filters }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get a specific refund by ID
+   */
+  getRefund: async (refundId: string) => {
+    const response = await apiClient.get<SubscriptionRefund>(
+      `/admin/refunds/${refundId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Approve a pending refund request
+   */
+  approveRefund: async (refundId: string, data?: ApproveRefundRequest) => {
+    const response = await apiClient.post<{ status: string; data: SubscriptionRefund; meta?: any }>(
+      `/admin/refunds/${refundId}/approve`,
+      data || {}
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Cancel a pending refund request
+   */
+  cancelRefund: async (refundId: string, data: CancelRefundRequest) => {
+    const response = await apiClient.post<{ status: string; data: SubscriptionRefund; meta?: any }>(
+      `/admin/refunds/${refundId}/cancel`,
+      data
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Cancel subscription with immediate refund (manual admin action)
+   */
+  cancelSubscriptionWithRefund: async (subscriptionId: string, data: ManualCancelRefundRequest) => {
+    const response = await apiClient.post<{ status: string; data: SubscriptionRefund; meta?: any }>(
+      `/admin/subscriptions/${subscriptionId}/cancel-with-refund`,
+      data
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Get credit usage for subscription's current billing period
+   */
+  getSubscriptionCreditUsage: async (subscriptionId: string) => {
+    const response = await apiClient.get<{ status: string; data: { subscriptionId: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; creditsUsed: number }; meta?: any }>(
+      `/admin/subscriptions/${subscriptionId}/credit-usage`
+    );
+    return response.data.data;
+  },
+};
+
+// ============================================================================
 // Combined Export
 // ============================================================================
 
@@ -666,6 +741,7 @@ export const plan109Api = {
   billing: billingApi,
   credits: creditApi,
   analytics: analyticsApi,
+  refunds: refundApi,
 };
 
 export default plan109Api;

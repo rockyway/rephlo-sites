@@ -1,4 +1,4 @@
-import { Credit } from '@prisma/client';
+import type { credits } from '@prisma/client';
 import { AllocateCreditsInput, DeductCreditsInput } from '../../types/credit-validation';
 
 export const ICreditService = Symbol('ICreditService');
@@ -20,13 +20,35 @@ export interface FreeCreditsInfo {
 }
 
 /**
- * Pro/purchased credits breakdown information
- * Tracks lifetime purchased credits and usage
+ * Subscription credits breakdown information (Plan 189)
+ * Monthly allocated credits from subscription tier
+ */
+export interface SubscriptionCreditsInfo {
+  remaining: number;
+  monthlyAllocation: number;
+  used: number;
+  resetDate: Date;
+  daysUntilReset: number;
+}
+
+/**
+ * Purchased addon credits breakdown information (Plan 189)
+ * One-time purchased credits (no monthly reset)
+ */
+export interface PurchasedCreditsInfo {
+  remaining: number;
+  totalPurchased: number;
+  lifetimeUsed: number;
+}
+
+/**
+ * Pro/purchased credits breakdown information (Plan 189)
+ * Splits subscription credits from purchased addon credits
  */
 export interface ProCreditsInfo {
-  remaining: number;
-  purchasedTotal: number;
-  lifetimeUsed: number;
+  subscriptionCredits: SubscriptionCreditsInfo;
+  purchasedCredits: PurchasedCreditsInfo;
+  totalRemaining: number;
 }
 
 /**
@@ -48,12 +70,12 @@ export interface ICreditService {
   /**
    * Get current credit balance for a user
    */
-  getCurrentCredits(userId: string): Promise<Credit | null>;
+  getCurrentCredits(userId: string): Promise<credits | null>;
 
   /**
    * Allocate credits to a user for a billing period
    */
-  allocateCredits(input: AllocateCreditsInput): Promise<Credit>;
+  allocateCredits(input: AllocateCreditsInput): Promise<credits>;
 
   /**
    * Check if user has sufficient credits
@@ -63,7 +85,7 @@ export interface ICreditService {
   /**
    * Deduct credits from user's balance (atomic transaction)
    */
-  deductCredits(input: DeductCreditsInput): Promise<Credit>;
+  deductCredits(input: DeductCreditsInput): Promise<credits>;
 
   /**
    * Get credit balance for a specific billing period
@@ -72,27 +94,27 @@ export interface ICreditService {
     userId: string,
     billingPeriodStart: Date,
     billingPeriodEnd: Date
-  ): Promise<Credit | null>;
+  ): Promise<credits | null>;
 
   /**
    * Get all credit records for a user (historical)
    */
-  getCreditHistory(userId: string, limit?: number): Promise<Credit[]>;
+  getCreditHistory(userId: string, limit?: number): Promise<credits[]>;
 
   /**
    * Calculate remaining credits
    */
-  calculateRemainingCredits(credit: Credit): number;
+  calculateRemainingCredits(credit: credits): number;
 
   /**
    * Calculate usage percentage (0-100)
    */
-  calculateUsagePercentage(credit: Credit): number;
+  calculateUsagePercentage(credit: credits): number;
 
   /**
    * Check if credits are low (below threshold)
    */
-  isCreditsLow(credit: Credit, thresholdPercentage?: number): boolean;
+  isCreditsLow(credit: credits, thresholdPercentage?: number): boolean;
 
   // ===========================================================================
   // Enhanced Credits API Methods (Phase 2)
@@ -108,11 +130,11 @@ export interface ICreditService {
   getFreeCreditsBreakdown(userId: string): Promise<FreeCreditsInfo>;
 
   /**
-   * Get pro/purchased credits breakdown for user
-   * Aggregates all pro credit records for lifetime statistics
+   * Get pro/purchased credits breakdown for user (Plan 189)
+   * Splits subscription-allocated credits from purchased addon credits
    *
    * @param userId - User ID
-   * @returns Pro credits breakdown
+   * @returns Pro credits breakdown with subscription and purchased separated
    */
   getProCreditsBreakdown(userId: string): Promise<ProCreditsInfo>;
 
@@ -143,4 +165,30 @@ export interface ICreditService {
    * @returns Days until reset (minimum 0)
    */
   calculateDaysUntilReset(resetDate: Date): number;
+
+  /**
+   * Calculate prorated credits for a tier change (upgrade or downgrade)
+   * Takes into account remaining time in billing cycle and current usage
+   *
+   * @param userId - User ID
+   * @param currentTierCredits - Monthly credit allocation for current tier
+   * @param newTierCredits - Monthly credit allocation for new tier
+   * @param billingPeriodStart - Start of current billing period
+   * @param billingPeriodEnd - End of current billing period
+   * @returns Proration calculation result with prorated credits and usage details
+   */
+  calculateProratedCreditsForTierChange(
+    userId: string,
+    currentTierCredits: number,
+    newTierCredits: number,
+    billingPeriodStart: Date,
+    billingPeriodEnd: Date
+  ): Promise<{
+    proratedCredits: number;
+    daysRemaining: number;
+    daysInCycle: number;
+    currentUsedCredits: number;
+    remainingCreditsAfterChange: number;
+    isDowngradeWithOveruse: boolean;
+  }>;
 }

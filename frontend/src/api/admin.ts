@@ -7,6 +7,16 @@ import type {
   AuditLogResponse,
 } from '@/types/model-tier';
 import type {
+  ModelInfo,
+  ModelMeta,
+  LifecycleEvent,
+  CreateModelRequest,
+  MarkLegacyRequest,
+  LifecycleHistoryResponse,
+  LegacyModelsResponse,
+  ArchivedModelsResponse,
+} from '@/types/model-lifecycle';
+import type {
   User,
   Subscription,
 } from '@rephlo/shared-types';
@@ -230,6 +240,166 @@ export const adminAPI = {
       '/admin/models/providers'
     );
     return response.data.providers;
+  },
+
+  // ============================================================================
+  // Model Lifecycle Management APIs
+  // ============================================================================
+
+  /**
+   * Mark a model as legacy with optional replacement and deprecation info
+   * @param modelId - Model ID to mark as legacy
+   * @param data - Legacy configuration (replacement model, notice, sunset date)
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.markModelAsLegacy('gpt-3.5-turbo', {
+   *   replacementModelId: 'gpt-4',
+   *   deprecationNotice: 'GPT-3.5 will be sunset on 2025-12-31. Please migrate to GPT-4.',
+   *   sunsetDate: '2025-12-31T00:00:00Z'
+   * });
+   */
+  markModelAsLegacy: async (
+    modelId: string,
+    data: MarkLegacyRequest
+  ): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/mark-legacy`, data);
+  },
+
+  /**
+   * Remove legacy status from a model
+   * @param modelId - Model ID to unmark as legacy
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.unmarkModelLegacy('gpt-3.5-turbo');
+   */
+  unmarkModelLegacy: async (modelId: string): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/unmark-legacy`);
+  },
+
+  /**
+   * Archive a model (removes from public endpoints)
+   * @param modelId - Model ID to archive
+   * @param reason - Required reason for archiving
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.archiveModel('text-davinci-002',
+   *   'Model deprecated by provider, no longer supported'
+   * );
+   */
+  archiveModel: async (modelId: string, reason: string): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/archive`, { reason });
+  },
+
+  /**
+   * Restore an archived model
+   * @param modelId - Model ID to unarchive
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.unarchiveModel('text-davinci-002');
+   */
+  unarchiveModel: async (modelId: string): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/unarchive`);
+  },
+
+  /**
+   * Update model metadata (partial update)
+   * @param modelId - Model ID to update
+   * @param metaUpdates - Partial meta object with fields to update
+   * @returns Updated model information
+   *
+   * @example
+   * const updatedModel = await adminAPI.updateModelMeta('gpt-4', {
+   *   displayName: 'GPT-4 Turbo',
+   *   contextLength: 128000,
+   *   inputCostPerMillionTokens: 10000
+   * });
+   */
+  updateModelMeta: async (
+    modelId: string,
+    metaUpdates: Partial<ModelMeta>
+  ): Promise<ModelInfo> => {
+    const response = await apiClient.patch<ModelInfo>(
+      `/admin/models/${modelId}/meta`,
+      metaUpdates
+    );
+    return response.data;
+  },
+
+  /**
+   * Create a new model
+   * @param modelData - Complete model configuration
+   * @returns Created model information
+   *
+   * @example
+   * const newModel = await adminAPI.createModel({
+   *   id: 'custom-model-1',
+   *   name: 'custom-model-1',
+   *   provider: 'custom',
+   *   meta: {
+   *     displayName: 'Custom Model v1',
+   *     description: 'Custom fine-tuned model',
+   *     capabilities: ['text'],
+   *     contextLength: 4096,
+   *     inputCostPerMillionTokens: 5000,
+   *     outputCostPerMillionTokens: 15000,
+   *     creditsPer1kTokens: 10,
+   *     requiredTier: 'pro',
+   *     tierRestrictionMode: 'minimum',
+   *     allowedTiers: ['pro', 'enterprise']
+   *   }
+   * });
+   */
+  createModel: async (modelData: CreateModelRequest): Promise<ModelInfo> => {
+    const response = await apiClient.post<ModelInfo>('/admin/models', modelData);
+    return response.data;
+  },
+
+  /**
+   * Get lifecycle history for a model
+   * @param modelId - Model ID to fetch history for
+   * @returns Array of lifecycle events
+   *
+   * @example
+   * const history = await adminAPI.getLifecycleHistory('gpt-4');
+   * // Returns events like: created, marked legacy, archived, meta updates
+   */
+  getLifecycleHistory: async (modelId: string): Promise<LifecycleEvent[]> => {
+    const response = await apiClient.get<LifecycleHistoryResponse>(
+      `/admin/models/${modelId}/lifecycle-history`
+    );
+    return response.data.history;
+  },
+
+  /**
+   * Get all models marked as legacy
+   * @returns Array of legacy models
+   *
+   * @example
+   * const legacyModels = await adminAPI.getLegacyModels();
+   * // Filter models by isLegacy=true with replacement info
+   */
+  getLegacyModels: async (): Promise<ModelInfo[]> => {
+    const response = await apiClient.get<LegacyModelsResponse>('/admin/models/legacy');
+    return response.data.models;
+  },
+
+  /**
+   * Get all archived models
+   * @returns Array of archived models
+   *
+   * @example
+   * const archivedModels = await adminAPI.getArchivedModels();
+   * // Filter models by isArchived=true
+   */
+  getArchivedModels: async (): Promise<ModelInfo[]> => {
+    const response = await apiClient.get<ArchivedModelsResponse>(
+      '/admin/models/archived?includeArchived=true'
+    );
+    return response.data.models;
   },
 
   // ============================================================================

@@ -147,23 +147,23 @@ export class AdminProfitabilityService {
       // Build where clause for date filtering
       const whereClause: any = {};
       if (startDate || endDate) {
-        whereClause.requestStartedAt = {};
-        if (startDate) whereClause.requestStartedAt.gte = startDate;
-        if (endDate) whereClause.requestStartedAt.lte = endDate;
+        whereClause.request_started_at = {};
+        if (startDate) whereClause.request_started_at.gte = startDate;
+        if (endDate) whereClause.request_started_at.lte = endDate;
       }
 
       // Aggregate token usage ledger to calculate revenue and cost
-      const usageData = await this.prisma.tokenUsageLedger.aggregate({
+      const usageData = await this.prisma.token_usage_ledger.aggregate({
         where: whereClause,
         _sum: {
-          vendorCost: true,
-          creditValueUsd: true,
+          vendor_cost: true,
+          credit_value_usd: true,
         },
         _count: true,
       });
 
-      const totalCost = Number(usageData._sum?.vendorCost || 0);
-      const totalRevenue = Number(usageData._sum?.creditValueUsd || 0);
+      const totalCost = Number(usageData._sum?.vendor_cost || 0);
+      const totalRevenue = Number(usageData._sum?.credit_value_usd || 0);
       const grossMargin = totalRevenue - totalCost;
       const marginPercentage = totalRevenue > 0 ? (grossMargin / totalRevenue) * 100 : 0;
 
@@ -339,23 +339,23 @@ export class AdminProfitabilityService {
     logger.info('AdminProfitabilityService.getPricingConfigs', { onlyActive });
 
     try {
-      const configs = await this.prisma.pricingConfig.findMany({
-        where: onlyActive ? { isActive: true } : undefined,
-        orderBy: { createdAt: 'desc' },
+      const configs = await this.prisma.pricing_configs.findMany({
+        where: onlyActive ? { is_active: true } : undefined,
+        orderBy: { created_at: 'desc' },
         take: 100,
       });
 
       return configs.map((config) => ({
         id: config.id,
-        scopeType: config.scopeType,
-        tier: config.subscriptionTier || undefined,
-        provider: config.providerId || undefined,
-        modelId: config.modelId || undefined,
-        marginMultiplier: Number(config.marginMultiplier),
-        effectiveFrom: config.effectiveFrom,
-        effectiveUntil: config.effectiveUntil,
-        approvalStatus: config.approvalStatus,
-        isActive: config.isActive,
+        scopeType: config.scope_type,
+        tier: config.subscription_tier || undefined,
+        provider: config.provider_id || undefined,
+        modelId: config.model_id || undefined,
+        marginMultiplier: Number(config.margin_multiplier),
+        effectiveFrom: config.effective_from,
+        effectiveUntil: config.effective_until,
+        approvalStatus: config.approval_status,
+        isActive: config.is_active,
       }));
     } catch (error) {
       logger.error('AdminProfitabilityService.getPricingConfigs: Error', { error });
@@ -428,30 +428,30 @@ export class AdminProfitabilityService {
         where.isActive = true;
       }
 
-      const prices = await this.prisma.modelProviderPricing.findMany({
+      const prices = await this.prisma.model_provider_pricing.findMany({
         where,
         include: {
-          provider: {
+          providers: {
             select: {
               name: true,
             },
           },
         },
-        orderBy: { lastVerified: 'desc' },
+        orderBy: { last_verified: 'desc' },
         take: 100,
       });
 
       return prices.map((price) => ({
         id: price.id,
-        provider: price.provider.name,
-        modelName: price.modelName,
-        inputPricePer1k: Number(price.inputPricePer1k),
-        outputPricePer1k: Number(price.outputPricePer1k),
-        effectiveFrom: price.effectiveFrom,
-        effectiveUntil: price.effectiveUntil,
-        priceChangePercentInput: price.priceChangePercentInput ? Number(price.priceChangePercentInput) : null,
-        priceChangePercentOutput: price.priceChangePercentOutput ? Number(price.priceChangePercentOutput) : null,
-        lastVerified: price.lastVerified,
+        provider: price.providers.name,
+        modelName: price.model_name,
+        inputPricePer1k: Number(price.input_price_per_1k),
+        outputPricePer1k: Number(price.output_price_per_1k),
+        effectiveFrom: price.effective_from,
+        effectiveUntil: price.effective_until,
+        priceChangePercentInput: price.price_change_percent_input ? Number(price.price_change_percent_input) : null,
+        priceChangePercentOutput: price.price_change_percent_output ? Number(price.price_change_percent_output) : null,
+        lastVerified: price.last_verified,
       }));
     } catch (error) {
       logger.error('AdminProfitabilityService.getVendorPrices: Error', { error });
@@ -478,25 +478,25 @@ export class AdminProfitabilityService {
       };
 
       if (modelId) {
-        where.modelId = modelId;
+        where.model_id = modelId;
       }
 
       if (providerId) {
-        where.providerId = providerId;
+        where.provider_id = providerId;
       }
 
       // Get affected usage data
-      const usageData = await this.prisma.tokenUsageLedger.aggregate({
+      const usageData = await this.prisma.token_usage_ledger.aggregate({
         where,
         _sum: {
-          vendorCost: true,
-          creditValueUsd: true,
+          vendor_cost: true,
+          credit_value_usd: true,
         },
         _count: true,
       });
 
-      const currentCost = Number(usageData._sum?.vendorCost || 0);
-      const currentRevenue = Number(usageData._sum?.creditValueUsd || 0);
+      const currentCost = Number(usageData._sum?.vendor_cost || 0);
+      const currentRevenue = Number(usageData._sum?.credit_value_usd || 0);
       const currentMargin = currentRevenue - currentCost;
       const currentMarginPercent = currentRevenue > 0 ? (currentMargin / currentRevenue) * 100 : 0;
 

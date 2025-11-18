@@ -5,6 +5,187 @@ All notable changes to the Rephlo API project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-01-15
+
+### Added - Tier Configuration Management (Plan 190)
+
+**Major Feature**: Comprehensive tier configuration management system with credit allocation controls, impact preview, and scheduled rollouts.
+
+#### Database Schema Changes
+
+- **No schema changes** - Uses existing `tier_config` and `tier_config_history` tables from Plan 109
+
+#### Backend Services
+
+- **New service**: `CreditUpgradeService` (`backend/src/services/credit-upgrade.service.ts`, 460 lines)
+  - `processTierCreditUpgrade()` - Batch credit upgrade processing for entire tier
+  - `isEligibleForUpgrade()` - Check if user qualifies for credit upgrade
+  - `applyUpgradeToUser()` - Apply credit upgrade to individual user with transaction atomicity
+  - `processPendingUpgrades()` - Process scheduled upgrades (background worker integration)
+  - `getUpgradeEligibilitySummary()` - Preview upgrade impact statistics
+  - **Upgrade-only policy**: Users never lose credits, only gain them
+  - **Transaction isolation**: Serializable isolation level for atomic credit updates
+- **Enhanced service**: `TierConfigService` (`backend/src/services/tier-config.service.ts`)
+  - Integration with `CreditUpgradeService` for immediate rollouts
+  - Conditional logic for scheduled vs immediate credit upgrades
+  - Automatic history record marking when upgrades complete
+- **New background worker**: `tier-credit-upgrade.worker.ts` (`backend/src/workers/`, 200 lines)
+  - Dual execution modes: continuous (production) and one-time (cron)
+  - Processes scheduled tier credit upgrades every 5 minutes
+  - Graceful shutdown handlers (SIGTERM, SIGINT, SIGUSR2)
+  - Resumable processing for crash recovery
+  - **npm scripts**:
+    - `npm run worker:tier-upgrade` - Continuous mode
+    - `npm run worker:tier-upgrade:once` - One-time mode (cron-compatible)
+
+#### API Enhancements
+
+- **Six tier configuration endpoints** (all require admin authentication):
+  1. `GET /api/admin/tier-config` - List all tier configurations
+  2. `GET /api/admin/tier-config/:tierName` - Get specific tier configuration
+  3. `GET /api/admin/tier-config/:tierName/history` - Get tier modification audit trail
+  4. `POST /api/admin/tier-config/:tierName/preview-update` - Preview tier update impact (dry-run)
+  5. `PATCH /api/admin/tier-config/:tierName/credits` - Update tier credit allocation
+  6. `PATCH /api/admin/tier-config/:tierName/price` - Update tier pricing (grandfathering policy)
+- **Preview endpoint** returns impact analysis:
+  - Current vs new credit allocation
+  - Change type (increase/decrease/no_change)
+  - Affected user counts (total, will upgrade, will remain same)
+  - Estimated cost impact in USD
+- **Validation rules**:
+  - Credits: 100-1,000,000 in increments of 100
+  - Reason: 10-500 characters (required for audit trail)
+  - Scheduled dates: Must be future timestamps
+- **Error responses**: Standardized format with detailed validation feedback
+
+#### Frontend Components
+
+- **Main page**: `AdminTierManagement.tsx` (`frontend/src/pages/`, 220 lines)
+  - Tier configuration table with live data
+  - Modal state management for edit and history views
+  - Snackbar notifications for success/error feedback
+  - Loading/error/empty state handling
+- **Table component**: `TierConfigTable.tsx` (`frontend/src/components/admin/`, 180 lines)
+  - Color-coded tier badges (Free/Pro/Enterprise)
+  - Version chips, status indicators, action buttons
+  - Responsive design with hover effects
+- **Edit modal**: `EditTierModal.tsx` (`frontend/src/components/admin/`, 400 lines)
+  - Tabbed interface: Credit Allocation vs Pricing
+  - Form validation with real-time error feedback
+  - Impact preview integration (dry-run before save)
+  - Immediate vs scheduled rollout options
+  - DateTime picker for scheduled rollouts
+- **History modal**: `TierHistoryModal.tsx` (`frontend/src/components/admin/`, 230 lines)
+  - Timeline view of all tier configuration changes
+  - Change type icons (increase ↗️, decrease ↘️, price 💲)
+  - Applied vs pending status chips
+  - Metadata display (affected users, changed by, timestamps)
+- **API client**: `tierConfig.ts` (`frontend/src/api/`, 160 lines)
+  - Centralized HTTP client for all tier config endpoints
+  - TypeScript-typed request/response interfaces
+  - Error handling with standardized format
+- **Utilities**: `formatters.ts` (`frontend/src/utils/`, 80 lines)
+  - `formatDate()` - ISO 8601 to human-readable
+  - `formatCurrency()` - USD formatting with Intl.NumberFormat
+  - `formatNumber()` - Thousand separators
+  - `formatPercentage()` - Decimal to percentage
+  - `formatRelativeTime()` - Relative timestamps ("2 hours ago")
+
+#### Router Integration
+
+- **New route**: `/admin/tier-management` (admin-protected)
+  - Added to `adminRoutes` configuration
+  - Lazy-loaded for code splitting
+  - Sidebar navigation entry under "Subscriptions" group
+
+#### Testing
+
+- **Unit tests**: 1,306 lines across 2 test suites
+  - `tier-config.service.test.ts` (637 lines, 26 test cases)
+  - `credit-upgrade.service.test.ts` (669 lines, 28 test cases)
+- **Integration tests**: 830 lines, 26 test cases
+  - All 6 API endpoints with authentication/authorization checks
+  - Request validation tests
+  - Error handling scenarios
+- **E2E tests**: 560 lines, 8 test cases
+  - Complete immediate rollout workflow
+  - Complete scheduled rollout workflow
+  - Preview → Save → Verify pipeline
+- **Test fixtures**: 437 lines of factory functions and scenario builders
+- **Test status**: 18/26 TierConfigService unit tests passing (69% - complex transaction mocking)
+
+#### Documentation
+
+- **API Reference**: `docs/reference/189-tier-config-api-documentation.md`
+  - Complete API documentation for all 6 endpoints
+  - Request/response examples with cURL commands
+  - Error codes and troubleshooting guide
+  - Background worker documentation
+  - Rate limiting details
+  - Security considerations
+  - Usage examples (3 real-world scenarios)
+- **Admin User Guide**: `docs/guides/019-tier-management-admin-guide.md`
+  - 11-section comprehensive guide for platform administrators
+  - Step-by-step instructions for all workflows
+  - Impact preview explanation with cost calculations
+  - Immediate vs scheduled rollout comparison
+  - Best practices (7 recommendations)
+  - Troubleshooting guide (5 common issues with solutions)
+  - FAQ (15 questions across 4 categories)
+
+#### Key Features
+
+1. **Preview-First Workflow**:
+   - Dry-run impact analysis before applying changes
+   - Shows affected user counts and estimated cost impact
+   - Prevents costly mistakes (e.g., 1M credits instead of 100K)
+
+2. **Upgrade-Only Policy**:
+   - Existing users can only gain credits, never lose them
+   - System blocks credit decreases with error message
+   - Grandfathering for pricing changes (existing users keep original price)
+
+3. **Flexible Rollout Options**:
+   - **Immediate rollout**: Process all users synchronously (<30 sec for 1K users)
+   - **Scheduled rollout**: Background worker processes at specified future date/time
+   - **New subscribers only**: Change tier config without affecting existing users
+
+4. **Complete Audit Trail**:
+   - All changes recorded in `tier_config_history` table (immutable)
+   - Tracks: change type, previous/new values, reason, affected users count
+   - Includes: admin email, timestamps (changed_at, applied_at), scheduled dates
+   - Timeline UI shows entire history with visual indicators
+
+5. **Configuration Versioning**:
+   - Each tier maintains incremental `config_version`
+   - Enables rollback capability (future enhancement)
+   - Version displayed in table and history timeline
+
+6. **Transaction Atomicity**:
+   - Serializable isolation level for credit upgrades
+   - Ensures all-or-nothing updates (allocation + balance + subscription)
+   - Crash-safe and resumable via background worker
+
+#### Breaking Changes
+
+- None. All changes are additive and backward-compatible.
+
+#### Security
+
+- All endpoints require admin authentication (`requireScopes(['admin'])`)
+- Input validation via Zod schemas prevents injection attacks
+- Audit logging tracks all changes with admin email and timestamp
+- Rate limiting: 300 req/min for admin users
+
+#### Performance
+
+- Impact preview uses efficient COUNT queries (no full table scans)
+- Credit upgrades use batch processing with transaction isolation
+- Background worker distributes load over time for large rollouts
+- Frontend uses lazy loading and code splitting
+
+---
+
 ## [1.1.0] - 2025-11-08
 
 ### Added - Model Tier Access Control

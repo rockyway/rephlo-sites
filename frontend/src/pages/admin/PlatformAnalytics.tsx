@@ -330,9 +330,10 @@ export default function PlatformAnalytics() {
                         const colors: Record<SubscriptionTier, string> = {
                           [SubscriptionTier.FREE]: '#94a3b8',
                           [SubscriptionTier.PRO]: '#3b82f6',
+                          [SubscriptionTier.PRO_PLUS]: '#6366f1',
                           [SubscriptionTier.PRO_MAX]: '#8b5cf6',
                           [SubscriptionTier.ENTERPRISE_PRO]: '#f59e0b',
-                          [SubscriptionTier.ENTERPRISE_MAX]: '#ef4444',
+                          [SubscriptionTier.ENTERPRISE_PRO_PLUS]: '#ef4444',
                           [SubscriptionTier.PERPETUAL]: '#10b981',
                         };
                         return `${colors[d.tier]} ${startPercent}% ${endPercent}%`;

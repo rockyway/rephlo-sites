@@ -19,6 +19,7 @@
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { CouponValidationService } from '../services/coupon-validation.service';
 import { CouponRedemptionService } from '../services/coupon-redemption.service';
 import {
@@ -47,7 +48,7 @@ export class CouponController {
    * Validate a coupon code
    */
   async validateCoupon(req: Request, res: Response): Promise<void> {
-    const userId = (req as any).userId;
+    const userId = (req as any).user_id;
 
     try {
       const data = safeValidateRequest(validateCouponRequestSchema, req.body);
@@ -93,7 +94,7 @@ export class CouponController {
    * Redeem a coupon
    */
   async redeemCoupon(req: Request, res: Response): Promise<void> {
-    const userId = (req as any).userId;
+    const userId = (req as any).user_id;
 
     if (!userId) {
       res.status(401).json({
@@ -136,9 +137,9 @@ export class CouponController {
         status: 'success',
         data: {
           redemptionId: redemption.id,
-          discountApplied: parseFloat(redemption.discountAppliedUsd.toString()),
-          finalAmount: parseFloat(redemption.finalAmountUsd.toString()),
-          redemptionStatus: redemption.redemptionStatus,
+          discountApplied: parseFloat(redemption.discount_applied_usd.toString()),
+          finalAmount: parseFloat(redemption.final_amount_usd.toString()),
+          redemptionStatus: redemption.redemption_status,
         }
       });
     } catch (error: any) {
@@ -158,7 +159,7 @@ export class CouponController {
    */
   async getUserCoupons(req: Request, res: Response): Promise<void> {
     const { userId } = req.params;
-    const requestingUserId = (req as any).userId;
+    const requestingUserId = (req as any).user_id;
 
     // Users can only see their own coupons unless admin
     if (userId !== requestingUserId && (req as any).role !== 'admin') {
@@ -178,9 +179,9 @@ export class CouponController {
         redemptions: redemptions.map((r) => ({
           id: r.id,
           coupon_code: (r as any).coupon.code,
-          discount_applied: parseFloat(r.discountAppliedUsd.toString()),
-          status: r.redemptionStatus,
-          redeemed_at: r.redemptionDate.toISOString(),
+          discount_applied: parseFloat(r.discount_applied_usd.toString()),
+          status: r.redemption_status,
+          redeemed_at: r.redemption_date.toISOString(),
         })),
       });
     } catch (error: any) {
@@ -199,48 +200,52 @@ export class CouponController {
    * Create a coupon (admin only)
    */
   async createCoupon(req: Request, res: Response): Promise<void> {
-    const adminUserId = (req as any).userId;
+    const adminUserId = (req as any).user_id;
 
     try {
       const data = safeValidateRequest(createCouponRequestSchema, req.body);
 
       const coupon = await this.prisma.coupon.create({
         data: {
+          id: randomUUID(),
           code: data.code.toUpperCase(),
-          couponType: data.type,
-          discountValue: new Prisma.Decimal(data.discountValue),
-          discountType: data.discountType,
+          coupon_type: data.type,
+          discount_value: new Prisma.Decimal(data.discountValue),
+          discount_type: data.discountType,
           currency: 'usd',
-          maxUses: data.maxUses,
-          maxUsesPerUser: data.maxUsesPerUser || 1,
-          minPurchaseAmount: data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null,
-          tierEligibility: data.tierEligibility || ['free', 'pro', 'enterprise'],
-          billingCycles: data.billingCycles || ['monthly', 'annual'],
-          validFrom: new Date(data.validFrom),
-          validUntil: new Date(data.validUntil),
-          isActive: data.isActive ?? true,
-          campaignId: data.campaignId || null,
+          max_uses: data.maxUses,
+          max_uses_per_user: data.maxUsesPerUser || 1,
+          min_purchase_amount: data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null,
+          tier_eligibility: data.tierEligibility || ['free', 'pro', 'enterprise'],
+          billing_cycles: data.billingCycles || ['monthly', 'annual'],
+          valid_from: new Date(data.validFrom),
+          valid_until: new Date(data.validUntil),
+          is_active: data.isActive ?? true,
+          campaign_id: data.campaignId || null,
           description: data.description || null,
-          internalNotes: data.internalNotes || null,
-          createdBy: adminUserId,
+          internal_notes: data.internalNotes || null,
+          created_by: adminUserId,
+          updated_at: new Date(),
         },
         include: {
-          usageLimits: true,
-          campaign: {
+          coupon_usage_limit: true,
+          coupon_campaign: {
             select: {
-              campaignName: true,
+              campaign_name: true,
             },
           },
         },
       });
 
       // Create usage limits record
-      await this.prisma.couponUsageLimit.create({
+      await this.prisma.coupon_usage_limit.create({
         data: {
-          couponId: coupon.id,
-          totalUses: 0,
-          uniqueUsers: 0,
-          totalDiscountAppliedUsd: 0,
+          id: randomUUID(),
+          coupon_id: coupon.id,
+          total_uses: 0,
+          unique_users: 0,
+          total_discount_applied_usd: 0,
+          updated_at: new Date(),
         },
       });
 
@@ -248,10 +253,10 @@ export class CouponController {
       const createdCoupon = await this.prisma.coupon.findUnique({
         where: { id: coupon.id },
         include: {
-          usageLimits: true,
-          campaign: {
+          coupon_usage_limit: true,
+          coupon_campaign: {
             select: {
-              campaignName: true,
+              campaign_name: true,
             },
           },
         },
@@ -301,10 +306,10 @@ export class CouponController {
         where: { id },
         data: updateData,
         include: {
-          usageLimits: true,
-          campaign: {
+          coupon_usage_limit: true,
+          coupon_campaign: {
             select: {
-              campaignName: true,
+              campaign_name: true,
             },
           },
         },
@@ -356,8 +361,8 @@ export class CouponController {
       const coupon = await this.prisma.coupon.findUnique({
         where: { id },
         include: {
-          usageLimits: true,
-          campaign: true,
+          coupon_usage_limit: true,
+          coupon_campaign: true,
         },
       });
 
@@ -416,10 +421,10 @@ export class CouponController {
           where,
           skip: page * limit,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           include: {
-            usageLimits: true,
-            campaign: true,
+            coupon_usage_limit: true,
+            coupon_campaign: true,
           },
         }),
         this.prisma.coupon.count({ where }),
@@ -459,24 +464,24 @@ export class CouponController {
 
       // Fetch redemptions with pagination
       const [redemptions, total, stats] = await Promise.all([
-        this.prisma.couponRedemption.findMany({
-          where: { couponId: id },
+        this.prisma.coupon_redemption.findMany({
+          where: { coupon_id: id },
           skip: page * limit,
           take: limit,
-          orderBy: { redemptionDate: 'desc' },
+          orderBy: { redemption_date: 'desc' },
         }),
-        this.prisma.couponRedemption.count({ where: { couponId: id } }),
+        this.prisma.coupon_redemption.count({ where: { coupon_id: id } }),
         this.redemptionService.getRedemptionStats(id),
       ]);
 
       // Map redemptions to response format
       const mappedRedemptions = redemptions.map((r) => ({
         id: r.id,
-        user_id: r.userId,
-        discount_applied: parseFloat(r.discountAppliedUsd.toString()),
-        status: r.redemptionStatus,
-        redeemed_at: r.redemptionDate.toISOString(),
-        ip_address: r.ipAddress,
+        user_id: r.user_id,
+        discount_applied: parseFloat(r.discount_applied_usd.toString()),
+        status: r.redemption_status,
+        redeemed_at: r.redemption_date.toISOString(),
+        ip_address: r.ip_address,
       }));
 
       // Send modern response with stats in data object

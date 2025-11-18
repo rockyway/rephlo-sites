@@ -10,7 +10,7 @@
  * Reference: docs/plan/108-model-tier-access-control-architecture.md
  */
 
-import { SubscriptionTier } from '@prisma/client';
+import { subscription_tier as SubscriptionTier } from '@prisma/client';
 import logger from './logger';
 
 // =============================================================================
@@ -46,10 +46,12 @@ export interface ModelTierConfig {
 export const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
   free: 0,
   pro: 1,
-  pro_max: 2,
-  enterprise_pro: 3,
-  enterprise_max: 4,
-  perpetual: 5,
+  pro_plus: 2,
+  pro_max: 3,
+  enterprise_pro: 4,
+  enterprise_pro_plus: 5,
+  enterprise_max: 6,
+  perpetual: 7,
 };
 
 /**
@@ -58,8 +60,10 @@ export const TIER_HIERARCHY: Record<SubscriptionTier, number> = {
 export const TIER_DISPLAY_NAMES: Record<SubscriptionTier, string> = {
   free: 'Free',
   pro: 'Pro',
+  pro_plus: 'Pro+',
   pro_max: 'Pro Max',
   enterprise_pro: 'Enterprise Pro',
+  enterprise_pro_plus: 'Enterprise Pro+',
   enterprise_max: 'Enterprise Max',
   perpetual: 'Perpetual',
 };
@@ -81,12 +85,8 @@ export function checkTierAccess(
 ): TierAccessResult {
   const { requiredTier, tierRestrictionMode, allowedTiers } = modelConfig;
 
-  logger.debug('Tier access check', {
-    userTier,
-    requiredTier,
-    tierRestrictionMode,
-    allowedTiers,
-  });
+  // Note: Debug logging removed to avoid verbose output in batch operations
+  // Individual tier checks are logged at higher levels (e.g., ModelService.canUserAccessModel)
 
   switch (tierRestrictionMode) {
     case 'minimum': {

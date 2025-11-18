@@ -53,17 +53,17 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
     expiresAt.setHours(expiresAt.getHours() + this.DEFAULT_EXPIRATION_HOURS);
 
     try {
-      const approvalRequest = await this.prisma.approvalRequest.create({
+      const approvalRequest = await this.prisma.approval_requests.create({
         data: {
-          requestedBy,
+          requested_by: requestedBy,
           action,
-          targetUserId,
+          target_user_id: targetUserId,
           reason,
           status: 'pending',
-          expiresAt,
+          expires_at: expiresAt,
         },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
@@ -104,25 +104,25 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
 
       if (filters) {
         if (filters.status) where.status = filters.status;
-        if (filters.requestedBy) where.requestedBy = filters.requestedBy;
+        if (filters.requestedBy) where.requested_by = filters.requestedBy;
         if (filters.action) where.action = filters.action;
         if (filters.createdAfter || filters.createdBefore) {
-          where.createdAt = {};
-          if (filters.createdAfter) where.createdAt.gte = filters.createdAfter;
-          if (filters.createdBefore) where.createdAt.lte = filters.createdBefore;
+          where.created_at = {};
+          if (filters.createdAfter) where.created_at.gte = filters.createdAfter;
+          if (filters.createdBefore) where.created_at.lte = filters.createdBefore;
         }
       }
 
-      const requests = await this.prisma.approvalRequest.findMany({
+      const requests = await this.prisma.approval_requests.findMany({
         where,
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          reviewer: {
+          users_approval_requests_reviewed_byTousers: {
             select: {
               id: true,
               email: true,
@@ -130,7 +130,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
       });
 
@@ -148,16 +148,16 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
     logger.debug('ApprovalWorkflowService: Getting approval request by ID', { requestId });
 
     try {
-      const request = await this.prisma.approvalRequest.findUnique({
+      const request = await this.prisma.approval_requests.findUnique({
         where: { id: requestId },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          reviewer: {
+          users_approval_requests_reviewed_byTousers: {
             select: {
               id: true,
               email: true,
@@ -221,7 +221,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
 
     try {
       // First, verify the request exists and is pending
-      const existingRequest = await this.prisma.approvalRequest.findUnique({
+      const existingRequest = await this.prisma.approval_requests.findUnique({
         where: { id: requestId },
       });
 
@@ -229,7 +229,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
         throw new Error(`Approval request not found: ${requestId}`);
       }
 
-      if (existingRequest.requestedBy !== requestedBy) {
+      if (existingRequest.requested_by !== requestedBy) {
         throw new Error('Only the requester can cancel their own request');
       }
 
@@ -238,15 +238,15 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
       }
 
       // Update the request to cancelled
-      const updated = await this.prisma.approvalRequest.update({
+      const updated = await this.prisma.approval_requests.update({
         where: { id: requestId },
         data: {
           status: 'cancelled',
-          reviewedAt: new Date(),
-          reviewNotes: 'Cancelled by requester',
+          reviewed_at: new Date(),
+          review_notes: 'Cancelled by requester',
         },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
@@ -281,17 +281,17 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
     try {
       const now = new Date();
 
-      const result = await this.prisma.approvalRequest.updateMany({
+      const result = await this.prisma.approval_requests.updateMany({
         where: {
           status: 'pending',
-          expiresAt: {
+          expires_at: {
             lt: now,
           },
         },
         data: {
           status: 'expired',
-          reviewedAt: now,
-          reviewNotes: 'Automatically expired after 24 hours',
+          reviewed_at: now,
+          review_notes: 'Automatically expired after 24 hours',
         },
       });
 
@@ -311,9 +311,9 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
     logger.debug('ApprovalWorkflowService: Checking for pending request', { userId, action });
 
     try {
-      const count = await this.prisma.approvalRequest.count({
+      const count = await this.prisma.approval_requests.count({
         where: {
-          requestedBy: userId,
+          requested_by: userId,
           action,
           status: 'pending',
         },
@@ -345,7 +345,7 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
   ): Promise<ApprovalRequestResponse> {
     try {
       // First, verify the request exists and is pending
-      const existingRequest = await this.prisma.approvalRequest.findUnique({
+      const existingRequest = await this.prisma.approval_requests.findUnique({
         where: { id: requestId },
       });
 
@@ -360,27 +360,27 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
       }
 
       // Verify the reviewer is not the requester
-      if (existingRequest.requestedBy === reviewedBy) {
+      if (existingRequest.requested_by === reviewedBy) {
         throw new Error('Users cannot review their own approval requests');
       }
 
       // Update the request
-      const updated = await this.prisma.approvalRequest.update({
+      const updated = await this.prisma.approval_requests.update({
         where: { id: requestId },
         data: {
           status,
-          reviewedBy,
-          reviewedAt: new Date(),
-          reviewNotes: reviewNotes || null,
+          reviewed_by: reviewedBy,
+          reviewed_at: new Date(),
+          review_notes: reviewNotes || null,
         },
         include: {
-          requester: {
+          users_approval_requests_requested_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          reviewer: {
+          users_approval_requests_reviewed_byTousers: {
             select: {
               id: true,
               email: true,
@@ -412,16 +412,16 @@ export class ApprovalWorkflowService implements IApprovalWorkflowService {
   private mapToResponse(request: any): ApprovalRequestResponse {
     return {
       id: request.id,
-      requestedBy: request.requestedBy,
+      requestedBy: request.requested_by,
       action: request.action,
-      targetUserId: request.targetUserId,
+      targetUserId: request.target_user_id,
       reason: request.reason,
       status: request.status,
-      reviewedBy: request.reviewedBy,
-      reviewedAt: request.reviewedAt,
-      reviewNotes: request.reviewNotes,
-      expiresAt: request.expiresAt,
-      createdAt: request.createdAt,
+      reviewedBy: request.reviewed_by,
+      reviewedAt: request.reviewed_at,
+      reviewNotes: request.review_notes,
+      expiresAt: request.expires_at,
+      createdAt: request.created_at,
       requester: request.requester
         ? {
             id: request.requester.id,

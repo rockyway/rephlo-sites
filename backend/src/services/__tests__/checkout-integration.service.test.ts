@@ -33,7 +33,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
     await cleanDatabase();
 
     // Create test user
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email: 'byok-test@example.com',
         emailVerified: true,
@@ -67,7 +67,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
     // Cleanup
     await prisma.perpetualLicense.deleteMany({ where: { user_id: testUserId } });
     await prisma.coupon.deleteMany({ where: { id: testCouponId } });
-    await prisma.user.deleteMany({ where: { id: testUserId } });
+    await prisma.users.deleteMany({ where: { id: testUserId } });
   });
 
   describe('grantPerpetualLicense', () => {
@@ -119,7 +119,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
       const license1 = await checkoutService.grantPerpetualLicense(testUserId, testCouponId);
 
       // Create second user and coupon for second license
-      const user2 = await prisma.user.create({
+      const user2 = await prisma.users.create({
         data: {
           email: 'byok-test2@example.com',
           emailVerified: true,
@@ -154,7 +154,7 @@ describe('CheckoutIntegrationService - BYOK Fix', () => {
       // Cleanup
       await prisma.perpetualLicense.deleteMany({ where: { user_id: user2.id } });
       await prisma.coupon.deleteMany({ where: { id: coupon2.id } });
-      await prisma.user.deleteMany({ where: { id: user2.id } });
+      await prisma.users.deleteMany({ where: { id: user2.id } });
     });
 
     it('should create license with timestamps', async () => {

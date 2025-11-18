@@ -61,8 +61,8 @@ export class VersionUpgradeController {
         is_free: isFree,
         requires_payment: !isFree,
         current_eligible_range: {
-          min: license.purchasedVersion,
-          max: license.eligibleUntilVersion,
+          min: license.purchased_version,
+          max: license.eligible_until_version,
         },
       });
     } catch (error) {
@@ -132,12 +132,12 @@ export class VersionUpgradeController {
         data: {
           upgrade_id: upgrade.id,
           license_id: license.id,
-          from_version: upgrade.fromVersion,
-          to_version: upgrade.toVersion,
-          upgrade_price_usd: upgrade.upgradePriceUsd,
+          from_version: upgrade.from_version,
+          to_version: upgrade.to_version,
+          upgrade_price_usd: upgrade.upgrade_price_usd,
           pricing_breakdown: pricing,
           status: upgrade.status,
-          purchased_at: upgrade.purchasedAt.toISOString(),
+          purchased_at: upgrade.purchased_at.toISOString(),
         },
       });
     } catch (error) {
@@ -191,7 +191,7 @@ export class VersionUpgradeController {
 
       res.status(200).json({
         license_key: licenseKey,
-        current_version: license.eligibleUntilVersion,
+        current_version: license.eligible_until_version,
         available_upgrades: upgrades,
       });
     } catch (error) {
@@ -231,11 +231,11 @@ export class VersionUpgradeController {
         license_key: licenseKey,
         upgrade_history: history.map((u) => ({
           id: u.id,
-          from_version: u.fromVersion,
-          to_version: u.toVersion,
-          upgrade_price_usd: u.upgradePriceUsd,
+          from_version: u.from_version,
+          to_version: u.to_version,
+          upgrade_price_usd: u.upgrade_price_usd,
           status: u.status,
-          purchased_at: u.purchasedAt.toISOString(),
+          purchased_at: u.purchased_at.toISOString(),
         })),
       });
     } catch (error) {

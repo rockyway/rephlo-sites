@@ -179,10 +179,9 @@ export class AuthController {
       const uid = req.params.uid;
 
       if (!email || !password) {
-        res.status(400).json({
-          error: 'invalid_request',
-          message: 'Email and password are required',
-        });
+        // Redirect back to login page with error message
+        const errorMessage = encodeURIComponent('Email and password are required');
+        res.redirect(`/interaction/${uid}?error=invalid_request&message=${errorMessage}`);
         return;
       }
 
@@ -190,10 +189,9 @@ export class AuthController {
       const user = await this.authService.authenticate(email, password);
 
       if (!user) {
-        res.status(401).json({
-          error: 'invalid_credentials',
-          message: 'Invalid email or password',
-        });
+        // Redirect back to login page with error message
+        const errorMessage = encodeURIComponent('Invalid email or password');
+        res.redirect(`/interaction/${uid}?error=invalid_credentials&message=${errorMessage}`);
         return;
       }
 
@@ -249,14 +247,9 @@ export class AuthController {
               retryError: retryErrorMsg,
             });
 
-            // Return user-friendly error with recovery instructions
-            res.status(400).json({
-              error: 'session_expired',
-              message: 'Your login session has expired. Please refresh the page and try again.',
-              details: {
-                suggestion: 'Close the login window and try the OAuth flow again from the beginning',
-              },
-            });
+            // Redirect back to login page with error message
+            const errorMessage = encodeURIComponent('Your login session has expired. Please close this window and start the login process again from your application.');
+            res.redirect(`/interaction/${uid}?error=session_expired&message=${errorMessage}`);
             return;
           }
         } else {

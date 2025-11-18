@@ -47,18 +47,18 @@ export class UserService implements IUserService {
   async getUserProfile(userId: string): Promise<UserProfileResponse> {
     logger.debug('UserService: Getting user profile', { userId });
 
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.users.findUnique({
       where: { id: userId },
       select: {
         id: true,
         email: true,
-        emailVerified: true,
+        email_verified: true,
         username: true,
-        firstName: true,
-        lastName: true,
-        profilePictureUrl: true,
-        createdAt: true,
-        lastLoginAt: true,
+        first_name: true,
+        last_name: true,
+        profile_picture_url: true,
+        created_at: true,
+        last_login_at: true,
       },
     });
 
@@ -72,13 +72,13 @@ export class UserService implements IUserService {
     return {
       id: user.id,
       email: user.email,
-      emailVerified: user.emailVerified,
+      emailVerified: user.email_verified,
       username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profilePictureUrl: user.profilePictureUrl,
-      createdAt: user.createdAt.toISOString(),
-      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      profilePictureUrl: user.profile_picture_url,
+      createdAt: user.created_at.toISOString(),
+      lastLoginAt: user.last_login_at ? user.last_login_at.toISOString() : null,
     };
   }
 
@@ -96,24 +96,24 @@ export class UserService implements IUserService {
     logger.debug('UserService: Updating user profile', { userId, data });
 
     try {
-      const user = await this.prisma.user.update({
+      const user = await this.prisma.users.update({
         where: { id: userId },
         data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
+          first_name: data.firstName,
+          last_name: data.lastName,
           username: data.username,
-          updatedAt: new Date(),
+          updated_at: new Date(),
         },
         select: {
           id: true,
           email: true,
-          emailVerified: true,
+          email_verified: true,
           username: true,
-          firstName: true,
-          lastName: true,
-          profilePictureUrl: true,
-          createdAt: true,
-          lastLoginAt: true,
+          first_name: true,
+          last_name: true,
+          profile_picture_url: true,
+          created_at: true,
+          last_login_at: true,
         },
       });
 
@@ -125,13 +125,13 @@ export class UserService implements IUserService {
       return {
         id: user.id,
         email: user.email,
-        emailVerified: user.emailVerified,
+        emailVerified: user.email_verified,
         username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        profilePictureUrl: user.profilePictureUrl,
-        createdAt: user.createdAt.toISOString(),
-        lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        profilePictureUrl: user.profile_picture_url,
+        createdAt: user.created_at.toISOString(),
+        lastLoginAt: user.last_login_at ? user.last_login_at.toISOString() : null,
       };
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -165,10 +165,10 @@ export class UserService implements IUserService {
     logger.debug('UserService: Updating last login', { userId });
 
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
-          lastLoginAt: new Date(),
+          last_login_at: new Date(),
         },
       });
 
@@ -190,11 +190,11 @@ export class UserService implements IUserService {
   async verifyEmail(userId: string): Promise<void> {
     logger.debug('UserService: Verifying email', { userId });
 
-    await this.prisma.user.update({
+    await this.prisma.users.update({
       where: { id: userId },
       data: {
-        emailVerified: true,
-        updatedAt: new Date(),
+        email_verified: true,
+        updated_at: new Date(),
       },
     });
 
@@ -217,30 +217,31 @@ export class UserService implements IUserService {
     logger.debug('UserService: Getting user preferences', { userId });
 
     // Find or create user preferences
-    let preferences = await this.prisma.userPreference.findUnique({
-      where: { userId },
+    let preferences = await this.prisma.user_preferences.findUnique({
+      where: { user_id: userId },
       select: {
-        defaultModelId: true,
-        enableStreaming: true,
-        maxTokens: true,
+        default_model_id: true,
+        enable_streaming: true,
+        max_tokens: true,
         temperature: true,
-        preferencesMetadata: true,
+        preferences_metadata: true,
       },
     });
 
     // Create default preferences if none exist
     if (!preferences) {
       logger.info('UserService: Creating default preferences', { userId });
-      preferences = await this.prisma.userPreference.create({
+      preferences = await this.prisma.user_preferences.create({
         data: {
-          userId,
+          user_id: userId,
+          updated_at: new Date(),
         },
         select: {
-          defaultModelId: true,
-          enableStreaming: true,
-          maxTokens: true,
+          default_model_id: true,
+          enable_streaming: true,
+          max_tokens: true,
           temperature: true,
-          preferencesMetadata: true,
+          preferences_metadata: true,
         },
       });
     }
@@ -248,11 +249,11 @@ export class UserService implements IUserService {
     logger.debug('UserService: User preferences retrieved', { userId });
 
     return {
-      defaultModelId: preferences.defaultModelId,
-      enableStreaming: preferences.enableStreaming,
-      maxTokens: preferences.maxTokens,
+      defaultModelId: preferences.default_model_id,
+      enableStreaming: preferences.enable_streaming,
+      maxTokens: preferences.max_tokens,
       temperature: preferences.temperature.toNumber(),
-      preferencesMetadata: preferences.preferencesMetadata as Record<
+      preferencesMetadata: preferences.preferences_metadata as Record<
         string,
         any
       > | null,
@@ -275,32 +276,32 @@ export class UserService implements IUserService {
     await this.ensurePreferencesExist(userId);
 
     // Prepare update data
-    const updateData: Prisma.UserPreferenceUpdateInput = {
-      updatedAt: new Date(),
+    const updateData: Prisma.user_preferencesUpdateInput = {
+      updated_at: new Date(),
     };
 
     if (data.enableStreaming !== undefined) {
-      updateData.enableStreaming = data.enableStreaming;
+      updateData.enable_streaming = data.enableStreaming;
     }
     if (data.maxTokens !== undefined) {
-      updateData.maxTokens = data.maxTokens;
+      updateData.max_tokens = data.maxTokens;
     }
     if (data.temperature !== undefined) {
       updateData.temperature = data.temperature;
     }
     if (data.preferencesMetadata !== undefined) {
-      updateData.preferencesMetadata = data.preferencesMetadata as Prisma.InputJsonValue;
+      updateData.preferences_metadata = data.preferencesMetadata as Prisma.InputJsonValue;
     }
 
-    const preferences = await this.prisma.userPreference.update({
-      where: { userId },
+    const preferences = await this.prisma.user_preferences.update({
+      where: { user_id: userId },
       data: updateData,
       select: {
-        defaultModelId: true,
-        enableStreaming: true,
-        maxTokens: true,
+        default_model_id: true,
+        enable_streaming: true,
+        max_tokens: true,
         temperature: true,
-        preferencesMetadata: true,
+        preferences_metadata: true,
       },
     });
 
@@ -310,11 +311,11 @@ export class UserService implements IUserService {
     });
 
     return {
-      defaultModelId: preferences.defaultModelId,
-      enableStreaming: preferences.enableStreaming,
-      maxTokens: preferences.maxTokens,
+      defaultModelId: preferences.default_model_id,
+      enableStreaming: preferences.enable_streaming,
+      maxTokens: preferences.max_tokens,
       temperature: preferences.temperature.toNumber(),
-      preferencesMetadata: preferences.preferencesMetadata as Record<
+      preferencesMetadata: preferences.preferences_metadata as Record<
         string,
         any
       > | null,
@@ -336,13 +337,13 @@ export class UserService implements IUserService {
     logger.debug('UserService: Setting default model', { userId, modelId });
 
     // Verify model exists
-    const model = await this.prisma.model.findUnique({
+    const model = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
-        displayName: true,
-        capabilities: true,
-        isAvailable: true,
+        name: true,
+        meta: true,
+        is_available: true,
       },
     });
 
@@ -351,20 +352,25 @@ export class UserService implements IUserService {
       throw new Error(`Model '${modelId}' does not exist`);
     }
 
-    if (!model.isAvailable) {
+    if (!model.is_available) {
       logger.warn('UserService: Model is not available', { userId, modelId });
       throw new Error(`Model '${modelId}' is not available`);
     }
+
+    // Extract from meta JSONB
+    const meta = model.meta as any;
+    const displayName = meta?.displayName ?? model.name;
+    const capabilities = meta?.capabilities ?? [];
 
     // Ensure user preferences record exists
     await this.ensurePreferencesExist(userId);
 
     // Update default model
-    await this.prisma.userPreference.update({
-      where: { userId },
+    await this.prisma.user_preferences.update({
+      where: { user_id: userId },
       data: {
-        defaultModelId: modelId,
-        updatedAt: new Date(),
+        default_model_id: modelId,
+        updated_at: new Date(),
       },
     });
 
@@ -374,8 +380,8 @@ export class UserService implements IUserService {
       defaultModelId: modelId,
       model: {
         id: model.id,
-        name: model.displayName ?? model.id,
-        capabilities: model.capabilities,
+        name: displayName,
+        capabilities: capabilities,
       },
     };
   }
@@ -388,21 +394,21 @@ export class UserService implements IUserService {
   async getDefaultModel(userId: string): Promise<DefaultModelResponse> {
     logger.debug('UserService: Getting default model', { userId });
 
-    const preferences = await this.prisma.userPreference.findUnique({
-      where: { userId },
+    const preferences = await this.prisma.user_preferences.findUnique({
+      where: { user_id: userId },
       select: {
-        defaultModelId: true,
-        defaultModel: {
+        default_model_id: true,
+        models: {
           select: {
             id: true,
-            displayName: true,
-            capabilities: true,
+            name: true,
+            meta: true,
           },
         },
       },
     });
 
-    if (!preferences || !preferences.defaultModelId) {
+    if (!preferences || !preferences.default_model_id) {
       logger.debug('UserService: No default model set', { userId });
       return {
         defaultModelId: null,
@@ -412,18 +418,23 @@ export class UserService implements IUserService {
 
     logger.debug('UserService: Default model retrieved', {
       userId,
-      modelId: preferences.defaultModelId,
+      modelId: preferences.default_model_id,
     });
 
+    // Extract from meta JSONB
+    let modelInfo = null;
+    if (preferences.models) {
+      const meta = preferences.models.meta as any;
+      modelInfo = {
+        id: preferences.models.id,
+        name: meta?.displayName ?? preferences.models.name,
+        capabilities: meta?.capabilities ?? [],
+      };
+    }
+
     return {
-      defaultModelId: preferences.defaultModelId,
-      model: preferences.defaultModel
-        ? {
-            id: preferences.defaultModel.id,
-            name: preferences.defaultModel.displayName ?? preferences.defaultModel.id,
-            capabilities: preferences.defaultModel.capabilities,
-          }
-        : null,
+      defaultModelId: preferences.default_model_id,
+      model: modelInfo,
     };
   }
 
@@ -437,15 +448,15 @@ export class UserService implements IUserService {
    * @param userId - User ID
    */
   private async ensurePreferencesExist(userId: string): Promise<void> {
-    const exists = await this.prisma.userPreference.findUnique({
-      where: { userId },
-      select: { userId: true },
+    const exists = await this.prisma.user_preferences.findUnique({
+      where: { user_id: userId },
+      select: { user_id: true },
     });
 
     if (!exists) {
       logger.debug('UserService: Creating default preferences', { userId });
-      await this.prisma.userPreference.create({
-        data: { userId },
+      await this.prisma.user_preferences.create({
+        data: { user_id: userId, updated_at: new Date() },
       });
     }
   }
@@ -456,15 +467,15 @@ export class UserService implements IUserService {
    * @returns true if user exists and is active
    */
   async isUserActive(userId: string): Promise<boolean> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.users.findUnique({
       where: { id: userId },
       select: {
-        isActive: true,
-        deletedAt: true,
+        is_active: true,
+        deleted_at: true,
       },
     });
 
-    return user !== null && user.isActive && user.deletedAt === null;
+    return user !== null && user.is_active && user.deleted_at === null;
   }
 
   /**
@@ -475,12 +486,12 @@ export class UserService implements IUserService {
   async softDeleteUser(userId: string): Promise<void> {
     logger.warn('UserService: Soft deleting user', { userId });
 
-    await this.prisma.user.update({
+    await this.prisma.users.update({
       where: { id: userId },
       data: {
-        isActive: false,
-        deletedAt: new Date(),
-        updatedAt: new Date(),
+        is_active: false,
+        deleted_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -502,7 +513,7 @@ export class UserService implements IUserService {
     logger.debug('UserService: Getting detailed user profile', { userId });
 
     // Query user with subscriptions and preferences
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.users.findUnique({
       where: { id: userId },
       include: {
         subscriptions: {
@@ -510,11 +521,11 @@ export class UserService implements IUserService {
             status: 'active',
           },
           orderBy: {
-            createdAt: 'desc',
+            created_at: 'desc',
           },
           take: 1,
         },
-        userPreferences: true,
+        user_preferences: true,
       },
     });
 
@@ -537,9 +548,9 @@ export class UserService implements IUserService {
             | 'cancelled'
             | 'expired'
             | 'trialing',
-          currentPeriodStart: activeSubscription.currentPeriodStart,
-          currentPeriodEnd: activeSubscription.currentPeriodEnd,
-          cancelAtPeriodEnd: activeSubscription.cancelAtPeriodEnd,
+          currentPeriodStart: activeSubscription.current_period_start,
+          currentPeriodEnd: activeSubscription.current_period_end,
+          cancelAtPeriodEnd: activeSubscription.cancel_at_period_end,
         }
       : {
           // Default free tier subscription
@@ -551,11 +562,11 @@ export class UserService implements IUserService {
         };
 
     // Map preferences data (use defaults if no preferences exist)
-    const preferences: any = user.userPreferences
+    const preferences: any = user.user_preferences
       ? {
-          defaultModel: user.userPreferences.defaultModelId,
-          emailNotifications: user.userPreferences.emailNotifications,
-          usageAlerts: user.userPreferences.usageAlerts,
+          defaultModel: user.user_preferences.default_model_id,
+          emailNotifications: user.user_preferences.email_notifications,
+          usageAlerts: user.user_preferences.usage_alerts,
         }
       : {
           // Default preferences
@@ -564,10 +575,10 @@ export class UserService implements IUserService {
           usageAlerts: true,
         };
 
-    // Construct display name from firstName + lastName or null
+    // Construct display name from first_name + last_name or null
     let displayName: string | null = null;
-    if (user.firstName || user.lastName) {
-      displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    if (user.first_name || user.last_name) {
+      displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     }
 
     const detailedProfile = {
@@ -576,14 +587,14 @@ export class UserService implements IUserService {
       displayName,
       subscription,
       preferences,
-      accountCreatedAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
+      accountCreatedAt: user.created_at,
+      lastLoginAt: user.last_login_at,
     };
 
     logger.info('UserService: Detailed user profile retrieved', {
       userId,
       tier: subscription.tier,
-      hasPreferences: !!user.userPreferences,
+      hasPreferences: !!user.user_preferences,
     });
 
     return detailedProfile;

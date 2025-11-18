@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import { RouteObject } from 'react-router-dom';
-import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import { AdminRoute } from '../components/auth/AdminRoute';
 
 // Lazy load admin components for code splitting
 const AdminLayout = lazy(() => import('../components/admin/layout/AdminLayout'));
@@ -33,20 +33,29 @@ const PricingSimulation = lazy(() => import('../pages/admin/PricingSimulation'))
 const VendorPriceMonitoring = lazy(() => import('../pages/admin/VendorPriceMonitoring'));
 const CouponAnalytics = lazy(() => import('../pages/admin/CouponAnalytics'));
 const CampaignCalendar = lazy(() => import('../pages/admin/CampaignCalendar'));
-const ModelTierManagement = lazy(() => import('../pages/admin/ModelTierManagement'));
+const ModelManagement = lazy(() => import('../pages/admin/ModelManagement'));
 const BillingDashboard = lazy(() => import('../pages/admin/BillingDashboard'));
 
 // Plan 131 Phase 2: Admin Settings
 const AdminSettings = lazy(() => import('../pages/admin/AdminSettings'));
+
+// Plan 180: Analytics Dashboard
+const AnalyticsDashboard = lazy(() => import('../pages/admin/AnalyticsDashboard'));
+
+// Plan 190: Tier Configuration Management
+const AdminTierManagement = lazy(() => import('../pages/AdminTierManagement'));
+
+// Plan 192: Refund Management
+const RefundManagement = lazy(() => import('../pages/admin/RefundManagement'));
 
 // Admin route configuration
 export const adminRoutes: RouteObject[] = [
   {
     path: '/admin',
     element: (
-      <ProtectedRoute>
+      <AdminRoute>
         <AdminLayout />
-      </ProtectedRoute>
+      </AdminRoute>
     ),
     children: [
       // Dashboard home
@@ -73,6 +82,18 @@ export const adminRoutes: RouteObject[] = [
       {
         path: 'credits',
         element: <CreditManagement />,
+      },
+
+      // Tier configuration management (Plan 190)
+      {
+        path: 'tier-management',
+        element: <AdminTierManagement />,
+      },
+
+      // Refund management (Plan 192)
+      {
+        path: 'refunds',
+        element: <RefundManagement />,
       },
 
       // License management (Plan 110)
@@ -114,6 +135,10 @@ export const adminRoutes: RouteObject[] = [
       // Analytics
       {
         path: 'analytics',
+        element: <AnalyticsDashboard />,
+      },
+      {
+        path: 'analytics/platform',
         element: <PlatformAnalytics />,
       },
       {
@@ -124,7 +149,7 @@ export const adminRoutes: RouteObject[] = [
       // Models (Plan 131)
       {
         path: 'models',
-        element: <ModelTierManagement />,
+        element: <ModelManagement />,
       },
 
       // Profitability (Plan 131)

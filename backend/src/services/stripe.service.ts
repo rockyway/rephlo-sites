@@ -475,6 +475,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, pris
 
 /**
  * Handle subscription.deleted event
+ * When a paid subscription is cancelled, revert user to free tier
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription, prisma: PrismaClient): Promise<void> {
   logger.info('Handling subscription.deleted event', {
@@ -482,31 +483,81 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, pris
   });
 
   try {
-    // Find and mark subscription as cancelled
-    const dbSubscription = await prisma.subscription.findFirst({
-      where: { stripeSubscriptionId: subscription.id },
+    // Find and mark subscription as cancelled in subscription_monetization table
+    const dbSubscription = await prisma.subscription_monetization.findFirst({
+      where: { stripe_subscription_id: subscription.id },
     });
 
-    if (dbSubscription) {
-      await prisma.subscription.update({
-        where: { id: dbSubscription.id },
-        data: {
-          status: 'cancelled',
-          cancelledAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-      logger.info('Subscription marked as cancelled in database', {
-        subscriptionId: subscription.id,
-        dbSubscriptionId: dbSubscription.id,
-      });
-    } else {
-      logger.warn('Subscription not found in database', {
+    if (!dbSubscription) {
+      logger.warn('Subscription not found in subscription_monetization table', {
         subscriptionId: subscription.id,
       });
+      return;
     }
+
+    const userId = dbSubscription.user_id;
+
+    // Mark the paid subscription as cancelled
+    await prisma.subscription_monetization.update({
+      where: { id: dbSubscription.id },
+      data: {
+        status: 'cancelled',
+        cancelled_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
+    logger.info('Paid subscription marked as cancelled', {
+      subscriptionId: subscription.id,
+      userId,
+      previousTier: dbSubscription.tier,
+    });
+
+    // Create a new free tier subscription for the user
+    const now = new Date();
+    const freeSubEnd = new Date(now);
+    freeSubEnd.setFullYear(freeSubEnd.getFullYear() + 10); // Free tier never expires
+
+    const freeSubscription = await prisma.subscription_monetization.create({
+      data: {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        tier: 'free',
+        billing_cycle: 'monthly',
+        status: 'active',
+        base_price_usd: 0,
+        monthly_credit_allocation: 200, // Plan 189: Free tier allocation
+        current_period_start: now,
+        current_period_end: freeSubEnd,
+        created_at: now,
+        updated_at: now,
+      },
+    });
+
+    logger.info('Free tier subscription created after cancellation', {
+      userId,
+      freeSubscriptionId: freeSubscription.id,
+    });
+
+    // Allocate free tier credits (200 credits per Plan 189)
+    const { container } = await import('tsyringe');
+    const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+
+    await creditService.allocateCredits({
+      userId,
+      subscriptionId: freeSubscription.id,
+      totalCredits: 200, // Plan 189: Free tier allocation
+      billingPeriodStart: now,
+      billingPeriodEnd: freeSubEnd,
+    });
+
+    logger.info('Free tier credits allocated after subscription cancellation', {
+      userId,
+      credits: 200,
+    });
+
   } catch (error) {
-    logger.error('Failed to mark subscription as cancelled', {
+    logger.error('Failed to handle subscription deletion', {
       subscriptionId: subscription.id,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
@@ -527,8 +578,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
     // Only allocate credits if this is a subscription invoice
     if (invoice.subscription && typeof invoice.subscription === 'string') {
       // Find subscription in database
-      const dbSubscription = await prisma.subscription.findFirst({
-        where: { stripeSubscriptionId: invoice.subscription },
+      const dbSubscription = await prisma.subscriptions.findFirst({
+        where: { stripe_subscription_id: invoice.subscription },
       });
 
       if (dbSubscription) {
@@ -539,9 +590,9 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
         const periodEnd = new Date(invoice.period_end * 1000);
 
         await creditService.allocateCredits({
-          userId: dbSubscription.userId,
+          userId: dbSubscription.user_id,
           subscriptionId: dbSubscription.id,
-          totalCredits: dbSubscription.creditsPerMonth,
+          totalCredits: dbSubscription.credits_per_month,
           billingPeriodStart: periodStart,
           billingPeriodEnd: periodEnd,
         });
@@ -549,8 +600,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, prisma: Pr
         logger.info('Credits allocated for successful payment', {
           invoiceId: invoice.id,
           subscriptionId: dbSubscription.id,
-          userId: dbSubscription.userId,
-          credits: dbSubscription.creditsPerMonth,
+          userId: dbSubscription.user_id,
+          credits: dbSubscription.credits_per_month,
         });
       } else {
         logger.warn('Subscription not found for invoice', {
@@ -580,23 +631,23 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: Prism
   try {
     // Suspend subscription on payment failure
     if (invoice.subscription && typeof invoice.subscription === 'string') {
-      const dbSubscription = await prisma.subscription.findFirst({
-        where: { stripeSubscriptionId: invoice.subscription },
+      const dbSubscription = await prisma.subscriptions.findFirst({
+        where: { stripe_subscription_id: invoice.subscription },
       });
 
       if (dbSubscription) {
-        await prisma.subscription.update({
+        await prisma.subscriptions.update({
           where: { id: dbSubscription.id },
           data: {
             status: 'suspended',
-            updatedAt: new Date(),
+            updated_at: new Date(),
           },
         });
 
         logger.info('Subscription suspended due to payment failure', {
           invoiceId: invoice.id,
           subscriptionId: dbSubscription.id,
-          userId: dbSubscription.userId,
+          userId: dbSubscription.user_id,
         });
       } else {
         logger.warn('Subscription not found for failed payment', {
@@ -609,6 +660,186 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, prisma: Prism
     logger.error('Failed to handle payment failure', {
       invoiceId: invoice.id,
       error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw error;
+  }
+}
+
+// ============================================================================
+// Plan 192: Billing & Refund Operations
+// ============================================================================
+
+/**
+ * Create invoice item for proration
+ * @param customerId - Stripe customer ID
+ * @param amount - Amount in USD
+ * @param description - Invoice item description
+ * @param metadata - Optional metadata
+ * @returns Created invoice item
+ */
+export async function createInvoiceItem(
+  customerId: string,
+  amount: number,
+  description: string,
+  metadata?: Record<string, string>
+): Promise<Stripe.InvoiceItem> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.info('Creating Stripe invoice item', {
+    customerId,
+    amount,
+    description,
+  });
+
+  try {
+    // Convert USD to cents for Stripe
+    const amountCents = Math.round(amount * 100);
+
+    const invoiceItem = await stripe.invoiceItems.create({
+      customer: customerId,
+      amount: amountCents,
+      currency: 'usd',
+      description,
+      metadata: metadata || {},
+    });
+
+    logger.info('Created Stripe invoice item', {
+      invoiceItemId: invoiceItem.id,
+      customerId,
+      amount: amountCents,
+    });
+
+    return invoiceItem;
+  } catch (error) {
+    logger.error('Failed to create Stripe invoice item', {
+      customerId,
+      amount,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create and finalize invoice
+ * @param customerId - Stripe customer ID
+ * @returns Created and finalized invoice
+ */
+export async function createAndFinalizeInvoice(customerId: string): Promise<Stripe.Invoice> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.info('Creating and finalizing Stripe invoice', { customerId });
+
+  try {
+    // Create draft invoice
+    const invoice = await stripe.invoices.create({
+      customer: customerId,
+      auto_advance: true, // Automatically finalize and attempt payment
+      collection_method: 'charge_automatically',
+    });
+
+    // Finalize invoice
+    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+
+    logger.info('Created and finalized Stripe invoice', {
+      invoiceId: finalizedInvoice.id,
+      customerId,
+      status: finalizedInvoice.status,
+    });
+
+    return finalizedInvoice;
+  } catch (error) {
+    logger.error('Failed to create and finalize Stripe invoice', {
+      customerId,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create refund for a charge
+ * @param chargeId - Stripe charge ID
+ * @param amount - Refund amount in USD
+ * @param reason - Refund reason
+ * @param metadata - Optional metadata
+ * @returns Created refund
+ */
+export async function createRefund(
+  chargeId: string,
+  amount: number,
+  reason: string,
+  metadata?: Record<string, string>
+): Promise<Stripe.Refund> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.info('Creating Stripe refund', {
+    chargeId,
+    amount,
+    reason,
+  });
+
+  try {
+    // Convert USD to cents for Stripe
+    const amountCents = Math.round(amount * 100);
+
+    const refund = await stripe.refunds.create({
+      charge: chargeId,
+      amount: amountCents,
+      reason: reason as any, // Cast to Stripe's reason type
+      metadata: metadata || {},
+    });
+
+    logger.info('Created Stripe refund', {
+      refundId: refund.id,
+      chargeId,
+      amount: amountCents,
+      status: refund.status,
+    });
+
+    return refund;
+  } catch (error) {
+    logger.error('Failed to create Stripe refund', {
+      chargeId,
+      amount,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get charge details
+ * @param chargeId - Stripe charge ID
+ * @returns Charge object
+ */
+export async function getCharge(chargeId: string): Promise<Stripe.Charge> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured');
+  }
+
+  logger.debug('Retrieving Stripe charge', { chargeId });
+
+  try {
+    const charge = await stripe.charges.retrieve(chargeId);
+
+    logger.debug('Retrieved Stripe charge', {
+      chargeId,
+      amount: charge.amount,
+      status: charge.status,
+    });
+
+    return charge;
+  } catch (error) {
+    logger.error('Failed to retrieve Stripe charge', {
+      chargeId,
+      error,
     });
     throw error;
   }

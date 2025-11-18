@@ -371,9 +371,11 @@ function UserManagement() {
                 <option value="">All Tiers</option>
                 <option value={SubscriptionTier.FREE}>Free</option>
                 <option value={SubscriptionTier.PRO}>Pro</option>
+                <option value={SubscriptionTier.PRO_PLUS}>Pro Plus</option>
                 <option value={SubscriptionTier.PRO_MAX}>Pro Max</option>
                 <option value={SubscriptionTier.ENTERPRISE_PRO}>Enterprise Pro</option>
-                <option value={SubscriptionTier.ENTERPRISE_MAX}>Enterprise Max</option>
+                <option value={SubscriptionTier.ENTERPRISE_PRO_PLUS}>Enterprise Pro Plus</option>
+                <option value={SubscriptionTier.PERPETUAL}>Perpetual</option>
               </select>
             </div>
 

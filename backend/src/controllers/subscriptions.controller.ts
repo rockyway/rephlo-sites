@@ -80,17 +80,17 @@ export class SubscriptionsController {
 
       res.json({
         id: subscription.id,
-        user_id: subscription.userId,
+        user_id: subscription.user_id,
         tier: subscription.tier,
         status: subscription.status,
-        credits_per_month: subscription.creditsPerMonth,
-        credits_rollover: subscription.creditsRollover,
-        billing_interval: subscription.billingInterval,
-        price_cents: subscription.priceCents,
-        current_period_start: subscription.currentPeriodStart.toISOString(),
-        current_period_end: subscription.currentPeriodEnd.toISOString(),
-        trial_end: subscription.trialEnd?.toISOString() || null,
-        created_at: subscription.createdAt.toISOString(),
+        credits_per_month: subscription.credits_per_month,
+        credits_rollover: subscription.credits_rollover,
+        billing_interval: subscription.billing_interval,
+        price_cents: subscription.price_cents,
+        current_period_start: subscription.current_period_start.toISOString(),
+        current_period_end: subscription.current_period_end.toISOString(),
+        trial_end: subscription.trial_end?.toISOString() || null,
+        created_at: subscription.created_at.toISOString(),
       });
     } catch (error) {
       logger.error('Failed to get current subscription', { userId, error });
@@ -173,9 +173,9 @@ export class SubscriptionsController {
         id: subscription.id,
         tier: subscription.tier,
         status: subscription.status,
-        credits_per_month: subscription.creditsPerMonth,
-        stripe_subscription_id: subscription.stripeSubscriptionId,
-        created_at: subscription.createdAt.toISOString(),
+        credits_per_month: subscription.credits_per_month,
+        stripe_subscription_id: subscription.stripe_subscription_id,
+        created_at: subscription.created_at.toISOString(),
       });
     } catch (error: any) {
       logger.error('Failed to create subscription', { userId, error });
@@ -280,10 +280,10 @@ export class SubscriptionsController {
         id: subscription.id,
         tier: subscription.tier,
         status: subscription.status,
-        credits_per_month: subscription.creditsPerMonth,
-        price_cents: subscription.priceCents,
-        billing_interval: subscription.billingInterval,
-        updated_at: subscription.updatedAt.toISOString(),
+        credits_per_month: subscription.credits_per_month,
+        price_cents: subscription.price_cents,
+        billing_interval: subscription.billing_interval,
+        updated_at: subscription.updated_at.toISOString(),
       });
     } catch (error: any) {
       logger.error('Failed to update subscription', { userId, error });
@@ -376,9 +376,9 @@ export class SubscriptionsController {
       res.json({
         id: subscription.id,
         status: subscription.status,
-        cancelled_at: subscription.cancelledAt?.toISOString() || null,
-        cancel_at_period_end: subscription.cancelAtPeriodEnd,
-        current_period_end: subscription.currentPeriodEnd.toISOString(),
+        cancelled_at: subscription.cancelled_at?.toISOString() || null,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        current_period_end: subscription.current_period_end.toISOString(),
       });
     } catch (error: any) {
       logger.error('Failed to cancel subscription', { userId, error });

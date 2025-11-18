@@ -1,4 +1,4 @@
-import { UsageHistory } from '@prisma/client';
+import { token_usage_ledger } from '@prisma/client';
 import {
   IUsageService,
   RecordUsageInput,
@@ -9,22 +9,37 @@ import {
 import { UsageQueryParams, UsageStatsQueryParams } from '../../types/credit-validation';
 
 export class MockUsageService implements IUsageService {
-  private usageHistory: Map<string, UsageHistory> = new Map();
+  private usageHistory: Map<string, token_usage_ledger> = new Map();
 
-  async recordUsage(data: RecordUsageInput): Promise<UsageHistory> {
-    const usage: UsageHistory = {
+  async recordUsage(data: RecordUsageInput): Promise<token_usage_ledger> {
+    const now = new Date();
+    const usage: token_usage_ledger = {
       id: `mock-usage-${Date.now()}-${Math.random()}`,
-      userId: data.userId,
-      creditId: data.creditId,
-      modelId: data.modelId,
-      operation: data.operation as any,
-      creditsUsed: data.creditsUsed,
-      inputTokens: data.inputTokens,
-      outputTokens: data.outputTokens,
-      totalTokens: data.totalTokens,
-      requestDurationMs: data.requestDurationMs,
-      requestMetadata: data.requestMetadata || null,
-      createdAt: new Date(),
+      request_id: `mock-req-${Date.now()}-${Math.random()}`,
+      user_id: data.userId,
+      subscription_id: data.subscriptionId || null,
+      model_id: data.modelId,
+      provider_id: data.providerId,
+      input_tokens: data.inputTokens,
+      output_tokens: data.outputTokens,
+      cached_input_tokens: data.cachedInputTokens || 0,
+      vendor_cost: data.vendorCost as any,
+      margin_multiplier: data.marginMultiplier as any,
+      credit_value_usd: data.creditValueUsd as any,
+      credits_deducted: data.creditsDeducted,
+      request_type: data.requestType as any,
+      streaming_segments: data.streamingSegments || null,
+      request_started_at: data.requestStartedAt,
+      request_completed_at: data.requestCompletedAt,
+      processing_time_ms: data.processingTimeMs || null,
+      status: (data.status as any) || 'success',
+      error_message: data.errorMessage || null,
+      is_streaming_complete: data.isStreamingComplete !== undefined ? data.isStreamingComplete : true,
+      user_tier_at_request: data.userTierAtRequest || null,
+      region: data.region || null,
+      deduction_record_id: data.deductionRecordId || null,
+      created_at: now,
+      gross_margin_usd: 0 as any,
     };
 
     this.usageHistory.set(usage.id, usage);
@@ -32,22 +47,22 @@ export class MockUsageService implements IUsageService {
   }
 
   async getUsageHistory(userId: string, params: UsageQueryParams): Promise<UsageHistoryResult> {
-    const allUsage = Array.from(this.usageHistory.values()).filter((u) => u.userId === userId);
+    const allUsage = Array.from(this.usageHistory.values()).filter((u) => u.user_id === userId);
 
     // Apply filters
     let filtered = allUsage;
     if (params.start_date) {
-      filtered = filtered.filter((u) => u.createdAt >= new Date(params.start_date!));
+      filtered = filtered.filter((u) => u.created_at >= new Date(params.start_date!));
     }
     if (params.end_date) {
-      filtered = filtered.filter((u) => u.createdAt <= new Date(params.end_date!));
+      filtered = filtered.filter((u) => u.created_at <= new Date(params.end_date!));
     }
     if (params.model_id) {
-      filtered = filtered.filter((u) => u.modelId === params.model_id);
+      filtered = filtered.filter((u) => u.model_id === params.model_id);
     }
 
-    // Sort by createdAt descending
-    filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    // Sort by created_at descending
+    filtered.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
 
     // Paginate
     const limit = params.limit || 50;
@@ -57,9 +72,9 @@ export class MockUsageService implements IUsageService {
 
     // Calculate summary
     const summary = {
-      totalCreditsUsed: filtered.reduce((sum, u) => sum + u.creditsUsed, 0),
+      totalCreditsUsed: filtered.reduce((sum, u) => sum + u.credits_deducted, 0),
       totalRequests: filtered.length,
-      totalTokens: filtered.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
+      totalTokens: filtered.reduce((sum, u) => sum + u.input_tokens + u.output_tokens, 0),
     };
 
     return {
@@ -78,43 +93,43 @@ export class MockUsageService implements IUsageService {
     userId: string,
     params: UsageStatsQueryParams
   ): Promise<UsageStatsResult> {
-    const allUsage = Array.from(this.usageHistory.values()).filter((u) => u.userId === userId);
+    const allUsage = Array.from(this.usageHistory.values()).filter((u) => u.user_id === userId);
 
     // Apply filters
     let filtered = allUsage;
     if (params.start_date) {
-      filtered = filtered.filter((u) => u.createdAt >= new Date(params.start_date!));
+      filtered = filtered.filter((u) => u.created_at >= new Date(params.start_date!));
     }
     if (params.end_date) {
-      filtered = filtered.filter((u) => u.createdAt <= new Date(params.end_date!));
+      filtered = filtered.filter((u) => u.created_at <= new Date(params.end_date!));
     }
 
     // Group by specified dimension
     const stats: UsageStatsItem[] = [];
     const total = {
-      creditsUsed: filtered.reduce((sum, u) => sum + u.creditsUsed, 0),
+      creditsUsed: filtered.reduce((sum, u) => sum + u.credits_deducted, 0),
       requestsCount: filtered.length,
-      tokensTotal: filtered.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
+      tokensTotal: filtered.reduce((sum, u) => sum + u.input_tokens + u.output_tokens, 0),
       averageDurationMs:
         filtered.length > 0
-          ? filtered.reduce((sum, u) => sum + (u.requestDurationMs || 0), 0) / filtered.length
+          ? filtered.reduce((sum, u) => sum + (u.processing_time_ms || 0), 0) / filtered.length
           : 0,
     };
 
     return { stats, total };
   }
 
-  async getUserUsage(userId: string, limit = 100): Promise<UsageHistory[]> {
+  async getUserUsage(userId: string, limit = 100): Promise<token_usage_ledger[]> {
     return Array.from(this.usageHistory.values())
-      .filter((u) => u.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .filter((u) => u.user_id === userId)
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
       .slice(0, limit);
   }
 
-  async getUsageByModel(userId: string, modelId: string): Promise<UsageHistory[]> {
+  async getUsageByModel(userId: string, modelId: string): Promise<token_usage_ledger[]> {
     return Array.from(this.usageHistory.values())
-      .filter((u) => u.userId === userId && u.modelId === modelId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .filter((u) => u.user_id === userId && u.model_id === modelId)
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
   }
 
   async getUserUsageStats(userId: string): Promise<{
@@ -124,24 +139,24 @@ export class MockUsageService implements IUsageService {
     byModel: Record<string, { requests: number; tokens: number; credits: number }>;
   }> {
     const userUsage = Array.from(this.usageHistory.values()).filter(
-      (u) => u.userId === userId
+      (u) => u.user_id === userId
     );
 
     const byModel: Record<string, { requests: number; tokens: number; credits: number }> = {};
 
     userUsage.forEach((usage) => {
-      if (!byModel[usage.modelId]) {
-        byModel[usage.modelId] = { requests: 0, tokens: 0, credits: 0 };
+      if (!byModel[usage.model_id]) {
+        byModel[usage.model_id] = { requests: 0, tokens: 0, credits: 0 };
       }
-      byModel[usage.modelId].requests++;
-      byModel[usage.modelId].tokens += usage.totalTokens || 0;
-      byModel[usage.modelId].credits += usage.creditsUsed;
+      byModel[usage.model_id].requests++;
+      byModel[usage.model_id].tokens += usage.input_tokens + usage.output_tokens;
+      byModel[usage.model_id].credits += usage.credits_deducted;
     });
 
     return {
       totalRequests: userUsage.length,
-      totalTokens: userUsage.reduce((sum, u) => sum + (u.totalTokens || 0), 0),
-      totalCredits: userUsage.reduce((sum, u) => sum + u.creditsUsed, 0),
+      totalTokens: userUsage.reduce((sum, u) => sum + u.input_tokens + u.output_tokens, 0),
+      totalCredits: userUsage.reduce((sum, u) => sum + u.credits_deducted, 0),
       byModel,
     };
   }
@@ -151,11 +166,11 @@ export class MockUsageService implements IUsageService {
     this.usageHistory.clear();
   }
 
-  seed(usage: UsageHistory[]) {
+  seed(usage: token_usage_ledger[]) {
     usage.forEach((u) => this.usageHistory.set(u.id, u));
   }
 
-  getAll(): UsageHistory[] {
+  getAll(): token_usage_ledger[] {
     return Array.from(this.usageHistory.values());
   }
 }

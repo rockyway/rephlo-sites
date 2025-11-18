@@ -26,7 +26,7 @@ describe('GET /api/user/profile', () => {
     prisma = container.resolve<PrismaClient>('PrismaClient');
 
     // Create test user with complete profile
-    const testUser = await prisma.user.create({
+    const testUser = await prisma.users.create({
       data: {
         id: 'test-user-profile-api',
         email: 'profile-api-test@example.com',
@@ -40,7 +40,7 @@ describe('GET /api/user/profile', () => {
     testUserId = testUser.id;
 
     // Create subscription for test user
-    await prisma.subscription.create({
+    await prisma.subscriptions.create({
       data: {
         id: 'test-subscription-profile',
         userId: testUserId,
@@ -73,8 +73,8 @@ describe('GET /api/user/profile', () => {
   afterAll(async () => {
     // Cleanup test data
     await prisma.userPreference.deleteMany({ where: { userId: testUserId } });
-    await prisma.subscription.deleteMany({ where: { userId: testUserId } });
-    await prisma.user.delete({ where: { id: testUserId } });
+    await prisma.subscriptions.deleteMany({ where: { userId: testUserId } });
+    await prisma.users.delete({ where: { id: testUserId } });
     await prisma.$disconnect();
   });
 
@@ -160,7 +160,7 @@ describe('GET /api/user/profile', () => {
 
     it('should provide displayName fallback when no firstName/lastName', async () => {
       // Create user without names
-      const userNoNames = await prisma.user.create({
+      const userNoNames = await prisma.users.create({
         data: {
           id: 'user-no-names',
           email: 'nonames@example.com',
@@ -168,7 +168,7 @@ describe('GET /api/user/profile', () => {
         },
       });
 
-      await prisma.subscription.create({
+      await prisma.subscriptions.create({
         data: {
           id: 'sub-no-names',
           userId: userNoNames.id,
@@ -207,8 +207,8 @@ describe('GET /api/user/profile', () => {
 
       // Cleanup
       await prisma.userPreference.deleteMany({ where: { userId: userNoNames.id } });
-      await prisma.subscription.deleteMany({ where: { userId: userNoNames.id } });
-      await prisma.user.delete({ where: { id: userNoNames.id } });
+      await prisma.subscriptions.deleteMany({ where: { userId: userNoNames.id } });
+      await prisma.users.delete({ where: { id: userNoNames.id } });
     });
   });
 
@@ -276,7 +276,7 @@ describe('GET /api/user/profile', () => {
   describe('Edge Cases', () => {
     it('should handle user with default subscription', async () => {
       // Create user with free tier
-      const userFreeTier = await prisma.user.create({
+      const userFreeTier = await prisma.users.create({
         data: {
           id: 'user-free-tier',
           email: 'freetier@example.com',
@@ -284,7 +284,7 @@ describe('GET /api/user/profile', () => {
         },
       });
 
-      await prisma.subscription.create({
+      await prisma.subscriptions.create({
         data: {
           id: 'sub-free-tier',
           userId: userFreeTier.id,
@@ -324,13 +324,13 @@ describe('GET /api/user/profile', () => {
 
       // Cleanup
       await prisma.userPreference.deleteMany({ where: { userId: userFreeTier.id } });
-      await prisma.subscription.deleteMany({ where: { userId: userFreeTier.id } });
-      await prisma.user.delete({ where: { id: userFreeTier.id } });
+      await prisma.subscriptions.deleteMany({ where: { userId: userFreeTier.id } });
+      await prisma.users.delete({ where: { id: userFreeTier.id } });
     });
 
     it('should handle null lastLoginAt', async () => {
       // Create user with no lastLoginAt
-      const userNoLogin = await prisma.user.create({
+      const userNoLogin = await prisma.users.create({
         data: {
           id: 'user-no-login',
           email: 'nologin@example.com',
@@ -339,7 +339,7 @@ describe('GET /api/user/profile', () => {
         },
       });
 
-      await prisma.subscription.create({
+      await prisma.subscriptions.create({
         data: {
           id: 'sub-no-login',
           userId: userNoLogin.id,
@@ -378,8 +378,8 @@ describe('GET /api/user/profile', () => {
 
       // Cleanup
       await prisma.userPreference.deleteMany({ where: { userId: userNoLogin.id } });
-      await prisma.subscription.deleteMany({ where: { userId: userNoLogin.id } });
-      await prisma.user.delete({ where: { id: userNoLogin.id } });
+      await prisma.subscriptions.deleteMany({ where: { userId: userNoLogin.id } });
+      await prisma.users.delete({ where: { id: userNoLogin.id } });
     });
   });
 });

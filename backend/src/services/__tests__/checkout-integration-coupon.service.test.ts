@@ -446,7 +446,7 @@ describe('CheckoutIntegrationService Mid-Cycle Upgrades', () => {
       const userId = crypto.randomUUID();
 
       // Create test user first (required by foreign key)
-      await prisma.user.create({
+      await prisma.users.create({
         data: {
           id: userId,
           email: 'annual-billing-test@example.com',
@@ -540,7 +540,7 @@ describe('CheckoutIntegrationService Mid-Cycle Upgrades', () => {
         await prisma.prorationEvent.deleteMany({ where: { userId } });
         await prisma.coupon.delete({ where: { id: coupon.id } });
         await prisma.subscriptionMonetization.delete({ where: { id: subscription.id } });
-        await prisma.user.delete({ where: { id: userId } });
+        await prisma.users.delete({ where: { id: userId } });
       } finally {
         jest.useRealTimers();
       }

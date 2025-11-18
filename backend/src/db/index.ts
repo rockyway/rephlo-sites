@@ -83,10 +83,10 @@ export async function isDatabaseConnected(): Promise<boolean> {
 export async function getDatabaseStats() {
   try {
     const [downloadCount, feedbackCount, diagnosticCount, versionCount] = await Promise.all([
-      prisma.download.count(),
-      prisma.feedback.count(),
-      prisma.diagnostic.count(),
-      prisma.appVersion.count(),
+      prisma.downloads.count(),
+      prisma.feedbacks.count(),
+      prisma.diagnostics.count(),
+      prisma.app_versions.count(),
     ]);
 
     return {
@@ -106,13 +106,13 @@ export async function getDatabaseStats() {
  * Export Prisma types for use in other modules
  *
  * This allows importing types like:
- * import type { Download, Feedback } from './db';
+ * import type { downloads, feedbacks } from './db';
  */
 export type {
-  Download,
-  Feedback,
-  Diagnostic,
-  AppVersion
+  downloads,
+  feedbacks,
+  diagnostics,
+  app_versions
 } from '@prisma/client';
 
 // Default export

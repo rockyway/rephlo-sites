@@ -1,4 +1,4 @@
-import { SubscriptionTier } from '@prisma/client';
+import type { subscription_tier } from '@prisma/client';
 import { TierAccessResult } from '../../utils/tier-access';
 import {
   CreateModelRequest,
@@ -23,7 +23,7 @@ export interface IModelService {
       provider?: string;
       includeArchived?: boolean;
     },
-    userTier?: SubscriptionTier
+    userTier?: subscription_tier
   ): Promise<ModelListResponse>;
 
   /**
@@ -31,7 +31,7 @@ export interface IModelService {
    */
   getModelDetails(
     modelId: string,
-    userTier?: SubscriptionTier
+    userTier?: subscription_tier
   ): Promise<ModelDetailsResponse>;
 
   /**
@@ -39,7 +39,7 @@ export interface IModelService {
    */
   canUserAccessModel(
     modelId: string,
-    userTier: SubscriptionTier
+    userTier: subscription_tier
   ): Promise<TierAccessResult>;
 
   /**

@@ -14,6 +14,8 @@
  *   npm run analyze:api -- --include-test=true
  *   npm run analyze:api -- --format=simple
  *   npm run analyze:api -- --format=simple --include-test=true
+ *   npm run analyze:api -- --format=simple --exclude-admin
+ *   npm run analyze:api:simple:public (shortcut for --format=simple --exclude-admin)
  */
 
 import * as fs from 'fs';
@@ -26,6 +28,7 @@ const formatArg = args.find(arg => arg.startsWith('--format='));
 const format = formatArg ? formatArg.split('=')[1] : 'full'; // 'simple' or 'full'
 const limitArg = args.find(arg => arg.startsWith('--limit='));
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : undefined; // Limit number of endpoints to analyze
+const excludeAdmin = args.some(arg => arg === '--exclude-admin'); // Filter out /admin routes
 
 if (!['simple', 'full'].includes(format)) {
   console.error(`Invalid format: ${format}. Must be 'simple' or 'full'.`);
@@ -68,6 +71,48 @@ const BACKEND_DIR = path.join(__dirname, '..', 'backend');
 const IDP_DIR = path.join(__dirname, '..', 'identity-provider');
 const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
 const ROOT_DIR = path.join(__dirname, '..');
+
+/**
+ * Route file to prefix mapping
+ * Maps route file names to their mounting prefixes based on backend/src/routes/index.ts
+ */
+const ROUTE_PREFIX_MAP: Record<string, string> = {
+  'v1.routes.ts': '/v1',
+  'api.routes.ts': '/api',
+  'admin.routes.ts': '/admin',
+  'admin-models.routes.ts': '/admin/models',
+  'plan109.routes.ts': '/admin', // Additional admin endpoints
+  'plan110.routes.ts': '/api', // Public endpoints (also has /admin routes)
+  'plan111.routes.ts': '', // Mounted at root
+  'auth.routes.ts': '/auth',
+  'mfa.routes.ts': '/auth/mfa',
+  'social-auth.routes.ts': '', // Mounted at root
+  'swagger.routes.ts': '/api-docs',
+  'branding.routes.ts': '/api',
+  'vendor-analytics.routes.ts': '/admin/analytics', // Nested under admin analytics
+};
+
+/**
+ * Determine the route prefix for a given route file
+ * @param filePath - Full path to the route file
+ * @returns The prefix to prepend to routes in this file
+ */
+function getRoutePrefixForFile(filePath: string): string {
+  const fileName = path.basename(filePath);
+
+  // Check if we have a direct mapping
+  if (ROUTE_PREFIX_MAP[fileName]) {
+    return ROUTE_PREFIX_MAP[fileName];
+  }
+
+  // Handle nested admin routes (e.g., admin/*.routes.ts)
+  if (filePath.includes('/admin/') && fileName.endsWith('.routes.ts')) {
+    return '/admin';
+  }
+
+  // Default: no prefix (root-level routes)
+  return '';
+}
 
 /**
  * Recursively read all files in a directory with specific extensions
@@ -121,6 +166,9 @@ function extractExpressRoutes(filePath: string): EndpointDefinition[] {
   const content = fs.readFileSync(filePath, 'utf-8');
   const lines = content.split('\n');
   const endpoints: EndpointDefinition[] = [];
+
+  // Determine the route prefix for this file
+  const routePrefix = getRoutePrefixForFile(filePath);
 
   // Extract global middleware from router.use() calls
   const globalMiddleware: string[] = [];
@@ -232,15 +280,18 @@ function extractExpressRoutes(filePath: string): EndpointDefinition[] {
           }
         }
 
+        // Apply route prefix to the path
+        const fullPath = routePrefix ? `${routePrefix}${routePath}` : routePath;
+
         // Check for duplicates
         const exists = endpoints.some(
-          e => e.method === method && e.path === routePath
+          e => e.method === method && e.path === fullPath
         );
 
         if (!exists) {
           endpoints.push({
             method,
-            path: routePath,
+            path: fullPath,
             file: path.relative(ROOT_DIR, filePath),
             line: routeStartLine + 1,
             handler,
@@ -1086,6 +1137,13 @@ function analyzeBackend(): ProjectEndpoints {
     endpoints.push(...serverEndpoints);
   }
 
+  // Filter out admin routes if requested
+  if (excludeAdmin) {
+    const beforeCount = endpoints.length;
+    endpoints = endpoints.filter(endpoint => !endpoint.path.includes('/admin'));
+    console.log(`Filtered out ${beforeCount - endpoints.length} admin endpoints`);
+  }
+
   // Extract schemas for each endpoint
   console.log('Extracting schemas...');
   const schemasMap = new Map<string, SchemaDefinition>();
@@ -1198,7 +1256,8 @@ function generateSimpleMarkdownReport(projects: ProjectEndpoints[]): string {
   let markdown = `# API Endpoints Analysis Report (Simple Format)\n\n`;
   markdown += `**Generated:** ${now}\n`;
   markdown += `**Format:** Simple\n`;
-  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n\n`;
+  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n`;
+  markdown += `**Exclude Admin Routes:** ${excludeAdmin ? 'Yes' : 'No'}\n\n`;
   markdown += `**Projects Analyzed:**\n`;
   projects.forEach(p => {
     markdown += `- ${p.projectName} (${p.baseUrl})\n`;
@@ -1342,7 +1401,8 @@ function generateMarkdownReport(projects: ProjectEndpoints[]): string {
   let markdown = `# API Endpoints Analysis Report (Full Format)\n\n`;
   markdown += `**Generated:** ${now}\n`;
   markdown += `**Format:** Full\n`;
-  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n\n`;
+  markdown += `**Include Tests:** ${includeTest ? 'Yes' : 'No'}\n`;
+  markdown += `**Exclude Admin Routes:** ${excludeAdmin ? 'Yes' : 'No'}\n\n`;
   markdown += `**Projects Analyzed:**\n`;
   projects.forEach(p => {
     markdown += `- ${p.projectName} (${p.baseUrl})\n`;
@@ -1452,6 +1512,7 @@ function main() {
   console.log('Starting API endpoint analysis...');
   console.log(`Format: ${format}`);
   console.log(`Include Tests: ${includeTest}`);
+  console.log(`Exclude Admin Routes: ${excludeAdmin}`);
   if (limit) {
     console.log(`Limit: ${limit} endpoints (POC mode)`);
   }
@@ -1490,8 +1551,14 @@ function main() {
     }
   }
 
-  const outputFile = path.join(docsAnalysisDir, `${String(nextNumber).padStart(3, '0')}-api-endpoints-analysis.md`);
+  // Store at root for easy to navigate
+  // Use different filename for public API (exclude-admin) exports
+  const baseFilename = excludeAdmin ? 'api-public-endpoints-index' : 'api-endpoints-index';
+  const outputFile = path.join(ROOT_DIR, `${baseFilename}.md`);
+  const outputFileWithNumber = path.join(ROOT_DIR, `${baseFilename}-v${String(nextNumber).padStart(3,'0')}.md`);
+  // const outputFile = path.join(docsAnalysisDir, `${String(nextNumber).padStart(3, '0')}-api-endpoints-analysis.md`);
   fs.writeFileSync(outputFile, markdown, 'utf-8');
+  fs.writeFileSync(outputFileWithNumber, markdown, 'utf-8');
 
   console.log(`\n✅ Report generated: ${path.relative(ROOT_DIR, outputFile)}`);
   console.log(`   Total projects analyzed: ${projects.length}`);

@@ -124,7 +124,20 @@ export class OIDCAdapter {
         return undefined;
       }
 
-      logger.debug(`OIDC Adapter: found ${this.name}`, { id });
+      logger.debug(`OIDC Adapter: found ${this.name}`, {
+        id,
+        expiresAt: record.expires_at,
+        payloadKeys: Object.keys(record.payload || {}),
+        ...(this.name === 'RefreshToken' && {
+          refreshTokenDetails: {
+            accountId: record.payload?.accountId,
+            clientId: record.payload?.clientId,
+            grantId: record.payload?.grantId,
+            consumed: record.payload?.consumed,
+            expiresWithSession: record.payload?.expiresWithSession,
+          },
+        }),
+      });
       return record.payload;
     } catch (error) {
       logger.error(`OIDC Adapter: find failed for ${this.name}`, {

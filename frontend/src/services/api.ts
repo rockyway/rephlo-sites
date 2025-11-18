@@ -62,6 +62,21 @@ function clearAuth(reason?: string): void {
 }
 
 /**
+ * Get user data from session storage
+ */
+function getUser() {
+  const userJson = sessionStorage.getItem('user');
+  if (!userJson) return null;
+
+  try {
+    return JSON.parse(userJson);
+  } catch (error) {
+    console.error('[Auth] Failed to parse user data from sessionStorage:', error);
+    return null;
+  }
+}
+
+/**
  * Check if token is expired or about to expire (within 60 seconds)
  */
 function isTokenExpired(): boolean {
@@ -223,6 +238,7 @@ apiClient.interceptors.response.use(
 export const authHelpers = {
   getAccessToken,
   getRefreshToken,
+  getUser,
   storeTokens,
   clearAuth,
   isTokenExpired,

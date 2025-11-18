@@ -66,13 +66,13 @@ export function requireMFA(
   }
 
   // Check user's MFA status
-  prisma.user
+  prisma.users
     .findUnique({
       where: { id: userId },
       select: {
-        mfaEnabled: true,
-        mfaSecret: true,
-        mfaBackupCodes: true,
+        mfa_enabled: true,
+        mfa_secret: true,
+        mfa_backup_codes: true,
       },
     })
     .then(async (user) => {
@@ -81,7 +81,7 @@ export function requireMFA(
         return next(unauthorizedError('User not found'));
       }
 
-      if (!user.mfaEnabled) {
+      if (!user.mfa_enabled) {
         logger.warn('requireMFA: MFA not enabled for user', { userId });
         return next(
           forbiddenError(
@@ -90,13 +90,13 @@ export function requireMFA(
         );
       }
 
-      if (!user.mfaSecret) {
+      if (!user.mfa_secret) {
         logger.error('requireMFA: MFA enabled but secret missing', { userId });
         return next(forbiddenError('MFA configuration error'));
       }
 
       // Try TOTP verification first
-      const totpValid = mfaService.verifyTOTP(user.mfaSecret, mfaToken);
+      const totpValid = mfaService.verifyTOTP(user.mfa_secret, mfaToken);
 
       if (totpValid) {
         logger.info('requireMFA: TOTP verified successfully', { userId });
@@ -104,9 +104,9 @@ export function requireMFA(
       }
 
       // Try backup code verification
-      if (user.mfaBackupCodes) {
+      if (user.mfa_backup_codes) {
         try {
-          const backupCodeList = JSON.parse(user.mfaBackupCodes);
+          const backupCodeList = JSON.parse(user.mfa_backup_codes);
 
           if (Array.isArray(backupCodeList) && backupCodeList.length > 0) {
             const backupCodeIndex = await mfaService.findMatchingBackupCodeIndex(
@@ -120,9 +120,9 @@ export function requireMFA(
                 (_: string, index: number) => index !== backupCodeIndex
               );
 
-              await prisma.user.update({
+              await prisma.users.update({
                 where: { id: userId },
-                data: { mfaBackupCodes: JSON.stringify(updatedBackupCodes) },
+                data: { mfa_backup_codes: JSON.stringify(updatedBackupCodes) },
               });
 
               logger.info('requireMFA: Backup code verified successfully', {
@@ -173,10 +173,10 @@ export function requireMFAForAdmins(
   const userId = req.user.sub;
 
   // Check if user is admin
-  prisma.user
+  prisma.users
     .findUnique({
       where: { id: userId },
-      select: { role: true, mfaEnabled: true },
+      select: { role: true, mfa_enabled: true },
     })
     .then((user) => {
       if (!user) {
@@ -191,7 +191,7 @@ export function requireMFAForAdmins(
       }
 
       // Admin user - check if MFA is enabled
-      if (!user.mfaEnabled) {
+      if (!user.mfa_enabled) {
         logger.warn('requireMFAForAdmins: Admin MFA not enabled', { userId });
         return next(
           forbiddenError(

@@ -123,7 +123,7 @@ export class AuthManagementController {
         validationResult.data as RegistrationInput;
 
       // 2. Check if email already exists
-      const existingEmail = await this.prisma.user.findUnique({
+      const existingEmail = await this.prisma.users.findUnique({
         where: { email },
       });
 
@@ -138,7 +138,7 @@ export class AuthManagementController {
       }
 
       // 3. Check if username already taken
-      const existingUsername = await this.prisma.user.findFirst({
+      const existingUsername = await this.prisma.users.findFirst({
         where: { username },
       });
 
@@ -172,18 +172,20 @@ export class AuthManagementController {
       const { token, hashedToken, expiry } = generateEmailVerificationToken(24); // 24 hours
 
       // 7. Create user record
-      const user = await this.prisma.user.create({
+      const user = await this.prisma.users.create({
         data: {
+          id: crypto.randomUUID(),
           email,
-          passwordHash,
+          password_hash: passwordHash,
           username,
-          firstName,
-          lastName,
-          emailVerified: false,
-          emailVerificationToken: hashedToken,
-          emailVerificationTokenExpiry: expiry,
-          isActive: true,
-          authProvider: 'local',
+          first_name: firstName,
+          last_name: lastName,
+          email_verified: false,
+          email_verification_token: hashedToken,
+          email_verification_token_expiry: expiry,
+          is_active: true,
+          auth_provider: 'local',
+          updated_at: new Date(),
         },
       });
 
@@ -204,7 +206,7 @@ export class AuthManagementController {
         data: {
           id: user.id,
           email: user.email,
-          emailVerified: user.emailVerified,
+          emailVerified: user.email_verified,
         },
         meta: {
           message: 'Registration successful. Please check your email to verify your account.',
@@ -270,7 +272,7 @@ export class AuthManagementController {
       const { token, email } = validationResult.data as EmailVerificationInput;
 
       // 2. Find user by email
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { email },
       });
 
@@ -285,7 +287,7 @@ export class AuthManagementController {
       }
 
       // 3. Check if already verified
-      if (user.emailVerified) {
+      if (user.email_verified) {
         const response = errorResponse(
           'already_verified',
           'Email is already verified',
@@ -296,7 +298,7 @@ export class AuthManagementController {
       }
 
       // 4. Check if token exists
-      if (!user.emailVerificationToken || !user.emailVerificationTokenExpiry) {
+      if (!user.email_verification_token || !user.email_verification_token_expiry) {
         const response = errorResponse(
           'no_token',
           'No verification token found. Please request a new one.',
@@ -307,7 +309,7 @@ export class AuthManagementController {
       }
 
       // 5. Check token expiration
-      if (isTokenExpired(user.emailVerificationTokenExpiry)) {
+      if (isTokenExpired(user.email_verification_token_expiry)) {
         const response = errorResponse(
           'token_expired',
           'Verification token has expired. Please request a new one.',
@@ -319,7 +321,7 @@ export class AuthManagementController {
 
       // 6. Verify token matches
       const hashedInputToken = hashToken(token);
-      if (hashedInputToken !== user.emailVerificationToken) {
+      if (hashedInputToken !== user.email_verification_token) {
         const response = errorResponse(
           'invalid_token',
           'Invalid verification token',
@@ -330,12 +332,12 @@ export class AuthManagementController {
       }
 
       // 7. Update user: mark email as verified and clear token
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: user.id },
         data: {
-          emailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationTokenExpiry: null,
+          email_verified: true,
+          email_verification_token: null,
+          email_verification_token_expiry: null,
         },
       });
 
@@ -417,7 +419,7 @@ export class AuthManagementController {
       const { email } = validationResult.data as ForgotPasswordInput;
 
       // 2. Find user by email (but don't reveal if user exists)
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { email },
       });
 
@@ -427,12 +429,12 @@ export class AuthManagementController {
         const { token, hashedToken, expiry } = generatePasswordResetToken(1);
 
         // Update user with reset token
-        await this.prisma.user.update({
+        await this.prisma.users.update({
           where: { id: user.id },
           data: {
-            passwordResetToken: hashedToken,
-            passwordResetTokenExpiry: expiry,
-            passwordResetCount: {
+            password_reset_token: hashedToken,
+            password_reset_token_expiry: expiry,
+            password_reset_count: {
               increment: 1,
             },
           },
@@ -442,7 +444,7 @@ export class AuthManagementController {
         logger.info('Password reset requested', {
           userId: user.id,
           email: user.email,
-          resetCount: user.passwordResetCount + 1,
+          resetCount: user.password_reset_count + 1,
         });
 
         // Send password reset email (async - don't block on email failure)
@@ -529,7 +531,7 @@ export class AuthManagementController {
       const { token, email, newPassword } = validationResult.data as ResetPasswordInput;
 
       // 2. Find user by email
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { email },
       });
 
@@ -544,7 +546,7 @@ export class AuthManagementController {
       }
 
       // 3. Check if reset token exists
-      if (!user.passwordResetToken || !user.passwordResetTokenExpiry) {
+      if (!user.password_reset_token || !user.password_reset_token_expiry) {
         const response = errorResponse(
           'no_token',
           'No password reset token found. Please request a new one.',
@@ -555,7 +557,7 @@ export class AuthManagementController {
       }
 
       // 4. Check token expiration
-      if (isTokenExpired(user.passwordResetTokenExpiry)) {
+      if (isTokenExpired(user.password_reset_token_expiry)) {
         const response = errorResponse(
           'token_expired',
           'Password reset token has expired. Please request a new one.',
@@ -567,7 +569,7 @@ export class AuthManagementController {
 
       // 5. Verify token matches
       const hashedInputToken = hashToken(token);
-      if (hashedInputToken !== user.passwordResetToken) {
+      if (hashedInputToken !== user.password_reset_token) {
         const response = errorResponse(
           'invalid_token',
           'Invalid reset token',
@@ -594,13 +596,13 @@ export class AuthManagementController {
       const newPasswordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
 
       // 8. Update user: set new password, clear reset token, update timestamp
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: user.id },
         data: {
-          passwordHash: newPasswordHash,
-          passwordResetToken: null,
-          passwordResetTokenExpiry: null,
-          lastPasswordChange: new Date(),
+          password_hash: newPasswordHash,
+          password_reset_token: null,
+          password_reset_token_expiry: null,
+          last_password_change: new Date(),
         },
       });
 

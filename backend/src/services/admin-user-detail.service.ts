@@ -50,16 +50,16 @@ export class AdminUserDetailService {
   async getUserOverview(userId: string): Promise<UserOverviewResponse> {
     try {
       // Get user basic info
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         select: {
           id: true,
           email: true,
-          firstName: true,
-          lastName: true,
-          createdAt: true,
-          lastLoginAt: true,
-          isActive: true,
+          first_name: true,
+          last_name: true,
+          created_at: true,
+          last_login_at: true,
+          is_active: true,
         },
       });
 
@@ -68,72 +68,72 @@ export class AdminUserDetailService {
       }
 
       // Get current active subscription
-      const currentSubscription = await this.prisma.subscriptionMonetization.findFirst({
+      const currentSubscription = await this.prisma.subscription_monetization.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: 'active',
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
         select: {
           id: true,
           tier: true,
           status: true,
-          billingCycle: true,
-          monthlyCreditAllocation: true,
-          currentPeriodEnd: true,
-          createdAt: true,
+          billing_cycle: true,
+          monthly_credit_allocation: true,
+          current_period_end: true,
+          created_at: true,
         },
       });
 
       // Get current active license
-      const currentLicense = await this.prisma.perpetualLicense.findFirst({
+      const currentLicense = await this.prisma.perpetual_license.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: 'active',
         },
         orderBy: {
-          purchasedAt: 'desc',
+          purchased_at: 'desc',
         },
         select: {
           id: true,
-          licenseKey: true,
+          license_key: true,
           status: true,
-          activatedAt: true,
-          currentActivations: true,
-          maxActivations: true,
+          activated_at: true,
+          current_activations: true,
+          max_activations: true,
         },
       });
 
       // Get credit balance
-      const creditBalance = await this.prisma.userCreditBalance.findUnique({
-        where: { userId: userId },
+      const creditBalance = await this.prisma.user_credit_balance.findUnique({
+        where: { user_id: userId },
         select: {
           amount: true,
-          updatedAt: true,
+          updated_at: true,
         },
       });
 
       // Get quick stats
       const [totalSubscriptions, totalLicenses, totalCreditsConsumed, totalCouponsRedeemed] =
         await Promise.all([
-          this.prisma.subscriptionMonetization.count({
-            where: { userId },
+          this.prisma.subscription_monetization.count({
+            where: { user_id: userId },
           }),
-          this.prisma.perpetualLicense.count({
-            where: { userId },
+          this.prisma.perpetual_license.count({
+            where: { user_id: userId },
           }),
-          this.prisma.tokenUsageLedger.aggregate({
-            where: { userId: userId },
-            _sum: { creditsDeducted: true },
+          this.prisma.token_usage_ledger.aggregate({
+            where: { user_id: userId },
+            _sum: { credits_deducted: true },
           }),
-          this.prisma.couponRedemption.count({
+          this.prisma.coupon_redemption.count({
             where: {
-              subscription: {
-                userId,
+              subscription_monetization: {
+                user_id: userId,
               },
-              redemptionStatus: 'success',
+              redemption_status: 'success',
             },
           }),
         ]);
@@ -149,39 +149,39 @@ export class AdminUserDetailService {
           id: user.id,
           email: user.email,
           name:
-            user.firstName && user.lastName
-              ? `${user.firstName} ${user.lastName}`
-              : user.firstName || user.lastName || null,
-          createdAt: user.createdAt,
-          lastLogin: user.lastLoginAt,
-          status: user.isActive ? 'active' : 'suspended',
+            user.first_name && user.last_name
+              ? `${user.first_name} ${user.last_name}`
+              : user.first_name || user.last_name || null,
+          createdAt: user.created_at,
+          lastLogin: user.last_login_at,
+          status: user.is_active ? 'active' : 'suspended',
         },
         currentSubscription: currentSubscription
           ? {
               id: currentSubscription.id,
               tier: currentSubscription.tier,
               status: currentSubscription.status,
-              billingCycle: currentSubscription.billingCycle as 'monthly' | 'annual',
-              creditAllocation: currentSubscription.monthlyCreditAllocation,
-              nextBillingDate: currentSubscription.currentPeriodEnd,
-              startedAt: currentSubscription.createdAt,
+              billingCycle: currentSubscription.billing_cycle as 'monthly' | 'annual',
+              creditAllocation: currentSubscription.monthly_credit_allocation,
+              nextBillingDate: currentSubscription.current_period_end,
+              startedAt: currentSubscription.created_at,
             }
           : null,
         currentLicense: currentLicense
           ? {
               id: currentLicense.id,
-              licenseKey: currentLicense.licenseKey,
+              licenseKey: currentLicense.license_key,
               status: currentLicense.status as 'active' | 'pending' | 'revoked',
-              activatedAt: currentLicense.activatedAt,
-              deviceCount: currentLicense.currentActivations,
-              maxDevices: currentLicense.maxActivations,
+              activatedAt: currentLicense.activated_at,
+              deviceCount: currentLicense.current_activations,
+              maxDevices: currentLicense.max_activations,
             }
           : null,
         creditBalance: creditBalance?.amount || 0,
         stats: {
           totalSubscriptions: totalSubscriptions,
           totalLicenses: totalLicenses,
-          creditsConsumed: Number(totalCreditsConsumed._sum?.creditsDeducted || 0),
+          creditsConsumed: Number(totalCreditsConsumed._sum?.credits_deducted || 0),
           couponsRedeemed: totalCouponsRedeemed,
         },
       };
@@ -216,42 +216,42 @@ export class AdminUserDetailService {
       const safeOffset = Math.max(0, offset);
 
       // Get total count
-      const total = await this.prisma.subscriptionMonetization.count({
-        where: { userId },
+      const total = await this.prisma.subscription_monetization.count({
+        where: { user_id: userId },
       });
 
       // Get subscriptions with pagination
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
-        where: { userId },
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
+        where: { user_id: userId },
         skip: safeOffset,
         take: safeLimit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         select: {
           id: true,
           tier: true,
           status: true,
-          billingCycle: true,
-          monthlyCreditAllocation: true,
-          createdAt: true,
-          cancelledAt: true,
-          currentPeriodEnd: true,
-          basePriceUsd: true,
+          billing_cycle: true,
+          monthly_credit_allocation: true,
+          created_at: true,
+          cancelled_at: true,
+          current_period_end: true,
+          base_price_usd: true,
         },
       });
 
       // Get proration events for this user
-      const prorations = await this.prisma.prorationEvent.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const prorations = await this.prisma.proration_event.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
         take: safeLimit,
         select: {
           id: true,
-          fromTier: true,
-          toTier: true,
-          unusedCreditValueUsd: true,
-          newTierProratedCostUsd: true,
-          netChargeUsd: true,
-          createdAt: true,
+          from_tier: true,
+          to_tier: true,
+          unused_credit_value_usd: true,
+          new_tier_prorated_cost_usd: true,
+          net_charge_usd: true,
+          created_at: true,
         },
       });
 
@@ -266,21 +266,21 @@ export class AdminUserDetailService {
           id: sub.id,
           tier: sub.tier,
           status: sub.status,
-          billingCycle: sub.billingCycle as 'monthly' | 'annual',
-          monthlyCreditAllocation: sub.monthlyCreditAllocation,
-          startedAt: sub.createdAt,
-          endedAt: sub.cancelledAt,
-          nextBillingDate: sub.status === 'active' ? sub.currentPeriodEnd : null,
-          monthlyPriceUsd: Number(sub.basePriceUsd),
+          billingCycle: sub.billing_cycle as 'monthly' | 'annual',
+          monthlyCreditAllocation: sub.monthly_credit_allocation,
+          startedAt: sub.created_at,
+          endedAt: sub.cancelled_at,
+          nextBillingDate: sub.status === 'active' ? sub.current_period_end : null,
+          monthlyPriceUsd: Number(sub.base_price_usd),
         })),
         prorations: prorations.map((pro) => ({
           id: pro.id,
-          fromTier: pro.fromTier || 'unknown',
-          toTier: pro.toTier || 'unknown',
-          fromPriceUsd: Number(pro.unusedCreditValueUsd),
-          toPriceUsd: Number(pro.newTierProratedCostUsd),
-          prorationAmountUsd: Number(pro.netChargeUsd),
-          createdAt: pro.createdAt,
+          fromTier: pro.from_tier || 'unknown',
+          toTier: pro.to_tier || 'unknown',
+          fromPriceUsd: Number(pro.unused_credit_value_usd),
+          toPriceUsd: Number(pro.new_tier_prorated_cost_usd),
+          prorationAmountUsd: Number(pro.net_charge_usd),
+          createdAt: pro.created_at,
         })),
         total,
         limit: safeLimit,
@@ -317,25 +317,25 @@ export class AdminUserDetailService {
       const safeOffset = Math.max(0, offset);
 
       // Get total count
-      const total = await this.prisma.perpetualLicense.count({
-        where: { userId },
+      const total = await this.prisma.perpetual_license.count({
+        where: { user_id: userId },
       });
 
       // Get licenses with device activations (avoid N+1 by using include)
-      const licenses = await this.prisma.perpetualLicense.findMany({
-        where: { userId },
+      const licenses = await this.prisma.perpetual_license.findMany({
+        where: { user_id: userId },
         skip: safeOffset,
         take: safeLimit,
-        orderBy: { purchasedAt: 'desc' },
+        orderBy: { purchased_at: 'desc' },
         include: {
-          activations: {
-            orderBy: { activatedAt: 'desc' },
+          license_activation: {
+            orderBy: { activated_at: 'desc' },
             select: {
               id: true,
-              deviceName: true,
-              machineFingerprint: true,
-              activatedAt: true,
-              lastSeenAt: true,
+              device_name: true,
+              machine_fingerprint: true,
+              activated_at: true,
+              last_seen_at: true,
               status: true,
             },
           },
@@ -343,16 +343,16 @@ export class AdminUserDetailService {
       });
 
       // Get version upgrades
-      const upgrades = await this.prisma.versionUpgrade.findMany({
-        where: { userId },
-        orderBy: { purchasedAt: 'desc' },
+      const upgrades = await this.prisma.version_upgrade.findMany({
+        where: { user_id: userId },
+        orderBy: { purchased_at: 'desc' },
         take: safeLimit,
         select: {
           id: true,
-          fromVersion: true,
-          toVersion: true,
-          upgradePriceUsd: true,
-          purchasedAt: true,
+          from_version: true,
+          to_version: true,
+          upgrade_price_usd: true,
+          purchased_at: true,
         },
       });
 
@@ -365,27 +365,27 @@ export class AdminUserDetailService {
       return {
         licenses: licenses.map((license) => ({
           id: license.id,
-          licenseKey: license.licenseKey,
+          licenseKey: license.license_key,
           status: license.status as 'active' | 'pending' | 'revoked',
-          purchasePriceUsd: Number(license.purchasePriceUsd),
-          purchaseDate: license.purchasedAt,
-          activatedAt: license.activatedAt,
-          eligibleUntilVersion: license.eligibleUntilVersion,
-          deviceActivations: license.activations.map((activation) => ({
+          purchasePriceUsd: Number(license.purchase_price_usd),
+          purchaseDate: license.purchased_at,
+          activatedAt: license.activated_at,
+          eligibleUntilVersion: license.eligible_until_version,
+          deviceActivations: license.license_activation.map((activation: any) => ({
             id: activation.id,
-            deviceName: activation.deviceName,
-            deviceId: activation.machineFingerprint,
-            activatedAt: activation.activatedAt,
-            lastSeenAt: activation.lastSeenAt,
+            deviceName: activation.device_name,
+            deviceId: activation.machine_fingerprint,
+            activatedAt: activation.activated_at,
+            lastSeenAt: activation.last_seen_at,
             status: activation.status as 'active' | 'deactivated',
           })),
         })),
         upgrades: upgrades.map((upgrade) => ({
           id: upgrade.id,
-          fromVersion: upgrade.fromVersion,
-          toVersion: upgrade.toVersion,
-          upgradePriceUsd: Number(upgrade.upgradePriceUsd),
-          upgradeDate: upgrade.purchasedAt,
+          fromVersion: upgrade.from_version,
+          toVersion: upgrade.to_version,
+          upgradePriceUsd: Number(upgrade.upgrade_price_usd),
+          upgradeDate: upgrade.purchased_at,
         })),
         total,
         limit: safeLimit,
@@ -427,83 +427,83 @@ export class AdminUserDetailService {
       const { startDate, endDate } = this.calculatePeriodDates(period);
 
       // Get current balance
-      const balance = await this.prisma.userCreditBalance.findUnique({
-        where: { userId: userId },
+      const balance = await this.prisma.user_credit_balance.findUnique({
+        where: { user_id: userId },
         select: {
           amount: true,
-          updatedAt: true,
+          updated_at: true,
         },
       });
 
       // Get credit allocations
-      const allocations = await this.prisma.creditAllocation.findMany({
+      const allocations = await this.prisma.credit_allocation.findMany({
         where: {
-          userId,
-          createdAt: {
+          user_id: userId,
+          created_at: {
             gte: startDate,
             lte: endDate,
           },
         },
         skip: safeOffset,
         take: safeLimit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         select: {
           id: true,
           amount: true,
           source: true,
-          createdAt: true,
+          created_at: true,
         },
       });
 
       // Get usage by model (aggregated from TokenUsageLedger)
-      const usageByModel = await this.prisma.tokenUsageLedger.groupBy({
-        by: ['modelId'],
+      const usageByModel = await this.prisma.token_usage_ledger.groupBy({
+        by: ['model_id'],
         where: {
-          userId: userId,
-          createdAt: {
+          user_id: userId,
+          created_at: {
             gte: startDate,
             lte: endDate,
           },
         },
         _sum: {
-          creditsDeducted: true,
+          credits_deducted: true,
         },
         _count: {
           id: true,
         },
       });
 
-      // Usage by model now groups by modelId (string), use modelId as the identifier
-      const modelPricingMap = new Map(usageByModel.map((u) => [u.modelId, u.modelId]));
+      // Usage by model now groups by model_id (string), use model_id as the identifier
+      const modelPricingMap = new Map(usageByModel.map((u) => [u.model_id, u.model_id]));
 
       // Get deductions
-      const deductions = await this.prisma.creditDeductionLedger.findMany({
+      const deductions = await this.prisma.credit_deduction_ledger.findMany({
         where: {
-          userId: userId,
-          createdAt: {
+          user_id: userId,
+          created_at: {
             gte: startDate,
             lte: endDate,
           },
         },
         skip: safeOffset,
         take: safeLimit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
         select: {
           id: true,
           amount: true,
-          createdAt: true,
-          requestId: true,
+          created_at: true,
+          request_id: true,
         },
       });
 
       // Get total allocations and deductions
       const [totalAllocations, totalDeductions] = await Promise.all([
-        this.prisma.creditAllocation.aggregate({
-          where: { userId },
+        this.prisma.credit_allocation.aggregate({
+          where: { user_id: userId },
           _sum: { amount: true },
         }),
-        this.prisma.creditDeductionLedger.aggregate({
-          where: { userId: userId },
+        this.prisma.credit_deduction_ledger.aggregate({
+          where: { user_id: userId },
           _sum: { amount: true },
         }),
       ]);
@@ -519,29 +519,29 @@ export class AdminUserDetailService {
       return {
         balance: {
           amount: balance?.amount || 0,
-          lastUpdated: balance?.updatedAt || new Date(),
+          lastUpdated: balance?.updated_at || new Date(),
         },
         allocations: allocations.map((alloc) => ({
           id: alloc.id,
           amount: alloc.amount,
           source: alloc.source as any,
           reason: null, // Not stored in current schema
-          allocatedAt: alloc.createdAt,
+          allocatedAt: alloc.created_at,
         })),
         usage: usageByModel.map((usage) => ({
-          model: modelPricingMap.get(usage.modelId) || 'Unknown Model',
-          totalCredits: usage._sum?.creditsDeducted || 0,
+          model: modelPricingMap.get(usage.model_id) || 'Unknown Model',
+          totalCredits: usage._sum?.credits_deducted || 0,
           requestCount: usage._count?.id || 0,
         })),
         deductions: deductions.map((deduction) => ({
           id: deduction.id,
           amount: deduction.amount,
           modelUsed: 'Unknown', // Would need to join with usage ledger
-          timestamp: deduction.createdAt,
+          timestamp: deduction.created_at,
         })),
         totalAllocations: totalAllocations._sum?.amount || 0,
         totalUsage: usageByModel.reduce(
-          (sum, u) => sum + (u._sum?.creditsDeducted || 0),
+          (sum, u) => sum + (u._sum?.credits_deducted || 0),
           0
         ),
         totalDeductions: totalDeductions._sum?.amount || 0,
@@ -577,34 +577,34 @@ export class AdminUserDetailService {
       const safeOffset = Math.max(0, offset);
 
       // Get total count
-      const total = await this.prisma.couponRedemption.count({
+      const total = await this.prisma.coupon_redemption.count({
         where: {
-          subscription: {
-            userId,
+          subscription_monetization: {
+            user_id: userId,
           },
         },
       });
 
       // Get coupon redemptions
-      const redemptions = await this.prisma.couponRedemption.findMany({
+      const redemptions = await this.prisma.coupon_redemption.findMany({
         where: {
-          subscription: {
-            userId,
+          subscription_monetization: {
+            user_id: userId,
           },
         },
         skip: safeOffset,
         take: safeLimit,
-        orderBy: { redemptionDate: 'desc' },
+        orderBy: { redemption_date: 'desc' },
         include: {
           coupon: {
             select: {
               code: true,
-              couponType: true,
-              discountType: true,
-              discountValue: true,
+              coupon_type: true,
+              discount_type: true,
+              discount_value: true,
             },
           },
-          subscription: {
+          subscription_monetization: {
             select: {
               tier: true,
             },
@@ -613,9 +613,9 @@ export class AdminUserDetailService {
       });
 
       // Get fraud flags for this user
-      const fraudFlags = await this.prisma.couponFraudDetection.findMany({
-        where: { userId },
-        orderBy: { detectedAt: 'desc' },
+      const fraudFlags = await this.prisma.coupon_fraud_detection.findMany({
+        where: { user_id: userId },
+        orderBy: { detected_at: 'desc' },
         take: safeLimit,
         include: {
           coupon: {
@@ -627,15 +627,15 @@ export class AdminUserDetailService {
       });
 
       // Calculate total discount value
-      const totalDiscountSum = await this.prisma.couponRedemption.aggregate({
+      const totalDiscountSum = await this.prisma.coupon_redemption.aggregate({
         where: {
-          subscription: {
-            userId,
+          subscription_monetization: {
+            user_id: userId,
           },
-          redemptionStatus: 'success',
+          redemption_status: 'success',
         },
         _sum: {
-          discountAppliedUsd: true,
+          discount_applied_usd: true,
         },
       });
 
@@ -650,23 +650,23 @@ export class AdminUserDetailService {
           id: redemption.id,
           coupon: {
             code: redemption.coupon.code,
-            type: redemption.coupon.couponType,
-            discountType: redemption.coupon.discountType,
-            discountValue: Number(redemption.coupon.discountValue),
+            type: redemption.coupon.coupon_type,
+            discountType: redemption.coupon.discount_type,
+            discountValue: Number(redemption.coupon.discount_value),
           },
-          redeemedAt: redemption.redemptionDate,
-          discountValueUsd: Number(redemption.discountAppliedUsd),
-          subscriptionTierGranted: redemption.subscription?.tier || null,
+          redeemedAt: redemption.redemption_date,
+          discountValueUsd: Number(redemption.discount_applied_usd),
+          subscriptionTierGranted: redemption.subscription_monetization?.tier || null,
           perpetualLicenseGranted: false, // Not tracked in current schema
         })),
         fraudFlags: fraudFlags.map((flag) => ({
           id: flag.id,
           couponCode: flag.coupon.code,
-          flagReason: flag.detectionType,
+          flagReason: flag.detection_type,
           severity: flag.severity as 'low' | 'medium' | 'high',
-          flaggedAt: flag.detectedAt,
+          flaggedAt: flag.detected_at,
         })),
-        totalDiscountValue: Number(totalDiscountSum._sum.discountAppliedUsd || 0) * 100, // Convert to cents
+        totalDiscountValue: Number(totalDiscountSum._sum.discount_applied_usd || 0) * 100, // Convert to cents
         total,
         limit: safeLimit,
         offset: safeOffset,
@@ -703,15 +703,15 @@ export class AdminUserDetailService {
       });
 
       // Get Stripe customer ID from subscription if exists
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
-        where: { userId },
-        select: { stripeCustomerId: true },
+      const subscription = await this.prisma.subscription_monetization.findFirst({
+        where: { user_id: userId },
+        select: { stripe_customer_id: true },
       });
 
       return {
         invoices: [],
         paymentMethod: null,
-        stripeCustomerId: subscription?.stripeCustomerId || null,
+        stripeCustomerId: subscription?.stripe_customer_id || null,
         total: 0,
         limit,
         offset,
@@ -760,15 +760,15 @@ export class AdminUserDetailService {
 
       // Subscription activities
       if (type === 'all' || type === 'subscription') {
-        const subscriptions = await this.prisma.subscriptionMonetization.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
+        const subscriptions = await this.prisma.subscription_monetization.findMany({
+          where: { user_id: userId },
+          orderBy: { created_at: 'desc' },
           take: safeLimit,
           select: {
             id: true,
             tier: true,
             status: true,
-            createdAt: true,
+            created_at: true,
           },
         });
 
@@ -779,22 +779,22 @@ export class AdminUserDetailService {
             action: 'created',
             description: `Subscription ${sub.status} for ${sub.tier} tier`,
             metadata: { tier: sub.tier, status: sub.status },
-            timestamp: sub.createdAt,
+            timestamp: sub.created_at,
           }))
         );
       }
 
       // License activities
       if (type === 'all' || type === 'license') {
-        const licenses = await this.prisma.perpetualLicense.findMany({
-          where: { userId },
-          orderBy: { purchasedAt: 'desc' },
+        const licenses = await this.prisma.perpetual_license.findMany({
+          where: { user_id: userId },
+          orderBy: { purchased_at: 'desc' },
           take: safeLimit,
           select: {
             id: true,
-            licenseKey: true,
+            license_key: true,
             status: true,
-            purchasedAt: true,
+            purchased_at: true,
           },
         });
 
@@ -803,22 +803,22 @@ export class AdminUserDetailService {
             id: license.id,
             type: 'license' as UserActivityType,
             action: 'purchased',
-            description: `Perpetual license purchased (${license.licenseKey})`,
-            metadata: { licenseKey: license.licenseKey, status: license.status },
-            timestamp: license.purchasedAt,
+            description: `Perpetual license purchased (${license.license_key})`,
+            metadata: { licenseKey: license.license_key, status: license.status },
+            timestamp: license.purchased_at,
           }))
         );
       }
 
       // Coupon activities
       if (type === 'all' || type === 'coupon') {
-        const coupons = await this.prisma.couponRedemption.findMany({
+        const coupons = await this.prisma.coupon_redemption.findMany({
           where: {
-            subscription: {
-              userId,
+            subscription_monetization: {
+              user_id: userId,
             },
           },
-          orderBy: { redemptionDate: 'desc' },
+          orderBy: { redemption_date: 'desc' },
           take: safeLimit,
           include: {
             coupon: { select: { code: true } },
@@ -832,22 +832,22 @@ export class AdminUserDetailService {
             action: 'redeemed',
             description: `Coupon ${coupon.coupon.code} redeemed`,
             metadata: { code: coupon.coupon.code },
-            timestamp: coupon.redemptionDate,
+            timestamp: coupon.redemption_date,
           }))
         );
       }
 
       // Credit activities
       if (type === 'all' || type === 'credit') {
-        const credits = await this.prisma.creditAllocation.findMany({
-          where: { userId },
-          orderBy: { createdAt: 'desc' },
+        const credits = await this.prisma.credit_allocation.findMany({
+          where: { user_id: userId },
+          orderBy: { created_at: 'desc' },
           take: safeLimit,
           select: {
             id: true,
             amount: true,
             source: true,
-            createdAt: true,
+            created_at: true,
           },
         });
 
@@ -858,22 +858,22 @@ export class AdminUserDetailService {
             action: 'allocated',
             description: `${credit.amount} credits allocated from ${credit.source}`,
             metadata: { amount: credit.amount, source: credit.source },
-            timestamp: credit.createdAt,
+            timestamp: credit.created_at,
           }))
         );
       }
 
       // Device activities
       if (type === 'all' || type === 'device') {
-        const devices = await this.prisma.licenseActivation.findMany({
-          where: { userId },
-          orderBy: { activatedAt: 'desc' },
+        const devices = await this.prisma.license_activation.findMany({
+          where: { user_id: userId },
+          orderBy: { activated_at: 'desc' },
           take: safeLimit,
           select: {
             id: true,
-            deviceName: true,
+            device_name: true,
             status: true,
-            activatedAt: true,
+            activated_at: true,
           },
         });
 
@@ -882,9 +882,9 @@ export class AdminUserDetailService {
             id: device.id,
             type: 'device' as UserActivityType,
             action: device.status === 'active' ? 'activated' : 'deactivated',
-            description: `Device ${device.deviceName || 'Unknown'} ${device.status}`,
-            metadata: { deviceName: device.deviceName, status: device.status },
-            timestamp: device.activatedAt,
+            description: `Device ${device.device_name || 'Unknown'} ${device.status}`,
+            metadata: { deviceName: device.device_name, status: device.status },
+            timestamp: device.activated_at,
           }))
         );
       }

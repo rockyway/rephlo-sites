@@ -6,7 +6,33 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, WebhookConfig, WebhookLog } from '@prisma/client';
+import crypto from 'crypto';
+import { PrismaClient } from '@prisma/client';
+
+// Type aliases for snake_case Prisma models
+type WebhookConfig = {
+  id: string;
+  created_at: Date;
+  updated_at: Date;
+  is_active: boolean;
+  user_id: string;
+  webhook_url: string;
+  webhook_secret: string;
+};
+
+type WebhookLog = {
+  id: string;
+  created_at: Date;
+  webhook_config_id: string;
+  event_type: string;
+  payload: any;
+  status: string;
+  attempts: number;
+  status_code: number | null;
+  response_body: string | null;
+  error_message: string | null;
+  completed_at: Date | null;
+};
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 import logger from '../utils/logger';
@@ -64,8 +90,8 @@ export class WebhookService implements IWebhookService {
   ): Promise<void> {
     try {
       // Check if user has webhook configured
-      const webhookConfig = await this.prisma.webhookConfig.findUnique({
-        where: { userId },
+      const webhookConfig = await this.prisma.webhook_configs.findUnique({
+        where: { user_id: userId },
       });
 
       if (!webhookConfig) {
@@ -73,7 +99,7 @@ export class WebhookService implements IWebhookService {
         return;
       }
 
-      if (!webhookConfig.isActive) {
+      if (!webhookConfig.is_active) {
         logger.debug('WebhookService: Webhook disabled', { userId, eventType });
         return;
       }
@@ -86,10 +112,11 @@ export class WebhookService implements IWebhookService {
       };
 
       // Create webhook log entry
-      const webhookLog = await this.prisma.webhookLog.create({
+      const webhookLog = await this.prisma.webhook_logs.create({
         data: {
-          webhookConfigId: webhookConfig.id,
-          eventType,
+          id: crypto.randomUUID(),
+          webhook_config_id: webhookConfig.id,
+          event_type: eventType,
           payload,
           status: 'pending',
           attempts: 0,
@@ -143,7 +170,7 @@ export class WebhookService implements IWebhookService {
   ): Promise<{ statusCode: number; responseBody: string }> {
     try {
       // Get webhook configuration
-      const webhookConfig = await this.prisma.webhookConfig.findUnique({
+      const webhookConfig = await this.prisma.webhook_configs.findUnique({
         where: { id: webhookConfigId },
       });
 
@@ -152,7 +179,7 @@ export class WebhookService implements IWebhookService {
       }
 
       // Generate HMAC signature
-      const signature = generateWebhookSignature(payload, webhookConfig.webhookSecret);
+      const signature = generateWebhookSignature(payload, webhookConfig.webhook_secret);
       const timestamp = getCurrentTimestamp();
 
       // Prepare headers
@@ -173,10 +200,10 @@ export class WebhookService implements IWebhookService {
         webhookConfigId,
         eventType,
         attempt,
-        url: webhookConfig.webhookUrl,
+        url: webhookConfig.webhook_url,
       });
 
-      const response = await fetch(webhookConfig.webhookUrl, {
+      const response = await fetch(webhookConfig.webhook_url, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
@@ -229,15 +256,15 @@ export class WebhookService implements IWebhookService {
     attempts?: number
   ): Promise<void> {
     try {
-      await this.prisma.webhookLog.update({
+      await this.prisma.webhook_logs.update({
         where: { id: webhookLogId },
         data: {
           status,
-          statusCode,
-          responseBody,
-          errorMessage,
+          status_code: statusCode,
+          response_body: responseBody,
+          error_message: errorMessage,
           attempts,
-          completedAt: status !== 'pending' ? new Date() : undefined,
+          completed_at: status !== 'pending' ? new Date() : undefined,
         },
       });
 
@@ -261,8 +288,8 @@ export class WebhookService implements IWebhookService {
    * @returns Webhook configuration or null
    */
   async getWebhookConfig(userId: string): Promise<WebhookConfig | null> {
-    return this.prisma.webhookConfig.findUnique({
-      where: { userId },
+    return this.prisma.webhook_configs.findUnique({
+      where: { user_id: userId },
     });
   }
 
@@ -279,18 +306,20 @@ export class WebhookService implements IWebhookService {
     webhookUrl: string,
     webhookSecret: string
   ): Promise<WebhookConfig> {
-    return this.prisma.webhookConfig.upsert({
-      where: { userId },
+    return this.prisma.webhook_configs.upsert({
+      where: { user_id: userId },
       create: {
-        userId,
-        webhookUrl,
-        webhookSecret,
-        isActive: true,
+        id: crypto.randomUUID(),
+        user_id: userId,
+        webhook_url: webhookUrl,
+        webhook_secret: webhookSecret,
+        is_active: true,
+        updated_at: new Date(),
       },
       update: {
-        webhookUrl,
-        webhookSecret,
-        isActive: true,
+        webhook_url: webhookUrl,
+        webhook_secret: webhookSecret,
+        is_active: true,
       },
     });
   }
@@ -301,8 +330,8 @@ export class WebhookService implements IWebhookService {
    * @param userId - User ID
    */
   async deleteWebhookConfig(userId: string): Promise<void> {
-    await this.prisma.webhookConfig.delete({
-      where: { userId },
+    await this.prisma.webhook_configs.delete({
+      where: { user_id: userId },
     });
   }
 
@@ -317,9 +346,9 @@ export class WebhookService implements IWebhookService {
     webhookConfigId: string,
     limit: number = 50
   ): Promise<WebhookLog[]> {
-    return this.prisma.webhookLog.findMany({
-      where: { webhookConfigId },
-      orderBy: { createdAt: 'desc' },
+    return this.prisma.webhook_logs.findMany({
+      where: { webhook_config_id: webhookConfigId },
+      orderBy: { created_at: 'desc' },
       take: limit,
     });
   }

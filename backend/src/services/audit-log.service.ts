@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * Audit Log Service
  *
@@ -14,7 +15,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, AdminAuditLog } from '@prisma/client';
+import { PrismaClient, admin_audit_log as AdminAuditLog } from '@prisma/client';
 import logger from '../utils/logger';
 
 export interface AuditLogEntry {
@@ -57,8 +58,9 @@ export class AuditLogService {
    */
   async log(entry: AuditLogEntry): Promise<void> {
     try {
-      await this.prisma.adminAuditLog.create({
+      await this.prisma.admin_audit_log.create({
         data: {
+          id: randomUUID(),
           admin_user_id: entry.adminUserId,
           action: entry.action,
           resource_type: entry.resourceType,
@@ -72,7 +74,7 @@ export class AuditLogService {
           new_value: entry.newValue || null,
           status_code: entry.statusCode,
           error_message: entry.errorMessage,
-          timestamp: new Date()
+          timestamp: new Date(),
         }
       });
 
@@ -98,7 +100,7 @@ export class AuditLogService {
    * @returns Array of audit log entries with admin user details
    */
   async getLogs(filters: AuditLogFilters): Promise<AdminAuditLog[]> {
-    return this.prisma.adminAuditLog.findMany({
+    return this.prisma.admin_audit_log.findMany({
       where: {
         admin_user_id: filters.adminUserId,
         resource_type: filters.resourceType,
@@ -112,12 +114,12 @@ export class AuditLogService {
       take: filters.limit || 100,
       skip: filters.offset || 0,
       include: {
-        admin_user: {
+        users: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true
+            first_name: true,
+            last_name: true
           }
         }
       }
@@ -133,7 +135,7 @@ export class AuditLogService {
    * @returns Total count of matching audit logs
    */
   async getLogCount(filters: Omit<AuditLogFilters, 'limit' | 'offset'>): Promise<number> {
-    return this.prisma.adminAuditLog.count({
+    return this.prisma.admin_audit_log.count({
       where: {
         admin_user_id: filters.adminUserId,
         resource_type: filters.resourceType,
@@ -161,7 +163,7 @@ export class AuditLogService {
     resourceId: string,
     limit: number = 50
   ): Promise<AdminAuditLog[]> {
-    return this.prisma.adminAuditLog.findMany({
+    return this.prisma.admin_audit_log.findMany({
       where: {
         resource_type: resourceType,
         resource_id: resourceId
@@ -169,12 +171,12 @@ export class AuditLogService {
       orderBy: { timestamp: 'desc' },
       take: limit,
       include: {
-        admin_user: {
+        users: {
           select: {
             id: true,
             email: true,
-            firstName: true,
-            lastName: true
+            first_name: true,
+            last_name: true
           }
         }
       }
@@ -194,7 +196,7 @@ export class AuditLogService {
     adminUserId: string,
     limit: number = 100
   ): Promise<AdminAuditLog[]> {
-    return this.prisma.adminAuditLog.findMany({
+    return this.prisma.admin_audit_log.findMany({
       where: {
         admin_user_id: adminUserId
       },

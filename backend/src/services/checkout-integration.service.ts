@@ -8,7 +8,8 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, Coupon, PerpetualLicense, CouponRedemption } from '@prisma/client';
+import { PrismaClient, coupon as Coupon, perpetual_license as PerpetualLicense, coupon_redemption as CouponRedemption } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { CouponValidationService } from './coupon-validation.service';
 import { CouponRedemptionService } from './coupon-redemption.service';
 import { LicenseManagementService } from './license-management.service';
@@ -46,7 +47,7 @@ export class CheckoutIntegrationService {
     logger.info('Applying coupon to checkout', { couponCode, userId: checkoutSession.userId });
 
     // Step 1: Fetch subscription to get actual tier (GAP FIX #2)
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: checkoutSession.subscriptionId }
     });
 
@@ -136,7 +137,7 @@ export class CheckoutIntegrationService {
   async applyDurationBonus(subscriptionId: string, bonusMonths: number): Promise<void> {
     logger.info('Applying duration bonus', { subscriptionId, bonusMonths });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -144,12 +145,12 @@ export class CheckoutIntegrationService {
       throw new Error('Subscription not found');
     }
 
-    const newEndDate = new Date(subscription.currentPeriodEnd);
+    const newEndDate = new Date(subscription.current_period_end);
     newEndDate.setMonth(newEndDate.getMonth() + bonusMonths);
 
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
-      data: { currentPeriodEnd: newEndDate },
+      data: { current_period_end: newEndDate },
     });
   }
 
@@ -160,7 +161,7 @@ export class CheckoutIntegrationService {
   ): Promise<void> {
     logger.info('Applying percentage discount', { subscriptionId, percentage, durationMonths });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -168,12 +169,12 @@ export class CheckoutIntegrationService {
       throw new Error('Subscription not found');
     }
 
-    const discountedPrice = parseFloat(subscription.basePriceUsd.toString()) * (1 - percentage / 100);
+    const discountedPrice = parseFloat(subscription.base_price_usd.toString()) * (1 - percentage / 100);
 
-    await this.prisma.subscriptionMonetization.update({
+    await this.prisma.subscription_monetization.update({
       where: { id: subscriptionId },
       data: {
-        basePriceUsd: discountedPrice,
+        base_price_usd: discountedPrice,
         // TODO: Store discount duration and revert after N months
       },
     });
@@ -182,10 +183,10 @@ export class CheckoutIntegrationService {
   async applyFixedDiscount(invoiceId: string, amount: number): Promise<void> {
     logger.info('Applying fixed discount to invoice', { invoiceId, amount });
 
-    await this.prisma.billingInvoice.update({
+    await this.prisma.billing_invoice.update({
       where: { id: invoiceId },
       data: {
-        amountDue: { decrement: amount },
+        amount_due: { decrement: amount },
       },
     });
   }
@@ -193,13 +194,14 @@ export class CheckoutIntegrationService {
   async grantCouponCredits(userId: string, amount: number, couponId: string): Promise<void> {
     logger.info('Granting coupon credits', { userId, amount, couponId });
 
-    await this.prisma.creditAllocation.create({
+    await this.prisma.credit_allocation.create({
       data: {
-        userId,
-        subscriptionId: null,
+        id: randomUUID(),
+        user_id: userId,
+        subscription_id: null,
         amount,
-        allocationPeriodStart: new Date(),
-        allocationPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+        allocation_period_start: new Date(),
+        allocation_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
         source: 'coupon',
       },
     });
@@ -219,7 +221,7 @@ export class CheckoutIntegrationService {
       logger.info('CheckoutIntegrationService: Perpetual license granted successfully', {
         userId,
         licenseId: license.id,
-        licenseKey: license.licenseKey,
+        licenseKey: license.license_key,
       });
 
       return license;
@@ -249,31 +251,31 @@ export class CheckoutIntegrationService {
   } | null> {
     logger.debug('CheckoutIntegrationService: Getting active discount', { subscriptionId });
 
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
       include: {
-        couponRedemptions: {
+        coupon_redemption: {
           where: {
-            redemptionStatus: 'success', // Successfully redeemed coupons only
+            redemption_status: 'success', // Successfully redeemed coupons only
           },
           include: {
             coupon: true,
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           take: 1,
         },
       },
-    });
+    }) as any;
 
-    if (!subscription || !subscription.couponRedemptions.length) {
+    if (!subscription || !subscription.coupon_redemption?.length) {
       return null;
     }
 
-    const redemption = subscription.couponRedemptions[0];
+    const redemption = subscription.coupon_redemption[0];
     const coupon = redemption.coupon;
 
     // Calculate effective price based on discount type
-    const basePriceUsd = parseFloat(subscription.basePriceUsd.toString());
+    const basePriceUsd = parseFloat(subscription.base_price_usd.toString());
     let effectivePrice = basePriceUsd;
     const discountType = coupon.discountType as 'percentage' | 'fixed_amount';
     const discountValue = parseFloat(coupon.discountValue.toString());
@@ -310,8 +312,8 @@ export class CheckoutIntegrationService {
     tier: string,
     billingCycle: string
   ): Promise<number> {
-    const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-      where: { tierName: tier },
+    const tierConfig = await this.prisma.subscription_tier_config.findUnique({
+      where: { tier_name: tier },
     });
 
     if (!tierConfig) {
@@ -323,9 +325,9 @@ export class CheckoutIntegrationService {
 
     // Calculate based on billing cycle
     if (billingCycle === 'annual') {
-      return Number(tierConfig.annualPriceUsd);
+      return Number(tierConfig.annual_price_usd);
     } else {
-      return Number(tierConfig.monthlyPriceUsd);
+      return Number(tierConfig.monthly_price_usd);
     }
   }
 
@@ -356,7 +358,7 @@ export class CheckoutIntegrationService {
     });
 
     // Step 1: Validate coupon against actual subscription tier
-    const subscription = await this.prisma.subscriptionMonetization.findUnique({
+    const subscription = await this.prisma.subscription_monetization.findUnique({
       where: { id: subscriptionId },
     });
 
@@ -367,12 +369,12 @@ export class CheckoutIntegrationService {
     // Get billing-cycle-aware pricing for new tier
     const newTierPrice = await this.getTierPriceForBillingCycle(
       newTier,
-      subscription.billingCycle
+      subscription.billing_cycle
     );
 
     logger.debug('CheckoutIntegrationService: Billing-cycle-aware validation pricing', {
       newTier,
-      billingCycle: subscription.billingCycle,
+      billingCycle: subscription.billing_cycle,
       newTierPrice,
     });
 

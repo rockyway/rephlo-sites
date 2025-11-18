@@ -325,9 +325,9 @@ export function requireActiveUser() {
       const { container } = await import('../container');
       const prisma = container.resolve<PrismaClient>('PrismaClient');
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: req.user.sub },
-        select: { isActive: true, deletedAt: true },
+        select: { is_active: true, deleted_at: true },
       });
 
       if (!user) {
@@ -337,11 +337,11 @@ export function requireActiveUser() {
         throw unauthorizedError('User not found');
       }
 
-      if (!user.isActive || user.deletedAt) {
+      if (!user.is_active || user.deleted_at) {
         logger.warn('Auth middleware: user inactive or deleted', {
           userId: req.user.sub,
-          isActive: user.isActive,
-          deletedAt: user.deletedAt,
+          isActive: user.is_active,
+          deletedAt: user.deleted_at,
         });
         throw forbiddenError('Account is inactive or deleted');
       }
@@ -387,16 +387,16 @@ export async function getUserTier(
     const prisma = container.resolve<PrismaClient>('PrismaClient');
 
     // Query active subscription
-    const subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.subscriptions.findFirst({
       where: {
-        userId,
+        user_id: userId,
         status: 'active',
       },
       select: {
         tier: true,
       },
       orderBy: {
-        currentPeriodEnd: 'desc',
+        current_period_end: 'desc',
       },
     });
 
