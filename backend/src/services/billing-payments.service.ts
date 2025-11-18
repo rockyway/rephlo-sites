@@ -17,6 +17,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
 import logger from '../utils/logger';
 import { notFoundError, badRequestError, createApiError } from '../middleware/error.middleware';
@@ -27,34 +28,34 @@ import { notFoundError, badRequestError, createApiError } from '../middleware/er
 
 export interface Invoice {
   id: string;
-  userId: string;
-  subscriptionId: string | null;
-  stripeInvoiceId: string;
-  amountDue: number;
-  amountPaid: number;
+  user_id: string;
+  subscription_id: string | null;
+  stripe_invoice_id: string;
+  amount_due: number;
+  amount_paid: number;
   currency: string;
   status: 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
-  periodStart: Date;
-  periodEnd: Date;
-  invoicePdf: string | null;
-  hostedInvoiceUrl: string | null;
+  period_start: Date;
+  period_end: Date;
+  invoice_pdf: string | null;
+  hosted_invoice_url: string | null;
   createdAt: Date;
-  paidAt: Date | null;
+  paid_at: Date | null;
 }
 
 export interface PaymentTransaction {
   id: string;
-  userId: string;
-  invoiceId: string | null;
-  subscriptionId: string | null;
-  stripePaymentIntentId: string;
+  user_id: string;
+  invoice_id: string | null;
+  subscription_id: string | null;
+  stripe_payment_intent_id: string;
   amount: number;
   currency: string;
   status: 'pending' | 'succeeded' | 'failed' | 'cancelled' | 'refunded';
-  paymentMethodType: string | null;
-  failureReason: string | null;
+  payment_method_type: string | null;
+  failure_reason: string | null;
   createdAt: Date;
-  completedAt: Date | null;
+  completed_at: Date | null;
 }
 
 export interface DunningAttempt {
@@ -133,18 +134,18 @@ export class BillingPaymentsService {
 
     try {
       // Get subscription to find customer ID
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const subscription = await this.prisma.subscription_monetization.findFirst({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
       });
 
-      if (!subscription || !subscription.stripeCustomerId) {
+      if (!subscription || !subscription.stripe_customer_id) {
         throw badRequestError('No Stripe customer found for user');
       }
 
       // Attach payment method to customer
       await this.stripe.paymentMethods.attach(paymentMethodId, {
-        customer: subscription.stripeCustomerId,
+        customer: subscription.stripe_customer_id,
       });
 
       logger.info('BillingPaymentsService: Payment method added', { userId, paymentMethodId });
@@ -166,16 +167,16 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.setDefaultPaymentMethod', { userId, paymentMethodId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const subscription = await this.prisma.subscription_monetization.findFirst({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
       });
 
-      if (!subscription || !subscription.stripeCustomerId) {
+      if (!subscription || !subscription.stripe_customer_id) {
         throw badRequestError('No Stripe customer found for user');
       }
 
-      await this.stripe.customers.update(subscription.stripeCustomerId, {
+      await this.stripe.customers.update(subscription.stripe_customer_id, {
         invoice_settings: {
           default_payment_method: paymentMethodId,
         },
@@ -218,7 +219,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.createInvoice', { subscriptionId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -226,35 +227,36 @@ export class BillingPaymentsService {
         throw notFoundError('Subscription');
       }
 
-      if (!subscription.stripeSubscriptionId) {
+      if (!subscription.stripe_subscription_id) {
         throw badRequestError('Subscription does not have Stripe subscription ID');
       }
 
       // Create invoice in Stripe
       const stripeInvoice = await this.stripe.invoices.create({
-        customer: subscription.stripeCustomerId!,
-        subscription: subscription.stripeSubscriptionId,
+        customer: subscription.stripe_customer_id!,
+        subscription: subscription.stripe_subscription_id,
         auto_advance: true,
       });
 
       // Create invoice record in database
-      const invoice = await this.prisma.billingInvoice.create({
+      const invoice = await this.prisma.billing_invoice.create({
         data: {
-          userId: subscription.userId,
-          subscriptionId: subscription.id,
-          stripeInvoiceId: stripeInvoice.id,
-          amountDue: stripeInvoice.amount_due / 100,
-          amountPaid: stripeInvoice.amount_paid / 100,
+          id: randomUUID(),
+          user_id: subscription.user_id,
+          subscription_id: subscription.id,
+          stripe_invoice_id: stripeInvoice.id,
+          amount_due: stripeInvoice.amount_due / 100,
+          amount_paid: stripeInvoice.amount_paid / 100,
           currency: stripeInvoice.currency,
           status: stripeInvoice.status || 'draft',
-          periodStart: new Date(stripeInvoice.period_start * 1000),
-          periodEnd: new Date(stripeInvoice.period_end * 1000),
-          invoicePdf: stripeInvoice.invoice_pdf,
-          hostedInvoiceUrl: stripeInvoice.hosted_invoice_url,
+          period_start: new Date(stripeInvoice.period_start * 1000),
+          period_end: new Date(stripeInvoice.period_end * 1000),
+          invoice_pdf: stripeInvoice.invoice_pdf,
+          hosted_invoice_url: stripeInvoice.hosted_invoice_url,
         },
       });
 
-      logger.info('BillingPaymentsService: Invoice created', { invoiceId: invoice.id });
+      logger.info('BillingPaymentsService: Invoice created', { invoice_id: invoice.id });
 
       return this.mapInvoice(invoice);
     } catch (error) {
@@ -272,7 +274,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.payInvoice', { invoiceId });
 
     try {
-      const invoice = await this.prisma.billingInvoice.findUnique({
+      const invoice = await this.prisma.billing_invoice.findUnique({
         where: { id: invoiceId },
       });
 
@@ -281,30 +283,31 @@ export class BillingPaymentsService {
       }
 
       // Pay invoice in Stripe
-      const stripeInvoice = await this.stripe.invoices.pay(invoice.stripeInvoiceId);
+      const stripeInvoice = await this.stripe.invoices.pay(invoice.stripe_invoice_id);
 
       // Update invoice status
-      await this.prisma.billingInvoice.update({
+      await this.prisma.billing_invoice.update({
         where: { id: invoiceId },
         data: {
           status: stripeInvoice.status || 'paid',
-          amountPaid: stripeInvoice.amount_paid / 100,
-          paidAt: new Date(),
+          amount_paid: stripeInvoice.amount_paid / 100,
+          paid_at: new Date(),
         },
       });
 
       // Create payment transaction record
-      const transaction = await this.prisma.paymentTransaction.create({
+      const transaction = await this.prisma.payment_transaction.create({
         data: {
-          userId: invoice.userId,
-          invoiceId: invoice.id,
-          subscriptionId: invoice.subscriptionId,
-          stripePaymentIntentId: stripeInvoice.payment_intent as string,
+          id: randomUUID(),
+          user_id: invoice.user_id,
+          invoice_id: invoice.id,
+          subscription_id: invoice.subscription_id,
+          stripe_payment_intent_id: stripeInvoice.payment_intent as string,
           amount: stripeInvoice.amount_paid / 100,
           currency: stripeInvoice.currency,
           status: 'succeeded',
-          paymentMethodType: 'card', // TODO: Get actual payment method type
-          completedAt: new Date(),
+          payment_method_type: 'card', // TODO: Get actual payment method type
+          completed_at: new Date(),
         },
       });
 
@@ -326,7 +329,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.voidInvoice', { invoiceId });
 
     try {
-      const invoice = await this.prisma.billingInvoice.findUnique({
+      const invoice = await this.prisma.billing_invoice.findUnique({
         where: { id: invoiceId },
       });
 
@@ -335,10 +338,10 @@ export class BillingPaymentsService {
       }
 
       // Void invoice in Stripe
-      await this.stripe.invoices.voidInvoice(invoice.stripeInvoiceId);
+      await this.stripe.invoices.voidInvoice(invoice.stripe_invoice_id);
 
       // Update invoice status
-      const updatedInvoice = await this.prisma.billingInvoice.update({
+      const updatedInvoice = await this.prisma.billing_invoice.update({
         where: { id: invoiceId },
         data: { status: 'void' },
       });
@@ -381,6 +384,11 @@ export class BillingPaymentsService {
           await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
 
+        // Plan 192: Refund webhook handler
+        case 'charge.refunded':
+          await this.handleChargeRefunded(event.data.object as Stripe.Charge);
+          break;
+
         default:
           logger.debug('BillingPaymentsService: Unhandled webhook event type', { type: event.type });
       }
@@ -397,35 +405,68 @@ export class BillingPaymentsService {
    * @param invoice - Stripe invoice
    */
   async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-    logger.info('BillingPaymentsService.handlePaymentSucceeded', { invoiceId: invoice.id });
+    logger.info('BillingPaymentsService.handlePaymentSucceeded', { invoice_id: invoice.id });
 
     try {
       // Update or create invoice record
-      await this.prisma.billingInvoice.upsert({
-        where: { stripeInvoiceId: invoice.id },
+      await this.prisma.billing_invoice.upsert({
+        where: { stripe_invoice_id: invoice.id },
         update: {
           status: 'paid',
-          amountPaid: invoice.amount_paid / 100,
-          paidAt: new Date(),
+          amount_paid: invoice.amount_paid / 100,
+          paid_at: new Date(),
         },
         create: {
-          userId: invoice.customer_email || '', // TODO: Get userId from customer metadata
-          stripeInvoiceId: invoice.id,
-          amountDue: invoice.amount_due / 100,
-          amountPaid: invoice.amount_paid / 100,
+          user_id: invoice.customer_email || '', // TODO: Get userId from customer metadata
+          id: randomUUID(),
+          stripe_invoice_id: invoice.id,
+          amount_due: invoice.amount_due / 100,
+          amount_paid: invoice.amount_paid / 100,
           currency: invoice.currency,
           status: 'paid',
-          periodStart: new Date(invoice.period_start * 1000),
-          periodEnd: new Date(invoice.period_end * 1000),
-          invoicePdf: invoice.invoice_pdf,
-          hostedInvoiceUrl: invoice.hosted_invoice_url,
-          paidAt: new Date(),
+          period_start: new Date(invoice.period_start * 1000),
+          period_end: new Date(invoice.period_end * 1000),
+          invoice_pdf: invoice.invoice_pdf,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          paid_at: new Date(),
         },
       });
 
       // TODO: Allocate credits for the billing period
 
-      logger.info('BillingPaymentsService: Payment succeeded handled', { invoiceId: invoice.id });
+      // Plan 192: Check if this is a proration invoice
+      // If invoice metadata contains proration_event_id, mark proration as paid
+      if (invoice.metadata && invoice.metadata.proration_event_id) {
+        const prorationEventId = invoice.metadata.proration_event_id;
+
+        logger.info('BillingPaymentsService: Proration invoice paid, updating proration event', {
+          invoiceId: invoice.id,
+          prorationEventId,
+        });
+
+        try {
+          // Dynamically resolve ProrationService to avoid circular dependencies
+          const { ProrationService } = await import('./proration.service');
+          const prorationService = this.prisma.constructor.name === 'PrismaClient'
+            ? new ProrationService(this.prisma as any)
+            : new ProrationService(this.prisma);
+
+          await prorationService.markProrationPaid(prorationEventId, invoice.id);
+
+          logger.info('BillingPaymentsService: Proration marked as paid', {
+            prorationEventId,
+            invoiceId: invoice.id,
+          });
+        } catch (error) {
+          logger.error('BillingPaymentsService: Failed to mark proration as paid', {
+            prorationEventId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          // Don't throw - invoice payment succeeded, proration update is secondary
+        }
+      }
+
+      logger.info('BillingPaymentsService: Payment succeeded handled', { invoice_id: invoice.id });
     } catch (error) {
       logger.error('BillingPaymentsService.handlePaymentSucceeded: Error', { error });
       throw error;
@@ -437,20 +478,20 @@ export class BillingPaymentsService {
    * @param invoice - Stripe invoice
    */
   async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    logger.info('BillingPaymentsService.handlePaymentFailed', { invoiceId: invoice.id });
+    logger.info('BillingPaymentsService.handlePaymentFailed', { invoice_id: invoice.id });
 
     try {
       // Update invoice status
-      const dbInvoice = await this.prisma.billingInvoice.findUnique({
-        where: { stripeInvoiceId: invoice.id },
+      const dbInvoice = await this.prisma.billing_invoice.findUnique({
+        where: { stripe_invoice_id: invoice.id },
       });
 
       if (!dbInvoice) {
-        logger.warn('Invoice not found in database', { invoiceId: invoice.id });
+        logger.warn('Invoice not found in database', { invoice_id: invoice.id });
         return;
       }
 
-      await this.prisma.billingInvoice.update({
+      await this.prisma.billing_invoice.update({
         where: { id: dbInvoice.id },
         data: { status: 'open' }, // Keep as open for retry
       });
@@ -458,7 +499,7 @@ export class BillingPaymentsService {
       // Schedule dunning attempts
       await this.scheduleDunningAttempts(dbInvoice.id);
 
-      logger.info('BillingPaymentsService: Payment failed handled', { invoiceId: invoice.id });
+      logger.info('BillingPaymentsService: Payment failed handled', { invoice_id: invoice.id });
     } catch (error) {
       logger.error('BillingPaymentsService.handlePaymentFailed: Error', { error });
       throw error;
@@ -471,21 +512,20 @@ export class BillingPaymentsService {
    */
   async handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
     logger.info('BillingPaymentsService.handleSubscriptionUpdated', {
-      subscriptionId: subscription.id,
+      subscription_id: subscription.id,
     });
 
     try {
-      await this.prisma.subscriptionMonetization.updateMany({
-        where: { stripeSubscriptionId: subscription.id },
+      await this.prisma.subscription_monetization.updateMany({
+        where: { stripe_subscription_id: subscription.id },
         data: {
           status: subscription.status as any,
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          updatedAt: new Date(),
+          current_period_start: new Date(subscription.current_period_start * 1000),
+          current_period_end: new Date(subscription.current_period_end * 1000),
         },
       });
 
-      logger.info('BillingPaymentsService: Subscription updated', { subscriptionId: subscription.id });
+      logger.info('BillingPaymentsService: Subscription updated', { subscription_id: subscription.id });
     } catch (error) {
       logger.error('BillingPaymentsService.handleSubscriptionUpdated: Error', { error });
       throw error;
@@ -498,22 +538,99 @@ export class BillingPaymentsService {
    */
   async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
     logger.info('BillingPaymentsService.handleSubscriptionDeleted', {
-      subscriptionId: subscription.id,
+      subscription_id: subscription.id,
     });
 
     try {
-      await this.prisma.subscriptionMonetization.updateMany({
-        where: { stripeSubscriptionId: subscription.id },
+      await this.prisma.subscription_monetization.updateMany({
+        where: { stripe_subscription_id: subscription.id },
         data: {
           status: 'cancelled',
-          cancelledAt: new Date(),
-          updatedAt: new Date(),
+          cancelled_at: new Date(),
         },
       });
 
-      logger.info('BillingPaymentsService: Subscription deleted', { subscriptionId: subscription.id });
+      logger.info('BillingPaymentsService: Subscription deleted', { subscription_id: subscription.id });
     } catch (error) {
       logger.error('BillingPaymentsService.handleSubscriptionDeleted: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Handle charge refunded (Plan 192)
+   * Updates subscription_refund record when Stripe processes a refund
+   * @param charge - Stripe charge object
+   */
+  async handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+    logger.info('BillingPaymentsService.handleChargeRefunded', {
+      charge_id: charge.id,
+      amount_refunded: charge.amount_refunded,
+    });
+
+    try {
+      // Get all refunds for this charge
+      const refunds = charge.refunds?.data || [];
+
+      if (refunds.length === 0) {
+        logger.warn('BillingPaymentsService: No refunds found in charge object', {
+          charge_id: charge.id,
+        });
+        return;
+      }
+
+      // Process each refund
+      for (const stripeRefund of refunds) {
+        logger.debug('BillingPaymentsService: Processing refund', {
+          refund_id: stripeRefund.id,
+          amount: stripeRefund.amount / 100,
+          status: stripeRefund.status,
+        });
+
+        // Find refund record in database by stripe_refund_id
+        const refundRecord = await this.prisma.subscription_refund.findUnique({
+          where: { stripe_refund_id: stripeRefund.id },
+        });
+
+        if (!refundRecord) {
+          logger.warn('BillingPaymentsService: Refund record not found in database', {
+            stripe_refund_id: stripeRefund.id,
+          });
+          continue;
+        }
+
+        // Update refund record to completed
+        await this.prisma.subscription_refund.update({
+          where: { id: refundRecord.id },
+          data: {
+            status: stripeRefund.status === 'succeeded' ? 'completed' : 'failed',
+            stripe_processed_at: new Date(stripeRefund.created * 1000),
+            processed_at: new Date(),
+            failure_reason:
+              stripeRefund.status === 'failed' && stripeRefund.failure_reason
+                ? stripeRefund.failure_reason
+                : null,
+            updated_at: new Date(),
+          },
+        });
+
+        logger.info('BillingPaymentsService: Refund record updated', {
+          refund_id: refundRecord.id,
+          stripe_refund_id: stripeRefund.id,
+          status: stripeRefund.status,
+          amount: stripeRefund.amount / 100,
+        });
+      }
+
+      logger.info('BillingPaymentsService: Charge refunded handled', {
+        charge_id: charge.id,
+        refunds_processed: refunds.length,
+      });
+    } catch (error) {
+      logger.error('BillingPaymentsService.handleChargeRefunded: Error', {
+        error,
+        charge_id: charge.id,
+      });
       throw error;
     }
   }
@@ -549,7 +666,7 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.scheduleDunningAttempts', { invoiceId });
 
     try {
-      const invoice = await this.prisma.billingInvoice.findUnique({
+      const invoice = await this.prisma.billing_invoice.findUnique({
         where: { id: invoiceId },
       });
 
@@ -571,15 +688,16 @@ export class BillingPaymentsService {
           ? new Date(scheduledAt.getTime() + retrySchedule[i + 1] * 24 * 60 * 60 * 1000)
           : null;
 
-        const attempt = await this.prisma.dunningAttempt.create({
+        const attempt = await this.prisma.dunning_attempt.create({
           data: {
-            userId: invoice.userId,
-            invoiceId: invoice.id,
-            subscriptionId: invoice.subscriptionId,
-            attemptNumber: i + 1,
-            scheduledAt,
+            id: randomUUID(),
+            user_id: invoice.user_id,
+            invoice_id: invoice.id,
+            subscription_id: invoice.subscription_id,
+            attempt_number: i + 1,
+            scheduled_at: scheduledAt,
             result: 'pending',
-            nextRetryAt,
+            next_retry_at: nextRetryAt,
           },
         });
 
@@ -607,9 +725,9 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.retryFailedPayment', { attemptId });
 
     try {
-      const attempt = await this.prisma.dunningAttempt.findUnique({
+      const attempt = await this.prisma.dunning_attempt.findUnique({
         where: { id: attemptId },
-        include: { invoice: true },
+        include: { billing_invoice: true },
       });
 
       if (!attempt) {
@@ -617,13 +735,13 @@ export class BillingPaymentsService {
       }
 
       // Try to pay the invoice
-      const transaction = await this.payInvoice(attempt.invoiceId);
+      const transaction = await this.payInvoice(attempt.invoice_id);
 
       // Update dunning attempt
-      await this.prisma.dunningAttempt.update({
+      await this.prisma.dunning_attempt.update({
         where: { id: attemptId },
         data: {
-          attemptedAt: new Date(),
+          attempted_at: new Date(),
           result: 'success',
         },
       });
@@ -635,12 +753,12 @@ export class BillingPaymentsService {
       logger.error('BillingPaymentsService.retryFailedPayment: Error', { error });
 
       // Update dunning attempt with failure
-      await this.prisma.dunningAttempt.update({
+      await this.prisma.dunning_attempt.update({
         where: { id: attemptId },
         data: {
-          attemptedAt: new Date(),
+          attempted_at: new Date(),
           result: 'failed',
-          failureReason: error.message,
+          failure_reason: error.message,
         },
       });
 
@@ -658,19 +776,19 @@ export class BillingPaymentsService {
   private mapInvoice(invoice: any): Invoice {
     return {
       id: invoice.id,
-      userId: invoice.userId,
-      subscriptionId: invoice.subscriptionId,
-      stripeInvoiceId: invoice.stripeInvoiceId,
-      amountDue: Number(invoice.amountDue),
-      amountPaid: Number(invoice.amountPaid),
+      user_id: invoice.user_id,
+      subscription_id: invoice.subscription_id,
+      stripe_invoice_id: invoice.stripe_invoice_id,
+      amount_due: Number(invoice.amountDue),
+      amount_paid: Number(invoice.amountPaid),
       currency: invoice.currency,
       status: invoice.status,
-      periodStart: invoice.periodStart,
-      periodEnd: invoice.periodEnd,
-      invoicePdf: invoice.invoicePdf,
-      hostedInvoiceUrl: invoice.hostedInvoiceUrl,
+      period_start: invoice.periodStart,
+      period_end: invoice.periodEnd,
+      invoice_pdf: invoice.invoicePdf,
+      hosted_invoice_url: invoice.hostedInvoiceUrl,
       createdAt: invoice.createdAt,
-      paidAt: invoice.paidAt,
+      paid_at: invoice.paidAt,
     };
   }
 
@@ -680,17 +798,17 @@ export class BillingPaymentsService {
   private mapTransaction(transaction: any): PaymentTransaction {
     return {
       id: transaction.id,
-      userId: transaction.userId,
-      invoiceId: transaction.invoiceId,
-      subscriptionId: transaction.subscriptionId,
-      stripePaymentIntentId: transaction.stripePaymentIntentId,
+      user_id: transaction.user_id,
+      invoice_id: transaction.invoice_id,
+      subscription_id: transaction.subscription_id,
+      stripe_payment_intent_id: transaction.stripePaymentIntentId,
       amount: Number(transaction.amount),
       currency: transaction.currency,
       status: transaction.status,
-      paymentMethodType: transaction.paymentMethodType,
-      failureReason: transaction.failureReason,
+      payment_method_type: transaction.paymentMethodType,
+      failure_reason: transaction.failureReason,
       createdAt: transaction.createdAt,
-      completedAt: transaction.completedAt,
+      completed_at: transaction.completedAt,
     };
   }
 
@@ -700,14 +818,14 @@ export class BillingPaymentsService {
   private mapDunningAttempt(attempt: any): DunningAttempt {
     return {
       id: attempt.id,
-      userId: attempt.userId,
-      invoiceId: attempt.invoiceId,
-      attemptNumber: attempt.attemptNumber,
-      scheduledAt: attempt.scheduledAt,
-      attemptedAt: attempt.attemptedAt,
+      userId: attempt.user_id,
+      invoiceId: attempt.invoice_id,
+      attemptNumber: attempt.attempt_number,
+      scheduledAt: attempt.scheduled_at,
+      attemptedAt: attempt.attempted_at,
       result: attempt.result,
-      failureReason: attempt.failureReason,
-      nextRetryAt: attempt.nextRetryAt,
+      failureReason: attempt.failure_reason,
+      nextRetryAt: attempt.next_retry_at,
     };
   }
 
@@ -734,12 +852,12 @@ export class BillingPaymentsService {
       const skip = (page - 1) * limit;
 
       const [invoices, total] = await Promise.all([
-        this.prisma.billingInvoice.findMany({
+        this.prisma.billing_invoice.findMany({
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
         }),
-        this.prisma.billingInvoice.count(),
+        this.prisma.billing_invoice.count(),
       ]);
 
       const mappedInvoices = invoices.map((inv) => this.mapInvoice(inv));
@@ -776,12 +894,12 @@ export class BillingPaymentsService {
       const skip = (page - 1) * limit;
 
       const [transactions, total] = await Promise.all([
-        this.prisma.paymentTransaction.findMany({
+        this.prisma.payment_transaction.findMany({
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
         }),
-        this.prisma.paymentTransaction.count(),
+        this.prisma.payment_transaction.count(),
       ]);
 
       const mappedTransactions = transactions.map((txn) => this.mapTransaction(txn));
@@ -807,14 +925,99 @@ export class BillingPaymentsService {
     logger.info('BillingPaymentsService.listDunningAttempts');
 
     try {
-      const attempts = await this.prisma.dunningAttempt.findMany({
-        orderBy: { scheduledAt: 'desc' },
+      const attempts = await this.prisma.dunning_attempt.findMany({
+        orderBy: { scheduled_at: 'desc' },
         take: 100, // Limit to recent 100 attempts
       });
 
       return attempts.map((attempt) => this.mapDunningAttempt(attempt));
     } catch (error) {
       logger.error('BillingPaymentsService.listDunningAttempts: Error', { error });
+      throw error;
+    }
+  }
+
+  // ===========================================================================
+  // User Endpoints: Invoice List (Desktop App Integration - Plan 182)
+  // ===========================================================================
+
+  /**
+   * Get invoices for a user (Desktop App endpoint)
+   * @param userId - User ID
+   * @param limit - Number of invoices to return (default: 10, max: 50)
+   * @returns Invoice list response
+   */
+  async getInvoices(userId: string, limit: number = 10): Promise<{
+    invoices: Array<{
+      id: string;
+      date: string;
+      amount: number;
+      currency: string;
+      status: string;
+      invoiceUrl: string;
+      pdfUrl: string;
+      description: string;
+    }>;
+    hasMore: boolean;
+    count: number;
+  }> {
+    logger.info('BillingPaymentsService.getInvoices', { userId, limit });
+
+    try {
+      // Get user's Stripe customer ID
+      const user = await this.prisma.users.findUnique({
+        where: { id: userId },
+        include: {
+          subscription_monetization: {
+            select: {
+              stripe_customer_id: true,
+            },
+            take: 1,
+            orderBy: {
+              created_at: 'desc',
+            }
+          }
+        },
+      });
+
+      // Return empty array if user has no Stripe customer
+      const stripeCustomerId = user?.subscription_monetization?.[0]?.stripe_customer_id;
+      if (!stripeCustomerId) {
+        logger.debug('BillingPaymentsService.getInvoices: User has no Stripe customer', { userId });
+        return { invoices: [], hasMore: false, count: 0 };
+      }
+
+      // Fetch invoices from Stripe
+      const stripeInvoices = await this.stripe.invoices.list({
+        customer: stripeCustomerId,
+        limit: Math.min(limit, 50), // Enforce max limit of 50
+      });
+
+      // Transform Stripe response to camelCase format
+      const invoices = stripeInvoices.data.map((inv) => ({
+        id: inv.id,
+        date: new Date(inv.created * 1000).toISOString(),
+        amount: inv.amount_paid, // Amount in cents (Stripe standard)
+        currency: inv.currency,
+        status: inv.status || 'unknown',
+        invoiceUrl: inv.hosted_invoice_url || '',
+        pdfUrl: inv.invoice_pdf || '',
+        description: inv.lines.data[0]?.description || 'Subscription',
+      }));
+
+      logger.info('BillingPaymentsService.getInvoices: Success', {
+        userId,
+        invoiceCount: invoices.length,
+        hasMore: stripeInvoices.has_more,
+      });
+
+      return {
+        invoices,
+        hasMore: stripeInvoices.has_more,
+        count: invoices.length,
+      };
+    } catch (error) {
+      logger.error('BillingPaymentsService.getInvoices: Error', { error, userId });
       throw error;
     }
   }

@@ -6,9 +6,18 @@
  *
  * Reference: backend/src/routes/plan110.routes.ts
  * Reference: docs/plan/110-perpetual-plan-and-proration-strategy.md
+ *
+ * NOTE: Most types in this file are frontend-specific for perpetual licensing.
+ * Perpetual license types are not yet in @rephlo/shared-types.
  */
 
-import { SubscriptionTier } from './plan109.types';
+// Import SubscriptionTier and ProrationEventType from shared-types
+import type { SubscriptionTier, ProrationEvent, ProrationStatus } from '@rephlo/shared-types';
+import { ProrationEventType } from '@rephlo/shared-types';
+
+// Re-export for convenience
+export type { SubscriptionTier, ProrationEvent, ProrationStatus };
+export { ProrationEventType };
 
 // ============================================================================
 // Enums
@@ -36,20 +45,8 @@ export enum UpgradeStatus {
   REFUNDED = 'refunded',
 }
 
-export enum ProrationChangeType {
-  UPGRADE = 'upgrade',
-  DOWNGRADE = 'downgrade',
-  CYCLE_CHANGE = 'interval_change',
-  MIGRATION = 'migration',
-  CANCELLATION = 'cancellation',
-}
-
-export enum ProrationStatus {
-  PENDING = 'pending',
-  APPLIED = 'applied',
-  FAILED = 'failed',
-  REVERSED = 'reversed',
-}
+// ProrationEventType (was ProrationChangeType) and ProrationStatus imported from shared-types
+// Note: ProrationChangeType renamed to ProrationEventType in shared-types
 
 export enum DiscountType {
   EARLY_BIRD = 'early_bird',
@@ -142,51 +139,9 @@ export interface LicenseStats {
 }
 
 // ============================================================================
-// Proration Types
+// Proration Types (using shared-types)
 // ============================================================================
-
-export interface ProrationEvent {
-  id: string;
-  userId: string;
-  subscriptionId: string;
-
-  eventType: ProrationChangeType;
-
-  // Tier changes
-  fromTier?: SubscriptionTier;
-  toTier?: SubscriptionTier;
-
-  // Billing cycle changes
-  fromInterval?: 'monthly' | 'annual';
-  toInterval?: 'monthly' | 'annual';
-
-  // Proration calculation
-  daysInPeriod: number;
-  daysUsed: number;
-  daysRemaining: number;
-  unusedCredit: number; // in dollars
-  newTierCost: number; // in dollars
-  netCharge: number; // positive = charge, negative = refund
-
-  // Dates
-  periodStart: string;
-  periodEnd: string;
-  changeDate: string;
-  effectiveDate: string;
-  nextBillingDate: string;
-
-  status: ProrationStatus;
-
-  // Stripe integration
-  stripeInvoiceId?: string;
-
-  // User details (populated)
-  user?: {
-    email: string;
-  };
-
-  createdAt: string;
-}
+// ProrationEvent imported from shared-types
 
 export interface ProrationStats {
   totalProrations: number;
@@ -282,7 +237,7 @@ export interface LicenseFilters {
 }
 
 export interface ProrationFilters {
-  changeType?: ProrationChangeType;
+  changeType?: ProrationEventType; // Renamed from ProrationChangeType
   status?: ProrationStatus;
   startDate?: string;
   endDate?: string;

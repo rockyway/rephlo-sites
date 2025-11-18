@@ -7,48 +7,58 @@
  * Reference: docs/plan/115-master-orchestration-plan-109-110-111.md
  */
 
-// ============================================================================
-// Enums
-// ============================================================================
+// Import shared types from @rephlo/shared-types
+import type {
+  User,
+  Subscription,
+  SubscriptionStats,
+  BillingInvoice as Invoice,
+  PaymentTransaction as Transaction,
+  CreditAllocation,
+  UsageStats,
+  PaginationData,
+  SubscriptionRefund,
+} from '@rephlo/shared-types';
 
-export enum SubscriptionTier {
-  FREE = 'free',
-  PRO = 'pro',
-  PRO_MAX = 'pro_max',
-  ENTERPRISE_PRO = 'enterprise_pro',
-  ENTERPRISE_MAX = 'enterprise_max',
-  PERPETUAL = 'perpetual',
-}
+// Import enums as runtime values (not type-only)
+import {
+  UserStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
+  BillingCycle,
+  InvoiceStatus,
+  PaymentStatus,
+  CreditSource,
+  RefundType,
+  RefundStatus,
+} from '@rephlo/shared-types';
 
-export enum SubscriptionStatus {
-  TRIAL = 'trial',
-  ACTIVE = 'active',
-  PAST_DUE = 'past_due',
-  CANCELLED = 'cancelled',
-  EXPIRED = 'expired',
-  SUSPENDED = 'suspended',
-}
+// Re-export commonly used types for convenience
+export type {
+  User,
+  Subscription,
+  SubscriptionStats,
+  UsageStats,
+  PaginationData,
+};
 
-export enum BillingCycle {
-  MONTHLY = 'monthly',
-  ANNUAL = 'annual',
-}
+// Re-export enums as values (not types)
+export {
+  UserStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
+  BillingCycle,
+  InvoiceStatus,
+  PaymentStatus,
+  CreditSource,
+  RefundType,
+  RefundStatus,
+};
 
-export enum UserStatus {
-  ACTIVE = 'active',
-  SUSPENDED = 'suspended',
-  BANNED = 'banned',
-  DELETED = 'deleted',
-}
+// Re-export with alias for backward compatibility
+export type { Invoice, Transaction };
 
-export enum InvoiceStatus {
-  DRAFT = 'draft',
-  OPEN = 'open',
-  PAID = 'paid',
-  VOID = 'void',
-  UNCOLLECTIBLE = 'uncollectible',
-}
-
+// Frontend-specific enum for transaction status (if needed beyond PaymentStatus)
 export enum TransactionStatus {
   PENDING = 'pending',
   SUCCEEDED = 'succeeded',
@@ -56,6 +66,7 @@ export enum TransactionStatus {
   REFUNDED = 'refunded',
 }
 
+// Frontend-specific credit adjustment type (extends CreditSource)
 export enum CreditAdjustmentType {
   SUBSCRIPTION = 'subscription',
   BONUS = 'bonus',
@@ -67,45 +78,9 @@ export enum CreditAdjustmentType {
 }
 
 // ============================================================================
-// Subscription Types
+// Subscription Types (using shared-types)
 // ============================================================================
-
-export interface Subscription {
-  id: string;
-  userId: string;
-  tier: SubscriptionTier;
-  billingCycle: BillingCycle;
-  status: SubscriptionStatus;
-
-  // Pricing
-  basePriceUsd: number;
-  discountPercentage?: number;
-  finalPriceUsd: number;
-
-  // Credit allocation
-  monthlyCreditsAllocated: number;
-
-  // Billing periods
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  nextBillingDate?: string;
-  trialEnd?: string;
-
-  // Stripe integration
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  stripePaymentMethodId?: string;
-
-  // Metadata
-  createdAt: string;
-  updatedAt: string;
-  cancelledAt?: string;
-  cancelReason?: string;
-  cancelAtPeriodEnd: boolean;
-
-  // Relations (populated)
-  user?: User;
-}
+// Subscription interface imported from shared-types
 
 export interface SubscriptionPlan {
   id: string;
@@ -127,39 +102,16 @@ export interface SubscriptionPlan {
   updatedAt: string;
 }
 
-export interface SubscriptionStats {
-  totalActive: number;
-  mrr: number;
-  pastDueCount: number;
-  trialConversionsThisMonth: number;
-}
+// SubscriptionStats imported from shared-types
 
 // ============================================================================
-// User Types
+// User Types (using shared-types)
 // ============================================================================
+// User interface imported from shared-types
 
-export interface User {
-  id: string;
-  email: string;
-  name?: string;
-  status: UserStatus;
-
-  // Subscription info
-  currentTier: SubscriptionTier;
-  creditsBalance: number;
-
-  // Timestamps
-  createdAt: string;
-  lastActiveAt?: string;
-  suspendedUntil?: string;
-  bannedAt?: string;
-  banReason?: string;
-
-  // Relations
-  subscription?: Subscription;
-}
-
-export interface UserDetails extends User {
+// Frontend-specific UserDetails extension
+// Renamed to AdminUserDetails to avoid conflict with shared-types UserDetails
+export interface AdminUserDetails extends User {
   subscriptionHistory: Subscription[];
   creditTransactions: CreditAllocation[];
   usageStats: UsageStats;
@@ -173,70 +125,13 @@ export interface UserFilters {
   limit?: number;
 }
 
-export interface UsageStats {
-  totalApiCalls: number;
-  creditsUsed: number;
-  averageCallsPerDay: number;
-  topModels: Array<{ modelName: string; calls: number }>;
-}
+// UsageStats imported from shared-types (with extended topModels field in frontend)
 
 // ============================================================================
-// Billing Types
+// Billing Types (using shared-types)
 // ============================================================================
-
-export interface Invoice {
-  id: string;
-  userId: string;
-  subscriptionId: string;
-
-  stripeInvoiceId: string;
-
-  amountDue: number;
-  amountPaid: number;
-  amountRemaining: number;
-
-  status: InvoiceStatus;
-
-  invoicePdfUrl?: string;
-  hostedInvoiceUrl?: string;
-
-  periodStart: string;
-  periodEnd: string;
-
-  dueDate?: string;
-  paidAt?: string;
-
-  createdAt: string;
-
-  // Relations
-  user?: User;
-}
-
-export interface Transaction {
-  id: string;
-  userId: string;
-  invoiceId?: string;
-
-  stripePaymentIntentId: string;
-  stripeChargeId?: string;
-
-  amount: number;
-  currency: string;
-
-  status: TransactionStatus;
-
-  paymentMethodType?: string;
-  last4?: string;
-
-  failureCode?: string;
-  failureMessage?: string;
-
-  createdAt: string;
-  updatedAt: string;
-
-  // Relations
-  user?: User;
-}
+// Invoice and Transaction (BillingInvoice, PaymentTransaction) imported from shared-types
+// Note: Invoice = BillingInvoice, Transaction = PaymentTransaction (aliased for backward compatibility)
 
 export interface DunningAttempt {
   id: string;
@@ -273,25 +168,9 @@ export interface RevenueByTier {
 }
 
 // ============================================================================
-// Credit Types
+// Credit Types (using shared-types)
 // ============================================================================
-
-export interface CreditAllocation {
-  id: string;
-  userId: string;
-  subscriptionId?: string;
-
-  amount: number;
-  source: CreditAdjustmentType;
-
-  allocatedAt: string;
-  expiresAt?: string;
-
-  createdAt: string;
-
-  // Relations
-  user?: User;
-}
+// CreditAllocation imported from shared-types
 
 export interface CreditAdjustmentRequest {
   userId: string;
@@ -381,22 +260,17 @@ export interface TierTransition {
 }
 
 // ============================================================================
-// API Response Types
+// API Response Types (using shared-types)
 // ============================================================================
+// ApiResponse and PaginationData imported from shared-types
 
+// Frontend-specific paginated response wrapper
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
 }
 
 // ============================================================================
@@ -473,4 +347,39 @@ export interface AnalyticsFilters {
   period?: 'last_7_days' | 'last_30_days' | 'last_90_days' | 'last_12_months';
   startDate?: string;
   endDate?: string;
+}
+
+// ============================================================================
+// Refund Types (Plan 192)
+// ============================================================================
+
+// Re-export SubscriptionRefund from shared-types
+export type { SubscriptionRefund };
+
+export interface RefundFilters {
+  status?: RefundStatus;
+  refundType?: RefundType;
+  userId?: string;
+  subscriptionId?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ManualCancelRefundRequest {
+  subscriptionId: string;
+  refundReason: string;
+  adminNotes?: string;
+  refundAmount?: number; // Optional: defaults to last charge
+}
+
+export interface ApproveRefundRequest {
+  refundId: string;
+  adminNotes?: string;
+}
+
+export interface CancelRefundRequest {
+  refundId: string;
+  reason: string;
 }

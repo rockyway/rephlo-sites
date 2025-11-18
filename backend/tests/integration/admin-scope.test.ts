@@ -13,7 +13,6 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/glo
 import { PrismaClient } from '@prisma/client';
 import { getTestDatabase, cleanDatabase, seedTestData } from '../setup/database';
 import { createVerifiedUser } from '../helpers/auth-fixtures';
-import jwt from 'jsonwebtoken';
 
 describe('Admin Scope Implementation (Phase 2)', () => {
   let prisma: PrismaClient;

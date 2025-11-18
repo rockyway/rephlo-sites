@@ -25,7 +25,7 @@ describe('ProrationService with Coupons', () => {
 
   afterAll(async () => {
     // Clean up all test data
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: {
         email: {
           contains: 'test-'
@@ -40,7 +40,7 @@ describe('ProrationService with Coupons', () => {
     testUserId = randomUUID();
 
     // Create test user first (required for foreign key constraint)
-    await prisma.user.create({
+    await prisma.users.create({
       data: {
         id: testUserId,
         email: `test-${testUserId}@example.com`,
@@ -66,7 +66,7 @@ describe('ProrationService with Coupons', () => {
 
   afterEach(async () => {
     // Clean up test data (delete user will cascade to subscriptions and proration events)
-    await prisma.user.delete({
+    await prisma.users.delete({
       where: { id: testUserId }
     }).catch(() => {
       // Ignore errors if user already deleted
@@ -248,7 +248,7 @@ describe('ProrationService with Coupons', () => {
       try {
         // Create test user for this scenario
         const multiUserId = randomUUID();
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             id: multiUserId,
             email: `test-multi-${multiUserId}@example.com`,
@@ -288,7 +288,7 @@ describe('ProrationService with Coupons', () => {
         expect(result.netChargeUsd).toBeCloseTo(24.50, 2);
 
         // Cleanup (delete user cascades to subscription)
-        await prisma.user.delete({ where: { id: multiUserId } });
+        await prisma.users.delete({ where: { id: multiUserId } });
       } finally {
         jest.useRealTimers();
       }
@@ -312,7 +312,7 @@ describe('ProrationService with Coupons', () => {
       try {
         // Create test user for downgrade scenario
         const downgradeUserId = randomUUID();
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             id: downgradeUserId,
             email: `test-downgrade-${downgradeUserId}@example.com`,
@@ -357,7 +357,7 @@ describe('ProrationService with Coupons', () => {
         expect(result.netChargeUsd).toBe(0);
 
         // Cleanup (delete user cascades to subscription)
-        await prisma.user.delete({ where: { id: downgradeUserId } });
+        await prisma.users.delete({ where: { id: downgradeUserId } });
       } finally {
         jest.useRealTimers();
       }
@@ -418,7 +418,7 @@ describe('ProrationService with Coupons', () => {
       try {
         // Create test user for annual scenario
         const annualUserId = randomUUID();
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             id: annualUserId,
             email: `test-annual-${annualUserId}@example.com`,
@@ -464,7 +464,7 @@ describe('ProrationService with Coupons', () => {
         expect(result.netChargeUsd).toBeCloseTo(expectedNetCharge, 2);
 
         // Cleanup (delete user cascades to subscription)
-        await prisma.user.delete({ where: { id: annualUserId } });
+        await prisma.users.delete({ where: { id: annualUserId } });
       } finally {
         jest.useRealTimers();
       }
@@ -520,7 +520,7 @@ describe('ProrationService with Coupons', () => {
 
       try {
         const annualUserId = randomUUID();
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             id: annualUserId,
             email: `test-annual-coupon-${annualUserId}@example.com`,
@@ -569,7 +569,7 @@ describe('ProrationService with Coupons', () => {
         expect(result.couponDiscountAmount).toBeCloseTo(expectedCouponDiscount, 2);
         expect(result.netChargeUsd).toBeCloseTo(expectedNetCharge, 2);
 
-        await prisma.user.delete({ where: { id: annualUserId } });
+        await prisma.users.delete({ where: { id: annualUserId } });
       } finally {
         jest.useRealTimers();
       }
@@ -589,7 +589,7 @@ describe('ProrationService with Coupons', () => {
 
       try {
         const annualUserId = randomUUID();
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             id: annualUserId,
             email: `test-annual-downgrade-${annualUserId}@example.com`,
@@ -628,7 +628,7 @@ describe('ProrationService with Coupons', () => {
         expect(result.newTierProratedCostUsd).toBeCloseTo(expectedProCost, 2);
         expect(result.netChargeUsd).toBe(expectedNetCharge);
 
-        await prisma.user.delete({ where: { id: annualUserId } });
+        await prisma.users.delete({ where: { id: annualUserId } });
       } finally {
         jest.useRealTimers();
       }

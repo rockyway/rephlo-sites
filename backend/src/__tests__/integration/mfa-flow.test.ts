@@ -35,7 +35,7 @@ describe('MFA Integration Tests', () => {
     testUserEmail = `admin-mfa-test-${Date.now()}@example.com`;
     const passwordHash = await bcrypt.hash('SecurePassword123!', 12);
 
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email: testUserEmail,
         emailVerified: true,
@@ -56,7 +56,7 @@ describe('MFA Integration Tests', () => {
   afterAll(async () => {
     // Clean up test user
     if (testUserId) {
-      await prisma.user.delete({
+      await prisma.users.delete({
         where: { id: testUserId },
       }).catch(() => {
         // Ignore if already deleted
@@ -89,7 +89,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.backupCodes).toHaveLength(10);
 
       // Verify secret is stored in database
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaSecret: true, mfaEnabled: true },
       });
@@ -100,7 +100,7 @@ describe('MFA Integration Tests', () => {
 
     it('should reject MFA setup if already enabled', async () => {
       // Enable MFA for user
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { mfaEnabled: true },
       });
@@ -113,7 +113,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.error.code).toBe('MFA_ALREADY_ENABLED');
 
       // Reset for next tests
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { mfaEnabled: false },
       });
@@ -174,7 +174,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.success).toBe(true);
 
       // Verify MFA is enabled in database
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaEnabled: true, mfaBackupCodes: true },
       });
@@ -196,7 +196,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.error.code).toBe('INVALID_MFA_TOKEN');
 
       // Verify MFA is not enabled
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaEnabled: true },
       });
@@ -222,7 +222,7 @@ describe('MFA Integration Tests', () => {
 
     it('should reject if MFA setup not initiated', async () => {
       // Clear MFA secret
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { mfaSecret: null },
       });
@@ -254,7 +254,7 @@ describe('MFA Integration Tests', () => {
 
       const hashedBackupCodes = await mfaService.hashBackupCodes(backupCodes);
 
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: {
           mfaSecret: secret,
@@ -294,7 +294,7 @@ describe('MFA Integration Tests', () => {
 
     it('should reject if MFA not enabled', async () => {
       // Disable MFA
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { mfaEnabled: false },
       });
@@ -315,7 +315,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.error.code).toBe('MFA_NOT_ENABLED');
 
       // Re-enable for other tests
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { mfaEnabled: true },
       });
@@ -323,7 +323,7 @@ describe('MFA Integration Tests', () => {
 
     it('should reject for inactive user', async () => {
       // Deactivate user
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { isActive: false },
       });
@@ -344,7 +344,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.error.code).toBe('ACCOUNT_INACTIVE');
 
       // Re-activate for other tests
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: { isActive: true },
       });
@@ -367,7 +367,7 @@ describe('MFA Integration Tests', () => {
       // Setup MFA with backup codes
       const { secret } = await mfaService.generateMFASecret(testUserId);
 
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: {
           mfaSecret: secret,
@@ -392,7 +392,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.remainingBackupCodes).toBe(9);
 
       // Verify backup code was removed
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaBackupCodes: true },
       });
@@ -447,7 +447,7 @@ describe('MFA Integration Tests', () => {
 
       const hashedBackupCodes = await mfaService.hashBackupCodes(backupCodes);
 
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: {
           mfaSecret: secret,
@@ -475,7 +475,7 @@ describe('MFA Integration Tests', () => {
       expect(response.body.success).toBe(true);
 
       // Verify MFA is disabled
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaEnabled: true, mfaSecret: true, mfaBackupCodes: true },
       });
@@ -501,7 +501,7 @@ describe('MFA Integration Tests', () => {
         .expect(401);
 
       // Verify MFA is still enabled
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaEnabled: true },
       });
@@ -520,7 +520,7 @@ describe('MFA Integration Tests', () => {
         .expect(401);
 
       // Verify MFA is still enabled
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUserId },
         select: { mfaEnabled: true },
       });
@@ -539,7 +539,7 @@ describe('MFA Integration Tests', () => {
       const { secret, backupCodes } = await mfaService.generateMFASecret(testUserId);
       const hashedBackupCodes = await mfaService.hashBackupCodes(backupCodes);
 
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: {
           mfaSecret: secret,
@@ -559,7 +559,7 @@ describe('MFA Integration Tests', () => {
 
     it('should return MFA status for user with MFA disabled', async () => {
       // Disable MFA
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUserId },
         data: {
           mfaEnabled: false,

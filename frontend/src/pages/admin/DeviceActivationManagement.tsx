@@ -33,7 +33,6 @@ import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { ConfirmationModal } from '@/components/plan109';
-import { activationApi } from '@/api/plan110';
 import { ActivationStatus } from '@/types/plan110.types';
 import { formatDate, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
@@ -362,23 +361,23 @@ function DeviceActivationManagement() {
   // ============================================================================
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Device Activation Management</h1>
-          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Device Activation Management</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Manage device activations for perpetual licenses
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport} disabled={devices.length === 0}>
+          <Button variant="ghost" onClick={handleExport} disabled={devices.length === 0}>
             Export CSV
           </Button>
-          <Button variant="outline" onClick={loadData} disabled={isLoading}>
+          <Button variant="ghost" onClick={loadData} disabled={isLoading}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
             Refresh
           </Button>
@@ -497,7 +496,7 @@ function DeviceActivationManagement() {
           </div>
 
           <div className="flex items-end">
-            <Button variant="outline" onClick={clearFilters} className="w-full">
+            <Button variant="ghost" onClick={clearFilters} className="w-full">
               <XIcon className="mr-2 h-4 w-4" />
               Clear
             </Button>
@@ -514,7 +513,7 @@ function DeviceActivationManagement() {
                 {selectedDeviceIds.size} device{selectedDeviceIds.size > 1 ? 's' : ''} selected
               </span>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setSelectedDeviceIds(new Set())}
               >
@@ -523,7 +522,7 @@ function DeviceActivationManagement() {
             </div>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   setBulkAction('deactivate');
@@ -713,7 +712,7 @@ function DeviceActivationManagement() {
                         <div className="flex items-center gap-2">
                           <p className="text-deep-navy-800 dark:text-white">{device.deviceName}</p>
                           {device.isSuspicious && (
-                            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" title="Suspicious activity detected" />
+                            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" aria-label="Suspicious activity detected" />
                           )}
                         </div>
                       </td>
@@ -747,7 +746,7 @@ function DeviceActivationManagement() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedDevice(device);
@@ -759,7 +758,7 @@ function DeviceActivationManagement() {
                           {device.status === ActivationStatus.ACTIVE && (
                             <>
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => {
                                   setSelectedDevice(device);
@@ -796,7 +795,7 @@ function DeviceActivationManagement() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
@@ -804,7 +803,7 @@ function DeviceActivationManagement() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
@@ -827,7 +826,7 @@ function DeviceActivationManagement() {
         }}
         onConfirm={handleDeactivate}
         title="Deactivate Device"
-        message={`Are you sure you want to deactivate "${selectedDevice?.deviceName}"? The user will be able to activate another device.`}
+        description={`Are you sure you want to deactivate "${selectedDevice?.deviceName}"? The user will be able to activate another device.`}
         confirmText="Deactivate"
         isProcessing={isProcessing}
       />
@@ -853,7 +852,7 @@ function DeviceActivationManagement() {
             </div>
             <div className="flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowRevokeModal(false);
                   setSelectedDevice(null);
@@ -1004,7 +1003,7 @@ function DeviceActivationManagement() {
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowBulkModal(false);
                   setBulkReason('');

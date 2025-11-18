@@ -14,6 +14,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import logger from '../../utils/logger';
 import { ModelService } from '../model.service';
 import {
@@ -60,14 +61,12 @@ export class ModelTierAdminService {
     });
 
     // Fetch current model data
-    const currentModel = await this.prisma.model.findUnique({
+    const currentModel = await this.prisma.models.findUnique({
       where: { id: modelId },
       select: {
         id: true,
-        displayName: true,
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
+        name: true,
+        meta: true,
       },
     });
 
@@ -75,66 +74,70 @@ export class ModelTierAdminService {
       throw new Error(`Model '${modelId}' not found`);
     }
 
-    // Prepare update data
-    const updateData: any = {};
+    const currentMeta = currentModel.meta as any;
+
+    // Prepare update data for meta JSONB
     const changes: Record<string, any> = {};
     const previousValues: Record<string, any> = {};
 
     if (tierData.requiredTier !== undefined) {
-      updateData.requiredTier = tierData.requiredTier;
       changes.requiredTier = tierData.requiredTier;
-      previousValues.requiredTier = currentModel.requiredTier;
+      previousValues.requiredTier = currentMeta?.requiredTier;
     }
 
     if (tierData.tierRestrictionMode !== undefined) {
-      updateData.tierRestrictionMode = tierData.tierRestrictionMode;
       changes.tierRestrictionMode = tierData.tierRestrictionMode;
-      previousValues.tierRestrictionMode = currentModel.tierRestrictionMode;
+      previousValues.tierRestrictionMode = currentMeta?.tierRestrictionMode;
     }
 
     if (tierData.allowedTiers !== undefined) {
-      updateData.allowedTiers = tierData.allowedTiers;
       changes.allowedTiers = tierData.allowedTiers;
-      previousValues.allowedTiers = currentModel.allowedTiers;
+      previousValues.allowedTiers = currentMeta?.allowedTiers;
     }
 
     // Validate that there are changes
-    if (Object.keys(updateData).length === 0) {
+    if (Object.keys(changes).length === 0) {
       throw new Error('No tier configuration changes provided');
     }
 
+    // Merge changes into meta JSONB
+    const updatedMeta = {
+      ...currentMeta,
+      ...changes,
+    };
+
     // Update model in transaction with audit log
     const result = await this.prisma.$transaction(async (tx) => {
-      // Update model
-      const updatedModel = await tx.model.update({
+      // Update model - only update meta JSONB field
+      const updatedModel = await tx.models.update({
         where: { id: modelId },
-        data: updateData,
+        data: {
+          meta: updatedMeta as any,
+        },
         select: {
           id: true,
           name: true,
-          displayName: true,
           provider: true,
-          requiredTier: true,
-          tierRestrictionMode: true,
-          allowedTiers: true,
-          isAvailable: true,
-          updatedAt: true,
+          is_available: true,
+          meta: true,
+          updated_at: true,
         },
       });
 
       // Create audit log entry
-      const auditLog = await tx.modelTierAuditLog.create({
+      const auditLog = await tx.model_tier_audit_logs.create({
         data: {
-          modelId,
-          adminUserId,
-          changeType: this.determineChangeType(changes),
-          previousValue: previousValues,
-          newValue: changes,
+          id: randomUUID(),
+          model_id: modelId,
+          admin_user_id: adminUserId,
+          change_type: this.determineChangeType(changes),
+          previous_value: previousValues,
+          new_value: changes,
           reason: tierData.reason || null,
-          ipAddress: ipAddress || null,
+          ip_address: ipAddress || null,
         },
         include: {
-          admin: {
+          users: {
             select: {
               email: true,
             },
@@ -153,30 +156,31 @@ export class ModelTierAdminService {
       adminUserId,
     });
 
+    const resultMeta = result.updatedModel.meta as any;
+
     return {
       model: {
         id: result.updatedModel.id,
         name: result.updatedModel.name,
-        displayName: result.updatedModel.displayName,
+        displayName: resultMeta?.displayName ?? result.updatedModel.name,
         provider: result.updatedModel.provider,
-        requiredTier: result.updatedModel.requiredTier,
-        tierRestrictionMode: result.updatedModel
-          .tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
-        allowedTiers: result.updatedModel.allowedTiers,
-        isAvailable: result.updatedModel.isAvailable,
-        lastModified: result.updatedModel.updatedAt.toISOString(),
+        requiredTier: resultMeta?.requiredTier ?? 'free',
+        tierRestrictionMode: (resultMeta?.tierRestrictionMode ?? 'minimum') as 'minimum' | 'exact' | 'whitelist',
+        allowedTiers: resultMeta?.allowedTiers ?? ['free'],
+        isAvailable: result.updatedModel.is_available,
+        lastModified: result.updatedModel.updated_at.toISOString(),
       },
       auditLog: {
         id: result.auditLog.id,
-        modelId: result.auditLog.modelId,
-        adminUserId: result.auditLog.adminUserId,
-        adminEmail: result.auditLog.admin.email,
-        changeType: result.auditLog.changeType,
-        previousValue: result.auditLog.previousValue as Record<string, any> | null,
-        newValue: result.auditLog.newValue as Record<string, any>,
+        modelId: result.auditLog.model_id,
+        adminUserId: result.auditLog.admin_user_id,
+        adminEmail: result.auditLog.users.email,
+        changeType: result.auditLog.change_type,
+        previousValue: result.auditLog.previous_value as Record<string, any> | null,
+        newValue: result.auditLog.new_value as Record<string, any>,
         reason: result.auditLog.reason || undefined,
-        ipAddress: result.auditLog.ipAddress || undefined,
-        createdAt: result.auditLog.createdAt.toISOString(),
+        ipAddress: result.auditLog.ip_address || undefined,
+        createdAt: result.auditLog.created_at.toISOString(),
       },
     };
   }
@@ -264,55 +268,55 @@ export class ModelTierAdminService {
     const where: any = {};
 
     if (params.modelId) {
-      where.modelId = params.modelId;
+      where.model_id = params.modelId;
     }
 
     if (params.adminUserId) {
-      where.adminUserId = params.adminUserId;
+      where.admin_user_id = params.adminUserId;
     }
 
     if (params.startDate || params.endDate) {
-      where.createdAt = {};
+      where.created_at = {};
       if (params.startDate) {
-        where.createdAt.gte = new Date(params.startDate);
+        where.created_at.gte = new Date(params.startDate);
       }
       if (params.endDate) {
-        where.createdAt.lte = new Date(params.endDate);
+        where.created_at.lte = new Date(params.endDate);
       }
     }
 
     // Query audit logs
     const [logs, total] = await Promise.all([
-      this.prisma.modelTierAuditLog.findMany({
+      this.prisma.model_tier_audit_logs.findMany({
         where,
         include: {
-          admin: {
+          users: {
             select: {
               email: true,
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          created_at: 'desc',
         },
         take: params.limit,
         skip: params.offset,
       }),
-      this.prisma.modelTierAuditLog.count({ where }),
+      this.prisma.model_tier_audit_logs.count({ where }),
     ]);
 
     return {
       logs: logs.map((log) => ({
         id: log.id,
-        modelId: log.modelId,
-        adminUserId: log.adminUserId,
-        adminEmail: log.admin.email,
-        changeType: log.changeType,
-        previousValue: log.previousValue as Record<string, any> | null,
-        newValue: log.newValue as Record<string, any>,
+        modelId: log.model_id,
+        adminUserId: log.admin_user_id,
+        adminEmail: log.users.email,
+        changeType: log.change_type,
+        previousValue: log.previous_value as Record<string, any> | null,
+        newValue: log.new_value as Record<string, any>,
         reason: log.reason || undefined,
-        ipAddress: log.ipAddress || undefined,
-        createdAt: log.createdAt.toISOString(),
+        ipAddress: log.ip_address || undefined,
+        createdAt: log.created_at.toISOString(),
       })),
       total,
       limit: params.limit || 50,
@@ -339,7 +343,7 @@ export class ModelTierAdminService {
     });
 
     // Fetch audit log entry
-    const auditLog = await this.prisma.modelTierAuditLog.findUnique({
+    const auditLog = await this.prisma.model_tier_audit_logs.findUnique({
       where: { id: auditLogId },
     });
 
@@ -347,12 +351,12 @@ export class ModelTierAdminService {
       throw new Error(`Audit log entry '${auditLogId}' not found`);
     }
 
-    if (!auditLog.previousValue) {
+    if (!auditLog.previous_value) {
       throw new Error('Cannot revert: no previous value recorded');
     }
 
     // Revert to previous values
-    const previousValue = auditLog.previousValue as Record<string, any>;
+    const previousValue = auditLog.previous_value as Record<string, any>;
     const revertData: UpdateModelTierRequest = {
       requiredTier: previousValue.requiredTier,
       tierRestrictionMode: previousValue.tierRestrictionMode,
@@ -361,7 +365,7 @@ export class ModelTierAdminService {
     };
 
     return this.updateModelTier(
-      auditLog.modelId,
+      auditLog.model_id,
       revertData,
       adminUserId,
       ipAddress
@@ -379,7 +383,7 @@ export class ModelTierAdminService {
   ): Promise<ModelTierListResponse> {
     logger.debug('ModelTierAdminService: Listing models with tiers', filters);
 
-    // Build where clause
+    // Build where clause using JSONB queries for tier fields
     const where: any = {};
 
     if (filters?.provider) {
@@ -387,42 +391,56 @@ export class ModelTierAdminService {
     }
 
     if (filters?.tier) {
-      where.requiredTier = filters.tier;
+      // Use JSONB path query for requiredTier filtering
+      where.meta = {
+        path: ['requiredTier'],
+        equals: filters.tier,
+      };
     }
 
     if (filters?.restrictionMode) {
-      where.tierRestrictionMode = filters.restrictionMode;
+      // Use JSONB path query for tierRestrictionMode filtering
+      where.meta = {
+        ...where.meta,
+        path: ['tierRestrictionMode'],
+        equals: filters.restrictionMode,
+      };
     }
 
-    // Query models
-    const models = await this.prisma.model.findMany({
+    // Query models - only select meta JSONB, not deprecated root columns
+    const models = await this.prisma.models.findMany({
       where,
       select: {
         id: true,
         name: true,
-        displayName: true,
         provider: true,
-        requiredTier: true,
-        tierRestrictionMode: true,
-        allowedTiers: true,
-        isAvailable: true,
-        updatedAt: true,
+        is_available: true,
+        is_legacy: true,
+        is_archived: true,
+        meta: true,
+        updated_at: true,
       },
-      orderBy: [{ provider: 'asc' }, { displayName: 'asc' }],
+      orderBy: [{ provider: 'asc' }, { name: 'asc' }],
     });
 
     return {
-      models: models.map((model) => ({
-        id: model.id,
-        name: model.name,
-        displayName: model.displayName,
-        provider: model.provider,
-        requiredTier: model.requiredTier,
-        tierRestrictionMode: model.tierRestrictionMode as 'minimum' | 'exact' | 'whitelist',
-        allowedTiers: model.allowedTiers,
-        isAvailable: model.isAvailable,
-        lastModified: model.updatedAt.toISOString(),
-      })),
+      models: models.map((model) => {
+        const meta = model.meta as any;
+        return {
+          id: model.id,
+          name: model.name,
+          displayName: meta?.displayName ?? model.name,
+          provider: model.provider,
+          requiredTier: meta?.requiredTier ?? 'free',
+          tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
+          allowedTiers: meta?.allowedTiers ?? ['free'],
+          isAvailable: model.is_available,
+          isLegacy: model.is_legacy,
+          isArchived: model.is_archived,
+          meta: model.meta,
+          lastModified: model.updated_at.toISOString(),
+        };
+      }),
       total: models.length,
     };
   }
@@ -436,7 +454,7 @@ export class ModelTierAdminService {
     logger.info('ModelTierAdminService.getUniqueProviders');
 
     try {
-      const providers = await this.prisma.model.findMany({
+      const providers = await this.prisma.models.findMany({
         distinct: ['provider'],
         select: {
           provider: true,

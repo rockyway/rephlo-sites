@@ -27,19 +27,15 @@ import {
   X as XIcon,
   ChevronRight,
   ChevronLeft,
-  Mail,
   Copy,
   Download,
-  Edit,
   Trash2,
   Play,
-  Pause,
 } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { ConfirmationModal } from '@/components/plan109';
-import { plan111API } from '@/api/plan111';
 import { CampaignStatus, CampaignType, type CouponCampaign, SubscriptionTier } from '@/types/plan111.types';
 import { formatDate, formatCurrency, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
@@ -91,12 +87,10 @@ function CampaignManagement() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    type: 'marketing' as CampaignType,
-    description: '',
+    type: CampaignType.PROMOTIONAL as CampaignType,
     startsAt: '',
     endsAt: '',
     targetTiers: [] as SubscriptionTier[],
-    expectedRevenue: '',
     budgetCap: '',
   });
 
@@ -115,32 +109,36 @@ function CampaignManagement() {
         {
           id: '1',
           name: 'Black Friday 2024',
-          type: 'holiday',
-          description: 'Annual Black Friday sale',
-          starts_at: new Date(2024, 10, 29).toISOString(),
-          ends_at: new Date(2024, 11, 2).toISOString(),
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          redemption_count: 156,
-          conversion_rate: 23.4,
-          actual_revenue: 45670,
-          expected_revenue: 50000,
+          type: CampaignType.SEASONAL,
+          startsAt: new Date(2024, 10, 29).toISOString(),
+          endsAt: new Date(2024, 11, 2).toISOString(),
+          status: CampaignStatus.ACTIVE,
+          budgetCap: 50000,
+          currentSpend: 28400,
+          isActive: true,
+          createdBy: 'admin-001',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          redemptionsCount: 156,
+          conversionRate: 23.4,
+          actualRevenue: 45670,
         },
         {
           id: '2',
           name: 'Welcome Bonus Q1',
-          type: 'marketing',
-          description: 'New user onboarding campaign',
-          starts_at: new Date(2024, 0, 1).toISOString(),
-          ends_at: new Date(2024, 2, 31).toISOString(),
-          status: 'ended',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          redemption_count: 423,
-          conversion_rate: 31.2,
-          actual_revenue: 67890,
-          expected_revenue: 60000,
+          type: CampaignType.PROMOTIONAL,
+          startsAt: new Date(2024, 0, 1).toISOString(),
+          endsAt: new Date(2024, 2, 31).toISOString(),
+          status: CampaignStatus.ENDED,
+          budgetCap: 30000,
+          currentSpend: 29500,
+          isActive: false,
+          createdBy: 'admin-002',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          redemptionsCount: 423,
+          conversionRate: 31.2,
+          actualRevenue: 67890,
         },
       ];
 
@@ -165,7 +163,7 @@ function CampaignManagement() {
         filtered = filtered.filter(
           (c) =>
             c.name.toLowerCase().includes(query) ||
-            (c.description && c.description.toLowerCase().includes(query))
+            c.type.toLowerCase().includes(query)
         );
       }
 
@@ -180,12 +178,12 @@ function CampaignManagement() {
             bVal = b.name;
             break;
           case 'startDate':
-            aVal = new Date(a.starts_at).getTime();
-            bVal = new Date(b.starts_at).getTime();
+            aVal = new Date(a.startsAt).getTime();
+            bVal = new Date(b.startsAt).getTime();
             break;
           case 'conversionRate':
-            aVal = a.conversion_rate || 0;
-            bVal = b.conversion_rate || 0;
+            aVal = a.conversionRate || 0;
+            bVal = b.conversionRate || 0;
             break;
         }
 
@@ -230,12 +228,10 @@ function CampaignManagement() {
       // await plan111API.createCampaign({
       //   name: formData.name,
       //   type: formData.type,
-      //   description: formData.description,
-      //   starts_at: formData.startsAt,
-      //   ends_at: formData.endsAt,
+      //   startsAt: formData.startsAt,
+      //   endsAt: formData.endsAt,
       //   target_audience: formData.targetTiers.length > 0 ? { user_tiers: formData.targetTiers } : undefined,
-      //   expected_revenue: formData.expectedRevenue ? parseFloat(formData.expectedRevenue) : undefined,
-      //   budget_cap: formData.budgetCap ? parseFloat(formData.budgetCap) : undefined,
+      //   budgetCap: formData.budgetCap ? parseFloat(formData.budgetCap) : undefined,
       // });
 
       setSuccessMessage(`Campaign "${formData.name}" created successfully`);
@@ -274,12 +270,10 @@ function CampaignManagement() {
     setFormData({
       name: `${campaign.name} (Copy)`,
       type: campaign.type,
-      description: campaign.description || '',
       startsAt: '',
       endsAt: '',
       targetTiers: [],
-      expectedRevenue: campaign.expected_revenue?.toString() || '',
-      budgetCap: campaign.budget_cap?.toString() || '',
+      budgetCap: campaign.budgetCap?.toString() || '',
     });
     setShowCreateModal(true);
   };
@@ -291,12 +285,13 @@ function CampaignManagement() {
       Name: campaign.name,
       Type: campaign.type,
       Status: campaign.status,
-      'Start Date': formatDate(campaign.starts_at, 'long'),
-      'End Date': formatDate(campaign.ends_at, 'long'),
-      'Redemptions': campaign.redemption_count || 0,
-      'Conversion Rate': campaign.conversion_rate ? `${campaign.conversion_rate.toFixed(1)}%` : '0%',
-      'Actual Revenue': formatCurrency(campaign.actual_revenue),
-      'Expected Revenue': formatCurrency(campaign.expected_revenue),
+      'Start Date': formatDate(campaign.startsAt, 'long'),
+      'End Date': formatDate(campaign.endsAt, 'long'),
+      'Redemptions': campaign.redemptionsCount || 0,
+      'Conversion Rate': campaign.conversionRate ? `${campaign.conversionRate.toFixed(1)}%` : '0%',
+      'Actual Revenue': formatCurrency(campaign.actualRevenue),
+      'Budget Cap': formatCurrency(campaign.budgetCap),
+      'Current Spend': formatCurrency(campaign.currentSpend),
     }));
 
     downloadCSV(exportData, 'campaigns');
@@ -305,12 +300,10 @@ function CampaignManagement() {
   const resetForm = () => {
     setFormData({
       name: '',
-      type: 'marketing',
-      description: '',
+      type: CampaignType.PROMOTIONAL,
       startsAt: '',
       endsAt: '',
       targetTiers: [],
-      expectedRevenue: '',
       budgetCap: '',
     });
   };
@@ -337,24 +330,24 @@ function CampaignManagement() {
   // ============================================================================
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
-{/* Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Campaign Management</h1>
-          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Campaign Management</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             Create and manage marketing campaigns with coupon batches
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport} disabled={campaigns.length === 0}>
+          <Button variant="ghost" onClick={handleExport} disabled={campaigns.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button variant="outline" onClick={loadData} disabled={isLoading}>
+          <Button variant="ghost" onClick={loadData} disabled={isLoading}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
             Refresh
           </Button>
@@ -478,7 +471,7 @@ function CampaignManagement() {
           </div>
 
           <div className="flex items-end">
-            <Button variant="outline" onClick={clearFilters} className="w-full">
+            <Button variant="ghost" onClick={clearFilters} className="w-full">
               <XIcon className="mr-2 h-4 w-4" />
               Clear
             </Button>
@@ -626,28 +619,28 @@ function CampaignManagement() {
                         </span>
                       </td>
                       <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white">
-                        {formatDate(campaign.starts_at)}
+                        {formatDate(campaign.startsAt)}
                       </td>
                       <td className="px-4 py-4 text-sm text-deep-navy-800 dark:text-white">
-                        {formatDate(campaign.ends_at)}
+                        {formatDate(campaign.endsAt)}
                       </td>
                       <td className="px-4 py-4 text-deep-navy-800 dark:text-white">
-                        {campaign.redemption_count?.toLocaleString() || 0}
+                        {campaign.redemptionsCount?.toLocaleString() || 0}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
                           <span className="text-deep-navy-800 dark:text-white">
-                            {campaign.conversion_rate ? `${campaign.conversion_rate.toFixed(1)}%` : '0%'}
+                            {campaign.conversionRate ? `${campaign.conversionRate.toFixed(1)}%` : '0%'}
                           </span>
                           <div className="h-1.5 w-16 overflow-hidden rounded-full bg-deep-navy-200 dark:bg-deep-navy-700">
                             <div
                               className={cn(
                                 'h-full transition-all',
-                                (campaign.conversion_rate || 0) >= 30 ? 'bg-green-500' :
-                                (campaign.conversion_rate || 0) >= 20 ? 'bg-blue-500' :
+                                (campaign.conversionRate || 0) >= 30 ? 'bg-green-500' :
+                                (campaign.conversionRate || 0) >= 20 ? 'bg-blue-500' :
                                 'bg-amber-500'
                               )}
-                              style={{ width: `${Math.min(campaign.conversion_rate || 0, 100)}%` }}
+                              style={{ width: `${Math.min(campaign.conversionRate || 0, 100)}%` }}
                             />
                           </div>
                         </div>
@@ -655,7 +648,7 @@ function CampaignManagement() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedCampaign(campaign);
@@ -665,7 +658,7 @@ function CampaignManagement() {
                             View Details
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleDuplicateCampaign(campaign)}
                           >
@@ -697,7 +690,7 @@ function CampaignManagement() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
@@ -705,7 +698,7 @@ function CampaignManagement() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
@@ -789,34 +782,21 @@ function CampaignManagement() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
-                    Expected Revenue
+                    Budget Cap
                   </label>
                   <Input
                     type="number"
-                    value={formData.expectedRevenue}
-                    onChange={(e) => setFormData({ ...formData, expectedRevenue: e.target.value })}
+                    value={formData.budgetCap}
+                    onChange={(e) => setFormData({ ...formData, budgetCap: e.target.value })}
                     placeholder="0.00"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-deep-navy-700 dark:text-deep-navy-200">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Campaign description..."
-                  rows={3}
-                  className="w-full rounded-md border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 px-3 py-2 focus:border-rephlo-blue dark:focus:border-electric-cyan focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
-                />
               </div>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowCreateModal(false);
                   resetForm();
@@ -873,44 +853,32 @@ function CampaignManagement() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Start Date</p>
-                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedCampaign.starts_at, 'long')}</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedCampaign.startsAt, 'long')}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">End Date</p>
-                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedCampaign.ends_at, 'long')}</p>
+                  <p className="text-deep-navy-800 dark:text-white">{formatDate(selectedCampaign.endsAt, 'long')}</p>
                 </div>
               </div>
-
-              {selectedCampaign.description && (
-                <div>
-                  <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Description</p>
-                  <p className="text-deep-navy-800 dark:text-white">{selectedCampaign.description}</p>
-                </div>
-              )}
 
               <div className="grid grid-cols-3 gap-4 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 bg-deep-navy-50 dark:bg-deep-navy-900 p-4">
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Redemptions</p>
                   <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
-                    {selectedCampaign.redemption_count?.toLocaleString() || 0}
+                    {selectedCampaign.redemptionsCount?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Conversion Rate</p>
                   <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
-                    {selectedCampaign.conversion_rate ? `${selectedCampaign.conversion_rate.toFixed(1)}%` : '0%'}
+                    {selectedCampaign.conversionRate ? `${selectedCampaign.conversionRate.toFixed(1)}%` : '0%'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-deep-navy-600 dark:text-deep-navy-200">Revenue</p>
                   <p className="text-2xl font-bold text-deep-navy-800 dark:text-white">
-                    {formatCurrency(selectedCampaign.actual_revenue)}
+                    {formatCurrency(selectedCampaign.actualRevenue || 0)}
                   </p>
-                  {selectedCampaign.expected_revenue && (
-                    <p className="text-xs text-deep-navy-500 dark:text-deep-navy-300">
-                      Target: {formatCurrency(selectedCampaign.expected_revenue)}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -927,7 +895,7 @@ function CampaignManagement() {
         }}
         onConfirm={handleDeleteCampaign}
         title="Delete Campaign"
-        message={`Are you sure you want to delete "${selectedCampaign?.name}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${selectedCampaign?.name}"? This action cannot be undone.`}
         confirmText="Delete"
         isProcessing={isProcessing}
       />

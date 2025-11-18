@@ -1,9 +1,22 @@
-// API Response types
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+// Re-export from shared-types using import/export pattern to satisfy isolatedModules
+import type {
+  ApiResponse as ApiResponseType,
+  ApiError as ApiErrorType,
+  PaginationData as PaginationDataType,
+  PaginationParams as PaginationParamsType
+} from '@rephlo/shared-types';
+
+export type ApiResponse<T = any> = ApiResponseType<T>;
+export type ApiError = ApiErrorType;
+export type PaginationData = PaginationDataType;
+export type PaginationParams = PaginationParamsType;
+
+// Re-export helper functions
+export {
+  createSuccessResponse,
+  createErrorResponse,
+  createPaginatedResponse
+} from '@rephlo/shared-types';
 
 // Download types
 export interface DownloadRequest {
@@ -66,3 +79,25 @@ export interface LegacyMetrics {
   feedbackCount: number;
   diagnosticsCount: number;
 }
+
+// Re-export model lifecycle types
+export type {
+  ModelInfo,
+  ModelMeta,
+  LifecycleEvent,
+  CreateModelRequest,
+  MarkLegacyRequest,
+  ArchiveRequest,
+  LifecycleHistoryResponse,
+  LegacyModelsResponse,
+  ArchivedModelsResponse,
+  ModelStatusFilter,
+  LifecycleAction,
+  MarkLegacyDialogProps,
+  ArchiveDialogProps,
+  MetaJsonEditorProps,
+  ModelCreationFormProps,
+  LifecycleHistoryPanelProps,
+  ModelStatusBadgeProps,
+  LifecycleActionMenuProps,
+} from './model-lifecycle';

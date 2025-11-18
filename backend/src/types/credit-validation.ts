@@ -122,13 +122,13 @@ export type RecordUsageInput = z.infer<typeof recordUsageSchema>;
  */
 export interface CurrentCreditsResponse {
   id: string;
-  user_id: string;
-  total_credits: number;
-  used_credits: number;
-  remaining_credits: number;
-  billing_period_start: string;
-  billing_period_end: string;
-  usage_percentage: number;
+  userId: string;
+  totalCredits: number;
+  usedCredits: number;
+  remainingCredits: number;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  usagePercentage: number;
 }
 
 /**
@@ -136,14 +136,14 @@ export interface CurrentCreditsResponse {
  */
 export interface UsageHistoryItem {
   id: string;
-  model_id: string;
+  modelId: string;
   operation: string;
-  credits_used: number;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  total_tokens: number | null;
-  request_duration_ms: number | null;
-  created_at: string;
+  creditsUsed: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  requestDurationMs: number | null;
+  createdAt: string;
 }
 
 /**
@@ -155,12 +155,12 @@ export interface UsageHistoryResponse {
     limit: number;
     offset: number;
     total: number;
-    has_more: boolean;
+    hasMore: boolean;
   };
   summary: {
-    total_credits_used: number;
-    total_requests: number;
-    total_tokens: number;
+    totalCreditsUsed: number;
+    totalRequests: number;
+    totalTokens: number;
   };
 }
 
@@ -170,11 +170,11 @@ export interface UsageHistoryResponse {
 export interface UsageStatsItem {
   date?: string;
   hour?: number;
-  model_id?: string;
-  credits_used: number;
-  requests_count: number;
-  tokens_total: number;
-  average_duration_ms: number;
+  modelId?: string;
+  creditsUsed: number;
+  requestsCount: number;
+  tokensTotal: number;
+  averageDurationMs: number;
 }
 
 /**
@@ -183,10 +183,10 @@ export interface UsageStatsItem {
 export interface UsageStatsResponse {
   stats: UsageStatsItem[];
   total: {
-    credits_used: number;
-    requests_count: number;
-    tokens_total: number;
-    average_duration_ms: number;
+    creditsUsed: number;
+    requestsCount: number;
+    tokensTotal: number;
+    averageDurationMs: number;
   };
 }
 
@@ -194,19 +194,19 @@ export interface UsageStatsResponse {
  * Rate limit status response type
  */
 export interface RateLimitStatusResponse {
-  requests_per_minute: {
+  requestsPerMinute: {
     limit: number;
     remaining: number;
-    reset_at: string;
+    resetAt: string;
   };
-  tokens_per_minute: {
+  tokensPerMinute: {
     limit: number;
     remaining: number;
-    reset_at: string;
+    resetAt: string;
   };
-  credits_per_day: {
+  creditsPerDay: {
     limit: number;
     remaining: number;
-    reset_at: string;
+    resetAt: string;
   };
 }

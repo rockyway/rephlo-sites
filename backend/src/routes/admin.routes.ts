@@ -28,6 +28,7 @@ import { RevenueAnalyticsController } from '../controllers/revenue-analytics.con
 import { SettingsController } from '../controllers/admin/settings.controller';
 import { BillingController } from '../controllers/billing.controller';
 import { ProfitabilityController } from '../controllers/admin/profitability.controller';
+import vendorAnalyticsRoutes from './vendor-analytics.routes';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -656,12 +657,15 @@ router.patch(
     const user = await userManagementService.viewUserDetails(id);
 
     return res.json({
-      message: 'User role updated successfully. All sessions have been terminated.',
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
+      status: 'success',
+      data: {
+        message: 'User role updated successfully. All sessions have been terminated.',
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+        },
       },
     });
   })
@@ -971,6 +975,140 @@ router.post(
   '/pricing/simulate',
   auditLog({ action: 'update', resourceType: 'profitability' }),
   asyncHandler(profitabilityController.simulatePricing.bind(profitabilityController))
+);
+
+// =============================================================================
+// Vendor Analytics Routes (Plan 180)
+// =============================================================================
+
+/**
+ * Vendor cost and gross margin analytics for Admin Analytics Dashboard
+ *
+ * Endpoints:
+ * - GET  /admin/analytics/gross-margin - Gross margin KPI with tier breakdown
+ * - GET  /admin/analytics/cost-by-provider - Top 5 providers by cost
+ * - GET  /admin/analytics/margin-trend - Time series gross margin data
+ * - GET  /admin/analytics/cost-distribution - Cost histogram with statistics
+ * - POST /admin/analytics/export-csv - Export analytics data as CSV
+ *
+ * Security:
+ * - JWT authentication (handled by parent router)
+ * - Admin role required (handled by parent router)
+ * - Rate limiting: 100 requests per hour (handled by vendor-analytics.routes)
+ *
+ * Reference: docs/plan/180-admin-analytics-dashboard-ui-design.md
+ */
+router.use('/analytics', vendorAnalyticsRoutes);
+
+// =============================================================================
+// Refund Management Endpoints (Plan 192 Section 7)
+// =============================================================================
+
+/**
+ * GET /admin/refunds
+ * List all refund requests with pagination and filtering
+ *
+ * Query parameters:
+ * - page: number (default: 1)
+ * - limit: number (default: 20, max: 100)
+ * - status: 'pending' | 'approved' | 'processing' | 'completed' | 'failed' | 'cancelled' (optional)
+ * - refundType: 'manual_admin' | 'proration_credit' | 'chargeback' (optional)
+ *
+ * Returns:
+ * - refunds: Array of refund records with user and subscription details
+ * - pagination: { total, page, limit, totalPages }
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.get(
+  '/refunds',
+  auditLog({ action: 'read', resourceType: 'refund' }),
+  asyncHandler(adminController.listRefunds.bind(adminController))
+);
+
+/**
+ * POST /admin/refunds/:id/approve
+ * Approve a pending refund request and process with Stripe
+ *
+ * Path parameters:
+ * - id: string (refund ID)
+ *
+ * Returns:
+ * - Updated refund record with 'processing' status
+ * - Stripe refund ID
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.post(
+  '/refunds/:id/approve',
+  auditLog({ action: 'update', resourceType: 'refund', captureRequestBody: true }),
+  asyncHandler(adminController.approveRefund.bind(adminController))
+);
+
+/**
+ * POST /admin/refunds/:id/cancel
+ * Cancel a pending refund request
+ *
+ * Path parameters:
+ * - id: string (refund ID)
+ *
+ * Request body:
+ * - reason: string (cancellation reason)
+ *
+ * Returns:
+ * - Updated refund record with 'cancelled' status
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.post(
+  '/refunds/:id/cancel',
+  auditLog({ action: 'update', resourceType: 'refund', captureRequestBody: true }),
+  asyncHandler(adminController.cancelRefund.bind(adminController))
+);
+
+/**
+ * POST /admin/subscriptions/:id/cancel-with-refund
+ * Manual cancel subscription with full refund
+ * (For users who forgot to cancel before billing)
+ *
+ * Path parameters:
+ * - id: string (subscription ID)
+ *
+ * Request body:
+ * - refundReason: string (required)
+ * - adminNotes: string (optional)
+ *
+ * Returns:
+ * - subscription: Cancelled subscription record
+ * - refund: Created refund record
+ *
+ * Reference: docs/plan/192-subscription-billing-refund-system.md Section 7.1
+ */
+router.post(
+  '/subscriptions/:id/cancel-with-refund',
+  auditLog({ action: 'update', resourceType: 'subscription', captureRequestBody: true }),
+  asyncHandler(adminController.cancelSubscriptionWithRefund.bind(adminController))
+);
+
+/**
+ * GET /admin/subscriptions/:id/credit-usage
+ * Get credit usage for current billing period
+ *
+ * Returns credit usage statistics for the subscription's current billing period.
+ * Used to calculate prorated refund amounts.
+ *
+ * Response:
+ * - subscriptionId
+ * - currentPeriodStart
+ * - currentPeriodEnd
+ * - creditsUsed (number of credits consumed in current period)
+ *
+ * Reference: Refund proration calculation
+ */
+router.get(
+  '/subscriptions/:id/credit-usage',
+  auditLog({ action: 'read', resourceType: 'subscription' }),
+  asyncHandler(adminController.getSubscriptionCreditUsage.bind(adminController))
 );
 
 export default router;

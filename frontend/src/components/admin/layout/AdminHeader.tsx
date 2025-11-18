@@ -4,6 +4,8 @@ import { Menu } from '@headlessui/react';
 import { ChevronRight, Menu as MenuIcon, Search, User, LogOut } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
 import ThemeToggle from '@/components/common/ThemeToggle';
+import { authHelpers } from '@/services/api';
+import { revokeToken } from '@/utils/oauth';
 
 /**
  * AdminHeader Component
@@ -24,6 +26,39 @@ const AdminHeader: React.FC = () => {
   const handleMobileMenuClick = () => {
     if ((window as any).__toggleMobileSidebar) {
       (window as any).__toggleMobileSidebar();
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      // Get tokens before clearing
+      const accessToken = authHelpers.getAccessToken();
+      const refreshToken = authHelpers.getRefreshToken();
+
+      // Revoke tokens on the server
+      if (accessToken) {
+        await revokeToken(accessToken);
+      }
+      if (refreshToken) {
+        await revokeToken(refreshToken);
+      }
+
+      // Clear local auth data
+      authHelpers.clearAuth('user_logout');
+
+      // Redirect to identity provider logout to clear session cookies
+      // Then redirect back to login page
+      const idpLogoutUrl = 'http://localhost:7151/logout';
+      const postLogoutRedirectUri = encodeURIComponent('http://localhost:7052/login');
+      window.location.href = `${idpLogoutUrl}?post_logout_redirect_uri=${postLogoutRedirectUri}`;
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if token revocation fails, clear local auth and redirect to IDP logout
+      authHelpers.clearAuth('user_logout_with_error');
+      const idpLogoutUrl = 'http://localhost:7151/logout';
+      const postLogoutRedirectUri = encodeURIComponent('http://localhost:7052/login');
+      window.location.href = `${idpLogoutUrl}?post_logout_redirect_uri=${postLogoutRedirectUri}`;
     }
   };
 
@@ -127,10 +162,7 @@ const AdminHeader: React.FC = () => {
                             className={`${
                               active ? 'bg-deep-navy-100 dark:bg-deep-navy-700' : ''
                             } flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 rounded-md transition-colors`}
-                            onClick={() => {
-                              // TODO: Implement logout
-                              console.log('Logout');
-                            }}
+                            onClick={handleLogout}
                           >
                             <LogOut className="w-4 h-4" />
                             <span>Logout</span>

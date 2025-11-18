@@ -138,9 +138,10 @@ export function getTierDisplayName(tier: SubscriptionTier): string {
   const names: Record<SubscriptionTier, string> = {
     [SubscriptionTier.FREE]: 'Free',
     [SubscriptionTier.PRO]: 'Pro',
+    [SubscriptionTier.PRO_PLUS]: 'Pro Plus',
     [SubscriptionTier.PRO_MAX]: 'Pro Max',
     [SubscriptionTier.ENTERPRISE_PRO]: 'Enterprise Pro',
-    [SubscriptionTier.ENTERPRISE_MAX]: 'Enterprise Max',
+    [SubscriptionTier.ENTERPRISE_PRO_PLUS]: 'Enterprise Pro Plus',
     [SubscriptionTier.PERPETUAL]: 'Perpetual',
   };
   return names[tier] || tier;
@@ -153,9 +154,10 @@ export function getTierColor(tier: SubscriptionTier): string {
   const colors: Record<SubscriptionTier, string> = {
     [SubscriptionTier.FREE]: 'bg-gray-100 text-gray-700 border-gray-300',
     [SubscriptionTier.PRO]: 'bg-blue-100 text-blue-700 border-blue-300',
+    [SubscriptionTier.PRO_PLUS]: 'bg-indigo-100 text-indigo-700 border-indigo-300',
     [SubscriptionTier.PRO_MAX]: 'bg-purple-100 text-purple-700 border-purple-300',
     [SubscriptionTier.ENTERPRISE_PRO]: 'bg-amber-100 text-amber-700 border-amber-300',
-    [SubscriptionTier.ENTERPRISE_MAX]: 'bg-orange-100 text-orange-700 border-orange-300',
+    [SubscriptionTier.ENTERPRISE_PRO_PLUS]: 'bg-orange-100 text-orange-700 border-orange-300',
     [SubscriptionTier.PERPETUAL]: 'bg-green-100 text-green-700 border-green-300',
   };
   return colors[tier] || 'bg-gray-100 text-gray-700';
@@ -168,10 +170,11 @@ export function getTierSortOrder(tier: SubscriptionTier): number {
   const order: Record<SubscriptionTier, number> = {
     [SubscriptionTier.FREE]: 0,
     [SubscriptionTier.PRO]: 1,
-    [SubscriptionTier.PRO_MAX]: 2,
-    [SubscriptionTier.ENTERPRISE_PRO]: 3,
-    [SubscriptionTier.ENTERPRISE_MAX]: 4,
-    [SubscriptionTier.PERPETUAL]: 5,
+    [SubscriptionTier.PRO_PLUS]: 2,
+    [SubscriptionTier.PRO_MAX]: 3,
+    [SubscriptionTier.ENTERPRISE_PRO]: 4,
+    [SubscriptionTier.ENTERPRISE_PRO_PLUS]: 5,
+    [SubscriptionTier.PERPETUAL]: 6,
   };
   return order[tier] || 999;
 }
@@ -191,6 +194,9 @@ export function getSubscriptionStatusDisplay(status: SubscriptionStatus): string
     [SubscriptionStatus.CANCELLED]: 'Cancelled',
     [SubscriptionStatus.EXPIRED]: 'Expired',
     [SubscriptionStatus.SUSPENDED]: 'Suspended',
+    [SubscriptionStatus.GRACE_PERIOD]: 'Grace Period',
+    [SubscriptionStatus.INACTIVE]: 'Inactive',
+    [SubscriptionStatus.PENDING]: 'Pending',
   };
   return names[status] || status;
 }
@@ -206,6 +212,9 @@ export function getSubscriptionStatusColor(status: SubscriptionStatus): string {
     [SubscriptionStatus.CANCELLED]: 'bg-gray-100 text-gray-700 border-gray-300',
     [SubscriptionStatus.EXPIRED]: 'bg-gray-100 text-gray-700 border-gray-300',
     [SubscriptionStatus.SUSPENDED]: 'bg-amber-100 text-amber-700 border-amber-300',
+    [SubscriptionStatus.GRACE_PERIOD]: 'bg-orange-100 text-orange-700 border-orange-300',
+    [SubscriptionStatus.INACTIVE]: 'bg-gray-100 text-gray-700 border-gray-300',
+    [SubscriptionStatus.PENDING]: 'bg-yellow-100 text-yellow-700 border-yellow-300',
   };
   return colors[status] || 'bg-gray-100 text-gray-700';
 }

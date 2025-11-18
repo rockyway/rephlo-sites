@@ -43,15 +43,15 @@ export class WebhooksController {
       }
 
       // Don't expose webhook secret in response
-      const { webhookSecret, ...configWithoutSecret } = webhookConfig;
+      const { webhook_secret, ...configWithoutSecret } = webhookConfig;
 
       res.json({
         id: configWithoutSecret.id,
-        user_id: configWithoutSecret.userId,
-        webhook_url: configWithoutSecret.webhookUrl,
-        is_active: configWithoutSecret.isActive,
-        created_at: configWithoutSecret.createdAt.toISOString(),
-        updated_at: configWithoutSecret.updatedAt.toISOString(),
+        user_id: configWithoutSecret.user_id,
+        webhook_url: configWithoutSecret.webhook_url,
+        is_active: configWithoutSecret.is_active,
+        created_at: configWithoutSecret.created_at.toISOString(),
+        updated_at: configWithoutSecret.updated_at.toISOString(),
       });
     } catch (error: any) {
       logger.error('Error getting webhook config', {
@@ -94,11 +94,11 @@ export class WebhooksController {
       // Don't expose webhook secret in response
       res.status(201).json({
         id: webhookConfig.id,
-        user_id: webhookConfig.userId,
-        webhook_url: webhookConfig.webhookUrl,
-        is_active: webhookConfig.isActive,
-        created_at: webhookConfig.createdAt.toISOString(),
-        updated_at: webhookConfig.updatedAt.toISOString(),
+        user_id: webhookConfig.user_id,
+        webhook_url: webhookConfig.webhook_url,
+        is_active: webhookConfig.is_active,
+        created_at: webhookConfig.created_at.toISOString(),
+        updated_at: webhookConfig.updated_at.toISOString(),
       });
     } catch (error: any) {
       if (error instanceof ZodError) {

@@ -40,8 +40,10 @@ import {
 import type {
   Coupon,
   CouponType,
+  UpdateCouponRequest,
+} from '@rephlo/shared-types';
+import type {
   CouponFilters,
-  CouponUpdateRequest,
 } from '@/types/plan111.types';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 import CreateCouponModal from '@/components/admin/coupons/CreateCouponModal';
@@ -117,19 +119,19 @@ function CouponManagement() {
       const now = new Date();
       const activeCoupons = coupons.filter(
         (c) =>
-          c.is_active &&
-          new Date(c.valid_from) <= now &&
-          new Date(c.valid_until) >= now
+          c.isActive &&
+          new Date(c.validFrom) <= now &&
+          new Date(c.validUntil) >= now
       );
 
       setStats({
         totalActive: activeCoupons.length,
         totalRedemptions: coupons.reduce(
-          (sum, c) => sum + (c.redemption_count || 0),
+          (sum, c) => sum + (c.redemptionCount || 0),
           0
         ),
         totalDiscountValue: coupons.reduce(
-          (sum, c) => sum + (c.total_discount_value || 0),
+          (sum, c) => sum + (c.totalDiscountValue || 0),
           0
         ),
         fraudEventsFlagged: 0, // TODO: Add fraud events API
@@ -180,13 +182,13 @@ function CouponManagement() {
 
   const handleToggleCouponStatus = async (coupon: Coupon) => {
     try {
-      const updates: CouponUpdateRequest = {
-        is_active: !coupon.is_active,
+      const updates: UpdateCouponRequest = {
+        isActive: !coupon.isActive,
       };
 
       await plan111API.updateCoupon(coupon.id, updates);
       setSuccessMessage(
-        `Coupon ${coupon.is_active ? 'deactivated' : 'activated'} successfully`
+        `Coupon ${coupon.isActive ? 'deactivated' : 'activated'} successfully`
       );
       setTimeout(() => setSuccessMessage(null), 3000);
       loadCoupons();
@@ -416,23 +418,23 @@ function CouponManagement() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
                         {formatDiscountValue(
                           coupon.type,
-                          coupon.discount_percentage ||
-                            coupon.discount_amount ||
-                            coupon.bonus_duration_months ||
+                          coupon.discountPercentage ||
+                            coupon.discountAmount ||
+                            coupon.bonusDurationMonths ||
                             0
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
-                        {coupon.max_discount_applications || '∞'}
+                        {coupon.maxDiscountApplications || '∞'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-800 dark:text-white">
-                        {coupon.redemption_count || 0}
+                        {coupon.redemptionCount || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
-                        {formatDate(coupon.valid_from)}
+                        {formatDate(coupon.validFrom)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-deep-navy-600 dark:text-deep-navy-300">
-                        {formatDate(coupon.valid_until)}
+                        {formatDate(coupon.validUntil)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <CouponStatusBadge coupon={coupon} />
@@ -457,15 +459,15 @@ function CouponManagement() {
                             onClick={() => handleToggleCouponStatus(coupon)}
                             className={cn(
                               'hover:opacity-70',
-                              coupon.is_active
+                              coupon.isActive
                                 ? 'text-green-600'
                                 : 'text-deep-navy-400 dark:text-deep-navy-500'
                             )}
                             title={
-                              coupon.is_active ? 'Deactivate' : 'Activate'
+                              coupon.isActive ? 'Deactivate' : 'Activate'
                             }
                           >
-                            {coupon.is_active ? (
+                            {coupon.isActive ? (
                               <Power className="w-4 h-4" />
                             ) : (
                               <PowerOff className="w-4 h-4" />

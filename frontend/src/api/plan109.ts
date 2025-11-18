@@ -13,22 +13,26 @@
 
 import { apiClient } from '@/services/api';
 import type {
-  Subscription,
-  SubscriptionFilters,
-  SubscriptionStats,
+  // Import shared types from shared-types package
   User,
-  UserDetails,
+  Subscription,
+  SubscriptionStats,
+  BillingInvoice,
+  PaymentTransaction,
+  CreditAllocation,
+  UserCreditBalance,
+} from '@rephlo/shared-types';
+import type {
+  // Keep plan109-specific types that don't exist in shared-types
+  AdminUserDetails,
+  SubscriptionFilters,
   UserFilters,
-  Invoice,
   InvoiceFilters,
-  Transaction,
   TransactionFilters,
   DunningAttempt,
   RevenueMetrics,
   RevenueByTier,
-  CreditAllocation,
   CreditAdjustmentRequest,
-  CreditBalance,
   CreditUtilization,
   TopCreditConsumer,
   DashboardMetrics,
@@ -36,7 +40,6 @@ import type {
   ConversionFunnel,
   RevenueTimeSeries,
   CreditsByModel,
-  TierTransition,
   PaginatedResponse,
   TierChangeRequest,
   CancelSubscriptionRequest,
@@ -45,7 +48,17 @@ import type {
   RefundRequest,
   BulkUpdateUsersRequest,
   AnalyticsFilters,
+  SubscriptionRefund,
+  RefundFilters,
+  ManualCancelRefundRequest,
+  ApproveRefundRequest,
+  CancelRefundRequest,
 } from '@/types/plan109.types';
+
+// Type aliases for compatibility with existing code
+type Invoice = BillingInvoice;
+type Transaction = PaymentTransaction;
+type CreditBalance = UserCreditBalance;
 
 // ============================================================================
 // Subscription Management API
@@ -87,53 +100,53 @@ export const subscriptionApi = {
    * Upgrade subscription tier
    */
   upgradeTier: async (subscriptionId: string, data: TierChangeRequest) => {
-    const response = await apiClient.post<Subscription>(
+    const response = await apiClient.post<{ status: string; data: Subscription; meta?: any }>(
       `/admin/subscriptions/${subscriptionId}/upgrade`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Downgrade subscription tier
    */
   downgradeTier: async (subscriptionId: string, data: TierChangeRequest) => {
-    const response = await apiClient.post<Subscription>(
+    const response = await apiClient.post<{ status: string; data: Subscription; meta?: any }>(
       `/admin/subscriptions/${subscriptionId}/downgrade`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Cancel subscription
    */
   cancelSubscription: async (subscriptionId: string, data: CancelSubscriptionRequest) => {
-    const response = await apiClient.post<Subscription>(
+    const response = await apiClient.post<{ status: string; data: Subscription; meta?: any }>(
       `/admin/subscriptions/${subscriptionId}/cancel`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Reactivate cancelled subscription
    */
   reactivateSubscription: async (subscriptionId: string) => {
-    const response = await apiClient.post<Subscription>(
+    const response = await apiClient.post<{ status: string; data: Subscription; meta?: any }>(
       `/admin/subscriptions/${subscriptionId}/reactivate`
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Allocate monthly credits for a subscription
    */
   allocateMonthlyCredits: async (subscriptionId: string) => {
-    const response = await apiClient.post<CreditAllocation>(
+    const response = await apiClient.post<{ status: string; data: CreditAllocation; meta?: any }>(
       `/admin/subscriptions/${subscriptionId}/allocate-credits`
     );
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -168,7 +181,7 @@ export const userManagementApi = {
    * Get detailed user information
    */
   getUserDetails: async (userId: string) => {
-    const response = await apiClient.get<UserDetails>(
+    const response = await apiClient.get<AdminUserDetails>(
       `/admin/users/${userId}`
     );
     return response.data;
@@ -189,64 +202,64 @@ export const userManagementApi = {
    * Suspend user account
    */
   suspendUser: async (data: SuspendUserRequest) => {
-    const response = await apiClient.post<User>(
+    const response = await apiClient.post<{ status: 'success'; data: User }>(
       `/admin/users/${data.userId}/suspend`,
       { reason: data.reason, duration: data.duration }
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Unsuspend user account
    */
   unsuspendUser: async (userId: string) => {
-    const response = await apiClient.post<User>(
+    const response = await apiClient.post<{ status: 'success'; data: User }>(
       `/admin/users/${userId}/unsuspend`
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Ban user account
    */
   banUser: async (data: BanUserRequest) => {
-    const response = await apiClient.post<User>(
+    const response = await apiClient.post<{ status: 'success'; data: User }>(
       `/admin/users/${data.userId}/ban`,
       { reason: data.reason, permanent: data.permanent }
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Unban user account
    */
   unbanUser: async (userId: string) => {
-    const response = await apiClient.post<User>(
+    const response = await apiClient.post<{ status: 'success'; data: User }>(
       `/admin/users/${userId}/unban`
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Bulk update users
    */
   bulkUpdateUsers: async (data: BulkUpdateUsersRequest) => {
-    const response = await apiClient.post<{ updated: number; errors: string[] }>(
+    const response = await apiClient.post<{ status: 'success'; data: { updated: number; errors: string[] } }>(
       '/admin/users/bulk-update',
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Manually adjust user credits
    */
   adjustCredits: async (userId: string, data: CreditAdjustmentRequest) => {
-    const response = await apiClient.post<CreditAllocation>(
+    const response = await apiClient.post<{ status: 'success'; data: CreditAllocation }>(
       `/admin/users/${userId}/adjust-credits`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 };
 
@@ -297,11 +310,11 @@ export const billingApi = {
    * Refund transaction
    */
   refundTransaction: async (transactionId: string, data: RefundRequest) => {
-    const response = await apiClient.post<Transaction>(
+    const response = await apiClient.post<{ status: string; data: Transaction; meta?: any }>(
       `/admin/billing/transactions/${transactionId}/refund`,
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -318,10 +331,10 @@ export const billingApi = {
    * Retry failed payment
    */
   retryPayment: async (attemptId: string) => {
-    const response = await apiClient.post<DunningAttempt>(
+    const response = await apiClient.post<{ status: string; data: DunningAttempt; meta?: any }>(
       `/admin/billing/dunning/${attemptId}/retry`
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -388,21 +401,21 @@ export const creditApi = {
    * Grant bonus credits
    */
   grantBonusCredits: async (data: CreditAdjustmentRequest) => {
-    const response = await apiClient.post<CreditAllocation>(
+    const response = await apiClient.post<{ status: string; data: CreditAllocation; meta?: any }>(
       '/admin/credits/grant-bonus',
       data
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
    * Process monthly credit allocations (cron job)
    */
   processMonthlyAllocations: async () => {
-    const response = await apiClient.post<{ processed: number }>(
+    const response = await apiClient.post<{ status: string; data: { processed: number }; meta?: any }>(
       '/admin/credits/process-monthly'
     );
-    return response.data;
+    return response.data.data;
   },
 
   /**
@@ -511,35 +524,21 @@ export const analyticsApi = {
   getConversionFunnel: async (period: '7d' | '30d' | '90d' | '1y' = '30d') => {
     try {
       const response = await apiClient.get<{
-        freeTier: { count: number; percentage: number };
-        paidSubscription: { count: number; percentage: number; conversionRate: number };
-        perpetualLicense: { count: number; percentage: number; conversionRate: number };
+        stages: { name: string; count: number; percentage: number; conversionRate?: number }[];
+        period: string;
       }>('/admin/analytics/revenue/funnel', { params: { period } });
 
       // Validate response structure
-      if (!response.data || !response.data.freeTier) {
+      if (!response.data || !response.data.stages || !Array.isArray(response.data.stages)) {
         throw new Error('Invalid response format from conversion funnel endpoint');
       }
 
       // Transform backend response to frontend format
-      const data = response.data;
-      const funnel: ConversionFunnel[] = [
-        {
-          stage: 'Free Tier',
-          users: data.freeTier.count,
-          conversionRate: 100, // Starting point
-        },
-        {
-          stage: 'Paid Subscription',
-          users: data.paidSubscription.count,
-          conversionRate: data.paidSubscription.conversionRate,
-        },
-        {
-          stage: 'Perpetual License',
-          users: data.perpetualLicense.count,
-          conversionRate: data.perpetualLicense.conversionRate,
-        },
-      ];
+      const funnel: ConversionFunnel[] = response.data.stages.map(stage => ({
+        stage: stage.name,
+        count: stage.count,
+        conversionRate: stage.conversionRate ?? 100, // Default to 100 for first stage
+      }));
 
       return { funnel };
     } catch (error: any) {
@@ -663,6 +662,76 @@ export const analyticsApi = {
 };
 
 // ============================================================================
+// Refund Management API (Plan 192)
+// ============================================================================
+
+export const refundApi = {
+  /**
+   * Get all refund requests with filters and pagination
+   */
+  getAllRefunds: async (filters?: RefundFilters) => {
+    const response = await apiClient.get<PaginatedResponse<SubscriptionRefund>>(
+      '/admin/refunds',
+      { params: filters }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get a specific refund by ID
+   */
+  getRefund: async (refundId: string) => {
+    const response = await apiClient.get<SubscriptionRefund>(
+      `/admin/refunds/${refundId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Approve a pending refund request
+   */
+  approveRefund: async (refundId: string, data?: ApproveRefundRequest) => {
+    const response = await apiClient.post<{ status: string; data: SubscriptionRefund; meta?: any }>(
+      `/admin/refunds/${refundId}/approve`,
+      data || {}
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Cancel a pending refund request
+   */
+  cancelRefund: async (refundId: string, data: CancelRefundRequest) => {
+    const response = await apiClient.post<{ status: string; data: SubscriptionRefund; meta?: any }>(
+      `/admin/refunds/${refundId}/cancel`,
+      data
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Cancel subscription with immediate refund (manual admin action)
+   */
+  cancelSubscriptionWithRefund: async (subscriptionId: string, data: ManualCancelRefundRequest) => {
+    const response = await apiClient.post<{ status: string; data: SubscriptionRefund; meta?: any }>(
+      `/admin/subscriptions/${subscriptionId}/cancel-with-refund`,
+      data
+    );
+    return response.data.data;
+  },
+
+  /**
+   * Get credit usage for subscription's current billing period
+   */
+  getSubscriptionCreditUsage: async (subscriptionId: string) => {
+    const response = await apiClient.get<{ status: string; data: { subscriptionId: string; currentPeriodStart: string | null; currentPeriodEnd: string | null; creditsUsed: number }; meta?: any }>(
+      `/admin/subscriptions/${subscriptionId}/credit-usage`
+    );
+    return response.data.data;
+  },
+};
+
+// ============================================================================
 // Combined Export
 // ============================================================================
 
@@ -672,6 +741,7 @@ export const plan109Api = {
   billing: billingApi,
   credits: creditApi,
   analytics: analyticsApi,
+  refunds: refundApi,
 };
 
 export default plan109Api;

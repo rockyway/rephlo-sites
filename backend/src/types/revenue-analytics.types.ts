@@ -91,12 +91,21 @@ export interface RevenueMixQuery {
 }
 
 /**
+ * Single revenue mix data point
+ */
+export interface RevenueMixDataPoint {
+  name: string; // 'Subscription', 'Perpetual', 'Upgrade'
+  value: number; // USD cents
+  percentage: number; // 0-100
+}
+
+/**
  * Revenue mix response - breakdown by source
  */
 export interface RevenueMixResponse {
-  subscriptionRevenue: number; // USD cents
-  perpetualRevenue: number; // USD cents
-  upgradeRevenue: number; // USD cents
+  data: RevenueMixDataPoint[];
+  total: number; // Total revenue in USD cents
+  period: string; // Period used (e.g., '30d')
 }
 
 // =============================================================================
@@ -125,6 +134,8 @@ export interface RevenueTrendDataPoint {
  */
 export interface RevenueTrendResponse {
   data: RevenueTrendDataPoint[];
+  period: string; // Period used (e.g., '30d')
+  granularity: 'daily' | 'weekly' | 'monthly'; // Aggregation level
 }
 
 // =============================================================================
@@ -139,34 +150,37 @@ export interface RevenueFunnelQuery {
 }
 
 /**
- * Single funnel stage with count and percentage
+ * Single funnel stage with count, percentage, and optional conversion rate
+ */
+export interface ConversionFunnelStage {
+  name: string; // Stage name (e.g., 'Free Tier', 'Paid Subscription')
+  count: number; // Number of users in this stage
+  percentage: number; // Percentage of total users (0-100)
+  conversionRate?: number; // Conversion rate from previous stage (0-100)
+}
+
+/**
+ * Revenue funnel response with stages array
+ */
+export interface RevenueFunnelResponse {
+  stages: ConversionFunnelStage[];
+  period: string; // Period used (e.g., '30d')
+}
+
+/**
+ * @deprecated Legacy types - kept for backwards compatibility
  */
 export interface FunnelStage {
   count: number;
   percentage: number; // 0-100
 }
 
-/**
- * Paid subscription stage with conversion rate
- */
 export interface PaidSubscriptionStage extends FunnelStage {
   conversionRate: number; // Percentage from free tier
 }
 
-/**
- * Perpetual license stage with conversion rate
- */
 export interface PerpetualLicenseStage extends FunnelStage {
   conversionRate: number; // Percentage from paid subscription
-}
-
-/**
- * Revenue funnel response
- */
-export interface RevenueFunnelResponse {
-  freeTier: FunnelStage;
-  paidSubscription: PaidSubscriptionStage;
-  perpetualLicense: PerpetualLicenseStage;
 }
 
 // =============================================================================
@@ -188,7 +202,7 @@ export interface CreditUsageEntry {
   model: string; // Model ID
   credits: number; // Total credits used
   requests: number; // Number of requests
-  revenue_contribution: number; // USD cents, estimated
+  revenueContribution: number; // USD cents, estimated
 }
 
 /**
@@ -196,6 +210,8 @@ export interface CreditUsageEntry {
  */
 export interface CreditUsageResponse {
   data: CreditUsageEntry[];
+  total: number; // Total credits used across all models
+  period: string; // Period used (e.g., '30d')
 }
 
 // =============================================================================
@@ -208,25 +224,39 @@ export interface CreditUsageResponse {
 export interface CouponROIQuery {
   period?: '7d' | '30d' | '90d' | '1y'; // Default: '30d'
   limit?: number; // Default: 10, max: 100
+  offset?: number; // Default: 0
 }
 
 /**
  * Single campaign ROI entry
  */
 export interface CouponROIEntry {
-  campaign_name: string;
-  coupons_issued: number;
-  coupons_redeemed: number;
-  discount_value: number; // USD cents
-  revenue_generated: number; // USD cents
-  roi_percentage: number; // ROI % (can be negative)
+  campaignName: string;
+  couponsIssued: number;
+  couponsRedeemed: number;
+  discountValue: number; // USD cents
+  revenueGenerated: number; // USD cents
+  roiPercentage: number; // ROI % (can be negative)
 }
 
 /**
- * Coupon ROI response with data array
+ * Pagination metadata for coupon ROI response
+ */
+export interface PaginationMetadata {
+  limit: number; // Items per page
+  offset: number; // Current offset
+  total: number; // Total items available
+  hasMore: boolean; // Whether more items exist
+}
+
+/**
+ * Coupon ROI response with data array and pagination
  */
 export interface CouponROIResponse {
   data: CouponROIEntry[];
+  total: number; // Total campaigns matching criteria
+  period: string; // Period used (e.g., '30d')
+  pagination: PaginationMetadata;
 }
 
 // =============================================================================

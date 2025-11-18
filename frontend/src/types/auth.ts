@@ -4,15 +4,11 @@
  * Type definitions for OAuth/OIDC authentication flow
  */
 
-export interface User {
-  id: string;
-  email: string;
-  name?: string;
-  role: 'admin' | 'user';
-  emailVerified: boolean;
-  createdAt: string;
-  permissions?: string[];
-}
+// Import User from shared-types instead of defining locally
+import type { User, UserStatus } from '@rephlo/shared-types';
+
+// Re-export for convenience
+export type { User, UserStatus };
 
 export interface AuthTokens {
   accessToken: string;

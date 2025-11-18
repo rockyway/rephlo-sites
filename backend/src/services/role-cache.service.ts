@@ -61,7 +61,7 @@ export class RoleCacheService {
       logger.debug(`RoleCacheService: Cache MISS for user ${userId}`, { userId });
 
       // 2. Query database
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         select: { role: true },
       });
@@ -89,7 +89,7 @@ export class RoleCacheService {
           error: error.message,
         });
 
-        const user = await this.prisma.user.findUnique({
+        const user = await this.prisma.users.findUnique({
           where: { id: userId },
           select: { role: true },
         });
@@ -136,9 +136,9 @@ export class RoleCacheService {
       });
 
       // 2. Query database
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
-        select: { role: true, isActive: true },
+        select: { role: true, is_active: true },
       });
 
       if (!user) {
@@ -148,7 +148,7 @@ export class RoleCacheService {
 
       const result = {
         role: user.role,
-        isActive: user.isActive,
+        isActive: user.is_active,
       };
 
       // 3. Update cache
@@ -177,9 +177,9 @@ export class RoleCacheService {
           }
         );
 
-        const user = await this.prisma.user.findUnique({
+        const user = await this.prisma.users.findUnique({
           where: { id: userId },
-          select: { role: true, isActive: true },
+          select: { role: true, is_active: true },
         });
 
         if (!user) {
@@ -188,7 +188,7 @@ export class RoleCacheService {
 
         return {
           role: user.role,
-          isActive: user.isActive,
+          isActive: user.is_active,
         };
       }
 

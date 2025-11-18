@@ -58,14 +58,18 @@ export class LicenseManagementController {
         purchasedVersion || '1.0.0'
       );
 
+      // Standard response format
       res.status(201).json({
-        id: license.id,
-        license_key: license.licenseKey,
-        purchased_version: license.purchasedVersion,
-        eligible_until_version: license.eligibleUntilVersion,
-        max_activations: license.maxActivations,
-        status: license.status,
-        purchased_at: license.purchasedAt.toISOString(),
+        status: 'success',
+        data: {
+          id: license.id,
+          license_key: license.license_key,
+          purchased_version: license.purchased_version,
+          eligible_until_version: license.eligible_until_version,
+          max_activations: license.max_activations,
+          status: license.status,
+          purchased_at: license.purchased_at.toISOString(),
+        },
       });
     } catch (error) {
       logger.error('Failed to purchase license', { userId, error });
@@ -98,14 +102,18 @@ export class LicenseManagementController {
     try {
       const result = await this.licenseService.activateDevice(licenseKey, deviceInfo);
 
+      // Standard response format
       res.status(result.isNewActivation ? 201 : 200).json({
-        activation_id: result.activation.id,
-        license_id: result.activation.licenseId,
-        machine_fingerprint: result.activation.machineFingerprint,
-        device_name: result.activation.deviceName,
-        status: result.activation.status,
-        activated_at: result.activation.activatedAt.toISOString(),
-        is_new_activation: result.isNewActivation,
+        status: 'success',
+        data: {
+          activation_id: result.activation.id,
+          license_id: result.activation.license_id,
+          machine_fingerprint: result.activation.machine_fingerprint,
+          device_name: result.activation.device_name,
+          status: result.activation.status,
+          activated_at: result.activation.activated_at.toISOString(),
+          is_new_activation: result.isNewActivation,
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -195,13 +203,17 @@ export class LicenseManagementController {
     try {
       const activation = await this.licenseService.replaceDevice(id, newDeviceInfo);
 
+      // Standard response format
       res.status(200).json({
-        activation_id: activation.id,
-        license_id: activation.licenseId,
-        machine_fingerprint: activation.machineFingerprint,
-        device_name: activation.deviceName,
-        status: activation.status,
-        activated_at: activation.activatedAt.toISOString(),
+        status: 'success',
+        data: {
+          activation_id: activation.id,
+          license_id: activation.license_id,
+          machine_fingerprint: activation.machine_fingerprint,
+          device_name: activation.device_name,
+          status: activation.status,
+          activated_at: activation.activated_at.toISOString(),
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -245,28 +257,28 @@ export class LicenseManagementController {
 
       res.status(200).json({
         id: license.id,
-        license_key: license.licenseKey,
-        purchased_version: license.purchasedVersion,
-        eligible_until_version: license.eligibleUntilVersion,
-        max_activations: license.maxActivations,
-        current_activations: license.currentActivations,
+        license_key: license.license_key,
+        purchased_version: license.purchased_version,
+        eligible_until_version: license.eligible_until_version,
+        max_activations: license.max_activations,
+        current_activations: license.current_activations,
         status: license.status,
-        purchased_at: license.purchasedAt.toISOString(),
-        activated_at: license.activatedAt?.toISOString() || null,
-        activations: license.activations?.map((a) => ({
+        purchased_at: license.purchased_at.toISOString(),
+        activated_at: license.activated_at?.toISOString() || null,
+        activations: license.license_activation?.map((a: any) => ({
           id: a.id,
-          device_name: a.deviceName,
-          os_type: a.osType,
+          device_name: a.device_name,
+          os_type: a.os_type,
           status: a.status,
-          activated_at: a.activatedAt.toISOString(),
+          activated_at: a.activated_at.toISOString(),
         })),
-        version_upgrades: license.versionUpgrades?.map((u) => ({
+        version_upgrades: license.version_upgrade?.map((u: any) => ({
           id: u.id,
           from_version: u.fromVersion,
           to_version: u.toVersion,
           upgrade_price_usd: u.upgradePriceUsd,
           status: u.status,
-          purchased_at: u.purchasedAt.toISOString(),
+          purchased_at: u.purchased_at.toISOString(),
         })),
       });
     } catch (error) {
@@ -304,16 +316,16 @@ export class LicenseManagementController {
 
       res.status(200).json({
         license_key: licenseKey,
-        max_activations: license.maxActivations,
+        max_activations: license.max_activations,
         current_activations: devices.length,
         devices: devices.map((d) => ({
           id: d.id,
-          device_name: d.deviceName,
-          os_type: d.osType,
-          os_version: d.osVersion,
-          cpu_info: d.cpuInfo,
-          activated_at: d.activatedAt.toISOString(),
-          last_seen_at: d.lastSeenAt.toISOString(),
+          device_name: d.device_name,
+          os_type: d.os_type,
+          os_version: d.os_version,
+          cpu_info: d.cpu_info,
+          activated_at: d.activated_at.toISOString(),
+          last_seen_at: d.last_seen_at.toISOString(),
         })),
       });
     } catch (error) {
@@ -338,11 +350,17 @@ export class LicenseManagementController {
     try {
       const license = await this.licenseService.suspendLicense(id, reason || 'Admin action');
 
+      // Standard response format
       res.status(200).json({
-        id: license.id,
-        license_key: license.licenseKey,
-        status: license.status,
-        message: 'License suspended successfully',
+        status: 'success',
+        data: {
+          id: license.id,
+          license_key: license.license_key,
+          status: license.status,
+        },
+        meta: {
+          message: 'License suspended successfully',
+        },
       });
     } catch (error) {
       logger.error('Failed to suspend license', { licenseId: id, error });
@@ -366,11 +384,17 @@ export class LicenseManagementController {
     try {
       const license = await this.licenseService.revokeLicense(id, reason || 'Admin action');
 
+      // Standard response format
       res.status(200).json({
-        id: license.id,
-        license_key: license.licenseKey,
-        status: license.status,
-        message: 'License revoked successfully',
+        status: 'success',
+        data: {
+          id: license.id,
+          license_key: license.license_key,
+          status: license.status,
+        },
+        meta: {
+          message: 'License revoked successfully',
+        },
       });
     } catch (error) {
       logger.error('Failed to revoke license', { licenseId: id, error });

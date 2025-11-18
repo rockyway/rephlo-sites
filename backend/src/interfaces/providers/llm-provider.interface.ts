@@ -25,9 +25,10 @@ export interface ILLMProvider {
   chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
     };
   }>;
 
@@ -44,9 +45,10 @@ export interface ILLMProvider {
   textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
     usage: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+      cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
     };
   }>;
 

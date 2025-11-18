@@ -41,8 +41,8 @@ export class RevenueAnalyticsService {
    */
   private getPeriodConfig(period: string): PeriodConfig {
     const now = new Date();
-    const endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+    const end_date = new Date(now);
+    end_date.setHours(23, 59, 59, 999);
 
     let days: number;
     switch (period) {
@@ -62,11 +62,11 @@ export class RevenueAnalyticsService {
         days = 30;
     }
 
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    const start_date = new Date(end_date);
+    start_date.setDate(start_date.getDate() - days);
+    start_date.setHours(0, 0, 0, 0);
 
-    const previousEndDate = new Date(startDate);
+    const previousEndDate = new Date(start_date);
     previousEndDate.setHours(23, 59, 59, 999);
     previousEndDate.setDate(previousEndDate.getDate() - 1);
 
@@ -74,7 +74,7 @@ export class RevenueAnalyticsService {
     previousStartDate.setDate(previousStartDate.getDate() - days);
     previousStartDate.setHours(0, 0, 0, 0);
 
-    return { startDate, endDate, previousStartDate, previousEndDate };
+    return { startDate: start_date, endDate: end_date, previousStartDate, previousEndDate };
   }
 
   /**
@@ -109,116 +109,116 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Calculate MRR from subscriptions
-      const currentSubscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const currentSubscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
-          currentPeriodEnd: {
+          current_period_end: {
             gte: config.startDate,
           },
         },
         select: {
-          basePriceUsd: true,
-          billingCycle: true,
+          base_price_usd: true,
+          billing_cycle: true,
         },
       });
 
       const currentMRR = currentSubscriptions.reduce((sum: number, sub) => {
         // Convert to monthly if annual
         const monthlyRate =
-          sub.billingCycle === 'annual'
-            ? parseFloat(sub.basePriceUsd.toString()) / 12
-            : parseFloat(sub.basePriceUsd.toString());
+          sub.billing_cycle === 'annual'
+            ? parseFloat(sub.base_price_usd.toString()) / 12
+            : parseFloat(sub.base_price_usd.toString());
         return sum + Math.round(monthlyRate * 100); // cents
       }, 0);
 
-      const previousSubscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const previousSubscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
-          currentPeriodEnd: {
+          current_period_end: {
             gte: config.previousStartDate,
             lte: config.previousEndDate,
           },
         },
         select: {
-          basePriceUsd: true,
-          billingCycle: true,
+          base_price_usd: true,
+          billing_cycle: true,
         },
       });
 
       const previousMRR = previousSubscriptions.reduce((sum: number, sub) => {
         const monthlyRate =
-          sub.billingCycle === 'annual'
-            ? parseFloat(sub.basePriceUsd.toString()) / 12
-            : parseFloat(sub.basePriceUsd.toString());
+          sub.billing_cycle === 'annual'
+            ? parseFloat(sub.base_price_usd.toString()) / 12
+            : parseFloat(sub.base_price_usd.toString());
         return sum + Math.round(monthlyRate * 100);
       }, 0);
 
       // Calculate perpetual revenue from licenses purchased in period
-      const perpetualRevenue = await this.prisma.perpetualLicense.aggregate({
+      const perpetualRevenue = await this.prisma.perpetual_license.aggregate({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
         },
         _sum: {
-          purchasePriceUsd: true,
+          purchase_price_usd: true,
         },
       });
 
       const currentPerpetualRevenue = Math.round(
-        parseFloat((perpetualRevenue._sum.purchasePriceUsd || 0).toString()) * 100
+        parseFloat((perpetualRevenue._sum.purchase_price_usd || 0).toString()) * 100
       );
 
-      const previousPerpetualRevenue = await this.prisma.perpetualLicense.aggregate({
+      const previousPerpetualRevenue = await this.prisma.perpetual_license.aggregate({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.previousStartDate,
             lte: config.previousEndDate,
           },
         },
         _sum: {
-          purchasePriceUsd: true,
+          purchase_price_usd: true,
         },
       });
 
       const prevPerpetualRevenue = Math.round(
-        parseFloat((previousPerpetualRevenue._sum.purchasePriceUsd || 0).toString()) * 100
+        parseFloat((previousPerpetualRevenue._sum.purchase_price_usd || 0).toString()) * 100
       );
 
       // Calculate upgrade revenue
-      const upgradeRevenue = await this.prisma.versionUpgrade.aggregate({
+      const upgradeRevenue = await this.prisma.version_upgrade.aggregate({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
           status: { in: ['completed'] },
         },
         _sum: {
-          upgradePriceUsd: true,
+          upgrade_price_usd: true,
         },
       });
 
       const currentUpgradeRevenue = Math.round(
-        parseFloat((upgradeRevenue._sum.upgradePriceUsd || 0).toString()) * 100
+        parseFloat((upgradeRevenue._sum.upgrade_price_usd || 0).toString()) * 100
       );
 
-      const previousUpgradeRevenue = await this.prisma.versionUpgrade.aggregate({
+      const previousUpgradeRevenue = await this.prisma.version_upgrade.aggregate({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.previousStartDate,
             lte: config.previousEndDate,
           },
           status: { in: ['completed'] },
         },
         _sum: {
-          upgradePriceUsd: true,
+          upgrade_price_usd: true,
         },
       });
 
       const prevUpgradeRevenue = Math.round(
-        parseFloat((previousUpgradeRevenue._sum.upgradePriceUsd || 0).toString()) * 100
+        parseFloat((previousUpgradeRevenue._sum.upgrade_price_usd || 0).toString()) * 100
       );
 
       // Total revenue = MRR + Perpetual + Upgrades
@@ -226,23 +226,23 @@ export class RevenueAnalyticsService {
       const previousTotalRevenue = previousMRR + prevPerpetualRevenue + prevUpgradeRevenue;
 
       // Calculate ARPU (Average Revenue Per User)
-      const activeUsers = await this.prisma.user.count({
+      const activeUsers = await this.prisma.users.count({
         where: {
           OR: [
             {
               subscriptions: {
                 some: {
                   status: 'active',
-                  currentPeriodEnd: {
+                  current_period_end: {
                     gte: config.startDate,
                   },
                 },
               },
             },
             {
-              perpetualLicenses: {
+              perpetual_license: {
                 some: {
-                  purchasedAt: {
+                  purchased_at: {
                     gte: config.startDate,
                     lte: config.endDate,
                   },
@@ -255,23 +255,23 @@ export class RevenueAnalyticsService {
 
       const arpu = activeUsers > 0 ? Math.round(currentTotalRevenue / activeUsers) : 0;
 
-      const previousActiveUsers = await this.prisma.user.count({
+      const previousActiveUsers = await this.prisma.users.count({
         where: {
           OR: [
             {
               subscriptions: {
                 some: {
                   status: 'active',
-                  currentPeriodEnd: {
+                  current_period_end: {
                     gte: config.previousStartDate,
                   },
                 },
               },
             },
             {
-              perpetualLicenses: {
+              perpetual_license: {
                 some: {
-                  purchasedAt: {
+                  purchased_at: {
                     gte: config.previousStartDate,
                     lte: config.previousEndDate,
                   },
@@ -288,21 +288,21 @@ export class RevenueAnalyticsService {
           : 0;
 
       // Calculate coupon discount
-      const couponDiscount = await this.prisma.couponRedemption.aggregate({
+      const couponDiscount = await this.prisma.coupon_redemption.aggregate({
         where: {
-          redemptionDate: {
+          redemption_date: {
             gte: config.startDate,
             lte: config.endDate,
           },
-          redemptionStatus: 'success',
+          redemption_status: 'success',
         },
         _sum: {
-          discountAppliedUsd: true,
+          discount_applied_usd: true,
         },
       });
 
       const couponDiscountValue = Math.round(
-        parseFloat((couponDiscount._sum.discountAppliedUsd || 0).toString()) * 100
+        parseFloat((couponDiscount._sum.discount_applied_usd || 0).toString()) * 100
       );
 
       return {
@@ -345,66 +345,88 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Subscription revenue (MRR)
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
           status: 'active',
-          currentPeriodEnd: {
+          current_period_end: {
             gte: config.startDate,
           },
         },
         select: {
-          basePriceUsd: true,
-          billingCycle: true,
+          base_price_usd: true,
+          billing_cycle: true,
         },
       });
 
       const subscriptionRevenue = subscriptions.reduce((sum: number, sub) => {
         const monthlyRate =
-          sub.billingCycle === 'annual'
-            ? parseFloat(sub.basePriceUsd.toString()) / 12
-            : parseFloat(sub.basePriceUsd.toString());
+          sub.billing_cycle === 'annual'
+            ? parseFloat(sub.base_price_usd.toString()) / 12
+            : parseFloat(sub.base_price_usd.toString());
         return sum + Math.round(monthlyRate * 100);
       }, 0);
 
       // Perpetual revenue
-      const perpetual = await this.prisma.perpetualLicense.aggregate({
+      const perpetual = await this.prisma.perpetual_license.aggregate({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
         },
         _sum: {
-          purchasePriceUsd: true,
+          purchase_price_usd: true,
         },
       });
 
       const perpetualRevenue = Math.round(
-        parseFloat((perpetual._sum.purchasePriceUsd || 0).toString()) * 100
+        parseFloat((perpetual._sum.purchase_price_usd || 0).toString()) * 100
       );
 
       // Upgrade revenue
-      const upgrades = await this.prisma.versionUpgrade.aggregate({
+      const upgrades = await this.prisma.version_upgrade.aggregate({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
           status: { in: ['completed'] },
         },
         _sum: {
-          upgradePriceUsd: true,
+          upgrade_price_usd: true,
         },
       });
 
       const upgradeRevenue = Math.round(
-        parseFloat((upgrades._sum.upgradePriceUsd || 0).toString()) * 100
+        parseFloat((upgrades._sum.upgrade_price_usd || 0).toString()) * 100
       );
 
+      // Calculate total and percentages
+      const total = subscriptionRevenue + perpetualRevenue + upgradeRevenue;
+
+      // Format as array of data points with percentages
+      const data = [
+        {
+          name: 'Subscription',
+          value: subscriptionRevenue,
+          percentage: total > 0 ? Math.round((subscriptionRevenue / total) * 100) : 0,
+        },
+        {
+          name: 'Perpetual',
+          value: perpetualRevenue,
+          percentage: total > 0 ? Math.round((perpetualRevenue / total) * 100) : 0,
+        },
+        {
+          name: 'Upgrade',
+          value: upgradeRevenue,
+          percentage: total > 0 ? Math.round((upgradeRevenue / total) * 100) : 0,
+        },
+      ];
+
       return {
-        subscriptionRevenue,
-        perpetualRevenue,
-        upgradeRevenue,
+        data,
+        total,
+        period,
       };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getRevenueMix: Error', {
@@ -429,46 +451,46 @@ export class RevenueAnalyticsService {
       const isMonthly = period === '1y';
 
       // Get subscription data
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
         where: {
-          createdAt: {
+          created_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
         },
         select: {
-          createdAt: true,
-          basePriceUsd: true,
-          billingCycle: true,
+          created_at: true,
+          base_price_usd: true,
+          billing_cycle: true,
         },
       });
 
       // Get perpetual license data
-      const perpetuals = await this.prisma.perpetualLicense.findMany({
+      const perpetuals = await this.prisma.perpetual_license.findMany({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
         },
         select: {
-          purchasedAt: true,
-          purchasePriceUsd: true,
+          purchased_at: true,
+          purchase_price_usd: true,
         },
       });
 
       // Get upgrade data
-      const upgrades = await this.prisma.versionUpgrade.findMany({
+      const upgrades = await this.prisma.version_upgrade.findMany({
         where: {
-          purchasedAt: {
+          purchased_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
           status: { in: ['completed'] },
         },
         select: {
-          purchasedAt: true,
-          upgradePriceUsd: true,
+          purchased_at: true,
+          upgrade_price_usd: true,
         },
       });
 
@@ -495,11 +517,11 @@ export class RevenueAnalyticsService {
       };
 
       subscriptions.forEach((sub: any) => {
-        const key = getKey(sub.createdAt);
+        const key = getKey(sub.created_at);
         const monthlyRate =
-          sub.billingCycle === 'annual'
-            ? parseFloat(sub.basePriceUsd.toString()) / 12
-            : parseFloat(sub.basePriceUsd.toString());
+          sub.billing_cycle === 'annual'
+            ? parseFloat(sub.base_price_usd.toString()) / 12
+            : parseFloat(sub.base_price_usd.toString());
         const amount = Math.round(monthlyRate * 100);
 
         const current = aggregated.get(key) || {
@@ -513,8 +535,8 @@ export class RevenueAnalyticsService {
       });
 
       perpetuals.forEach((perp: any) => {
-        const key = getKey(perp.purchasedAt);
-        const amount = Math.round(parseFloat(perp.purchasePriceUsd.toString()) * 100);
+        const key = getKey(perp.purchased_at);
+        const amount = Math.round(parseFloat(perp.purchase_price_usd.toString()) * 100);
 
         const current = aggregated.get(key) || {
           totalRevenue: 0,
@@ -527,8 +549,8 @@ export class RevenueAnalyticsService {
       });
 
       upgrades.forEach((upg: any) => {
-        const key = getKey(upg.purchasedAt);
-        const amount = Math.round(parseFloat(upg.upgradePriceUsd.toString()) * 100);
+        const key = getKey(upg.purchased_at);
+        const amount = Math.round(parseFloat(upg.upgrade_price_usd.toString()) * 100);
 
         const current = aggregated.get(key) || {
           totalRevenue: 0,
@@ -549,7 +571,14 @@ export class RevenueAnalyticsService {
           perpetualRevenue: data.perpetualRevenue,
         }));
 
-      return { data: sorted };
+      // Determine granularity string
+      const granularity = isMonthly ? 'monthly' : isWeekly ? 'weekly' : 'daily';
+
+      return {
+        data: sorted,
+        period,
+        granularity,
+      };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getRevenueTrend: Error', {
         period,
@@ -568,9 +597,9 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Total free tier users
-      const freeTierUsers = await this.prisma.user.count({
+      const freeTierUsers = await this.prisma.users.count({
         where: {
-          createdAt: {
+          created_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
@@ -579,19 +608,19 @@ export class RevenueAnalyticsService {
               status: 'active',
             },
           },
-          perpetualLicenses: {
+          perpetual_license: {
             none: {},
           },
         },
       });
 
       // Paid subscription users
-      const paidSubscriptionUsers = await this.prisma.user.count({
+      const paidSubscriptionUsers = await this.prisma.users.count({
         where: {
           subscriptions: {
             some: {
               status: 'active',
-              createdAt: {
+              created_at: {
                 gte: config.startDate,
                 lte: config.endDate,
               },
@@ -601,11 +630,11 @@ export class RevenueAnalyticsService {
       });
 
       // Perpetual license users
-      const perpetualLicenseUsers = await this.prisma.user.count({
+      const perpetualLicenseUsers = await this.prisma.users.count({
         where: {
-          perpetualLicenses: {
+          perpetual_license: {
             some: {
-              purchasedAt: {
+              purchased_at: {
                 gte: config.startDate,
                 lte: config.endDate,
               },
@@ -616,29 +645,43 @@ export class RevenueAnalyticsService {
 
       const totalUsers = freeTierUsers + paidSubscriptionUsers + perpetualLicenseUsers;
 
-      return {
-        freeTier: {
+      // Calculate conversion rates
+      const paidConversionRate =
+        freeTierUsers > 0
+          ? Math.round((paidSubscriptionUsers / freeTierUsers) * 100 * 10) / 10
+          : 0;
+
+      const perpetualConversionRate =
+        paidSubscriptionUsers > 0
+          ? Math.round((perpetualLicenseUsers / paidSubscriptionUsers) * 100 * 10) / 10
+          : 0;
+
+      // Format as array of stages matching frontend expectations
+      const stages = [
+        {
+          name: 'Free Tier',
           count: freeTierUsers,
           percentage: totalUsers > 0 ? Math.round((freeTierUsers / totalUsers) * 100) : 0,
         },
-        paidSubscription: {
+        {
+          name: 'Paid Subscription',
           count: paidSubscriptionUsers,
           percentage:
             totalUsers > 0 ? Math.round((paidSubscriptionUsers / totalUsers) * 100) : 0,
-          conversionRate:
-            freeTierUsers > 0
-              ? Math.round((paidSubscriptionUsers / freeTierUsers) * 100 * 10) / 10
-              : 0,
+          conversionRate: paidConversionRate,
         },
-        perpetualLicense: {
+        {
+          name: 'Perpetual License',
           count: perpetualLicenseUsers,
           percentage:
             totalUsers > 0 ? Math.round((perpetualLicenseUsers / totalUsers) * 100) : 0,
-          conversionRate:
-            paidSubscriptionUsers > 0
-              ? Math.round((perpetualLicenseUsers / paidSubscriptionUsers) * 100 * 10) / 10
-              : 0,
+          conversionRate: perpetualConversionRate,
         },
+      ];
+
+      return {
+        stages,
+        period,
       };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getRevenueFunnel: Error', {
@@ -661,52 +704,49 @@ export class RevenueAnalyticsService {
       const config = this.getPeriodConfig(period);
 
       // Get credit usage by model
-      const usageByModel = await this.prisma.usageHistory.groupBy({
-        by: ['modelId'],
+      const usageByModel = await this.prisma.token_usage_ledger.groupBy({
+        by: ['model_id'],
         where: {
-          createdAt: {
+          created_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
         },
         _sum: {
-          creditsUsed: true,
+          credits_deducted: true,
         },
         _count: {
           id: true,
         },
         orderBy: {
           _sum: {
-            creditsUsed: 'desc',
+            credits_deducted: 'desc',
           },
         },
         take: limit,
       });
 
       // Get total credits for percentage
-      const totalCredits = await this.prisma.usageHistory.aggregate({
+      const totalCredits = await this.prisma.token_usage_ledger.aggregate({
         where: {
-          createdAt: {
+          created_at: {
             gte: config.startDate,
             lte: config.endDate,
           },
         },
         _sum: {
-          creditsUsed: true,
+          credits_deducted: true,
         },
       });
 
-      const totalCreditsUsed = totalCredits._sum.creditsUsed || 0;
+      const totalCreditsUsed = totalCredits._sum.credits_deducted || 0;
 
-      // Get total revenue
+      // Get total revenue (using new format)
       const revenueData = await this.getRevenueMix(period);
-      const totalRevenue =
-        revenueData.subscriptionRevenue +
-        revenueData.perpetualRevenue +
-        revenueData.upgradeRevenue;
+      const totalRevenue = revenueData.total;
 
       const data = usageByModel.map((item) => {
-        const credits = item._sum.creditsUsed || 0;
+        const credits = item._sum.credits_deducted || 0;
         const creditPercentage = totalCreditsUsed > 0 ? (credits / totalCreditsUsed) * 100 : 0;
         const revenueContribution = Math.round(
           totalRevenue > 0
@@ -715,14 +755,18 @@ export class RevenueAnalyticsService {
         );
 
         return {
-          model: item.modelId,
+          model: item.model_id,
           credits,
           requests: item._count.id,
-          revenue_contribution: revenueContribution,
+          revenueContribution,
         };
       });
 
-      return { data };
+      return {
+        data,
+        total: totalCreditsUsed,
+        period,
+      };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getCreditUsage: Error', {
         period,
@@ -739,36 +783,50 @@ export class RevenueAnalyticsService {
    */
   async getCouponROI(
     period: string = '30d',
-    limit: number = 10
+    limit: number = 10,
+    offset: number = 0
   ): Promise<CouponROIResponse> {
     try {
       const config = this.getPeriodConfig(period);
 
-      // Get campaigns with coupon data
-      const campaigns = await this.prisma.couponCampaign.findMany({
+      // Get total count of campaigns
+      const totalCount = await this.prisma.coupon_campaign.count({
         where: {
-          startDate: {
+          start_date: {
             lte: config.endDate,
           },
-          endDate: {
+          end_date: {
+            gte: config.startDate,
+          },
+        },
+      });
+
+      // Get campaigns with coupon data
+      const campaigns = await this.prisma.coupon_campaign.findMany({
+        where: {
+          start_date: {
+            lte: config.endDate,
+          },
+          end_date: {
             gte: config.startDate,
           },
         },
         include: {
-          coupons: {
+          coupon: {
             include: {
-              redemptions: {
+              coupon_redemption: {
                 where: {
-                  redemptionDate: {
+                  redemption_date: {
                     gte: config.startDate,
                     lte: config.endDate,
                   },
-                  redemptionStatus: 'success',
+                  redemption_status: 'success',
                 },
               },
             },
           },
         },
+        skip: offset,
         take: limit,
       });
 
@@ -778,27 +836,27 @@ export class RevenueAnalyticsService {
         let totalDiscount = 0;
         let totalRevenueGenerated = 0;
 
-        campaign.coupons.forEach((coupon: any) => {
-          totalCouponsRedeemed += coupon.redemptions.length;
-          coupon.redemptions.forEach((redemption: any) => {
-            // Use discountAppliedUsd from the actual field
+        campaign.coupon.forEach((coupon: any) => {
+          totalCouponsRedeemed += coupon.coupon_redemption.length;
+          coupon.coupon_redemption.forEach((redemption: any) => {
+            // Use discount_applied_usd from the actual field
             totalDiscount += Math.round(
-              parseFloat(redemption.discountAppliedUsd.toString()) * 100
+              parseFloat(redemption.discount_applied_usd.toString()) * 100
             );
             // Revenue generated is the final amount paid (after discount)
             totalRevenueGenerated += Math.round(
-              parseFloat(redemption.finalAmountUsd.toString()) * 100
+              parseFloat(redemption.final_amount_usd.toString()) * 100
             );
           });
         });
 
         // Count total coupons issued (sum of max_uses or estimate from created count)
-        campaign.coupons.forEach((coupon: any) => {
-          if (coupon.maxUses) {
-            totalCouponsIssued += coupon.maxUses;
+        campaign.coupon.forEach((coupon: any) => {
+          if (coupon.max_uses) {
+            totalCouponsIssued += coupon.max_uses;
           } else {
             // If unlimited, use redemption count as proxy
-            totalCouponsIssued += coupon.redemptions.length;
+            totalCouponsIssued += coupon.coupon_redemption.length;
           }
         });
 
@@ -807,16 +865,26 @@ export class RevenueAnalyticsService {
           : 0;
 
         return {
-          campaign_name: campaign.campaignName,
-          coupons_issued: totalCouponsIssued,
-          coupons_redeemed: totalCouponsRedeemed,
-          discount_value: totalDiscount,
-          revenue_generated: totalRevenueGenerated,
-          roi_percentage: roi,
+          campaignName: campaign.campaign_name,
+          couponsIssued: totalCouponsIssued,
+          couponsRedeemed: totalCouponsRedeemed,
+          discountValue: totalDiscount,
+          revenueGenerated: totalRevenueGenerated,
+          roiPercentage: roi,
         };
       });
 
-      return { data };
+      return {
+        data,
+        total: totalCount,
+        period,
+        pagination: {
+          limit,
+          offset,
+          total: totalCount,
+          hasMore: offset + limit < totalCount,
+        },
+      };
     } catch (error) {
       logger.error('RevenueAnalyticsService.getCouponROI: Error', {
         period,

@@ -16,36 +16,36 @@ import logger from '../utils/logger';
 // =============================================================================
 
 export interface CouponAnalyticsMetrics {
-  total_redemptions: number;
-  total_discount_value: number;
-  average_discount_per_redemption: number;
-  conversion_rate: number;
-  fraud_detection_rate: number;
-  month_over_month_change: {
+  totalRedemptions: number;
+  totalDiscountValue: number;
+  averageDiscountPerRedemption: number;
+  conversionRate: number;
+  fraudDetectionRate: number;
+  monthOverMonthChange: {
     redemptions: number;
-    discount_value: number;
+    discountValue: number;
   };
 }
 
 export interface RedemptionTrend {
   date: string;
   redemptions: number;
-  discount_value: number;
+  discountValue: number;
 }
 
 export interface TopPerformingCoupon {
   code: string;
   redemptions: number;
-  discount_value: number;
-  conversion_rate: number;
-  average_discount: number;
+  discountValue: number;
+  conversionRate: number;
+  averageDiscount: number;
 }
 
 export interface RedemptionByType {
   type: string;
   count: number;
   percentage: number;
-  discount_value: number;
+  discountValue: number;
 }
 
 // =============================================================================
@@ -73,67 +73,67 @@ export class CouponAnalyticsService {
     try {
       const dateFilter: any = {};
       if (startDate || endDate) {
-        dateFilter.redemptionDate = {};
-        if (startDate) dateFilter.redemptionDate.gte = startDate;
-        if (endDate) dateFilter.redemptionDate.lte = endDate;
+        dateFilter.redemption_date = {};
+        if (startDate) dateFilter.redemption_date.gte = startDate;
+        if (endDate) dateFilter.redemption_date.lte = endDate;
       }
 
       // Get current period metrics
-      const currentPeriodRedemptions = await this.prisma.couponRedemption.aggregate({
+      const currentPeriodRedemptions = await this.prisma.coupon_redemption.aggregate({
         where: {
-          redemptionStatus: 'success',
+          redemption_status: 'success',
           ...dateFilter,
         },
         _count: true,
         _sum: {
-          discountAppliedUsd: true,
+          discount_applied_usd: true,
         },
       });
 
       // Get previous period for comparison (same duration before startDate)
-      let previousPeriodRedemptions: any = { _count: 0, _sum: { discountAppliedUsd: 0 } };
+      let previousPeriodRedemptions: any = { _count: 0, _sum: { discount_applied_usd: 0 } };
       if (startDate && endDate) {
         const duration = endDate.getTime() - startDate.getTime();
         const previousStart = new Date(startDate.getTime() - duration);
         const previousEnd = startDate;
 
-        previousPeriodRedemptions = await this.prisma.couponRedemption.aggregate({
+        previousPeriodRedemptions = await this.prisma.coupon_redemption.aggregate({
           where: {
-            redemptionStatus: 'success',
-            redemptionDate: {
+            redemption_status: 'success',
+            redemption_date: {
               gte: previousStart,
               lte: previousEnd,
             },
           },
           _count: true,
           _sum: {
-            discountAppliedUsd: true,
+            discount_applied_usd: true,
           },
         });
       }
 
       // Get fraud detection count
-      const fraudDetectedCount = await this.prisma.couponRedemption.count({
+      const fraudDetectedCount = await this.prisma.coupon_redemption.count({
         where: {
-          redemptionStatus: 'failed',
+          redemption_status: 'failed',
           ...dateFilter,
         },
       });
 
       // Get total attempts for conversion rate
-      const totalAttempts = await this.prisma.couponRedemption.count({
+      const totalAttempts = await this.prisma.coupon_redemption.count({
         where: dateFilter,
       });
 
       const totalRedemptions = currentPeriodRedemptions._count || 0;
-      const totalDiscountValue = Number(currentPeriodRedemptions._sum?.discountAppliedUsd || 0);
+      const totalDiscountValue = Number(currentPeriodRedemptions._sum?.discount_applied_usd || 0);
       const averageDiscount = totalRedemptions > 0 ? totalDiscountValue / totalRedemptions : 0;
       const conversionRate = totalAttempts > 0 ? (totalRedemptions / totalAttempts) * 100 : 0;
       const fraudRate = totalAttempts > 0 ? (fraudDetectedCount / totalAttempts) * 100 : 0;
 
       // Calculate month-over-month changes
       const previousRedemptions = previousPeriodRedemptions._count || 0;
-      const previousDiscount = Number(previousPeriodRedemptions._sum?.discountAppliedUsd || 0);
+      const previousDiscount = Number(previousPeriodRedemptions._sum?.discount_applied_usd || 0);
 
       const redemptionChange = previousRedemptions > 0
         ? ((totalRedemptions - previousRedemptions) / previousRedemptions) * 100
@@ -143,14 +143,14 @@ export class CouponAnalyticsService {
         : 0;
 
       return {
-        total_redemptions: totalRedemptions,
-        total_discount_value: totalDiscountValue,
-        average_discount_per_redemption: averageDiscount,
-        conversion_rate: conversionRate,
-        fraud_detection_rate: fraudRate,
-        month_over_month_change: {
+        totalRedemptions,
+        totalDiscountValue,
+        averageDiscountPerRedemption: averageDiscount,
+        conversionRate,
+        fraudDetectionRate: fraudRate,
+        monthOverMonthChange: {
           redemptions: redemptionChange,
-          discount_value: discountChange,
+          discountValue: discountChange,
         },
       };
     } catch (error) {
@@ -191,7 +191,7 @@ export class CouponAnalyticsService {
       return results.map((row) => ({
         date: new Date(row.date).toISOString().split('T')[0],
         redemptions: Number(row.redemptions),
-        discount_value: Number(row.discount_value),
+        discountValue: Number(row.discount_value),
       }));
     } catch (error) {
       logger.error('CouponAnalyticsService.getRedemptionTrend: Error', { error });
@@ -228,9 +228,9 @@ export class CouponAnalyticsService {
       return results.map((row) => ({
         code: row.code,
         redemptions: Number(row.redemptions),
-        discount_value: Number(row.discount_value),
-        conversion_rate: Number(row.conversion_rate),
-        average_discount: Number(row.average_discount),
+        discountValue: Number(row.discount_value),
+        conversionRate: Number(row.conversion_rate),
+        averageDiscount: Number(row.average_discount),
       }));
     } catch (error) {
       logger.error('CouponAnalyticsService.getTopPerformingCoupons: Error', { error });
@@ -266,7 +266,7 @@ export class CouponAnalyticsService {
         type: row.type,
         count: Number(row.count),
         percentage: total > 0 ? (Number(row.count) / total) * 100 : 0,
-        discount_value: Number(row.discount_value),
+        discountValue: Number(row.discount_value),
       }));
     } catch (error) {
       logger.error('CouponAnalyticsService.getRedemptionsByType: Error', { error });

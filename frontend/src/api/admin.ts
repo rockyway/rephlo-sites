@@ -6,6 +6,20 @@ import type {
   ModelTierListResponse,
   AuditLogResponse,
 } from '@/types/model-tier';
+import type {
+  ModelInfo,
+  ModelMeta,
+  LifecycleEvent,
+  CreateModelRequest,
+  MarkLegacyRequest,
+  LifecycleHistoryResponse,
+  LegacyModelsResponse,
+  ArchivedModelsResponse,
+} from '@/types/model-lifecycle';
+import type {
+  User,
+  Subscription,
+} from '@rephlo/shared-types';
 
 // ============================================================================
 // Dashboard Analytics Types
@@ -88,11 +102,11 @@ export const adminAPI = {
       page,
       pageSize,
     };
-    const response = await apiClient.get<ModelTierListResponse>(
+    const response = await apiClient.get<{ status: string; data: ModelTierListResponse }>(
       '/admin/models/tiers',
       { params }
     );
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -100,10 +114,10 @@ export const adminAPI = {
    * @param modelId - Model ID
    */
   getModelTier: async (modelId: string): Promise<ModelTierInfo> => {
-    const response = await apiClient.get<ModelTierInfo>(
+    const response = await apiClient.get<{ status: string; data: ModelTierInfo }>(
       `/admin/models/${modelId}/tier`
     );
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -115,11 +129,16 @@ export const adminAPI = {
     modelId: string,
     data: ModelTierUpdateRequest
   ): Promise<ModelTierInfo> => {
-    const response = await apiClient.patch<ModelTierInfo>(
+    const response = await apiClient.patch<{
+      status: string;
+      data: ModelTierInfo;
+      meta?: { auditLog: any };
+    }>(
       `/admin/models/${modelId}/tier`,
       data
     );
-    return response.data;
+    // Backend returns flat data
+    return response.data.data;
   },
 
   /**
@@ -133,14 +152,14 @@ export const adminAPI = {
     reason?: string
   ): Promise<{ updated: number; models: ModelTierInfo[] }> => {
     const response = await apiClient.post<{
-      updated: number;
-      models: ModelTierInfo[];
+      status: string;
+      data: { updated: number; models: ModelTierInfo[] };
     }>('/admin/models/tiers/bulk', {
       modelIds,
       updates,
       reason,
     });
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -155,11 +174,48 @@ export const adminAPI = {
     page?: number;
     pageSize?: number;
   }): Promise<AuditLogResponse> => {
-    const response = await apiClient.get<AuditLogResponse>(
+    const response = await apiClient.get<{
+      status: string;
+      data: {
+        logs: Array<{
+          id: string;
+          modelId: string;
+          adminUserId: string;
+          adminEmail?: string;
+          changeType: string;
+          previousValue: any;
+          newValue: any;
+          reason?: string;
+          createdAt: string;
+        }>;
+        total: number;
+        limit: number;
+        offset: number;
+      }
+    }>(
       '/admin/models/tiers/audit-logs',
       { params }
     );
-    return response.data;
+
+    // Transform backend response to frontend format (previousValue/newValue -> oldValues/newValues)
+    const backendData = response.data.data;
+    return {
+      logs: backendData.logs.map(log => ({
+        id: log.id,
+        modelId: log.modelId,
+        modelName: '', // Backend doesn't return modelName, will be empty
+        adminUserId: log.adminUserId,
+        adminUserEmail: log.adminEmail,
+        changeType: log.changeType as 'tier_change' | 'restriction_mode_change' | 'allowed_tiers_change',
+        oldValues: log.previousValue || {},
+        newValues: log.newValue || {},
+        reason: log.reason,
+        timestamp: log.createdAt,
+      })),
+      total: backendData.total,
+      page: Math.floor(backendData.offset / backendData.limit),
+      pageSize: backendData.limit,
+    };
   },
 
   /**
@@ -170,10 +226,10 @@ export const adminAPI = {
     auditLogId: string
   ): Promise<{ success: boolean; model: ModelTierInfo }> => {
     const response = await apiClient.post<{
-      success: boolean;
-      model: ModelTierInfo;
+      status: string;
+      data: { success: boolean; model: ModelTierInfo };
     }>(`/admin/models/tiers/revert/${auditLogId}`);
-    return response.data;
+    return response.data.data; // Unwrap nested data
   },
 
   /**
@@ -184,6 +240,166 @@ export const adminAPI = {
       '/admin/models/providers'
     );
     return response.data.providers;
+  },
+
+  // ============================================================================
+  // Model Lifecycle Management APIs
+  // ============================================================================
+
+  /**
+   * Mark a model as legacy with optional replacement and deprecation info
+   * @param modelId - Model ID to mark as legacy
+   * @param data - Legacy configuration (replacement model, notice, sunset date)
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.markModelAsLegacy('gpt-3.5-turbo', {
+   *   replacementModelId: 'gpt-4',
+   *   deprecationNotice: 'GPT-3.5 will be sunset on 2025-12-31. Please migrate to GPT-4.',
+   *   sunsetDate: '2025-12-31T00:00:00Z'
+   * });
+   */
+  markModelAsLegacy: async (
+    modelId: string,
+    data: MarkLegacyRequest
+  ): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/mark-legacy`, data);
+  },
+
+  /**
+   * Remove legacy status from a model
+   * @param modelId - Model ID to unmark as legacy
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.unmarkModelLegacy('gpt-3.5-turbo');
+   */
+  unmarkModelLegacy: async (modelId: string): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/unmark-legacy`);
+  },
+
+  /**
+   * Archive a model (removes from public endpoints)
+   * @param modelId - Model ID to archive
+   * @param reason - Required reason for archiving
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.archiveModel('text-davinci-002',
+   *   'Model deprecated by provider, no longer supported'
+   * );
+   */
+  archiveModel: async (modelId: string, reason: string): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/archive`, { reason });
+  },
+
+  /**
+   * Restore an archived model
+   * @param modelId - Model ID to unarchive
+   * @returns Promise resolving when operation completes
+   *
+   * @example
+   * await adminAPI.unarchiveModel('text-davinci-002');
+   */
+  unarchiveModel: async (modelId: string): Promise<void> => {
+    await apiClient.post(`/admin/models/${modelId}/unarchive`);
+  },
+
+  /**
+   * Update model metadata (partial update)
+   * @param modelId - Model ID to update
+   * @param metaUpdates - Partial meta object with fields to update
+   * @returns Updated model information
+   *
+   * @example
+   * const updatedModel = await adminAPI.updateModelMeta('gpt-4', {
+   *   displayName: 'GPT-4 Turbo',
+   *   contextLength: 128000,
+   *   inputCostPerMillionTokens: 10000
+   * });
+   */
+  updateModelMeta: async (
+    modelId: string,
+    metaUpdates: Partial<ModelMeta>
+  ): Promise<ModelInfo> => {
+    const response = await apiClient.patch<ModelInfo>(
+      `/admin/models/${modelId}/meta`,
+      metaUpdates
+    );
+    return response.data;
+  },
+
+  /**
+   * Create a new model
+   * @param modelData - Complete model configuration
+   * @returns Created model information
+   *
+   * @example
+   * const newModel = await adminAPI.createModel({
+   *   id: 'custom-model-1',
+   *   name: 'custom-model-1',
+   *   provider: 'custom',
+   *   meta: {
+   *     displayName: 'Custom Model v1',
+   *     description: 'Custom fine-tuned model',
+   *     capabilities: ['text'],
+   *     contextLength: 4096,
+   *     inputCostPerMillionTokens: 5000,
+   *     outputCostPerMillionTokens: 15000,
+   *     creditsPer1kTokens: 10,
+   *     requiredTier: 'pro',
+   *     tierRestrictionMode: 'minimum',
+   *     allowedTiers: ['pro', 'enterprise']
+   *   }
+   * });
+   */
+  createModel: async (modelData: CreateModelRequest): Promise<ModelInfo> => {
+    const response = await apiClient.post<ModelInfo>('/admin/models', modelData);
+    return response.data;
+  },
+
+  /**
+   * Get lifecycle history for a model
+   * @param modelId - Model ID to fetch history for
+   * @returns Array of lifecycle events
+   *
+   * @example
+   * const history = await adminAPI.getLifecycleHistory('gpt-4');
+   * // Returns events like: created, marked legacy, archived, meta updates
+   */
+  getLifecycleHistory: async (modelId: string): Promise<LifecycleEvent[]> => {
+    const response = await apiClient.get<LifecycleHistoryResponse>(
+      `/admin/models/${modelId}/lifecycle-history`
+    );
+    return response.data.history;
+  },
+
+  /**
+   * Get all models marked as legacy
+   * @returns Array of legacy models
+   *
+   * @example
+   * const legacyModels = await adminAPI.getLegacyModels();
+   * // Filter models by isLegacy=true with replacement info
+   */
+  getLegacyModels: async (): Promise<ModelInfo[]> => {
+    const response = await apiClient.get<LegacyModelsResponse>('/admin/models/legacy');
+    return response.data.models;
+  },
+
+  /**
+   * Get all archived models
+   * @returns Array of archived models
+   *
+   * @example
+   * const archivedModels = await adminAPI.getArchivedModels();
+   * // Filter models by isArchived=true
+   */
+  getArchivedModels: async (): Promise<ModelInfo[]> => {
+    const response = await apiClient.get<ArchivedModelsResponse>(
+      '/admin/models/archived?includeArchived=true'
+    );
+    return response.data.models;
   },
 
   // ============================================================================
@@ -336,19 +552,10 @@ export const adminAPI = {
 // ============================================================================
 
 export interface UserOverviewResponse {
-  user: {
-    id: string;
-    email: string;
-    name?: string;
-    createdAt: string;
+  user: Pick<User, 'id' | 'email' | 'name' | 'createdAt' | 'status'> & {
     lastLogin?: string;
-    status: 'active' | 'suspended' | 'banned';
   };
-  currentSubscription?: {
-    id: string;
-    tier: string;
-    status: string;
-    billingCycle: 'monthly' | 'annual';
+  currentSubscription?: Pick<Subscription, 'id' | 'tier' | 'status' | 'billingCycle'> & {
     creditAllocation: number;
     nextBillingDate?: string;
     startedAt: string;
@@ -371,11 +578,7 @@ export interface UserOverviewResponse {
 }
 
 export interface UserSubscriptionsResponse {
-  subscriptions: Array<{
-    id: string;
-    tier: string;
-    status: string;
-    billingCycle: 'monthly' | 'annual';
+  subscriptions: Array<Pick<Subscription, 'id' | 'tier' | 'status' | 'billingCycle'> & {
     startedAt: string;
     endedAt?: string;
     price: number;

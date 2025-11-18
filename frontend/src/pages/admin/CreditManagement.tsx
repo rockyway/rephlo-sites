@@ -35,13 +35,11 @@ import {
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { TierBadge, ConfirmationModal, CreditAdjustmentModal } from '@/components/plan109';
-import { creditApi } from '@/api/plan109';
+import { TierBadge, CreditAdjustmentModal } from '@/components/plan109';
 import {
   SubscriptionTier,
-  type CreditAdjustmentRequest,
-} from '@/types/plan109.types';
-import { formatNumber, formatDate, calculateCreditUtilization, downloadCSV } from '@/lib/plan109.utils';
+} from '@rephlo/shared-types';
+import { formatNumber, formatDate, downloadCSV } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
 
@@ -77,12 +75,12 @@ interface CreditUsageHistoryItem {
   requestId: string;
 }
 
-interface BulkAdjustmentData {
-  selectedUsers: string[];
-  action: 'add' | 'deduct' | 'reset';
-  amount?: number;
-  reason?: string;
-}
+// interface BulkAdjustmentData {
+//   selectedUsers: string[];
+//   action: 'add' | 'deduct' | 'reset';
+//   amount?: number;
+//   reason?: string;
+// }
 
 // ============================================================================
 // Component
@@ -235,7 +233,7 @@ function CreditManagement() {
     }
   };
 
-  const handleAdjustCredits = async (amount: number, reason: string, expiresAt?: string) => {
+  const handleAdjustCredits = async (_amount: number, _reason: string, _expiresAt?: string) => {
     if (!selectedUser) return;
 
     setIsProcessing(true);
@@ -276,8 +274,8 @@ function CreditManagement() {
 
     try {
       // TODO: Call actual bulk API
-      const amount = bulkAction === 'reset' ? 0 : parseInt(bulkAmount);
-      const finalAmount = bulkAction === 'deduct' ? -amount : amount;
+      // const amount = bulkAction === 'reset' ? 0 : parseInt(bulkAmount);
+      // const finalAmount = bulkAction === 'deduct' ? -amount : amount;
 
       setSuccessMessage(`Successfully adjusted credits for ${selectedUserIds.size} users`);
       setShowBulkModal(false);
@@ -292,7 +290,7 @@ function CreditManagement() {
     }
   };
 
-  const handleViewHistory = async (userId: string) => {
+  const handleViewHistory = async (_userId: string) => {
     setIsProcessing(true);
     setError(null);
 
@@ -387,28 +385,28 @@ function CreditManagement() {
   // ============================================================================
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-deep-navy-800 dark:text-white">Credit Management</h1>
-          <p className="mt-1 text-sm text-deep-navy-600 dark:text-deep-navy-200">
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Credit Management</h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
             View and manage user credit balances and allocations
           </p>
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={handleExportAllData}
             disabled={users.length === 0}
           >
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
-          <Button variant="outline" onClick={loadData} disabled={isLoading}>
+          <Button variant="ghost" onClick={loadData} disabled={isLoading}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isLoading && 'animate-spin')} />
             Refresh
           </Button>
@@ -505,9 +503,10 @@ function CreditManagement() {
               <option value="">All Tiers</option>
               <option value={SubscriptionTier.FREE}>Free</option>
               <option value={SubscriptionTier.PRO}>Pro</option>
+              <option value={SubscriptionTier.PRO_PLUS}>Pro Plus</option>
               <option value={SubscriptionTier.PRO_MAX}>Pro Max</option>
               <option value={SubscriptionTier.ENTERPRISE_PRO}>Enterprise Pro</option>
-              <option value={SubscriptionTier.ENTERPRISE_MAX}>Enterprise Max</option>
+              <option value={SubscriptionTier.ENTERPRISE_PRO_PLUS}>Enterprise Pro Plus</option>
               <option value={SubscriptionTier.PERPETUAL}>Perpetual</option>
             </select>
           </div>
@@ -526,7 +525,7 @@ function CreditManagement() {
           </div>
 
           <div className="flex items-end">
-            <Button variant="outline" onClick={clearFilters} className="w-full">
+            <Button variant="ghost" onClick={clearFilters} className="w-full">
               <XIcon className="mr-2 h-4 w-4" />
               Clear
             </Button>
@@ -543,7 +542,7 @@ function CreditManagement() {
                 {selectedUserIds.size} user{selectedUserIds.size > 1 ? 's' : ''} selected
               </span>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setSelectedUserIds(new Set())}
               >
@@ -552,7 +551,7 @@ function CreditManagement() {
             </div>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   setBulkAction('add');
@@ -563,7 +562,7 @@ function CreditManagement() {
                 Add Credits
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   setBulkAction('deduct');
@@ -574,7 +573,7 @@ function CreditManagement() {
                 Deduct Credits
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   setBulkAction('reset');
@@ -781,7 +780,7 @@ function CreditManagement() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => {
                               setSelectedUser(user);
@@ -816,7 +815,7 @@ function CreditManagement() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
@@ -824,7 +823,7 @@ function CreditManagement() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
@@ -862,7 +861,7 @@ function CreditManagement() {
                 <p className="text-sm text-deep-navy-600 dark:text-deep-navy-200">{selectedUser.userEmail}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleExportHistory}>
+                <Button variant="ghost" size="sm" onClick={handleExportHistory}>
                   <Download className="mr-2 h-4 w-4" />
                   Export
                 </Button>
@@ -986,7 +985,7 @@ function CreditManagement() {
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   setShowBulkModal(false);
                   setBulkAmount('');

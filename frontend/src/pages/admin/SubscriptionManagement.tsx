@@ -11,7 +11,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
   RefreshCw,
   Search,
@@ -27,16 +26,18 @@ import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { TierBadge, StatusBadge, ConfirmationModal } from '@/components/plan109';
-import { subscriptionApi } from '@/api/plan109';
+import { subscriptionApi, refundApi } from '@/api/plan109';
+import ManualCancelRefundModal from '@/components/admin/ManualCancelRefundModal';
 import {
   SubscriptionTier,
   SubscriptionStatus,
   type Subscription,
   type SubscriptionStats,
-} from '@/types/plan109.types';
+} from '@rephlo/shared-types';
 import { formatCurrency, formatDate, formatNumber, calculateDaysBetween } from '@/lib/plan109.utils';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 function SubscriptionManagement() {
   // State
@@ -61,8 +62,10 @@ function SubscriptionManagement() {
   // Modals
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
   const [cancelAtPeriodEnd] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [creditsUsedInCurrentPeriod, setCreditsUsedInCurrentPeriod] = useState(0);
 
   // Load data
   useEffect(() => {
@@ -77,8 +80,8 @@ function SubscriptionManagement() {
       // Load subscriptions and stats in parallel
       const [subsResponse, statsData] = await Promise.all([
         subscriptionApi.getAllSubscriptions({
-          tier: filterTier as SubscriptionTier || undefined,
-          status: filterStatus as SubscriptionStatus || undefined,
+          tier: (filterTier || undefined) as SubscriptionTier | undefined,
+          status: (filterStatus || undefined) as SubscriptionStatus | undefined,
           search: searchQuery || undefined,
           page,
           limit,
@@ -86,13 +89,14 @@ function SubscriptionManagement() {
         subscriptionApi.getStats(),
       ]);
 
-      // Backend wraps responses in { success, data }
-      const unwrappedSubs = (subsResponse as any).data || subsResponse;
-      const unwrappedStats = (statsData as any).data || statsData;
+      // Handle both response formats: { data: [...] } or direct array
+      // Some endpoints return { data: {...}, pagination: {...} }, others return unwrapped
+      const subscriptionsData = (subsResponse as any).data || subsResponse;
+      const paginationData = (subsResponse as any).pagination || subsResponse;
 
-      setSubscriptions(unwrappedSubs.data || unwrappedSubs || []);
-      setTotalPages(unwrappedSubs.totalPages || 1);
-      setStats(unwrappedStats);
+      setSubscriptions(safeArray<Subscription>(subscriptionsData));
+      setTotalPages(paginationData.totalPages || 1);
+      setStats((statsData as any).data || statsData);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load subscriptions');
     } finally {
@@ -148,6 +152,34 @@ function SubscriptionManagement() {
     }
   };
 
+  const handleCancelWithRefund = async (data: any) => {
+    try {
+      await refundApi.cancelSubscriptionWithRefund(data.subscriptionId, data);
+      setSuccessMessage('Subscription cancelled and refund request created successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      loadData();
+      setShowRefundModal(false);
+      setSelectedSubscription(null);
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || 'Failed to cancel subscription with refund');
+    }
+  };
+
+  const handleOpenRefundModal = async (subscription: Subscription) => {
+    try {
+      setSelectedSubscription(subscription);
+      // Fetch credit usage for current billing period
+      const creditUsageData = await refundApi.getSubscriptionCreditUsage(subscription.id);
+      setCreditsUsedInCurrentPeriod(creditUsageData.creditsUsed);
+      setShowRefundModal(true);
+    } catch (err: any) {
+      // If fetch fails, default to 0 (will show full refund)
+      console.error('Failed to fetch credit usage:', err);
+      setCreditsUsedInCurrentPeriod(0);
+      setShowRefundModal(true);
+    }
+  };
+
   // Sort subscriptions
   const sortedSubscriptions = [...subscriptions].sort((a, b) => {
     let compareValue = 0;
@@ -191,19 +223,20 @@ function SubscriptionManagement() {
           Refresh
         </Button>
       </div>
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
-          </div>
-        )}
+
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-green-600" />
+          <p className="text-body text-green-800">{successMessage}</p>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-body text-red-800">{error}</p>
+        </div>
+      )}
 
         {/* Quick Stats */}
         {stats && (
@@ -267,9 +300,10 @@ function SubscriptionManagement() {
                 <option value="">All Tiers</option>
                 <option value={SubscriptionTier.FREE}>Free</option>
                 <option value={SubscriptionTier.PRO}>Pro</option>
+                <option value={SubscriptionTier.PRO_PLUS}>Pro Plus</option>
                 <option value={SubscriptionTier.PRO_MAX}>Pro Max</option>
                 <option value={SubscriptionTier.ENTERPRISE_PRO}>Enterprise Pro</option>
-                <option value={SubscriptionTier.ENTERPRISE_MAX}>Enterprise Max</option>
+                <option value={SubscriptionTier.ENTERPRISE_PRO_PLUS}>Enterprise Pro Plus</option>
                 <option value={SubscriptionTier.PERPETUAL}>Perpetual</option>
               </select>
             </div>
@@ -511,9 +545,14 @@ function SubscriptionManagement() {
                                 >
                                   Cancel
                                 </Button>
-                                <Link to={`/admin/subscriptions/${subscription.id}`}>
-                                  <Button size="sm">View</Button>
-                                </Link>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleOpenRefundModal(subscription)}
+                                  className="text-orange-600 hover:text-orange-700"
+                                >
+                                  Cancel + Refund
+                                </Button>
                               </>
                             )}
                           </div>
@@ -571,6 +610,21 @@ function SubscriptionManagement() {
         variant="danger"
         isProcessing={isProcessing}
       />
+
+      {/* Manual Cancel with Refund Modal */}
+      {selectedSubscription && (
+        <ManualCancelRefundModal
+          isOpen={showRefundModal}
+          onClose={() => {
+            setShowRefundModal(false);
+            setSelectedSubscription(null);
+          }}
+          onConfirm={handleCancelWithRefund}
+          subscription={selectedSubscription}
+          defaultRefundAmount={Number(selectedSubscription.basePriceUsd)}
+          creditsUsedInCurrentPeriod={creditsUsedInCurrentPeriod}
+        />
+      )}
     </div>
   );
 }

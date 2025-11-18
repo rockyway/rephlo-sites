@@ -24,7 +24,7 @@ describe('CreditManagementService - P0 Fixes', () => {
     await cleanDatabase();
 
     // Create test user
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email: 'credit-test@example.com',
         emailVerified: true,
@@ -60,7 +60,7 @@ describe('CreditManagementService - P0 Fixes', () => {
     await prisma.userCreditBalance.deleteMany({ where: { user_id: testUserId } });
     await prisma.creditDeductionLedger.deleteMany({ where: { user_id: testUserId } });
     await prisma.subscriptionMonetization.deleteMany({ where: { userId: testUserId } });
-    await prisma.user.deleteMany({ where: { id: testUserId } });
+    await prisma.users.deleteMany({ where: { id: testUserId } });
   });
 
   describe('allocateSubscriptionCredits', () => {

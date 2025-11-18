@@ -10,7 +10,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, User } from '@prisma/client';
+import { PrismaClient, users } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import logger from '../utils/logger';
 import { IAuthService } from '../interfaces';
@@ -26,9 +26,9 @@ export class AuthService implements IAuthService {
   /**
    * Find user by email
    */
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<users | null> {
     try {
-      return await this.prisma.user.findUnique({
+      return await this.prisma.users.findUnique({
         where: { email: email.toLowerCase() },
       });
     } catch (error) {
@@ -43,9 +43,9 @@ export class AuthService implements IAuthService {
   /**
    * Find user by ID
    */
-  async findById(userId: string): Promise<User | null> {
+  async findById(userId: string): Promise<users | null> {
     try {
-      return await this.prisma.user.findUnique({
+      return await this.prisma.users.findUnique({
         where: { id: userId },
       });
     } catch (error) {
@@ -66,21 +66,23 @@ export class AuthService implements IAuthService {
     firstName?: string;
     lastName?: string;
     username?: string;
-  }): Promise<User> {
+  }): Promise<users> {
     try {
-      const passwordHash = data.password
+      const password_hash = data.password
         ? await this.hashPassword(data.password)
         : null;
 
-      const user = await this.prisma.user.create({
+      const user = await this.prisma.users.create({
         data: {
+          id: crypto.randomUUID(),
           email: data.email.toLowerCase(),
-          passwordHash,
-          firstName: data.firstName,
-          lastName: data.lastName,
+          password_hash,
+          first_name: data.firstName,
+          last_name: data.lastName,
           username: data.username,
-          emailVerified: false,
-          isActive: true,
+          email_verified: false,
+          is_active: true,
+          updated_at: new Date(),
         },
       });
 
@@ -106,7 +108,7 @@ export class AuthService implements IAuthService {
   async authenticate(
     email: string,
     password: string
-  ): Promise<User | null> {
+  ): Promise<users | null> {
     try {
       const user = await this.findByEmail(email);
 
@@ -115,19 +117,19 @@ export class AuthService implements IAuthService {
         return null;
       }
 
-      if (!user.isActive) {
+      if (!user.is_active) {
         logger.warn('Login failed: Account inactive', { userId: user.id });
         return null;
       }
 
-      if (!user.passwordHash) {
+      if (!user.password_hash) {
         logger.warn('Login failed: Password not set (OAuth-only account)', { userId: user.id });
         return null;
       }
 
       const isPasswordValid = await this.verifyPassword(
         password,
-        user.passwordHash
+        user.password_hash
       );
 
       if (!isPasswordValid) {
@@ -183,7 +185,7 @@ export class AuthService implements IAuthService {
   /**
    * Get OIDC claims for a user based on requested scope
    */
-  private getClaimsForUser(user: User, scope: string): Record<string, any> {
+  private getClaimsForUser(user: users, scope: string): Record<string, any> {
     const scopes = scope.split(' ');
     const claims: Record<string, any> = {
       sub: user.id,
@@ -195,30 +197,30 @@ export class AuthService implements IAuthService {
     // email scope
     if (scopes.includes('email')) {
       claims.email = user.email;
-      claims.email_verified = user.emailVerified;
+      claims.email_verified = user.email_verified;
     }
 
     // profile scope
     if (scopes.includes('profile')) {
-      if (user.firstName || user.lastName) {
-        claims.name = [user.firstName, user.lastName]
+      if (user.first_name || user.last_name) {
+        claims.name = [user.first_name, user.last_name]
           .filter(Boolean)
           .join(' ');
       }
-      if (user.firstName) claims.given_name = user.firstName;
-      if (user.lastName) claims.family_name = user.lastName;
+      if (user.first_name) claims.given_name = user.first_name;
+      if (user.last_name) claims.family_name = user.last_name;
       if (user.username) claims.preferred_username = user.username;
-      if (user.profilePictureUrl) claims.picture = user.profilePictureUrl;
-      claims.updated_at = Math.floor(user.updatedAt.getTime() / 1000);
+      if (user.profile_picture_url) claims.picture = user.profile_picture_url;
+      claims.updated_at = Math.floor(user.updated_at.getTime() / 1000);
     }
 
     // Custom scopes (user.info)
     if (scopes.includes('user.info')) {
-      claims.created_at = Math.floor(user.createdAt.getTime() / 1000);
-      claims.last_login_at = user.lastLoginAt
-        ? Math.floor(user.lastLoginAt.getTime() / 1000)
+      claims.created_at = Math.floor(user.created_at.getTime() / 1000);
+      claims.last_login_at = user.last_login_at
+        ? Math.floor(user.last_login_at.getTime() / 1000)
         : null;
-      claims.is_active = user.isActive;
+      claims.is_active = user.is_active;
     }
 
     return claims;
@@ -253,9 +255,9 @@ export class AuthService implements IAuthService {
    */
   async updateLastLogin(userId: string): Promise<void> {
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
-        data: { lastLoginAt: new Date() },
+        data: { last_login_at: new Date() },
       });
     } catch (error) {
       logger.error('AuthService: updateLastLogin failed', {
@@ -270,9 +272,9 @@ export class AuthService implements IAuthService {
    */
   async verifyEmail(userId: string): Promise<void> {
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
-        data: { emailVerified: true },
+        data: { email_verified: true },
       });
 
       logger.info('AuthService: email verified', { userId });
@@ -293,11 +295,11 @@ export class AuthService implements IAuthService {
     newPassword: string
   ): Promise<void> {
     try {
-      const passwordHash = await this.hashPassword(newPassword);
+      const password_hash = await this.hashPassword(newPassword);
 
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
-        data: { passwordHash },
+        data: { password_hash },
       });
 
       logger.info('AuthService: password updated', { userId });
@@ -315,9 +317,9 @@ export class AuthService implements IAuthService {
    */
   async deactivateAccount(userId: string): Promise<void> {
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
-        data: { isActive: false },
+        data: { is_active: false },
       });
 
       logger.info('AuthService: account deactivated', { userId });
@@ -335,11 +337,11 @@ export class AuthService implements IAuthService {
    */
   async deleteAccount(userId: string): Promise<void> {
     try {
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
-          isActive: false,
-          deletedAt: new Date(),
+          is_active: false,
+          deleted_at: new Date(),
         },
       });
 
@@ -372,10 +374,10 @@ export class AuthService implements IAuthService {
   }> {
     try {
       const [total, active, verified, inactive] = await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.user.count({ where: { isActive: true } }),
-        this.prisma.user.count({ where: { emailVerified: true } }),
-        this.prisma.user.count({ where: { isActive: false } }),
+        this.prisma.users.count(),
+        this.prisma.users.count({ where: { is_active: true } }),
+        this.prisma.users.count({ where: { email_verified: true } }),
+        this.prisma.users.count({ where: { is_active: false } }),
       ]);
 
       return { total, active, verified, inactive };

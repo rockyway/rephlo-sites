@@ -30,7 +30,7 @@ describe('Admin Role Cache Integration', () => {
     roleCacheService = container.resolve(RoleCacheService);
 
     // Create test users
-    adminUser = await prisma.user.create({
+    adminUser = await prisma.users.create({
       data: {
         id: '123e4567-e89b-12d3-a456-426614174001',
         email: 'admin@test.com',
@@ -40,7 +40,7 @@ describe('Admin Role Cache Integration', () => {
       },
     });
 
-    regularUser = await prisma.user.create({
+    regularUser = await prisma.users.create({
       data: {
         id: '123e4567-e89b-12d3-a456-426614174002',
         email: 'user@test.com',
@@ -53,7 +53,7 @@ describe('Admin Role Cache Integration', () => {
 
   afterAll(async () => {
     // Cleanup test data
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: {
         email: {
           in: ['admin@test.com', 'user@test.com'],
@@ -128,7 +128,7 @@ describe('Admin Role Cache Integration', () => {
       expect(cached).toBe('user');
 
       // Change role to admin
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: regularUser.id },
         data: { role: 'admin' },
       });
@@ -145,7 +145,7 @@ describe('Admin Role Cache Integration', () => {
       expect(newRole).toBe('admin');
 
       // Restore original role
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: regularUser.id },
         data: { role: 'user' },
       });
@@ -198,7 +198,7 @@ describe('Admin Role Cache Integration', () => {
 
     it('should handle inactive users correctly', async () => {
       // Create inactive user
-      const inactiveUser = await prisma.user.create({
+      const inactiveUser = await prisma.users.create({
         data: {
           id: '123e4567-e89b-12d3-a456-426614174003',
           email: 'inactive@test.com',
@@ -216,7 +216,7 @@ describe('Admin Role Cache Integration', () => {
       });
 
       // Cleanup
-      await prisma.user.delete({ where: { id: inactiveUser.id } });
+      await prisma.users.delete({ where: { id: inactiveUser.id } });
     });
   });
 

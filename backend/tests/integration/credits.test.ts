@@ -23,7 +23,7 @@ describe('Credits & Usage API Integration Tests', () => {
     await cleanDatabase();
 
     const { createApp } = await import('../../src/app');
-    app = await createApp(prisma);
+    app = await createApp();
 
     const user = await createTestUser(prisma);
     userId = user.id;
@@ -281,7 +281,7 @@ describe('Credits & Usage API Integration Tests', () => {
       // Free tier user
       const freeUser = await createTestUser(prisma);
       const freeToken = await generateTestAccessToken(freeUser);
-      const freeSub = await createTestSubscription(prisma, freeUser.id, {
+      await createTestSubscription(prisma, freeUser.id, {
         tier: 'free',
       });
 
@@ -296,7 +296,7 @@ describe('Credits & Usage API Integration Tests', () => {
       // Pro tier user
       const proUser = await createTestUser(prisma);
       const proToken = await generateTestAccessToken(proUser);
-      const proSub = await createTestSubscription(prisma, proUser.id, {
+      await createTestSubscription(prisma, proUser.id, {
         tier: 'pro',
       });
 

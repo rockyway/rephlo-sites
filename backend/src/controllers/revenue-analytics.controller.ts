@@ -158,9 +158,8 @@ export class RevenueAnalyticsController {
 
       logger.info('RevenueAnalyticsController.getRevenueMix: Revenue mix retrieved', {
         period,
-        subscriptionRevenue: mix.subscriptionRevenue,
-        perpetualRevenue: mix.perpetualRevenue,
-        upgradeRevenue: mix.upgradeRevenue,
+        total: mix.total,
+        dataPoints: mix.data.length,
       });
 
       res.status(200).json(mix);
@@ -293,9 +292,8 @@ export class RevenueAnalyticsController {
 
       logger.info('RevenueAnalyticsController.getRevenueFunnel: Revenue funnel retrieved', {
         period,
-        freeTier: funnel.freeTier.count,
-        paidSubscription: funnel.paidSubscription.count,
-        perpetualLicense: funnel.perpetualLicense.count,
+        stages: funnel.stages.length,
+        totalUsers: funnel.stages.reduce((sum, stage) => sum + stage.count, 0),
       });
 
       res.status(200).json(funnel);
@@ -433,12 +431,16 @@ export class RevenueAnalyticsController {
       // Validate limit parameter
       const limit = this.validateLimit(query.limit, 10, 100);
 
+      // Validate offset parameter
+      const offset = query.offset ? (typeof query.offset === 'string' ? parseInt(query.offset, 10) : query.offset) : 0;
+
       // Get coupon ROI from service
-      const roi = await this.analyticsService.getCouponROI(period, limit);
+      const roi = await this.analyticsService.getCouponROI(period, limit, offset);
 
       logger.info('RevenueAnalyticsController.getCouponROI: Coupon ROI retrieved', {
         period,
         limit,
+        offset,
         campaigns: roi.data.length,
       });
 

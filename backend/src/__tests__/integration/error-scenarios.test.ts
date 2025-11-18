@@ -35,11 +35,11 @@ describe('Error Scenarios and Edge Cases', () => {
 
   beforeAll(async () => {
     await redis.flushdb();
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'error-test' } },
     });
 
-    testUser = await prisma.user.create({
+    testUser = await prisma.users.create({
       data: {
         email: 'error-test@example.com',
         passwordHash: '$2b$12$test',
@@ -51,7 +51,7 @@ describe('Error Scenarios and Edge Cases', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'error-test' } },
     });
     await redis.flushdb();
@@ -294,21 +294,21 @@ describe('Error Scenarios and Edge Cases', () => {
 
     it('Should handle database connection errors gracefully', async () => {
       // Mock Prisma to simulate database failure
-      const originalFindUnique = prisma.user.findUnique;
-      (prisma.user.findUnique as jest.Mock) = jest
+      const originalFindUnique = prisma.users.findUnique;
+      (prisma.users.findUnique as jest.Mock) = jest
         .fn()
         .mockRejectedValue(new Error('Database connection lost'));
 
       try {
         await expect(roleCacheService.getUserRole(testUser.id)).rejects.toThrow();
       } finally {
-        prisma.user.findUnique = originalFindUnique;
+        prisma.users.findUnique = originalFindUnique;
       }
     });
 
     it('Should handle database query timeout', async () => {
-      const originalFindUnique = prisma.user.findUnique;
-      (prisma.user.findUnique as jest.Mock) = jest.fn().mockImplementation(() => {
+      const originalFindUnique = prisma.users.findUnique;
+      (prisma.users.findUnique as jest.Mock) = jest.fn().mockImplementation(() => {
         return new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Query timeout')), 100);
         });
@@ -317,7 +317,7 @@ describe('Error Scenarios and Edge Cases', () => {
       try {
         await expect(roleCacheService.getUserRole(testUser.id)).rejects.toThrow();
       } finally {
-        prisma.user.findUnique = originalFindUnique;
+        prisma.users.findUnique = originalFindUnique;
       }
     });
   });
@@ -412,7 +412,7 @@ describe('Error Scenarios and Edge Cases', () => {
       }
 
       // Verify all depleted
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: testUser.id },
         select: { mfaBackupCodes: true },
       });
@@ -433,7 +433,7 @@ describe('Error Scenarios and Edge Cases', () => {
 
     it('Should reject MFA verification for disabled MFA', async () => {
       // Disable MFA
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUser.id },
         data: { mfaEnabled: false },
       });
@@ -454,7 +454,7 @@ describe('Error Scenarios and Edge Cases', () => {
       expect(response.body.error.code).toBe('MFA_NOT_ENABLED');
 
       // Re-enable for other tests
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUser.id },
         data: { mfaEnabled: true },
       });
@@ -462,7 +462,7 @@ describe('Error Scenarios and Edge Cases', () => {
 
     it('Should reject MFA verification for inactive user', async () => {
       // Deactivate user
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUser.id },
         data: { isActive: false },
       });
@@ -483,7 +483,7 @@ describe('Error Scenarios and Edge Cases', () => {
       expect(response.body.error.code).toBe('ACCOUNT_INACTIVE');
 
       // Reactivate
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: testUser.id },
         data: { isActive: true },
       });
@@ -580,7 +580,7 @@ describe('Error Scenarios and Edge Cases', () => {
      */
 
     it('Should handle permission check for user with no role', async () => {
-      const noRoleUser = await prisma.user.create({
+      const noRoleUser = await prisma.users.create({
         data: {
           email: 'no-role@example.com',
           passwordHash: '$2b$12$test',
@@ -592,11 +592,11 @@ describe('Error Scenarios and Edge Cases', () => {
       const permissions = await permissionCacheService.getPermissions(noRoleUser.id);
       expect(permissions).toContain('api.read');
 
-      await prisma.user.delete({ where: { id: noRoleUser.id } });
+      await prisma.users.delete({ where: { id: noRoleUser.id } });
     });
 
     it('Should handle permission check for inactive user', async () => {
-      const inactiveUser = await prisma.user.create({
+      const inactiveUser = await prisma.users.create({
         data: {
           email: 'inactive@example.com',
           passwordHash: '$2b$12$test',
@@ -608,13 +608,13 @@ describe('Error Scenarios and Edge Cases', () => {
       const result = await permissionCacheService.getPermissionAndStatus(inactiveUser.id);
       expect(result.isActive).toBe(false);
 
-      await prisma.user.delete({ where: { id: inactiveUser.id } });
+      await prisma.users.delete({ where: { id: inactiveUser.id } });
     });
 
     it('Should handle empty permission array gracefully', async () => {
       // Mock user with no permissions (edge case)
-      const originalFindUnique = prisma.user.findUnique;
-      (prisma.user.findUnique as jest.Mock) = jest.fn().mockResolvedValue({
+      const originalFindUnique = prisma.users.findUnique;
+      (prisma.users.findUnique as jest.Mock) = jest.fn().mockResolvedValue({
         id: testUser.id,
         role: null, // No role
         isActive: true,
@@ -624,7 +624,7 @@ describe('Error Scenarios and Edge Cases', () => {
         const permissions = await permissionCacheService.getPermissions(testUser.id);
         expect(Array.isArray(permissions)).toBe(true);
       } finally {
-        prisma.user.findUnique = originalFindUnique;
+        prisma.users.findUnique = originalFindUnique;
       }
     });
   });
@@ -671,7 +671,7 @@ describe('Performance and Scalability Edge Cases', () => {
     // Create 100 test users
     const users = await Promise.all(
       Array.from({ length: 100 }, (_, i) =>
-        prisma.user.create({
+        prisma.users.create({
           data: {
             email: `perf-test-${i}@example.com`,
             passwordHash: '$2b$12$test',
@@ -694,7 +694,7 @@ describe('Performance and Scalability Edge Cases', () => {
     expect(duration).toBeLessThan(5000); // Should complete in under 5 seconds
 
     // Clean up
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'perf-test' } },
     });
   });
@@ -705,7 +705,7 @@ describe('Performance and Scalability Edge Cases', () => {
     // Create 50 users and cache their permissions
     const users = await Promise.all(
       Array.from({ length: 50 }, (_, i) =>
-        prisma.user.create({
+        prisma.users.create({
           data: {
             email: `cache-test-${i}@example.com`,
             passwordHash: '$2b$12$test',
@@ -724,7 +724,7 @@ describe('Performance and Scalability Edge Cases', () => {
     expect(stats.permissionKeyCount).toBeGreaterThanOrEqual(50);
 
     // Clean up
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: { email: { contains: 'cache-test' } },
     });
   });

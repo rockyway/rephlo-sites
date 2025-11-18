@@ -16,8 +16,8 @@
  */
 
 import request from 'supertest';
-import { PrismaClient, SubscriptionTier, TierRestrictionMode } from '@prisma/client';
-import { app } from '../../src/app';
+import { PrismaClient, SubscriptionTier } from '@prisma/client';
+import app from '../../src/app';
 import { createTestUser, createTestSubscription } from '../helpers/factories';
 import { generateTestAccessToken } from '../helpers/tokens';
 import nock from 'nock';
@@ -52,47 +52,53 @@ describe('Tier Enforcement in Inference Endpoints', () => {
     proUserToken = await generateTestAccessToken(proUser);
 
     const enterpriseUser = await createTestUser(prisma, { email: 'enterprise@test.com' });
-    await createTestSubscription(prisma, enterpriseUser.id, { tier: SubscriptionTier.enterprise });
+    await createTestSubscription(prisma, enterpriseUser.id, { tier: SubscriptionTier.enterprise_pro });
     enterpriseUserToken = await generateTestAccessToken(enterpriseUser);
 
     // Create test models with tier restrictions
     await prisma.model.createMany({
       data: [
         {
-          modelId: freeModelId,
+          id: freeModelId,
           name: 'GPT-3.5 Turbo',
           provider: 'openai',
-          contextWindow: 4096,
-          maxOutputTokens: 4096,
-          capabilities: [],
-          isActive: true,
-          requiredTier: SubscriptionTier.free,
-          tierRestrictionMode: TierRestrictionMode.minimum,
-          allowedTiers: [SubscriptionTier.free, SubscriptionTier.pro, SubscriptionTier.enterprise],
+          isAvailable: true,
+          meta: {
+            displayName: 'GPT-3.5 Turbo',
+            contextLength: 4096,
+            maxOutputTokens: 4096,
+            capabilities: [],
+            requiredTier: SubscriptionTier.free,
+            allowedTiers: [SubscriptionTier.free, SubscriptionTier.pro, SubscriptionTier.enterprise_pro, SubscriptionTier.enterprise_max],
+          },
         },
         {
-          modelId: proModelId,
+          id: proModelId,
           name: 'GPT-4',
           provider: 'openai',
-          contextWindow: 8192,
-          maxOutputTokens: 8192,
-          capabilities: [],
-          isActive: true,
-          requiredTier: SubscriptionTier.pro,
-          tierRestrictionMode: TierRestrictionMode.minimum,
-          allowedTiers: [SubscriptionTier.pro, SubscriptionTier.enterprise],
+          isAvailable: true,
+          meta: {
+            displayName: 'GPT-4',
+            contextLength: 8192,
+            maxOutputTokens: 8192,
+            capabilities: [],
+            requiredTier: SubscriptionTier.pro,
+            allowedTiers: [SubscriptionTier.pro, SubscriptionTier.enterprise_pro, SubscriptionTier.enterprise_max],
+          },
         },
         {
-          modelId: enterpriseModelId,
+          id: enterpriseModelId,
           name: 'Claude Opus 3',
           provider: 'anthropic',
-          contextWindow: 200000,
-          maxOutputTokens: 4096,
-          capabilities: [],
-          isActive: true,
-          requiredTier: SubscriptionTier.enterprise,
-          tierRestrictionMode: TierRestrictionMode.minimum,
-          allowedTiers: [SubscriptionTier.enterprise],
+          isAvailable: true,
+          meta: {
+            displayName: 'Claude Opus 3',
+            contextLength: 200000,
+            maxOutputTokens: 4096,
+            capabilities: [],
+            requiredTier: SubscriptionTier.enterprise_pro,
+            allowedTiers: [SubscriptionTier.enterprise_pro, SubscriptionTier.enterprise_max],
+          },
         },
       ],
     });
@@ -101,7 +107,7 @@ describe('Tier Enforcement in Inference Endpoints', () => {
   afterAll(async () => {
     await prisma.model.deleteMany({
       where: {
-        modelId: {
+        id: {
           in: [freeModelId, proModelId, enterpriseModelId],
         },
       },
@@ -177,7 +183,7 @@ describe('Tier Enforcement in Inference Endpoints', () => {
       expect(res.body.error).toBeDefined();
       expect(res.body.error.code).toBe('model_access_restricted');
       expect(res.body.error.message).toContain('Enterprise');
-      expect(res.body.error.details.required_tier).toBe(SubscriptionTier.enterprise);
+      expect(res.body.error.details.required_tier).toBe(SubscriptionTier.enterprise_pro);
     });
 
     it('should allow pro user to access free tier model', async () => {
@@ -251,7 +257,7 @@ describe('Tier Enforcement in Inference Endpoints', () => {
       expect(res.body.error).toBeDefined();
       expect(res.body.error.code).toBe('model_access_restricted');
       expect(res.body.error.message).toContain('Enterprise');
-      expect(res.body.error.details.required_tier).toBe(SubscriptionTier.enterprise);
+      expect(res.body.error.details.required_tier).toBe(SubscriptionTier.enterprise_pro);
       expect(res.body.error.details.current_tier).toBe(SubscriptionTier.pro);
     });
 
@@ -412,7 +418,7 @@ describe('Tier Enforcement in Inference Endpoints', () => {
 
       expect(res.body.error).toBeDefined();
       expect(res.body.error.code).toBe('model_access_restricted');
-      expect(res.body.error.details.required_tier).toBe(SubscriptionTier.enterprise);
+      expect(res.body.error.details.required_tier).toBe(SubscriptionTier.enterprise_pro);
     });
 
     it('should allow enterprise user to access all tier models', async () => {

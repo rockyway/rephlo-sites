@@ -137,10 +137,17 @@ export default function OAuthCallback() {
 
         // Decode user information from id_token
         // Using id_token avoids audience mismatch with resource-specific access token
+        if (!tokenResponse.id_token) {
+          console.error('No id_token in response');
+          setStatus('error');
+          setErrorDetails(errorMessages.userinfo_failed);
+          return;
+        }
+
         let idTokenClaims;
         try {
           idTokenClaims = decodeJWT<{
-            sub: string;
+            sub?: string;
             email: string;
             email_verified?: boolean;
             name?: string;
@@ -159,13 +166,25 @@ export default function OAuthCallback() {
 
         // Transform id_token claims to User object
         const userData: User = {
-          id: idTokenClaims.sub,
+          id: idTokenClaims.sub || '',
           email: idTokenClaims.email,
-          name: idTokenClaims.name || `${idTokenClaims.given_name || ''} ${idTokenClaims.family_name || ''}`.trim() || undefined,
-          role: idTokenClaims.role || 'user',
-          emailVerified: idTokenClaims.email_verified,
+          name: idTokenClaims.name || `${idTokenClaims.given_name || ''} ${idTokenClaims.family_name || ''}`.trim() || null,
+          firstName: idTokenClaims.given_name || null,
+          lastName: idTokenClaims.family_name || null,
+          username: null,
+          profilePictureUrl: null,
+          status: 'active' as any,
+          isActive: true,
+          currentTier: 'free' as any,
+          creditsBalance: 0,
+          role: (idTokenClaims.role === 'admin' || idTokenClaims.role === 'user') ? idTokenClaims.role : 'user',
           createdAt: idTokenClaims.created_at || new Date().toISOString(),
-          permissions: idTokenClaims.permissions
+          lastActiveAt: null,
+          deactivatedAt: null,
+          deletedAt: null,
+          suspendedUntil: null,
+          bannedAt: null,
+          lifetimeValue: 0,
         };
 
         // Store tokens in session storage (temporary - will be improved with secure storage)
@@ -269,11 +288,9 @@ export default function OAuthCallback() {
               <p className="text-body-sm text-deep-navy-300 mb-1">
                 <span className="font-semibold">Role:</span> {user.role}
               </p>
-              {user.permissions && user.permissions.length > 0 && (
-                <p className="text-body-sm text-deep-navy-300">
-                  <span className="font-semibold">Permissions:</span> {user.permissions.join(', ')}
-                </p>
-              )}
+              <p className="text-body-sm text-deep-navy-300">
+                <span className="font-semibold">Tier:</span> {user.currentTier}
+              </p>
             </div>
           )}
         </Card>

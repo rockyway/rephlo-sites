@@ -109,9 +109,13 @@ export class ModelTierAdminController {
         ipAddress
       );
 
+      // Standard response format: flat data with optional metadata
       res.status(200).json({
         status: 'success',
-        data: result,
+        data: result.model,
+        meta: {
+          auditLog: result.auditLog,
+        },
       });
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
@@ -234,9 +238,13 @@ export class ModelTierAdminController {
         ipAddress
       );
 
+      // Standard response format: flat data with optional metadata
       res.status(200).json({
         status: 'success',
-        data: result,
+        data: result.model,
+        meta: {
+          auditLog: result.auditLog,
+        },
       });
     } catch (error) {
       if (error instanceof Error && error.message.includes('not found')) {

@@ -101,12 +101,12 @@ interface MarginBadgeProps {
 export function MarginBadge({ marginPercent, targetMargin, size = 'md' }: MarginBadgeProps) {
   const variance = targetMargin !== undefined ? marginPercent - targetMargin : 0;
 
-  // Determine color based on variance
-  let colorClass = 'bg-green-100 text-green-700';
+  // Determine color based on variance (with dark mode support)
+  let colorClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
   if (targetMargin !== undefined) {
-    if (variance < -5) colorClass = 'bg-red-100 text-red-700';
-    else if (variance < -2) colorClass = 'bg-amber-100 text-amber-700';
-    else if (variance > 2) colorClass = 'bg-blue-100 text-blue-700';
+    if (variance < -5) colorClass = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+    else if (variance < -2) colorClass = 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300';
+    else if (variance > 2) colorClass = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
   }
 
   const sizeClasses = {

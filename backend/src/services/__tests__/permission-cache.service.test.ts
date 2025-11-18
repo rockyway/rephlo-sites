@@ -57,7 +57,7 @@ describe('PermissionCacheService', () => {
 
       expect(permissions).toEqual(cachedPermissions);
       expect(mockRedis.get).toHaveBeenCalledWith('user:user-123:permissions');
-      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockprisma.users.findUnique).not.toHaveBeenCalled();
     });
 
     it('should query database and cache permissions on cache miss', async () => {
@@ -66,7 +66,7 @@ describe('PermissionCacheService', () => {
       const expectedPermissions = ['*'];
 
       mockRedis.get.mockResolvedValue(null); // Cache miss
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: userRole,
       } as any);
@@ -75,7 +75,7 @@ describe('PermissionCacheService', () => {
 
       expect(permissions).toEqual(expectedPermissions);
       expect(mockRedis.get).toHaveBeenCalledWith('user:user-456:permissions');
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      expect(mockprisma.users.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
         select: { role: true },
       });
@@ -92,7 +92,7 @@ describe('PermissionCacheService', () => {
       const expectedPermissions = ['api.read'];
 
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: userRole,
       } as any);
@@ -111,7 +111,7 @@ describe('PermissionCacheService', () => {
       const userId = 'nonexistent-user';
 
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      mockprisma.users.findUnique.mockResolvedValue(null);
 
       await expect(
         permissionCacheService.getPermissions(userId)
@@ -126,7 +126,7 @@ describe('PermissionCacheService', () => {
       const expectedPermissions = ['*'];
 
       mockRedis.get.mockRejectedValue(new Error('Redis connection failed'));
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: userRole,
       } as any);
@@ -134,7 +134,7 @@ describe('PermissionCacheService', () => {
       const permissions = await permissionCacheService.getPermissions(userId);
 
       expect(permissions).toEqual(expectedPermissions);
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockprisma.users.findUnique).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -155,7 +155,7 @@ describe('PermissionCacheService', () => {
       expect(mockRedis.get).toHaveBeenCalledWith(
         'user:user-123:permission_status'
       );
-      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockprisma.users.findUnique).not.toHaveBeenCalled();
     });
 
     it('should query database and cache on cache miss', async () => {
@@ -166,7 +166,7 @@ describe('PermissionCacheService', () => {
       };
 
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(userData as any);
+      mockprisma.users.findUnique.mockResolvedValue(userData as any);
 
       const result =
         await permissionCacheService.getPermissionAndStatus(userId);
@@ -188,7 +188,7 @@ describe('PermissionCacheService', () => {
       };
 
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(userData as any);
+      mockprisma.users.findUnique.mockResolvedValue(userData as any);
 
       const result =
         await permissionCacheService.getPermissionAndStatus(userId);
@@ -301,7 +301,7 @@ describe('PermissionCacheService', () => {
       const userId = 'user-123';
 
       mockRedis.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockprisma.users.findUnique.mockResolvedValue({
         id: userId,
         role: 'admin',
       } as any);

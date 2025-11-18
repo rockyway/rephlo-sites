@@ -1,6 +1,12 @@
 // Model Tier Types for Admin UI
 
-export type SubscriptionTier = 'free' | 'pro' | 'enterprise';
+// Import SubscriptionTier from shared-types
+import type { SubscriptionTier } from '@rephlo/shared-types';
+
+// Re-export for convenience
+export type { SubscriptionTier };
+
+// Frontend-specific types for model tier management
 export type TierRestrictionMode = 'minimum' | 'exact' | 'whitelist';
 export type AccessStatus = 'allowed' | 'restricted' | 'upgrade_required';
 

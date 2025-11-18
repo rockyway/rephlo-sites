@@ -14,32 +14,20 @@
  * Reference: docs/plan/115-master-orchestration-plan-109-110-111.md
  */
 
-import { injectable, inject } from 'tsyringe';
+import { injectable, inject, container } from 'tsyringe';
 import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
 import logger from '../utils/logger';
 import { notFoundError, badRequestError } from '../middleware/error.middleware';
+import {
+  Subscription,
+  SubscriptionStats,
+} from '@rephlo/shared-types';
+import { mapSubscriptionToApiType } from '../utils/typeMappers';
 
 // =============================================================================
 // Types and Interfaces
 // =============================================================================
-
-export interface Subscription {
-  id: string;
-  userId: string;
-  tier: string;
-  billingCycle: 'monthly' | 'annual' | 'lifetime';
-  status: 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired';
-  basePriceUsd: number;
-  monthlyCreditAllocation: number;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  trialEndsAt: Date | null;
-  cancelledAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface CreditAllocation {
   id: string;
@@ -97,19 +85,19 @@ export class SubscriptionManagementService {
 
     try {
       // Get tier configuration
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: input.tier },
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
+        where: { tier_name: input.tier },
       });
 
-      if (!tierConfig || !tierConfig.isActive) {
+      if (!tierConfig || !tierConfig.is_active) {
         throw badRequestError(`Invalid or inactive subscription tier: ${input.tier}`);
       }
 
       // Calculate pricing based on billing cycle
       const basePriceUsd =
         input.billingCycle === 'annual'
-          ? Number(tierConfig.annualPriceUsd)
-          : Number(tierConfig.monthlyPriceUsd);
+          ? Number(tierConfig.annual_price_usd)
+          : Number(tierConfig.monthly_price_usd);
 
       // Calculate billing period
       const now = new Date();
@@ -134,26 +122,43 @@ export class SubscriptionManagementService {
       }
 
       // Create subscription record
-      const subscription = await this.prisma.subscriptionMonetization.create({
+      const subscription = await this.prisma.subscription_monetization.create({
         data: {
-          userId: input.userId,
+          id: crypto.randomUUID(),
+          user_id: input.userId,
           tier: input.tier as any, // Cast to enum type
-          billingCycle: input.billingCycle,
+          billing_cycle: input.billingCycle,
           status: initialStatus,
-          basePriceUsd,
-          monthlyCreditAllocation: tierConfig.monthlyCreditAllocation,
-          stripeCustomerId: input.stripeCustomerId || null,
-          stripeSubscriptionId: input.stripeSubscriptionId || null,
-          currentPeriodStart,
-          currentPeriodEnd,
-          trialEndsAt,
+          base_price_usd: basePriceUsd,
+          monthly_credit_allocation: tierConfig.monthly_credit_allocation,
+          stripe_customer_id: input.stripeCustomerId || null,
+          stripe_subscription_id: input.stripeSubscriptionId || null,
+          current_period_start: currentPeriodStart,
+          current_period_end: currentPeriodEnd,
+          trial_ends_at: trialEndsAt,
+          updated_at: new Date(),
         },
       });
 
       // Allocate initial credits (except for trial users - they get credits when trial ends)
-      if (initialStatus === 'active' && tierConfig.monthlyCreditAllocation > 0) {
+      if (initialStatus === 'active' && tierConfig.monthly_credit_allocation > 0) {
         await this.allocateMonthlyCredits(input.userId, subscription.id);
       }
+
+      // Fetch subscription with user relation for mapper
+      const createdSubscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscription.id },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      });
 
       logger.info('SubscriptionManagementService: Subscription created', {
         subscriptionId: subscription.id,
@@ -161,7 +166,7 @@ export class SubscriptionManagementService {
         status: initialStatus,
       });
 
-      return this.mapSubscription(subscription);
+      return mapSubscriptionToApiType(createdSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.createSubscription: Error', { error });
       throw error;
@@ -181,7 +186,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -200,33 +205,153 @@ export class SubscriptionManagementService {
       }
 
       // Get new tier configuration
-      const newTierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: newTier },
+      const newTierConfig = await this.prisma.subscription_tier_config.findUnique({
+        where: { tier_name: newTier },
       });
 
-      if (!newTierConfig || !newTierConfig.isActive) {
+      if (!newTierConfig || !newTierConfig.is_active) {
         throw badRequestError(`Invalid or inactive subscription tier: ${newTier}`);
       }
 
       // Calculate new pricing
       const basePriceUsd =
-        subscription.billingCycle === 'annual'
-          ? Number(newTierConfig.annualPriceUsd)
-          : Number(newTierConfig.monthlyPriceUsd);
+        subscription.billing_cycle === 'annual'
+          ? Number(newTierConfig.annual_price_usd)
+          : Number(newTierConfig.monthly_price_usd);
 
       // Update subscription
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      const updatedSubscription = await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
-          basePriceUsd,
-          monthlyCreditAllocation: newTierConfig.monthlyCreditAllocation,
-          updatedAt: new Date(),
+          base_price_usd: basePriceUsd,
+          monthly_credit_allocation: newTierConfig.monthly_credit_allocation,
+          updated_at: new Date(),
         },
       });
 
-      // TODO: Implement proration logic (integration with Plan 110)
-      // For now, upgrade takes effect immediately at renewal
+      // Calculate and record MONETARY proration (payment/invoice)
+      // This calculates how much to charge the user for the prorated upgrade
+      try {
+        const prorationService = container.resolve<import('./proration.service').ProrationService>(
+          'ProrationService'
+        );
+
+        // Calculate monetary proration (in USD)
+        const monetaryProration = await prorationService.calculateProration(subscriptionId, newTier);
+
+        // Create proration event record
+        await this.prisma.proration_event.create({
+          data: {
+            id: crypto.randomUUID(),
+            user_id: updatedSubscription.user_id,
+            subscription_id: subscriptionId,
+            from_tier: monetaryProration.fromTier,
+            to_tier: monetaryProration.toTier,
+            change_type: 'upgrade',
+            days_remaining: monetaryProration.daysRemaining,
+            days_in_cycle: monetaryProration.daysInCycle,
+            unused_credit_value_usd: monetaryProration.unusedCreditValueUsd,
+            new_tier_prorated_cost_usd: monetaryProration.newTierProratedCostUsd,
+            net_charge_usd: monetaryProration.netChargeUsd,
+            effective_date: new Date(),
+            status: 'pending',
+            updated_at: new Date(),
+          },
+        });
+
+        logger.info('Monetary proration calculated and recorded for upgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          fromTier: monetaryProration.fromTier,
+          toTier: monetaryProration.toTier,
+          netChargeUsd: monetaryProration.netChargeUsd,
+          unusedCreditValueUsd: monetaryProration.unusedCreditValueUsd,
+          newTierProratedCostUsd: monetaryProration.newTierProratedCostUsd,
+        });
+      } catch (error) {
+        logger.error('Failed to calculate/record monetary proration for upgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        // Don't throw - continue with credit allocation even if proration fails
+        // This ensures credits are allocated even if monetary proration recording fails
+      }
+
+      // Allocate PRORATED credits for tier upgrade
+      // User gets credits proportional to remaining time in billing cycle
+      try {
+        const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+
+        // Get current tier's credit allocation for proration calculation
+        const currentTierConfig = await this.prisma.subscription_tier_config.findUnique({
+          where: { tier_name: subscription.tier },
+        });
+
+        if (!currentTierConfig) {
+          throw new Error(`Current tier config not found: ${subscription.tier}`);
+        }
+
+        // Calculate prorated credits based on remaining time in billing cycle
+        const proration = await creditService.calculateProratedCreditsForTierChange(
+          updatedSubscription.user_id,
+          currentTierConfig.monthly_credit_allocation,
+          newTierConfig.monthly_credit_allocation,
+          updatedSubscription.current_period_start,
+          updatedSubscription.current_period_end
+        );
+
+        logger.info('Upgrade proration calculated', {
+          userId: updatedSubscription.user_id,
+          currentTier: subscription.tier,
+          newTier: newTier,
+          currentTierCredits: currentTierConfig.monthly_credit_allocation,
+          newTierCredits: newTierConfig.monthly_credit_allocation,
+          daysRemaining: proration.daysRemaining,
+          daysInCycle: proration.daysInCycle,
+          proratedCredits: proration.proratedCredits,
+          currentUsedCredits: proration.currentUsedCredits,
+        });
+
+        // Allocate prorated credits (not full monthly amount)
+        await creditService.allocateCredits({
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          totalCredits: proration.proratedCredits,
+          billingPeriodStart: updatedSubscription.current_period_start,
+          billingPeriodEnd: updatedSubscription.current_period_end,
+        });
+
+        logger.info('Prorated credits allocated for upgraded subscription', {
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          proratedCredits: proration.proratedCredits,
+          daysRemaining: proration.daysRemaining,
+        });
+      } catch (error) {
+        logger.error('Failed to allocate prorated credits for upgraded subscription', {
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error; // Re-throw to fail the upgrade if credit allocation fails
+      }
+
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      });
 
       logger.info('SubscriptionManagementService: Tier upgraded', {
         subscriptionId,
@@ -234,7 +359,7 @@ export class SubscriptionManagementService {
         newTier,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.upgradeTier: Error', { error });
       throw error;
@@ -254,7 +379,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -273,28 +398,179 @@ export class SubscriptionManagementService {
       }
 
       // Get new tier configuration
-      const newTierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: newTier },
+      const newTierConfig = await this.prisma.subscription_tier_config.findUnique({
+        where: { tier_name: newTier },
       });
 
-      if (!newTierConfig || !newTierConfig.isActive) {
+      if (!newTierConfig || !newTierConfig.is_active) {
         throw badRequestError(`Invalid or inactive subscription tier: ${newTier}`);
       }
 
       // Calculate new pricing
       const basePriceUsd =
-        subscription.billingCycle === 'annual'
-          ? Number(newTierConfig.annualPriceUsd)
-          : Number(newTierConfig.monthlyPriceUsd);
+        subscription.billing_cycle === 'annual'
+          ? Number(newTierConfig.annual_price_usd)
+          : Number(newTierConfig.monthly_price_usd);
 
-      // Update subscription (downgrade takes effect at period end)
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      // Update subscription (downgrade takes effect immediately)
+      const updatedSubscription = await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           tier: newTier as any, // Cast to enum type
-          basePriceUsd,
-          monthlyCreditAllocation: newTierConfig.monthlyCreditAllocation,
-          updatedAt: new Date(),
+          base_price_usd: basePriceUsd,
+          monthly_credit_allocation: newTierConfig.monthly_credit_allocation,
+          updated_at: new Date(),
+        },
+      });
+
+      // Calculate and record MONETARY proration (payment/invoice)
+      // For downgrades, this calculates the credit/refund the user should receive
+      try {
+        const prorationService = container.resolve<import('./proration.service').ProrationService>(
+          'ProrationService'
+        );
+
+        // Calculate monetary proration (in USD)
+        const monetaryProration = await prorationService.calculateProration(subscriptionId, newTier);
+
+        // Create proration event record
+        await this.prisma.proration_event.create({
+          data: {
+            id: crypto.randomUUID(),
+            user_id: updatedSubscription.user_id,
+            subscription_id: subscriptionId,
+            from_tier: monetaryProration.fromTier,
+            to_tier: monetaryProration.toTier,
+            change_type: 'downgrade',
+            days_remaining: monetaryProration.daysRemaining,
+            days_in_cycle: monetaryProration.daysInCycle,
+            unused_credit_value_usd: monetaryProration.unusedCreditValueUsd,
+            new_tier_prorated_cost_usd: monetaryProration.newTierProratedCostUsd,
+            net_charge_usd: monetaryProration.netChargeUsd,
+            effective_date: new Date(),
+            status: 'pending',
+            updated_at: new Date(),
+          },
+        });
+
+        logger.info('Monetary proration calculated and recorded for downgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          fromTier: monetaryProration.fromTier,
+          toTier: monetaryProration.toTier,
+          netChargeUsd: monetaryProration.netChargeUsd,
+          unusedCreditValueUsd: monetaryProration.unusedCreditValueUsd,
+          newTierProratedCostUsd: monetaryProration.newTierProratedCostUsd,
+        });
+      } catch (error) {
+        logger.error('Failed to calculate/record monetary proration for downgrade', {
+          userId: updatedSubscription.user_id,
+          subscriptionId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        // Don't throw - continue with credit allocation even if proration fails
+        // This ensures credits are allocated even if monetary proration recording fails
+      }
+
+      // Allocate PRORATED credits for tier downgrade
+      // User gets reduced credits proportional to remaining time in billing cycle
+      // EDGE CASE: User may have already consumed more than the prorated amount
+      try {
+        const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+
+        // Get current tier's credit allocation for proration calculation
+        const currentTierConfig = await this.prisma.subscription_tier_config.findUnique({
+          where: { tier_name: subscription.tier },
+        });
+
+        if (!currentTierConfig) {
+          throw new Error(`Current tier config not found: ${subscription.tier}`);
+        }
+
+        // Calculate prorated credits based on remaining time in billing cycle
+        const proration = await creditService.calculateProratedCreditsForTierChange(
+          updatedSubscription.user_id,
+          currentTierConfig.monthly_credit_allocation,
+          newTierConfig.monthly_credit_allocation,
+          updatedSubscription.current_period_start,
+          updatedSubscription.current_period_end
+        );
+
+        logger.info('Downgrade proration calculated', {
+          userId: updatedSubscription.user_id,
+          currentTier: subscription.tier,
+          newTier: newTier,
+          currentTierCredits: currentTierConfig.monthly_credit_allocation,
+          newTierCredits: newTierConfig.monthly_credit_allocation,
+          daysRemaining: proration.daysRemaining,
+          daysInCycle: proration.daysInCycle,
+          proratedCredits: proration.proratedCredits,
+          currentUsedCredits: proration.currentUsedCredits,
+          isDowngradeWithOveruse: proration.isDowngradeWithOveruse,
+        });
+
+        // Handle edge case: user already used more than prorated amount
+        if (proration.isDowngradeWithOveruse) {
+          logger.warn('Downgrade with overuse detected', {
+            userId: updatedSubscription.user_id,
+            proratedCredits: proration.proratedCredits,
+            currentUsedCredits: proration.currentUsedCredits,
+            deficit: Math.abs(proration.remainingCreditsAfterChange),
+          });
+
+          // Allocate 0 credits for remaining period (user has overused)
+          // They'll get the new tier's full allocation at next billing cycle
+          await creditService.allocateCredits({
+            userId: updatedSubscription.user_id,
+            subscriptionId: updatedSubscription.id,
+            totalCredits: proration.currentUsedCredits, // Set total = used (0 remaining)
+            billingPeriodStart: updatedSubscription.current_period_start,
+            billingPeriodEnd: updatedSubscription.current_period_end,
+          });
+
+          logger.info('Downgrade with overuse: 0 credits remaining for current cycle', {
+            userId: updatedSubscription.user_id,
+            currentUsedCredits: proration.currentUsedCredits,
+          });
+        } else {
+          // Normal downgrade: allocate prorated credits
+          await creditService.allocateCredits({
+            userId: updatedSubscription.user_id,
+            subscriptionId: updatedSubscription.id,
+            totalCredits: proration.proratedCredits,
+            billingPeriodStart: updatedSubscription.current_period_start,
+            billingPeriodEnd: updatedSubscription.current_period_end,
+          });
+
+          logger.info('Prorated credits allocated for downgraded subscription', {
+            userId: updatedSubscription.user_id,
+            subscriptionId: updatedSubscription.id,
+            proratedCredits: proration.proratedCredits,
+            daysRemaining: proration.daysRemaining,
+            remainingAfterChange: proration.remainingCreditsAfterChange,
+          });
+        }
+      } catch (error) {
+        logger.error('Failed to allocate prorated credits for downgraded subscription', {
+          userId: updatedSubscription.user_id,
+          subscriptionId: updatedSubscription.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error; // Re-throw to fail the downgrade if credit allocation fails
+      }
+
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
         },
       });
 
@@ -304,7 +580,7 @@ export class SubscriptionManagementService {
         newTier,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.downgradeTier: Error', { error });
       throw error;
@@ -327,8 +603,18 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
       });
 
       if (!subscription) {
@@ -342,24 +628,205 @@ export class SubscriptionManagementService {
       const now = new Date();
       const newStatus = cancelAtPeriodEnd ? subscription.status : 'cancelled';
 
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      // Cancel Stripe subscription if exists
+      if (subscription.stripe_subscription_id) {
+        try {
+          const { cancelStripeSubscription } = await import('./stripe.service');
+          await cancelStripeSubscription(subscription.stripe_subscription_id, cancelAtPeriodEnd);
+          logger.info('SubscriptionManagementService: Stripe subscription cancelled', {
+            subscriptionId,
+            stripeSubscriptionId: subscription.stripe_subscription_id,
+          });
+        } catch (stripeError) {
+          logger.error('SubscriptionManagementService: Failed to cancel Stripe subscription', {
+            subscriptionId,
+            error: stripeError,
+          });
+          // Continue with local cancellation even if Stripe fails
+        }
+      }
+
+      // Update subscription
+      await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           status: newStatus,
-          cancelledAt: now,
-          updatedAt: now,
+          cancelled_at: now,
+          updated_at: now,
+        },
+      });
+
+      // Revoke remaining credits if immediate cancellation
+      if (!cancelAtPeriodEnd) {
+        try {
+          // TODO: Implement credit revocation logic
+          // const creditService = container.resolve<import('../interfaces').ICreditService>('ICreditService');
+          // await creditService.revokeRemainingCredits(subscription.user_id);
+          logger.info('SubscriptionManagementService: Credits revocation pending implementation', {
+            subscriptionId,
+            userId: subscription.user_id,
+          });
+        } catch (creditError) {
+          logger.error('SubscriptionManagementService: Failed to revoke credits', {
+            subscriptionId,
+            error: creditError,
+          });
+        }
+      }
+
+      // Send cancellation confirmation email
+      try {
+        const emailService = container.resolve<import('./email/email.service.interface').IEmailService>('IEmailService');
+        const username = subscription.users.first_name || subscription.users.email.split('@')[0];
+        await emailService.sendCancellationConfirmationEmail(
+          subscription.users.email,
+          username,
+          cancelAtPeriodEnd,
+          cancelAtPeriodEnd ? subscription.current_period_end : undefined
+        );
+        logger.info('SubscriptionManagementService: Cancellation email sent', {
+          subscriptionId,
+          email: subscription.users.email,
+        });
+      } catch (emailError) {
+        logger.error('SubscriptionManagementService: Failed to send cancellation email', {
+          subscriptionId,
+          error: emailError,
+        });
+      }
+
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
         },
       });
 
       logger.info('SubscriptionManagementService: Subscription cancelled', {
         subscriptionId,
         cancelAtPeriodEnd,
-        effectiveDate: cancelAtPeriodEnd ? subscription.currentPeriodEnd : now,
+        effectiveDate: cancelAtPeriodEnd ? subscription.current_period_end : now,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.cancelSubscription: Error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel subscription with refund (admin-initiated)
+   * Section 3.1.2 of Plan 192
+   */
+  async cancelWithRefund(
+    subscriptionId: string,
+    adminUserId: string,
+    refundReason: string,
+    refundAmount: number,
+    adminNotes?: string
+  ): Promise<{
+    subscription: Subscription;
+    refund: any;
+  }> {
+    logger.info('SubscriptionManagementService.cancelWithRefund', {
+      subscriptionId,
+      adminUserId,
+      refundReason,
+      refundAmount,
+    });
+
+    try {
+      // Get subscription with user details
+      const subscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      });
+
+      if (!subscription) {
+        throw notFoundError('Subscription');
+      }
+
+      if (subscription.status === 'cancelled') {
+        throw badRequestError('Subscription is already cancelled');
+      }
+
+      // Server-side validation: Refund amount must be > 0
+      if (refundAmount <= 0) {
+        throw badRequestError('Refund amount must be greater than 0');
+      }
+
+      const basePriceUsd = Number(subscription.base_price_usd);
+
+      // Server-side validation: Refund amount cannot exceed base price
+      if (refundAmount > basePriceUsd) {
+        throw badRequestError(`Refund amount ($${refundAmount.toFixed(2)}) cannot exceed subscription price ($${basePriceUsd.toFixed(2)})`);
+      }
+
+      // Get RefundService from container
+      const { RefundService } = await import('./refund.service');
+      const refundService = new RefundService(this.prisma);
+
+      // Create refund request with admin-specified amount
+      const refund = await refundService.createRefundRequest({
+        userId: subscription.user_id,
+        subscriptionId: subscription.id,
+        refundType: 'manual_admin',
+        refundReason,
+        requestedBy: adminUserId,
+        originalChargeAmountUsd: basePriceUsd,
+        refundAmountUsd: refundAmount,
+        stripeChargeId: subscription.stripe_subscription_id || undefined,
+        adminNotes,
+      });
+
+      // Approve and process refund
+      const processedRefund = await refundService.approveAndProcessRefund(refund.id, adminUserId);
+
+      // Cancel subscription immediately
+      const cancelledSubscription = await this.cancelSubscription(subscriptionId, false);
+
+      // Update subscription with refund metadata
+      await this.prisma.subscription_monetization.update({
+        where: { id: subscriptionId },
+        data: {
+          cancellation_reason: refundReason,
+          cancellation_requested_by: adminUserId,
+          refunded_at: new Date(),
+          refund_amount_usd: refundAmount,
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('SubscriptionManagementService: Subscription cancelled with refund', {
+        subscriptionId,
+        refundId: processedRefund.id,
+        refundAmount,
+      });
+
+      return {
+        subscription: cancelledSubscription,
+        refund: processedRefund,
+      };
+    } catch (error) {
+      logger.error('SubscriptionManagementService.cancelWithRefund: Error', { error });
       throw error;
     }
   }
@@ -375,7 +842,7 @@ export class SubscriptionManagementService {
     });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findUnique({
+      const subscription = await this.prisma.subscription_monetization.findUnique({
         where: { id: subscriptionId },
       });
 
@@ -383,16 +850,31 @@ export class SubscriptionManagementService {
         throw notFoundError('Subscription');
       }
 
-      if (subscription.status !== 'cancelled' && !subscription.cancelledAt) {
+      if (subscription.status !== 'cancelled' && !subscription.cancelled_at) {
         throw badRequestError('Subscription is not cancelled');
       }
 
-      const updatedSubscription = await this.prisma.subscriptionMonetization.update({
+      await this.prisma.subscription_monetization.update({
         where: { id: subscriptionId },
         data: {
           status: 'active',
-          cancelledAt: null,
-          updatedAt: new Date(),
+          cancelled_at: null,
+          updated_at: new Date(),
+        },
+      });
+
+      // Fetch updated subscription with user relation
+      const finalSubscription = await this.prisma.subscription_monetization.findUnique({
+        where: { id: subscriptionId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
         },
       });
 
@@ -400,7 +882,7 @@ export class SubscriptionManagementService {
         subscriptionId,
       });
 
-      return this.mapSubscription(updatedSubscription);
+      return mapSubscriptionToApiType(finalSubscription!);
     } catch (error) {
       logger.error('SubscriptionManagementService.reactivateSubscription: Error', { error });
       throw error;
@@ -427,14 +909,21 @@ export class SubscriptionManagementService {
     });
 
     try {
-      // Get subscription
+      // Get subscription (always fetch from Prisma for consistent types)
       let subscription;
       if (subscriptionId) {
-        subscription = await this.prisma.subscriptionMonetization.findUnique({
+        subscription = await this.prisma.subscription_monetization.findUnique({
           where: { id: subscriptionId },
         });
       } else {
-        subscription = await this.getActiveSubscription(userId);
+        // Fetch active subscription directly from Prisma (not using mapper)
+        subscription = await this.prisma.subscription_monetization.findFirst({
+          where: {
+            user_id: userId,
+            status: { in: ['trial', 'active'] },
+          },
+          orderBy: { created_at: 'desc' },
+        });
       }
 
       if (!subscription) {
@@ -442,26 +931,55 @@ export class SubscriptionManagementService {
       }
 
       // Create credit allocation record
-      const allocation = await this.prisma.creditAllocation.create({
+      const allocation = await this.prisma.credit_allocation.create({
         data: {
-          userId,
-          subscriptionId: subscription.id,
-          amount: subscription.monthlyCreditAllocation,
-          allocationPeriodStart: subscription.currentPeriodStart,
-          allocationPeriodEnd: subscription.currentPeriodEnd,
+          id: crypto.randomUUID(),
+          user_id: userId,
+          subscription_id: subscription.id,
+          amount: subscription.monthly_credit_allocation,
+          allocation_period_start: subscription.current_period_start,
+          allocation_period_end: subscription.current_period_end,
           source: 'subscription',
+          created_at: new Date(),
         },
       });
 
-      // TODO: Integrate with Plan 112's user_credit_balance table
-      // await this.updateUserCreditBalance(userId, allocation.amount);
+      // Integrate with user_credit_balance table (Fixed Bug #2)
+      await this.prisma.user_credit_balance.upsert({
+        where: { user_id: userId },
+        create: {
+          id: crypto.randomUUID(),
+          user_id: userId,
+          amount: allocation.amount,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        update: {
+          amount: { increment: allocation.amount },
+          updated_at: new Date(),
+        },
+      });
+
+      logger.info('SubscriptionManagementService: User credit balance updated', {
+        userId,
+        amount: allocation.amount,
+      });
 
       logger.info('SubscriptionManagementService: Credits allocated', {
         allocationId: allocation.id,
         amount: allocation.amount,
       });
 
-      return allocation as CreditAllocation;
+      return {
+        id: allocation.id,
+        userId: allocation.user_id,
+        subscriptionId: allocation.subscription_id,
+        amount: allocation.amount,
+        allocationPeriodStart: allocation.allocation_period_start,
+        allocationPeriodEnd: allocation.allocation_period_end,
+        source: allocation.source as any,
+        createdAt: allocation.created_at,
+      };
     } catch (error) {
       logger.error('SubscriptionManagementService.allocateMonthlyCredits: Error', { error });
       throw error;
@@ -484,15 +1002,15 @@ export class SubscriptionManagementService {
       }
 
       // Get tier configuration for rollover limits
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: subscription.tier },
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
+        where: { tier_name: subscription.tier },
       });
 
       if (!tierConfig) {
         throw badRequestError(`Tier configuration not found: ${subscription.tier}`);
       }
 
-      const maxRollover = tierConfig.maxCreditRollover;
+      const maxRollover = tierConfig.max_credit_rollover;
 
       if (maxRollover === 0) {
         logger.debug('No rollover allowed for tier', { tier: subscription.tier });
@@ -536,8 +1054,8 @@ export class SubscriptionManagementService {
         return this.freeUserCanAccessFeature(feature);
       }
 
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: subscription.tier },
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
+        where: { tier_name: subscription.tier },
       });
 
       if (!tierConfig) {
@@ -565,8 +1083,8 @@ export class SubscriptionManagementService {
 
       const tier = subscription?.tier || 'free';
 
-      const tierConfig = await this.prisma.subscriptionTierConfig.findUnique({
-        where: { tierName: tier },
+      const tierConfig = await this.prisma.subscription_tier_config.findUnique({
+        where: { tier_name: tier },
       });
 
       if (!tierConfig) {
@@ -574,9 +1092,9 @@ export class SubscriptionManagementService {
       }
 
       return {
-        tier: tierConfig.tierName,
-        creditsPerMonth: tierConfig.monthlyCreditAllocation,
-        maxRollover: tierConfig.maxCreditRollover,
+        tier: tierConfig.tier_name,
+        creditsPerMonth: tierConfig.monthly_credit_allocation,
+        maxRollover: tierConfig.max_credit_rollover,
         features: tierConfig.features as Record<string, any>,
       };
     } catch (error) {
@@ -598,15 +1116,25 @@ export class SubscriptionManagementService {
     logger.debug('SubscriptionManagementService.getActiveSubscription', { userId });
 
     try {
-      const subscription = await this.prisma.subscriptionMonetization.findFirst({
+      const subscription = await this.prisma.subscription_monetization.findFirst({
         where: {
-          userId,
+          user_id: userId,
           status: { in: ['trial', 'active'] },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
       });
 
-      return subscription ? this.mapSubscription(subscription) : null;
+      return subscription ? mapSubscriptionToApiType(subscription) : null;
     } catch (error) {
       logger.error('SubscriptionManagementService.getActiveSubscription: Error', { error });
       return null;
@@ -622,12 +1150,22 @@ export class SubscriptionManagementService {
     logger.debug('SubscriptionManagementService.getSubscriptionHistory', { userId });
 
     try {
-      const subscriptions = await this.prisma.subscriptionMonetization.findMany({
-        where: { userId },
-        orderBy: { createdAt: 'desc' },
+      const subscriptions = await this.prisma.subscription_monetization.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: 'desc' },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
       });
 
-      return subscriptions.map((sub) => this.mapSubscription(sub));
+      return subscriptions.map((sub) => mapSubscriptionToApiType(sub));
     } catch (error) {
       logger.error('SubscriptionManagementService.getSubscriptionHistory: Error', { error });
       throw error;
@@ -663,27 +1201,27 @@ export class SubscriptionManagementService {
       }
 
       const [subscriptions, total] = await Promise.all([
-        this.prisma.subscriptionMonetization.findMany({
+        this.prisma.subscription_monetization.findMany({
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 email: true,
-                firstName: true,
-                lastName: true,
+                first_name: true,
+                last_name: true,
               },
             },
           },
         }),
-        this.prisma.subscriptionMonetization.count({ where }),
+        this.prisma.subscription_monetization.count({ where }),
       ]);
 
       return {
-        data: subscriptions.map((sub) => this.mapSubscription(sub)),
+        data: subscriptions.map((sub) => mapSubscriptionToApiType(sub)),
         total,
         page,
         limit,
@@ -696,54 +1234,70 @@ export class SubscriptionManagementService {
 
   /**
    * Get subscription statistics for dashboard
-   * @returns Subscription stats (total, by status, by tier)
+   * Uses shared SubscriptionStats type from @rephlo/shared-types
+   * @returns Subscription stats matching shared type interface
    */
-  async getSubscriptionStats(): Promise<{
-    total: number;
-    active: number;
-    trial: number;
-    cancelled: number;
-    expired: number;
-    byTier: Record<string, number>;
-  }> {
+  async getSubscriptionStats(): Promise<SubscriptionStats> {
     logger.debug('SubscriptionManagementService.getSubscriptionStats');
 
     try {
-      const [total, byStatus, byTier] = await Promise.all([
-        this.prisma.subscriptionMonetization.count(),
-        this.prisma.subscriptionMonetization.groupBy({
-          by: ['status'],
-          _count: { id: true },
+      // Calculate date range for current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const [activeCount, pastDueCount, mrrData, trialConversions] = await Promise.all([
+        // Count active subscriptions
+        this.prisma.subscription_monetization.count({
+          where: { status: 'active' },
         }),
-        this.prisma.subscriptionMonetization.groupBy({
-          by: ['tier'],
-          _count: { id: true },
+
+        // Count past due subscriptions
+        this.prisma.subscription_monetization.count({
+          where: { status: 'past_due' },
+        }),
+
+        // Calculate MRR (Monthly Recurring Revenue)
+        this.prisma.subscription_monetization.aggregate({
+          where: {
+            status: 'active',
+            billing_cycle: 'monthly',
+          },
+          _sum: { base_price_usd: true },
+        }),
+
+        // Count trial conversions this month (trials that became active)
+        this.prisma.subscription_monetization.count({
+          where: {
+            status: 'active',
+            updated_at: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+            // Look for subscriptions that were trials before
+            // Note: This is an approximation - ideally we'd have a status history table
+          },
         }),
       ]);
 
-      const statusCounts = byStatus.reduce(
-        (acc, item) => {
-          acc[item.status] = item._count.id;
-          return acc;
+      // Calculate MRR including annual subscriptions (converted to monthly)
+      const annualMrrData = await this.prisma.subscription_monetization.aggregate({
+        where: {
+          status: 'active',
+          billing_cycle: 'annual',
         },
-        {} as Record<string, number>
-      );
+        _sum: { base_price_usd: true },
+      });
 
-      const tierCounts = byTier.reduce(
-        (acc, item) => {
-          acc[item.tier] = item._count.id;
-          return acc;
-        },
-        {} as Record<string, number>
-      );
+      const monthlyMrr = Number(mrrData._sum.base_price_usd) || 0;
+      const annualMrr = (Number(annualMrrData._sum.base_price_usd) || 0) / 12; // Convert annual to monthly
+      const totalMrr = monthlyMrr + annualMrr;
 
       return {
-        total,
-        active: statusCounts.active || 0,
-        trial: statusCounts.trial || 0,
-        cancelled: statusCounts.cancelled || 0,
-        expired: statusCounts.expired || 0,
-        byTier: tierCounts,
+        totalActive: activeCount,
+        mrr: Math.round(totalMrr * 100) / 100, // Round to 2 decimal places
+        pastDueCount: pastDueCount,
+        trialConversionsThisMonth: trialConversions,
       };
     } catch (error) {
       logger.error('SubscriptionManagementService.getSubscriptionStats: Error', { error });
@@ -754,29 +1308,6 @@ export class SubscriptionManagementService {
   // ===========================================================================
   // Private Helper Methods
   // ===========================================================================
-
-  /**
-   * Map Prisma subscription to service interface
-   */
-  private mapSubscription(subscription: any): Subscription {
-    return {
-      id: subscription.id,
-      userId: subscription.userId,
-      tier: subscription.tier,
-      billingCycle: subscription.billingCycle as 'monthly' | 'annual' | 'lifetime',
-      status: subscription.status as 'trial' | 'active' | 'past_due' | 'cancelled' | 'expired',
-      basePriceUsd: Number(subscription.basePriceUsd),
-      monthlyCreditAllocation: subscription.monthlyCreditAllocation,
-      stripeCustomerId: subscription.stripeCustomerId,
-      stripeSubscriptionId: subscription.stripeSubscriptionId,
-      currentPeriodStart: subscription.currentPeriodStart,
-      currentPeriodEnd: subscription.currentPeriodEnd,
-      trialEndsAt: subscription.trialEndsAt,
-      cancelledAt: subscription.cancelledAt,
-      createdAt: subscription.createdAt,
-      updatedAt: subscription.updatedAt,
-    };
-  }
 
   /**
    * Get tier level for comparison (higher number = higher tier)

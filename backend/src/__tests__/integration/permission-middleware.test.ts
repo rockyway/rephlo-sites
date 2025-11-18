@@ -30,7 +30,7 @@ describe('Permission Middleware Integration', () => {
     permissionCacheService = container.resolve(PermissionCacheService);
 
     // Create test users
-    adminUser = await prisma.user.create({
+    adminUser = await prisma.users.create({
       data: {
         email: `admin-perm-test-${Date.now()}@test.com`,
         passwordHash: 'hashed_password',
@@ -40,7 +40,7 @@ describe('Permission Middleware Integration', () => {
       },
     });
 
-    regularUser = await prisma.user.create({
+    regularUser = await prisma.users.create({
       data: {
         email: `user-perm-test-${Date.now()}@test.com`,
         passwordHash: 'hashed_password',
@@ -53,7 +53,7 @@ describe('Permission Middleware Integration', () => {
 
   afterAll(async () => {
     // Clean up test users
-    await prisma.user.deleteMany({
+    await prisma.users.deleteMany({
       where: {
         email: {
           contains: '-perm-test-',
@@ -130,7 +130,7 @@ describe('Permission Middleware Integration', () => {
 
     it('should deny access to inactive user', async () => {
       // Deactivate user
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: regularUser.id },
         data: { isActive: false },
       });
@@ -152,7 +152,7 @@ describe('Permission Middleware Integration', () => {
       );
 
       // Reactivate user for other tests
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: regularUser.id },
         data: { isActive: true },
       });

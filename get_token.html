@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Access Token - Rephlo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .token-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        button {
+            background: #2563EB;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1E40AF;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #2563EB;
+            background: #EFF6FF;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔑 Rephlo API - Get Access Token</h1>
+
+    <div class="step">
+        <h3>Step 1: Start OAuth Flow</h3>
+        <p>Click the button below to log in and authorize the application:</p>
+        <button onclick="startOAuthFlow()">🚀 Start OAuth Login</button>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Copy Your Tokens</h3>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const CLIENT_ID = 'desktop-app-test';
+        const REDIRECT_URI = 'http://localhost:8080/callback';
+        const OIDC_URL = 'http://localhost:7151';
+        const SCOPE = 'openid email profile llm.inference models.read user.info credits.read offline_access';
+
+        // Generate code verifier and challenge for PKCE
+        function generateCodeVerifier() {
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            return base64URLEncode(array);
+        }
+
+        async function generateCodeChallenge(verifier) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(verifier);
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return base64URLEncode(new Uint8Array(hash));
+        }
+
+        function base64URLEncode(buffer) {
+            const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+            let binary = '';
+            bytes.forEach(b => binary += String.fromCharCode(b));
+            return btoa(binary)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=/g, '');
+        }
+
+        async function startOAuthFlow() {
+            const codeVerifier = generateCodeVerifier();
+            const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+            // Store for later
+            sessionStorage.setItem('code_verifier', codeVerifier);
+
+            const state = Math.random().toString(36).substring(7);
+            sessionStorage.setItem('oauth_state', state);
+
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                redirect_uri: REDIRECT_URI,
+                response_type: 'code',
+                scope: SCOPE,
+                state: state,
+                code_challenge: codeChallenge,
+                code_challenge_method: 'S256'
+            });
+
+            window.location.href = `${OIDC_URL}/oauth/authorize?${params}`;
+        }
+
+        // Handle callback
+        window.addEventListener('load', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            const state = params.get('state');
+
+            if (code && state) {
+                const storedState = sessionStorage.getItem('oauth_state');
+                if (state !== storedState) {
+                    document.getElementById('result').innerHTML = '<p style="color:red;">❌ Invalid state parameter</p>';
+                    return;
+                }
+
+                const codeVerifier = sessionStorage.getItem('code_verifier');
+
+                // Exchange code for tokens
+                try {
+                    const response = await fetch(`${OIDC_URL}/oauth/token`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            grant_type: 'authorization_code',
+                            code: code,
+                            redirect_uri: REDIRECT_URI,
+                            client_id: CLIENT_ID,
+                            code_verifier: codeVerifier
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.access_token) {
+                        document.getElementById('result').innerHTML = `
+                            <p style="color:green;">✅ Tokens obtained successfully!</p>
+
+                            <h4>Access Token:</h4>
+                            <div class="token-box">${data.access_token}</div>
+                            <button onclick="copyToken('${data.access_token}')">📋 Copy Access Token</button>
+
+                            <h4>Refresh Token:</h4>
+                            <div class="token-box">${data.refresh_token}</div>
+                            <button onclick="copyToken('${data.refresh_token}')">📋 Copy Refresh Token</button>
+
+                            <h4>Expires in: ${data.expires_in} seconds (${Math.floor(data.expires_in / 60)} minutes)</h4>
+
+                            <h4>Instructions:</h4>
+                            <ol>
+                                <li>Copy the access token above</li>
+                                <li>Save it to <code>temp_token.txt</code> in your project root</li>
+                                <li>Save the refresh token to <code>temp_refreshtoken.txt</code></li>
+                            </ol>
+                        `;
+                    } else {
+                        document.getElementById('result').innerHTML = `
+                            <p style="color:red;">❌ Error: ${JSON.stringify(data, null, 2)}</p>
+                        `;
+                    }
+                } catch (error) {
+                    document.getElementById('result').innerHTML = `
+                        <p style="color:red;">❌ Error: ${error.message}</p>
+                    `;
+                }
+            }
+        });
+
+        function copyToken(token) {
+            navigator.clipboard.writeText(token);
+            alert('Token copied to clipboard!');
+        }
+    </script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * Fraud Detection Service
  *
@@ -8,7 +9,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, CouponFraudDetection, FraudDetectionType, FraudSeverity } from '@prisma/client';
+import { PrismaClient, fraud_detection_type as FraudDetectionType, fraud_severity as FraudSeverity, coupon_fraud_detection as CouponFraudDetection } from '@prisma/client';
 import { FraudDetectionResult } from '../types/coupon-validation';
 import logger from '../utils/logger';
 
@@ -20,8 +21,8 @@ export class FraudDetectionService {
 
   async detectVelocityAbuse(userId: string, couponId: string): Promise<FraudDetectionResult> {
     const lastHour = new Date(Date.now() - 3600000);
-    const recentRedemptions = await this.prisma.couponRedemption.count({
-      where: { userId, redemptionDate: { gte: lastHour } },
+    const recentRedemptions = await this.prisma.coupon_redemption.count({
+      where: { user_id: userId, redemption_date: { gte: lastHour } },
     });
 
     if (recentRedemptions >= 3) {
@@ -48,13 +49,13 @@ export class FraudDetectionService {
 
   async detectIPSwitching(userId: string, ipAddress: string): Promise<FraudDetectionResult> {
     const last10Min = new Date(Date.now() - 600000);
-    const recentIPs = await this.prisma.couponRedemption.findMany({
-      where: { userId, redemptionDate: { gte: last10Min } },
-      select: { ipAddress: true },
-      distinct: ['ipAddress'],
+    const recentIPs = await this.prisma.coupon_redemption.findMany({
+      where: { user_id: userId, redemption_date: { gte: last10Min } },
+      select: { ip_address: true },
+      distinct: ['ip_address'],
     });
 
-    if (recentIPs.length > 1 && !recentIPs.some((r) => r.ipAddress === ipAddress)) {
+    if (recentIPs.length > 1 && !recentIPs.some((r) => r.ip_address === ipAddress)) {
       return {
         detected: true,
         detectionType: 'ip_switching',
@@ -86,10 +87,10 @@ export class FraudDetectionService {
 
   async detectDeviceFingerprintMismatch(userId: string, _deviceFingerprint: string): Promise<FraudDetectionResult> {
     // Device fingerprint consistency check
-    const userRedemptions = await this.prisma.couponRedemption.findMany({
-      where: { userId, redemptionStatus: 'success' },
-      select: { ipAddress: true },
-      distinct: ['ipAddress'],
+    const userRedemptions = await this.prisma.coupon_redemption.findMany({
+      where: { user_id: userId, redemption_status: 'success' },
+      select: { ip_address: true },
+      distinct: ['ip_address'],
     });
 
     if (userRedemptions.length > 5) {
@@ -108,11 +109,11 @@ export class FraudDetectionService {
   async detectStackingAbuse(userId: string): Promise<FraudDetectionResult> {
     // Check for multiple active coupons in same session
     const last5Min = new Date(Date.now() - 300000);
-    const recentRedemptions = await this.prisma.couponRedemption.count({
+    const recentRedemptions = await this.prisma.coupon_redemption.count({
       where: {
-        userId,
-        redemptionDate: { gte: last5Min },
-        redemptionStatus: 'success',
+        user_id: userId,
+        redemption_date: { gte: last5Min },
+        redemption_status: 'success',
       },
     });
 
@@ -139,10 +140,16 @@ export class FraudDetectionService {
   }): Promise<CouponFraudDetection> {
     logger.warn('Flagging fraud event', data);
 
-    return await this.prisma.couponFraudDetection.create({
+    return await this.prisma.coupon_fraud_detection.create({
       data: {
-        ...data,
-        detectedAt: new Date(),
+        id: randomUUID(),
+        coupon_id: data.couponId,
+        user_id: data.userId,
+        detection_type: data.detectionType,
+        severity: data.severity,
+        details: data.details,
+        is_flagged: data.isFlagged,
+        detected_at: new Date(),
       },
     });
   }
@@ -154,13 +161,13 @@ export class FraudDetectionService {
   ): Promise<CouponFraudDetection> {
     logger.info('Reviewing fraud event', { eventId, reviewerId, resolution });
 
-    return await this.prisma.couponFraudDetection.update({
+    return await this.prisma.coupon_fraud_detection.update({
       where: { id: eventId },
       data: {
-        reviewedBy: reviewerId,
-        reviewedAt: new Date(),
+        reviewed_by: reviewerId,
+        reviewed_at: new Date(),
         resolution,
-        isFlagged: resolution === 'confirmed_fraud',
+        is_flagged: resolution === 'confirmed_fraud',
       },
     });
   }
@@ -184,13 +191,13 @@ export class FraudDetectionService {
   }
 
   async shouldBlockRedemption(userId: string, couponId: string): Promise<boolean> {
-    const criticalFlags = await this.prisma.couponFraudDetection.count({
+    const criticalFlags = await this.prisma.coupon_fraud_detection.count({
       where: {
-        userId,
-        couponId,
+        user_id: userId,
+        coupon_id: couponId,
         severity: { in: ['critical', 'high'] },
-        isFlagged: true,
-        reviewedAt: null,
+        is_flagged: true,
+        reviewed_at: null,
       },
     });
 
@@ -198,26 +205,26 @@ export class FraudDetectionService {
   }
 
   async getUserFraudFlags(userId: string): Promise<CouponFraudDetection[]> {
-    return await this.prisma.couponFraudDetection.findMany({
-      where: { userId },
-      orderBy: { detectedAt: 'desc' },
+    return await this.prisma.coupon_fraud_detection.findMany({
+      where: { user_id: userId },
+      orderBy: { detected_at: 'desc' },
     });
   }
 
   async getCouponFraudFlags(couponId: string): Promise<CouponFraudDetection[]> {
-    return await this.prisma.couponFraudDetection.findMany({
-      where: { couponId },
-      orderBy: { detectedAt: 'desc' },
+    return await this.prisma.coupon_fraud_detection.findMany({
+      where: { coupon_id: couponId },
+      orderBy: { detected_at: 'desc' },
     });
   }
 
   async getPendingFraudReviews(): Promise<CouponFraudDetection[]> {
-    return await this.prisma.couponFraudDetection.findMany({
+    return await this.prisma.coupon_fraud_detection.findMany({
       where: {
-        isFlagged: true,
-        reviewedAt: null,
+        is_flagged: true,
+        reviewed_at: null,
       },
-      orderBy: { detectedAt: 'desc' },
+      orderBy: { detected_at: 'desc' },
     });
   }
 }

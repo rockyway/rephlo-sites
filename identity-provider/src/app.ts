@@ -15,6 +15,7 @@ import { PrismaClient } from '@prisma/client';
 import { createOIDCProvider } from './config/oidc';
 import { AuthController } from './controllers/auth.controller';
 import { errorHandler } from './middleware/error.middleware';
+import { createSessionValidator } from './middleware/session-validator';
 import logger from './utils/logger';
 
 export async function createApp(prisma: PrismaClient) {
@@ -34,10 +35,6 @@ export async function createApp(prisma: PrismaClient) {
     })
   );
 
-  // Body parsing
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-
   // Create OIDC provider
   const oidcProvider = await createOIDCProvider(prisma);
 
@@ -53,15 +50,23 @@ export async function createApp(prisma: PrismaClient) {
     });
   });
 
+  // Body parsing middleware (only for interaction routes that need it)
+  const bodyParser = [express.json(), express.urlencoded({ extended: true })];
+
   // Interaction routes (must be before OIDC provider middleware)
   app.get('/interaction/:uid', authController.interaction);
-  app.post('/interaction/:uid/login', authController.login);
-  app.post('/interaction/:uid/consent', authController.consent);
+  app.post('/interaction/:uid/login', bodyParser, authController.login);
+  app.post('/interaction/:uid/consent', bodyParser, authController.consent);
   app.get('/interaction/:uid/abort', authController.abort);
   app.get('/interaction/:uid/data', authController.getInteractionData);
 
   // Logout route - clears OIDC session
   app.get('/logout', authController.logout);
+
+  // CRITICAL: Session validation middleware (must run BEFORE oidcProvider)
+  // Validates that sessions reference existing, active users
+  // Destroys invalid sessions to prevent errors in OIDC authorization flow
+  app.use(createSessionValidator(oidcProvider, prisma));
 
   // OIDC provider middleware (handles all OAuth endpoints)
   app.use('/', oidcProvider.callback());

@@ -1,0 +1,34 @@
+{
+  "info": {
+    "title": "Rephlo Backend API (Generated)",
+    "version": "3.0.0",
+    "description": "Complete REST API documentation for the Rephlo Backend system. This specification is auto-generated from TypeScript type definitions."
+  },
+  "openapi": "3.0.3",
+  "paths": {},
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token obtained through OAuth 2.0 authorization flow"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.textassistant.com",
+      "description": "Production API"
+    },
+    {
+      "url": "https://staging-api.textassistant.com",
+      "description": "Staging API"
+    },
+    {
+      "url": "http://localhost:7150",
+      "description": "Local Development"
+    }
+  ]
+}

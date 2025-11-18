@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client';
 import { FraudDetectionService } from '../services/fraud-detection.service';
 import { reviewFraudEventRequestSchema, safeValidateRequest } from '../types/coupon-validation';
 import logger from '../utils/logger';
+import { sendPaginatedResponse, successResponse } from '../utils/responses';
 
 @injectable()
 export class FraudDetectionController {
@@ -22,26 +23,59 @@ export class FraudDetectionController {
     logger.debug('FraudDetectionController: Initialized');
   }
 
-  async listFraudEvents(_req: Request, res: Response): Promise<void> {
+  /**
+   * GET /admin/fraud-detection
+   * List all fraud detection events (admin only)
+   *
+   * Query params:
+   * - page: number (default: 0)
+   * - limit: number (default: 50)
+   * - severity: string (optional filter: low/medium/high/critical)
+   * - status: string (optional filter: pending/reviewed/resolved)
+   */
+  async listFraudEvents(req: Request, res: Response): Promise<void> {
     try {
-      const events = await this.prisma.couponFraudDetection.findMany({
-        orderBy: { detectedAt: 'desc' },
-        take: 100, // Limit to last 100 events
-      });
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
-      res.json({
-        events: events.map((e) => ({
-          id: e.id,
-          coupon_id: e.couponId,
-          user_id: e.userId,
-          detection_type: e.detectionType,
-          severity: e.severity,
-          is_flagged: e.isFlagged,
-          detected_at: e.detectedAt.toISOString(),
-          reviewed_at: e.reviewedAt?.toISOString() || null,
-          details: e.details,
-        })),
-      });
+      // Build filter conditions
+      const where: any = {};
+      if (req.query.severity) {
+        where.severity = req.query.severity;
+      }
+      if (req.query.status === 'pending') {
+        where.reviewed_at = null;
+      } else if (req.query.status === 'reviewed') {
+        where.reviewed_at = { not: null };
+      }
+
+      // Fetch fraud events with pagination
+      const [events, total] = await Promise.all([
+        this.prisma.coupon_fraud_detection.findMany({
+          where,
+          skip: page * limit,
+          take: limit,
+          orderBy: { detected_at: 'desc' },
+        }),
+        this.prisma.coupon_fraud_detection.count({ where }),
+      ]);
+
+      // Map to response format
+      const mappedEvents = events.map((e) => ({
+        id: e.id,
+        coupon_id: e.coupon_id,
+        user_id: e.user_id,
+        detection_type: e.detection_type,
+        severity: e.severity,
+        is_flagged: e.is_flagged,
+        detected_at: e.detected_at.toISOString(),
+        reviewed_at: e.reviewed_at?.toISOString() || null,
+        details: e.details,
+      }));
+
+      // Send modern paginated response
+      sendPaginatedResponse(res, mappedEvents, total, page, limit);
     } catch (error: any) {
       logger.error('Failed to list fraud events', { error });
       res.status(500).json({
@@ -52,18 +86,22 @@ export class FraudDetectionController {
 
   async reviewFraudEvent(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
-    const reviewerId = (req as any).userId;
+    const reviewerId = (req as any).user_id;
 
     try {
       const data = safeValidateRequest(reviewFraudEventRequestSchema, req.body);
 
       const event = await this.fraudService.reviewFraudEvent(id, reviewerId, data.resolution);
 
+      // Standard response format: flat data with camelCase
       res.json({
-        id: event.id,
-        resolution: data.resolution,
-        reviewed_at: event.reviewedAt?.toISOString(),
-        is_flagged: event.isFlagged,
+        status: 'success',
+        data: {
+          id: event.id,
+          resolution: data.resolution,
+          reviewedAt: event.reviewed_at?.toISOString(),
+          isFlagged: event.is_flagged,
+        }
       });
     } catch (error: any) {
       logger.error('Failed to review fraud event', { id, error });
@@ -73,21 +111,27 @@ export class FraudDetectionController {
     }
   }
 
+  /**
+   * GET /admin/fraud-detection/pending
+   * List pending fraud detection reviews (admin only)
+   */
   async getPendingReviews(_req: Request, res: Response): Promise<void> {
     try {
       const events = await this.fraudService.getPendingFraudReviews();
 
-      res.json({
-        events: events.map((e) => ({
-          id: e.id,
-          coupon_id: e.couponId,
-          user_id: e.userId,
-          detection_type: e.detectionType,
-          severity: e.severity,
-          detected_at: e.detectedAt.toISOString(),
-          details: e.details,
-        })),
-      });
+      // Map to response format
+      const mappedEvents = events.map((e) => ({
+        id: e.id,
+        coupon_id: e.coupon_id,
+        user_id: e.user_id,
+        detection_type: e.detection_type,
+        severity: e.severity,
+        detected_at: e.detected_at.toISOString(),
+        details: e.details,
+      }));
+
+      // Send modern success response
+      res.json(successResponse(mappedEvents));
     } catch (error: any) {
       logger.error('Failed to get pending reviews', { error });
       res.status(500).json({

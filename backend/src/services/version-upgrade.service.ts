@@ -8,7 +8,8 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { PrismaClient, VersionUpgrade, PerpetualLicense } from '@prisma/client';
+import crypto from 'crypto';
+import { PrismaClient, version_upgrade as VersionUpgrade, perpetual_license as PerpetualLicense } from '@prisma/client';
 import semver from 'semver';
 import logger from '../utils/logger';
 import { NotFoundError, ValidationError } from '../utils/errors';
@@ -99,7 +100,7 @@ export class VersionUpgradeService {
    * @returns True if eligible for free update
    */
   async isEligibleForFreeUpdate(licenseId: string, requestedVersion: string): Promise<boolean> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
     });
 
@@ -111,7 +112,7 @@ export class VersionUpgradeService {
     // Example: v1.0.0 → v1.9.5 is free
     // Example: v1.0.0 → v2.0.0 requires payment
 
-    const purchasedMajor = this.parseSemVer(license.purchasedVersion).major;
+    const purchasedMajor = this.parseSemVer(license.purchased_version).major;
     const requestedMajor = this.parseSemVer(requestedVersion).major;
 
     if (requestedMajor !== purchasedMajor) {
@@ -119,7 +120,7 @@ export class VersionUpgradeService {
     }
 
     // Check if within eligible range
-    return semver.lte(requestedVersion, license.eligibleUntilVersion);
+    return semver.lte(requestedVersion, license.eligible_until_version);
   }
 
   /**
@@ -142,9 +143,9 @@ export class VersionUpgradeService {
   async calculateUpgradePrice(licenseId: string, targetVersion: string): Promise<UpgradePricing> {
     logger.debug('VersionUpgradeService: Calculating upgrade price', { licenseId, targetVersion });
 
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
-      include: { versionUpgrades: true },
+      include: { version_upgrade: true },
     });
 
     if (!license) {
@@ -164,7 +165,7 @@ export class VersionUpgradeService {
     }
 
     // Check if user has upgraded before (loyalty discount)
-    const hasUpgradedBefore = license.versionUpgrades.some(
+    const hasUpgradedBefore = license.version_upgrade.some(
       (upgrade) => upgrade.status === 'completed'
     );
     if (hasUpgradedBefore) {
@@ -217,7 +218,7 @@ export class VersionUpgradeService {
       paymentIntentId,
     });
 
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
     });
 
@@ -237,15 +238,17 @@ export class VersionUpgradeService {
     const pricing = await this.calculateUpgradePrice(licenseId, targetVersion);
 
     // Create upgrade record
-    const upgrade = await this.prisma.versionUpgrade.create({
+    const upgrade = await this.prisma.version_upgrade.create({
       data: {
-        licenseId,
-        userId: license.userId,
-        fromVersion: license.eligibleUntilVersion,
-        toVersion: targetVersion,
-        upgradePriceUsd: pricing.finalPrice,
-        stripePaymentIntentId: paymentIntentId,
+        license_id: licenseId,
+        id: crypto.randomUUID(),
+        user_id: license.user_id,
+        from_version: license.eligible_until_version,
+        to_version: targetVersion,
+        upgrade_price_usd: pricing.finalPrice,
+        stripe_payment_intent_id: paymentIntentId,
         status: 'pending', // Will be updated to 'completed' by webhook
+        updated_at: new Date(),
       },
     });
 
@@ -281,16 +284,16 @@ export class VersionUpgradeService {
    * @returns Discount amount in USD
    */
   async applyLoyaltyDiscount(licenseId: string, _targetVersion: string): Promise<number> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
-      include: { versionUpgrades: true },
+      include: { version_upgrade: true },
     });
 
     if (!license) {
       return 0;
     }
 
-    const hasUpgradedBefore = license.versionUpgrades.some(
+    const hasUpgradedBefore = license.version_upgrade.some(
       (upgrade) => upgrade.status === 'completed'
     );
 
@@ -319,9 +322,9 @@ export class VersionUpgradeService {
     const majorVersion = this.parseSemVer(newVersion).major;
     const eligibleUntilVersion = `${majorVersion}.99.99`;
 
-    const license = await this.prisma.perpetualLicense.update({
+    const license = await this.prisma.perpetual_license.update({
       where: { id: licenseId },
-      data: { eligibleUntilVersion },
+      data: { eligible_until_version: eligibleUntilVersion },
     });
 
     return license;
@@ -333,9 +336,9 @@ export class VersionUpgradeService {
    * @returns List of version upgrades
    */
   async getUpgradeHistory(licenseId: string): Promise<VersionUpgrade[]> {
-    return this.prisma.versionUpgrade.findMany({
-      where: { licenseId },
-      orderBy: { purchasedAt: 'desc' },
+    return this.prisma.version_upgrade.findMany({
+      where: { license_id: licenseId },
+      orderBy: { purchased_at: 'desc' },
     });
   }
 
@@ -345,7 +348,7 @@ export class VersionUpgradeService {
    * @returns List of available upgrades
    */
   async getAvailableUpgrades(licenseId: string): Promise<AvailableUpgrade[]> {
-    const license = await this.prisma.perpetualLicense.findUnique({
+    const license = await this.prisma.perpetual_license.findUnique({
       where: { id: licenseId },
     });
 
@@ -355,12 +358,12 @@ export class VersionUpgradeService {
 
     // In a real implementation, this would fetch available versions from a version registry
     // For now, we'll return a mock example
-    const currentMajor = this.parseSemVer(license.eligibleUntilVersion).major;
+    const currentMajor = this.parseSemVer(license.eligible_until_version).major;
     const nextMajor = currentMajor + 1;
 
     const upgrades: AvailableUpgrade[] = [
       {
-        fromVersion: license.eligibleUntilVersion,
+        fromVersion: license.eligible_until_version,
         toVersion: `${nextMajor}.0.0`,
         upgradeType: 'major',
         isFree: false,
@@ -383,18 +386,18 @@ export class VersionUpgradeService {
    */
   async getUpgradeConversionRate(majorVersion: string): Promise<number> {
     // Count eligible licenses (purchased version < major version)
-    const eligibleLicenses = await this.prisma.perpetualLicense.count({
+    const eligibleLicenses = await this.prisma.perpetual_license.count({
       where: {
-        eligibleUntilVersion: {
+        eligible_until_version: {
           lt: `${majorVersion}.0.0`,
         },
       },
     });
 
     // Count completed upgrades to this major version
-    const upgradedLicenses = await this.prisma.versionUpgrade.count({
+    const upgradedLicenses = await this.prisma.version_upgrade.count({
       where: {
-        toVersion: {
+        to_version: {
           startsWith: `${majorVersion}.`,
         },
         status: 'completed',
@@ -415,14 +418,14 @@ export class VersionUpgradeService {
    * @returns Average days to upgrade
    */
   async getAverageTimeToUpgrade(fromVersion: string, toVersion: string): Promise<number> {
-    const upgrades = await this.prisma.versionUpgrade.findMany({
+    const upgrades = await this.prisma.version_upgrade.findMany({
       where: {
-        fromVersion,
-        toVersion,
+        from_version: fromVersion,
+        to_version: toVersion,
         status: 'completed',
       },
       select: {
-        purchasedAt: true,
+        purchased_at: true,
       },
     });
 
@@ -447,10 +450,10 @@ export class VersionUpgradeService {
   private async isEarlyBirdVersion(version: string): Promise<boolean> {
     // In a real implementation, this would query a version release registry
     // For now, we'll check if there's a recent version upgrade to this version
-    const recentUpgrades = await this.prisma.versionUpgrade.findFirst({
+    const recentUpgrades = await this.prisma.version_upgrade.findFirst({
       where: {
-        toVersion: version,
-        purchasedAt: {
+        to_version: version,
+        purchased_at: {
           gte: new Date(Date.now() - this.EARLY_BIRD_WINDOW_DAYS * 24 * 60 * 60 * 1000),
         },
       },

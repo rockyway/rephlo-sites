@@ -32,9 +32,12 @@ import { ConfirmationModal, TierBadge } from '@/components/plan109';
 import { ProrationChangeTypeBadge, ProrationCalculationModal } from '@/components/plan110';
 import { prorationApi } from '@/api/plan110';
 import {
-  ProrationChangeType,
+  ProrationEventType,
   ProrationStatus,
+  SubscriptionTier,
   type ProrationEvent,
+} from '@rephlo/shared-types';
+import {
   type ProrationStats,
   type ProrationCalculationBreakdown,
 } from '@/types/plan110.types';
@@ -85,7 +88,7 @@ function ProrationTracking() {
       // Load prorations and stats in parallel
       const [prorationsResponse, statsData] = await Promise.all([
         prorationApi.getAllProrations({
-          changeType: filterChangeType as ProrationChangeType || undefined,
+          changeType: filterChangeType as ProrationEventType || undefined,
           status: filterStatus as ProrationStatus || undefined,
           search: searchQuery || undefined,
           page,
@@ -159,13 +162,13 @@ function ProrationTracking() {
 
     switch (sortBy) {
       case 'changeDate':
-        compareValue = new Date(a.changeDate).getTime() - new Date(b.changeDate).getTime();
+        compareValue = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         break;
       case 'netCharge':
-        compareValue = a.netCharge - b.netCharge;
+        compareValue = a.netChargeUsd - b.netChargeUsd;
         break;
       case 'changeType':
-        compareValue = a.eventType.localeCompare(b.eventType);
+        compareValue = a.changeType.localeCompare(b.changeType);
         break;
     }
 
@@ -177,7 +180,7 @@ function ProrationTracking() {
       {/* Breadcrumbs */}
       <Breadcrumbs />
 
-{/* Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">Proration Tracking</h1>
@@ -190,81 +193,82 @@ function ProrationTracking() {
           Refresh
         </Button>
       </div>
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
+
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-green-600" />
+          <p className="text-body text-green-800">{successMessage}</p>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-body text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Prorations This Month</h3>
+              <Calculator className="h-5 w-5 text-rephlo-blue" />
+            </div>
+            <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalProrations)}</p>
           </div>
-        )}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
+
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Net Proration Revenue</h3>
+              <DollarSign
+                className={cn('h-5 w-5', stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600')}
+              />
+            </div>
+            <p
+              className={cn(
+                'text-h2 font-bold',
+                stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600'
+              )}
+            >
+              {stats.netRevenue >= 0 ? '+' : ''}
+              {formatCurrency(stats.netRevenue, 0)}
+            </p>
+            <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+              {stats.netRevenue >= 0 ? 'Collected' : 'Refunded'}
+            </p>
           </div>
-        )}
 
-        {/* Quick Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Total Prorations This Month</h3>
-                <Calculator className="h-5 w-5 text-rephlo-blue" />
-              </div>
-              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatNumber(stats.totalProrations)}</p>
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Average Net Charge</h3>
+              <TrendingUp className="h-5 w-5 text-rephlo-blue" />
             </div>
-
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Net Proration Revenue</h3>
-                <DollarSign
-                  className={cn('h-5 w-5', stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600')}
-                />
-              </div>
-              <p
-                className={cn(
-                  'text-h2 font-bold',
-                  stats.netRevenue >= 0 ? 'text-green-600' : 'text-red-600'
-                )}
-              >
-                {stats.netRevenue >= 0 ? '+' : ''}
-                {formatCurrency(stats.netRevenue, 0)}
-              </p>
-              <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                {stats.netRevenue >= 0 ? 'Collected' : 'Refunded'}
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Average Net Charge</h3>
-                <TrendingUp className="h-5 w-5 text-rephlo-blue" />
-              </div>
-              <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.avgNetCharge)}</p>
-            </div>
-
-            <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Pending Prorations</h3>
-                <Clock
-                  className={cn('h-5 w-5', stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-400')}
-                />
-              </div>
-              <p
-                className={cn(
-                  'text-h2 font-bold',
-                  stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-800'
-                )}
-              >
-                {stats.pendingProrations}
-              </p>
-            </div>
+            <p className="text-h2 font-bold text-deep-navy-800 dark:text-white">{formatCurrency(stats.avgNetCharge)}</p>
           </div>
-        )}
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6 mb-6">
+          <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200 font-medium">Pending Prorations</h3>
+              <Clock
+                className={cn('h-5 w-5', stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-400')}
+              />
+            </div>
+            <p
+              className={cn(
+                'text-h2 font-bold',
+                stats.pendingProrations > 0 ? 'text-amber-600' : 'text-deep-navy-800'
+              )}
+            >
+              {stats.pendingProrations}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 p-6">
           <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Change Type Filter */}
@@ -279,11 +283,11 @@ function ProrationTracking() {
                 className="w-full px-3 py-2 border border-deep-navy-300 dark:border-deep-navy-600 bg-white dark:bg-deep-navy-800 text-deep-navy-900 dark:text-deep-navy-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-rephlo-blue dark:focus:ring-electric-cyan focus:border-rephlo-blue dark:focus:border-electric-cyan"
               >
                 <option value="">All Types</option>
-                <option value={ProrationChangeType.UPGRADE}>Upgrade</option>
-                <option value={ProrationChangeType.DOWNGRADE}>Downgrade</option>
-                <option value={ProrationChangeType.CYCLE_CHANGE}>Billing Cycle Change</option>
-                <option value={ProrationChangeType.MIGRATION}>Migration</option>
-                <option value={ProrationChangeType.CANCELLATION}>Cancellation</option>
+                <option value={ProrationEventType.UPGRADE}>Upgrade</option>
+                <option value={ProrationEventType.DOWNGRADE}>Downgrade</option>
+                <option value={ProrationEventType.INTERVAL_CHANGE}>Billing Cycle Change</option>
+                <option value={ProrationEventType.MIGRATION}>Migration</option>
+                <option value={ProrationEventType.CANCELLATION}>Cancellation</option>
               </select>
             </div>
 
@@ -452,43 +456,43 @@ function ProrationTracking() {
                 </thead>
                 <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
                   {sortedProrations.map((proration) => {
-                    const netChargeData = formatNetCharge(proration.netCharge);
+                    const netChargeData = formatNetCharge(proration.netChargeUsd);
 
                     return (
                       <tr key={proration.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-800 dark:text-white">
-                            {proration.user?.email || 'N/A'}
+                            {proration.user?.email || proration.userId || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           {proration.fromTier ? (
-                            <TierBadge tier={proration.fromTier} />
+                            <TierBadge tier={proration.fromTier as SubscriptionTier} />
                           ) : (
                             <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           {proration.toTier ? (
-                            <TierBadge tier={proration.toTier} />
+                            <TierBadge tier={proration.toTier as SubscriptionTier} />
                           ) : (
                             <span className="text-body-sm text-deep-navy-400 dark:text-deep-navy-500">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <ProrationChangeTypeBadge type={proration.eventType} />
+                          <ProrationChangeTypeBadge type={proration.changeType} />
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">{proration.daysRemaining} days</span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-green-600 font-medium">
-                            {formatCurrency(proration.unusedCredit)}
+                            {formatCurrency(proration.unusedCreditValueUsd)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-rephlo-blue font-medium">
-                            {formatCurrency(proration.newTierCost)}
+                            {formatCurrency(proration.newTierProratedCostUsd)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -499,7 +503,7 @@ function ProrationTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body-sm text-deep-navy-600 dark:text-deep-navy-200">
-                            {formatDate(proration.changeDate)}
+                            {formatDate(proration.createdAt)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -610,8 +614,8 @@ function ProrationTracking() {
         }}
         onConfirm={handleReverseProration}
         title="Reverse Proration"
-        description={`Are you sure you want to reverse this proration for ${
-          selectedProration?.user?.email || 'this user'
+        description={`Are you sure you want to reverse this proration for user ${
+          selectedProration?.userId || 'this user'
         }? This will undo the tier change and refund/charge as necessary.`}
         confirmText="Reverse Proration"
         requireReason

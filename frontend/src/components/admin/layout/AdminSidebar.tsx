@@ -15,16 +15,6 @@ import {
   X,
   Cpu,
   DollarSign,
-  Receipt,
-  TrendingUp,
-  Calculator,
-  LineChart,
-  Calendar,
-  Tag,
-  Shield,
-  AlertTriangle,
-  Smartphone,
-  Zap,
 } from 'lucide-react';
 import { useAdminUIStore } from '../../../stores/adminUIStore';
 
@@ -73,6 +63,8 @@ const navigationItems: NavigationItem[] = [
       { name: 'Subscription Management', href: '/admin/subscriptions' },
       { name: 'Billing Dashboard', href: '/admin/billing' },
       { name: 'Credit Management', href: '/admin/credits' },
+      { name: 'Tier Management', href: '/admin/tier-management' },
+      { name: 'Refund Management', href: '/admin/refunds' },
     ],
   },
 

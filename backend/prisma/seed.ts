@@ -14,8 +14,9 @@
  * Uses upsert logic to ensure no duplicates and allows data restoration.
  */
 
-import { PrismaClient, ModelCapability, SubscriptionTier, ProrationEventType, ProrationStatus } from '@prisma/client';
+import { PrismaClient, proration_event_type, proration_status } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -30,26 +31,28 @@ const OAUTH_CLIENTS_CONFIG = [
   {
     clientId: 'desktop-app-test',
     clientName: 'Rephlo Desktop App (Test)',
-    clientSecret: 'test-secret-desktop-app-12345',
+    clientSecret: null, // Public client using PKCE - desktop apps cannot securely store secrets
     redirectUris: [
       'http://localhost:8327/callback',
       'http://localhost:8329/callback',
-      'rephlo://callback',
+      'ai.rephlo.desktop:/callback', // Reverse domain name based custom URI scheme
+      'http://127.0.0.1:8327/callback', // Loopback IP for native apps
+      'http://127.0.0.1:8329/callback',
     ],
     grantTypes: ['authorization_code', 'refresh_token'],
     responseTypes: ['code'],
     scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
-      description: 'Official Rephlo Desktop Application',
-      tags: ['desktop', 'official', 'test'],
-      allowedOrigins: ['http://localhost:8327', 'http://localhost:8329', 'rephlo://'],
+      description: 'Official Rephlo Desktop Application - Public client with PKCE and refresh tokens',
+      tags: ['desktop', 'official', 'test', 'public'],
+      allowedOrigins: ['http://localhost:8327', 'http://localhost:8329', 'http://127.0.0.1:8327', 'http://127.0.0.1:8329'],
     },
   },
   {
     clientId: 'poc-client-test',
     clientName: 'POC Client (Test)',
-    clientSecret: null, // Public client using PKCE - no secret
+    clientSecret: null, // Public client using PKCE - no secret needed
     redirectUris: [
       'http://localhost:8080/callback',
       'http://localhost:8080/oauth/callback',
@@ -59,7 +62,7 @@ const OAUTH_CLIENTS_CONFIG = [
     scope: 'openid email profile offline_access llm.inference models.read user.info credits.read',
     config: {
       skipConsentScreen: true,
-      description: 'Proof of Concept Client for Testing - Public client using PKCE',
+      description: 'Proof of Concept Client for Testing - Public client with PKCE and refresh tokens',
       tags: ['poc', 'test', 'public'],
       allowedOrigins: ['http://localhost:8080'],
     },
@@ -183,34 +186,36 @@ async function seedOAuthClients() {
     // For public clients (no secret), clientSecretHash is null
     const clientSecretHash = client.clientSecret ? await hashPassword(client.clientSecret) : null;
 
-    const oauthClient = await prisma.oAuthClient.upsert({
-      where: { clientId: client.clientId },
+    const oauthClient = await prisma.oauth_clients.upsert({
+      where: { client_id: client.clientId },
       update: {
-        clientName: client.clientName,
-        clientSecretHash,
-        redirectUris: client.redirectUris,
-        grantTypes: client.grantTypes,
-        responseTypes: client.responseTypes,
+        client_name: client.clientName,
+        client_secret_hash: clientSecretHash,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
         scope: client.scope,
-        isActive: true,
+        is_active: true,
         config: client.config,
+        updated_at: new Date(),
       },
       create: {
-        clientId: client.clientId,
-        clientName: client.clientName,
-        clientSecretHash,
-        redirectUris: client.redirectUris,
-        grantTypes: client.grantTypes,
-        responseTypes: client.responseTypes,
+        client_id: client.clientId,
+        client_name: client.clientName,
+        client_secret_hash: clientSecretHash,
+        redirect_uris: client.redirectUris,
+        grant_types: client.grantTypes,
+        response_types: client.responseTypes,
         scope: client.scope,
-        isActive: true,
+        is_active: true,
         config: client.config,
+        updated_at: new Date(),
       },
     });
 
     createdClients.push({
-      clientId: oauthClient.clientId,
-      clientName: oauthClient.clientName,
+      clientId: oauthClient.client_id,
+      clientName: oauthClient.client_name,
       secret: client.clientSecret, // Display secret only on creation
     });
   }
@@ -238,35 +243,37 @@ async function seedUserPersonas() {
       : null;
 
     // Use upsert instead of delete + create to avoid foreign key conflicts
-    const user = await prisma.user.upsert({
+    const user = await prisma.users.upsert({
       where: { email: persona.email },
       update: {
-        firstName: persona.firstName,
-        lastName: persona.lastName,
+        first_name: persona.firstName,
+        last_name: persona.lastName,
         username: persona.username,
-        passwordHash,
-        emailVerified: persona.emailVerified,
-        authProvider: persona.authProvider,
-        googleId: persona.googleId || undefined,
+        password_hash: passwordHash,
+        email_verified: persona.emailVerified,
+        auth_provider: persona.authProvider,
+        google_id: persona.googleId || undefined,
         role: persona.role,
-        isActive: true,
+        is_active: true,
       },
       create: {
+        id: randomUUID(),
         email: persona.email,
-        firstName: persona.firstName,
-        lastName: persona.lastName,
+        first_name: persona.firstName,
+        last_name: persona.lastName,
         username: persona.username,
-        passwordHash,
-        emailVerified: persona.emailVerified,
-        authProvider: persona.authProvider,
-        googleId: persona.googleId || undefined,
+        password_hash: passwordHash,
+        email_verified: persona.emailVerified,
+        auth_provider: persona.authProvider,
+        google_id: persona.googleId || undefined,
         role: persona.role,
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     });
 
     createdUsers.push({
-      userId: user.id,
+      user_id: user.id,
       email: user.email,
       role: user.role,
       description: persona.description,
@@ -284,6 +291,199 @@ async function seedUserPersonas() {
 }
 
 /**
+ * Seed Tier Configurations (Plan 189 + Plan 190)
+ * Creates the subscription_tier_config records for all 6 tiers per Plan 189
+ */
+async function seedTierConfigs() {
+  console.log('Creating tier configurations...');
+
+  const tierConfigs = [
+    // Free Tier - Loss leader
+    {
+      id: randomUUID(),
+      tier_name: 'free',
+      monthly_price_usd: 0,
+      annual_price_usd: 0,
+      monthly_credit_allocation: 200,  // Plan 189: Updated from 100
+      max_credit_rollover: 0,
+      features: {
+        maxProjects: 1,
+        apiAccess: false,
+        prioritySupport: false,
+        customModels: false,
+        rateLimit: 10,  // req/min
+        concurrentRequests: 1,
+        processingSpeed: 1.0,
+        historyRetentionDays: 30,
+        supportSLA: 'Community',
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro Tier - Break-even
+    {
+      id: randomUUID(),
+      tier_name: 'pro',
+      monthly_price_usd: 15.00,  // Plan 189: Updated from $99.99
+      annual_price_usd: 150.00,  // Annual: ~$12.50/month
+      monthly_credit_allocation: 1500,  // Plan 189: Updated from 10,000
+      max_credit_rollover: 750,  // 1 month rollover
+      features: {
+        maxProjects: 10,
+        apiAccess: false,
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 30,  // req/min
+        concurrentRequests: 3,
+        processingSpeed: 1.5,
+        historyRetentionDays: 90,
+        supportSLA: '24-48h',
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro+ Tier - NEW (11% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'pro_plus',
+      monthly_price_usd: 45.00,
+      annual_price_usd: 450.00,
+      monthly_credit_allocation: 5000,
+      max_credit_rollover: 2500,  // 3 months rollover
+      features: {
+        maxProjects: 50,
+        apiAccess: true,  // API access (beta)
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 60,  // req/min
+        concurrentRequests: 5,
+        processingSpeed: 2.0,
+        historyRetentionDays: 180,
+        supportSLA: '12-24h',
+        advancedAnalytics: true,
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Pro Max Tier - Premium (26% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'pro_max',
+      monthly_price_usd: 199.00,  // Plan 189: Updated from $49
+      annual_price_usd: 1990.00,
+      monthly_credit_allocation: 25000,  // Plan 189: Updated
+      max_credit_rollover: 12500,  // 6 months rollover
+      features: {
+        maxProjects: -1,  // unlimited
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: true,
+        rateLimit: 120,  // req/min
+        concurrentRequests: 10,
+        processingSpeed: 3.0,
+        historyRetentionDays: 365,
+        supportSLA: '4-8h',
+        dedicatedAccountManager: true,
+        advancedAnalytics: true,
+      },
+      is_active: true,
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Enterprise Pro - Coming Soon (17% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'enterprise_pro',
+      monthly_price_usd: 30.00,
+      annual_price_usd: 300.00,
+      monthly_credit_allocation: 3500,
+      max_credit_rollover: 1750,  // 3 months
+      features: {
+        maxProjects: -1,
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: false,
+        rateLimit: 60,
+        concurrentRequests: 5,
+        processingSpeed: 2.0,
+        historyRetentionDays: 180,
+        supportSLA: '8h',
+        teamManagement: true,
+        maxTeamSize: 5,
+        sso: true,
+        slaUptime: '99.5%',
+      },
+      is_active: false,  // Coming Soon
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+    // Enterprise Pro+ - Coming Soon (22% margin)
+    {
+      id: randomUUID(),
+      tier_name: 'enterprise_pro_plus',
+      monthly_price_usd: 90.00,
+      annual_price_usd: 900.00,
+      monthly_credit_allocation: 11000,
+      max_credit_rollover: 5500,  // 6 months
+      features: {
+        maxProjects: -1,
+        apiAccess: true,
+        prioritySupport: true,
+        customModels: true,
+        rateLimit: 120,
+        concurrentRequests: 10,
+        processingSpeed: 3.0,
+        historyRetentionDays: 365,
+        supportSLA: '4h',
+        teamManagement: true,
+        maxTeamSize: 15,
+        sso: true,
+        slaUptime: '99.9%',
+        advancedSecurity: true,
+        customRateLimits: true,
+        dedicatedInfrastructure: true,
+      },
+      is_active: false,  // Coming Soon
+      config_version: 1,
+      last_modified_at: new Date(),
+      apply_to_existing_users: false,
+      updated_at: new Date(),
+    },
+  ];
+
+  for (const config of tierConfigs) {
+    await prisma.subscription_tier_config.upsert({
+      where: { tier_name: config.tier_name },
+      create: config,
+      update: {
+        monthly_price_usd: config.monthly_price_usd,
+        annual_price_usd: config.annual_price_usd,
+        monthly_credit_allocation: config.monthly_credit_allocation,
+        max_credit_rollover: config.max_credit_rollover,
+        features: config.features,
+        is_active: config.is_active,
+        updated_at: new Date(),
+      },
+    });
+  }
+
+  console.log(`✓ Created/Updated ${tierConfigs.length} tier configurations\n`);
+}
+
+/**
  * Seed Subscriptions for users
  */
 async function seedSubscriptions(users: any[]) {
@@ -291,15 +491,36 @@ async function seedSubscriptions(users: any[]) {
   const createdSubscriptions = [];
 
   // Subscription tier configuration
+  // Updated 2025-11-15: New pricing structure with x100 credit conversion (1 credit = $0.01)
   const tierConfig = {
     free: {
-      creditsPerMonth: 100,
+      creditsPerMonth: 200,        // $2 worth of API usage
       priceCents: 0,
       billingInterval: 'monthly',
     },
     pro: {
-      creditsPerMonth: 10000,
-      priceCents: 9999, // $99.99
+      creditsPerMonth: 1500,       // $15 worth of API usage
+      priceCents: 1500,            // $15/month
+      billingInterval: 'monthly',
+    },
+    pro_plus: {                    // NEW TIER
+      creditsPerMonth: 5000,       // $50 worth of API usage
+      priceCents: 4500,            // $45/month
+      billingInterval: 'monthly',
+    },
+    pro_max: {
+      creditsPerMonth: 25000,      // $250 worth of API usage
+      priceCents: 19900,           // $199/month
+      billingInterval: 'monthly',
+    },
+    enterprise_pro: {              // COMING SOON (Q2 2026)
+      creditsPerMonth: 3500,       // $35 worth of API usage
+      priceCents: 3000,            // $30/month
+      billingInterval: 'monthly',
+    },
+    enterprise_pro_plus: {         // COMING SOON (Q2 2026)
+      creditsPerMonth: 11000,      // $110 worth of API usage
+      priceCents: 9000,            // $90/month
       billingInterval: 'monthly',
     },
   };
@@ -315,29 +536,31 @@ async function seedSubscriptions(users: any[]) {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Delete existing subscription for this user to avoid conflicts
-    await prisma.subscription.deleteMany({
-      where: { userId: user.userId },
+    await prisma.subscriptions.deleteMany({
+      where: { user_id: user.user_id },
     });
 
-    const subscription = await prisma.subscription.create({
+    const subscription = await prisma.subscriptions.create({
       data: {
-        userId: user.userId,
+        id: randomUUID(),
+        user_id: user.user_id,
         tier,
         status: 'active',
-        creditsPerMonth: config.creditsPerMonth,
-        priceCents: config.priceCents,
-        billingInterval: config.billingInterval,
-        currentPeriodStart: now,
-        currentPeriodEnd: endOfMonth,
-        creditsRollover: false,
+        credits_per_month: config.creditsPerMonth,
+        price_cents: config.priceCents,
+        billing_interval: config.billingInterval,
+        current_period_start: now,
+        current_period_end: endOfMonth,
+        credits_rollover: false,
+        updated_at: new Date(),
       },
     });
 
     createdSubscriptions.push({
-      subscriptionId: subscription.id,
-      userId: subscription.userId,
+      subscription_id: subscription.id,
+      user_id: subscription.user_id,
       tier: subscription.tier,
-      creditsPerMonth: subscription.creditsPerMonth,
+      creditsPerMonth: subscription.credits_per_month,
     });
   }
 
@@ -351,10 +574,22 @@ async function seedSubscriptions(users: any[]) {
 
 /**
  * Seed Credit Allocations
+ * Links credits to their subscriptions for proper categorization (Plan 189)
  */
-async function seedCredits(users: any[]) {
+async function seedCredits(users: any[], subscriptions: any[]) {
   console.log('Creating credit allocations...');
   const createdCredits = [];
+
+  // Tier configuration - MUST match seedSubscriptions tierConfig
+  // Updated 2025-11-15: New pricing structure with x100 credit conversion (1 credit = $0.01)
+  const tierConfig = {
+    free: { creditsPerMonth: 200 },        // $2 worth of API usage
+    pro: { creditsPerMonth: 1500 },        // $15 worth of API usage
+    pro_plus: { creditsPerMonth: 5000 },   // $50 worth of API usage
+    pro_max: { creditsPerMonth: 25000 },   // $250 worth of API usage
+    enterprise_pro: { creditsPerMonth: 3500 },       // $35 worth of API usage
+    enterprise_pro_plus: { creditsPerMonth: 11000 }, // $110 worth of API usage
+  };
 
   for (const user of users) {
     // Find persona to determine tier
@@ -362,37 +597,66 @@ async function seedCredits(users: any[]) {
     if (!persona) continue;
 
     const tier = persona.subscriptionTier;
+    const config = tierConfig[tier];
+
+    if (!config) {
+      console.warn(`⚠️  Unknown tier '${tier}' for user ${user.email}, skipping credit allocation`);
+      continue;
+    }
+
+    // Find subscription for this user to link credits
+    const userSubscription = subscriptions.find((s) => s.user_id === user.user_id);
+
     const creditType = tier === 'free' ? 'free' : 'pro';
-    const monthlyAllocation = tier === 'free' ? 100 : 10000;
+    const monthlyAllocation = config.creditsPerMonth;
 
     const now = new Date();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Delete existing credit for this user to start fresh
-    await prisma.credit.deleteMany({
-      where: { userId: user.userId },
+    await prisma.credits.deleteMany({
+      where: { user_id: user.user_id },
     });
 
-    // Create new credit allocation
-    const credit = await prisma.credit.create({
+    // Create new credit allocation linked to subscription (Plan 189 requirement)
+    const credit = await prisma.credits.create({
       data: {
-        userId: user.userId,
-        totalCredits: monthlyAllocation,
-        usedCredits: 0,
-        creditType,
-        monthlyAllocation,
-        billingPeriodStart: now,
-        billingPeriodEnd: endOfMonth,
-        isCurrent: true,
-        resetDayOfMonth: 1,
+        id: randomUUID(),
+        user_id: user.user_id,
+        subscription_id: userSubscription?.subscription_id || null, // Link to subscription
+        total_credits: monthlyAllocation,
+        used_credits: 0,
+        credit_type: creditType,
+        monthly_allocation: monthlyAllocation,
+        billing_period_start: now,
+        billing_period_end: endOfMonth,
+        is_current: true,
+        reset_day_of_month: 1,
+        updated_at: new Date(),
+      },
+    });
+
+    // Create user credit balance (Bug #1 fix)
+    await prisma.user_credit_balance.upsert({
+      where: { user_id: user.user_id },
+      create: {
+        id: randomUUID(),
+        user_id: user.user_id,
+        amount: monthlyAllocation,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      update: {
+        amount: monthlyAllocation,
+        updated_at: new Date(),
       },
     });
 
     createdCredits.push({
       creditId: credit.id,
-      userId: credit.userId,
-      creditType: credit.creditType,
-      monthlyAllocation: credit.monthlyAllocation,
+      user_id: credit.user_id,
+      creditType: credit.credit_type,
+      monthlyAllocation: credit.monthly_allocation,
     });
   }
 
@@ -405,6 +669,7 @@ async function seedCredits(users: any[]) {
 /**
  * Seed LLM Models
  * Seeds top-tier models from major providers with current pricing
+ * Uses new JSONB meta format for all model metadata
  */
 async function seedModels() {
   console.log('Creating LLM models...');
@@ -414,288 +679,534 @@ async function seedModels() {
     {
       id: 'gpt-5',
       name: 'gpt-5',
-      displayName: 'GPT-5',
       provider: 'openai',
-      description: 'OpenAI\'s best AI system with 272K input, 128K output, 94.6% AIME math, 74.9% SWE-bench coding, 45% fewer hallucinations',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 272000,
-      maxOutputTokens: 128000,
-      inputCostPerMillionTokens: 1250,
-      outputCostPerMillionTokens: 10000,
-      creditsPer1kTokens: 28,
-      requiredTier: SubscriptionTier.pro_max,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'GPT-5',
+        description: 'OpenAI\'s best AI system with 272K input, 128K output, 94.6% AIME math, 74.9% SWE-bench coding, 45% fewer hallucinations',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 272000,
+        maxOutputTokens: 128000,
+        inputCostPerMillionTokens: 1250,
+        outputCostPerMillionTokens: 10000,
+        creditsPer1kTokens: 28,
+        requiredTier: 'pro_max',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          openai: {
+            modelFamily: 'gpt-5',
+            trainingCutoff: '2025-06',
+          },
+        },
+        internalNotes: 'Flagship model - highest tier access',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
     },
     {
       id: 'gpt-5-mini',
       name: 'gpt-5-mini',
-      displayName: 'GPT-5 Mini',
       provider: 'openai',
-      description: 'Cost-efficient GPT-5 with 87.5% cost reduction, 272K input context with smart routing',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 272000,
-      maxOutputTokens: 128000,
-      inputCostPerMillionTokens: 250,
-      outputCostPerMillionTokens: 2000,
-      creditsPer1kTokens: 6,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'GPT-5 Mini',
+        description: 'Cost-efficient GPT-5 with 87.5% cost reduction, 272K input context with smart routing',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 272000,
+        maxOutputTokens: 128000,
+        inputCostPerMillionTokens: 250,
+        outputCostPerMillionTokens: 2000,
+        creditsPer1kTokens: 6,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          openai: {
+            modelFamily: 'gpt-5',
+            trainingCutoff: '2025-06',
+          },
+        },
+        internalNotes: 'Cost-efficient variant for pro tier',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
     },
     {
       id: 'gpt-5-nano',
       name: 'gpt-5-nano',
-      displayName: 'GPT-5 Nano',
       provider: 'openai',
-      description: 'Ultra cost-efficient GPT-5 variant with 272K context, ideal for high-volume tasks',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 272000,
-      maxOutputTokens: 128000,
-      inputCostPerMillionTokens: 50,
-      outputCostPerMillionTokens: 400,
-      creditsPer1kTokens: 1,
-      requiredTier: SubscriptionTier.free,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'GPT-5 Nano',
+        description: 'Ultra cost-efficient GPT-5 variant with 272K context, ideal for high-volume tasks',
+        capabilities: ['text', 'function_calling', 'long_context', 'code'],
+        contextLength: 272000,
+        maxOutputTokens: 128000,
+        inputCostPerMillionTokens: 50,
+        outputCostPerMillionTokens: 400,
+        creditsPer1kTokens: 1,
+        requiredTier: 'free',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          openai: {
+            modelFamily: 'gpt-5',
+            trainingCutoff: '2025-06',
+          },
+        },
+        internalNotes: 'Free tier access - entry level model',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
     },
 
     // Anthropic Models (2025 - Claude 4 Generation)
     {
       id: 'claude-opus-4-1',
       name: 'claude-opus-4.1',
-      displayName: 'Claude Opus 4.1',
       provider: 'anthropic',
-      description: 'Most powerful Claude model for highly complex tasks, 200K context (August 2025)',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 200000,
-      maxOutputTokens: 16384,
-      inputCostPerMillionTokens: 15000,
-      outputCostPerMillionTokens: 75000,
-      creditsPer1kTokens: 180,
-      requiredTier: SubscriptionTier.pro_max,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Claude Opus 4.1',
+        description: 'Most powerful Claude model for highly complex tasks, 200K context (August 2025)',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 200000,
+        maxOutputTokens: 16384,
+        inputCostPerMillionTokens: 15000,
+        outputCostPerMillionTokens: 75000,
+        creditsPer1kTokens: 180,
+        requiredTier: 'pro_max',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          anthropic: {
+            modelSeries: 'claude-4',
+            knowledgeCutoff: '2025-08',
+          },
+        },
+        internalNotes: 'Most powerful Anthropic model',
+        complianceTags: ['SOC2', 'GDPR', 'HIPAA'],
+      },
     },
     {
       id: 'claude-sonnet-4-5',
       name: 'claude-sonnet-4.5',
-      displayName: 'Claude Sonnet 4.5',
       provider: 'anthropic',
-      description: 'Most intelligent for agents, coding, and computer use with 200K context (September 2025)',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 200000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 3000,
-      outputCostPerMillionTokens: 15000,
-      creditsPer1kTokens: 40,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Claude Sonnet 4.5',
+        description: 'Most intelligent for agents, coding, and computer use with 200K context (September 2025)',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 200000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 3000,
+        outputCostPerMillionTokens: 15000,
+        creditsPer1kTokens: 40,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          anthropic: {
+            modelSeries: 'claude-4',
+            knowledgeCutoff: '2025-09',
+          },
+        },
+        internalNotes: 'Best for agentic coding',
+        complianceTags: ['SOC2', 'GDPR', 'HIPAA'],
+      },
     },
     {
       id: 'claude-haiku-4-5',
       name: 'claude-haiku-4.5',
-      displayName: 'Claude Haiku 4.5',
       provider: 'anthropic',
-      description: 'Fastest and most cost-efficient Claude with 200K context (October 2025)',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
-      contextLength: 200000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 1000,
-      outputCostPerMillionTokens: 5000,
-      creditsPer1kTokens: 15,
-      requiredTier: SubscriptionTier.free,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Claude Haiku 4.5',
+        description: 'Fastest and most cost-efficient Claude with 200K context (October 2025)',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context'],
+        contextLength: 200000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 1000,
+        outputCostPerMillionTokens: 5000,
+        creditsPer1kTokens: 15,
+        requiredTier: 'free',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          anthropic: {
+            modelSeries: 'claude-4',
+            knowledgeCutoff: '2025-10',
+          },
+        },
+        internalNotes: 'Free tier access - fast and efficient',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
+    },
+    // LEGACY MODEL EXAMPLE: Claude 3.5 Sonnet (superseded by Claude 4.5)
+    {
+      id: 'claude-3-5-sonnet',
+      name: 'claude-3.5-sonnet',
+      provider: 'anthropic',
+      isLegacy: true,
+      isArchived: false,
+      meta: {
+        displayName: 'Claude 3.5 Sonnet (Legacy)',
+        description: 'Previous generation Claude model - superseded by Claude 4.5 Sonnet',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 200000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 3000,
+        outputCostPerMillionTokens: 15000,
+        creditsPer1kTokens: 40,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        legacyReplacementModelId: 'claude-sonnet-4-5',
+        deprecationNotice: 'Claude 3.5 Sonnet will be deprecated on 2025-12-31. Please migrate to Claude Sonnet 4.5 for improved performance.',
+        sunsetDate: '2025-12-31T23:59:59Z',
+        providerMetadata: {
+          anthropic: {
+            modelSeries: 'claude-3',
+            knowledgeCutoff: '2024-08',
+          },
+        },
+        internalNotes: 'Legacy model - encourage migration to 4.5',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
     },
 
     // Google Models (2025)
     {
       id: 'gemini-2-5-pro',
       name: 'gemini-2.5-pro',
-      displayName: 'Gemini 2.5 Pro',
       provider: 'google',
-      description: 'Most advanced Gemini model with 1M context (2M coming soon), exceptional reasoning',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 1000000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 1250,
-      outputCostPerMillionTokens: 5000,
-      creditsPer1kTokens: 20,
-      requiredTier: SubscriptionTier.pro_max,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Gemini 2.5 Pro',
+        description: 'Most advanced Gemini model with 1M context (2M coming soon), exceptional reasoning',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 1000000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 1250,
+        outputCostPerMillionTokens: 5000,
+        creditsPer1kTokens: 20,
+        requiredTier: 'pro_max',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          google: {
+            modelType: 'gemini-pro',
+            tuningSupport: true,
+          },
+        },
+        internalNotes: 'Largest context window - 1M tokens',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
     },
     {
       id: 'gemini-2-0-flash',
       name: 'gemini-2.0-flash',
-      displayName: 'Gemini 2.0 Flash',
       provider: 'google',
-      description: 'Generally available model with 1M context, multimodal input, and native tool use',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
-      contextLength: 1000000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 100,
-      outputCostPerMillionTokens: 400,
-      creditsPer1kTokens: 3,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Gemini 2.0 Flash',
+        description: 'Generally available model with 1M context, multimodal input, and native tool use',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context'],
+        contextLength: 1000000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 100,
+        outputCostPerMillionTokens: 400,
+        creditsPer1kTokens: 3,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          google: {
+            modelType: 'gemini-flash',
+          },
+        },
+        internalNotes: 'Fast multimodal model',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
     },
     {
       id: 'gemini-2-0-flash-lite',
       name: 'gemini-2.0-flash-lite',
-      displayName: 'Gemini 2.0 Flash-Lite',
       provider: 'google',
-      description: 'Most cost-efficient Gemini model with 1M context and multimodal capabilities',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
-      contextLength: 1000000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 38,
-      outputCostPerMillionTokens: 150,
-      creditsPer1kTokens: 1,
-      requiredTier: SubscriptionTier.free,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Gemini 2.0 Flash-Lite',
+        description: 'Most cost-efficient Gemini model with 1M context and multimodal capabilities',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context'],
+        contextLength: 1000000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 38,
+        outputCostPerMillionTokens: 150,
+        creditsPer1kTokens: 1,
+        requiredTier: 'free',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          google: {
+            modelType: 'gemini-flash',
+          },
+        },
+        internalNotes: 'Free tier - ultra efficient',
+        complianceTags: ['SOC2'],
+      },
     },
 
     // Mistral Models (2025)
     {
       id: 'mistral-medium-3',
       name: 'mistral-medium-3',
-      displayName: 'Mistral Medium 3',
       provider: 'mistral',
-      description: 'Latest Mistral model excelling in coding and STEM tasks, 90% of Claude 3.7 at lower cost',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code],
-      contextLength: 128000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 400,
-      outputCostPerMillionTokens: 2000,
-      creditsPer1kTokens: 8,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Mistral Medium 3',
+        description: 'Latest Mistral model excelling in coding and STEM tasks, 90% of Claude 3.7 at lower cost',
+        capabilities: ['text', 'function_calling', 'code'],
+        contextLength: 128000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 400,
+        outputCostPerMillionTokens: 2000,
+        creditsPer1kTokens: 8,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Strong coding capabilities',
+        complianceTags: ['SOC2'],
+      },
     },
     {
       id: 'mistral-small-3-1',
       name: 'mistral-small-3.1',
-      displayName: 'Mistral Small 3.1',
       provider: 'mistral',
-      description: 'Cost-efficient model for standard tasks with strong multilingual support',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling],
-      contextLength: 128000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 200,
-      outputCostPerMillionTokens: 600,
-      creditsPer1kTokens: 3,
-      requiredTier: SubscriptionTier.free,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Mistral Small 3.1',
+        description: 'Cost-efficient model for standard tasks with strong multilingual support',
+        capabilities: ['text', 'function_calling'],
+        contextLength: 128000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 200,
+        outputCostPerMillionTokens: 600,
+        creditsPer1kTokens: 3,
+        requiredTier: 'free',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Multilingual support',
+        complianceTags: [],
+      },
     },
 
     // Meta Models (2025)
     {
       id: 'llama-4-scout',
       name: 'llama-4-scout',
-      displayName: 'Llama 4 Scout',
       provider: 'meta',
-      description: 'Industry-leading 10M context window with superior text and visual intelligence',
-      capabilities: [ModelCapability.text, ModelCapability.vision, ModelCapability.function_calling, ModelCapability.long_context],
-      contextLength: 10000000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 200,
-      outputCostPerMillionTokens: 800,
-      creditsPer1kTokens: 5,
-      requiredTier: SubscriptionTier.pro_max,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Llama 4 Scout',
+        description: 'Industry-leading 10M context window with superior text and visual intelligence',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context'],
+        contextLength: 10000000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 200,
+        outputCostPerMillionTokens: 800,
+        creditsPer1kTokens: 5,
+        requiredTier: 'pro_max',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Massive 10M context window',
+        complianceTags: [],
+      },
     },
     {
       id: 'llama-3-3-70b',
       name: 'llama-3.3-70b',
-      displayName: 'Llama 3.3 70B',
       provider: 'meta',
-      description: 'Excellent performance at 10-15x lower cost than GPT-4o with 128K context',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code, ModelCapability.long_context],
-      contextLength: 128000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 100,
-      outputCostPerMillionTokens: 400,
-      creditsPer1kTokens: 2,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Llama 3.3 70B',
+        description: 'Excellent performance at 10-15x lower cost than GPT-4o with 128K context',
+        capabilities: ['text', 'function_calling', 'code', 'long_context'],
+        contextLength: 128000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 100,
+        outputCostPerMillionTokens: 400,
+        creditsPer1kTokens: 2,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Cost-effective large model',
+        complianceTags: [],
+      },
     },
     {
       id: 'llama-3-1-405b',
       name: 'llama-3.1-405b',
-      displayName: 'Llama 3.1 405B',
       provider: 'meta',
-      description: 'Largest Llama model with exceptional capabilities and 128K context',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code, ModelCapability.long_context],
-      contextLength: 128000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 300,
-      outputCostPerMillionTokens: 1200,
-      creditsPer1kTokens: 6,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Llama 3.1 405B',
+        description: 'Largest Llama model with exceptional capabilities and 128K context',
+        capabilities: ['text', 'function_calling', 'code', 'long_context'],
+        contextLength: 128000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 300,
+        outputCostPerMillionTokens: 1200,
+        creditsPer1kTokens: 6,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Largest parameter count',
+        complianceTags: [],
+      },
     },
 
     // xAI Models (2025)
     {
       id: 'grok-4',
       name: 'grok-4-0709',
-      displayName: 'Grok 4',
       provider: 'xai',
-      description: 'The most intelligent model in the world with native tool use and real-time search (August 2025)',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 256000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 3000,
-      outputCostPerMillionTokens: 15000,
-      creditsPer1kTokens: 40,
-      requiredTier: SubscriptionTier.pro_max,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok 4',
+        description: 'The most intelligent model in the world with native tool use and real-time search (August 2025)',
+        capabilities: ['text', 'function_calling', 'long_context', 'code'],
+        contextLength: 256000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 3000,
+        outputCostPerMillionTokens: 15000,
+        creditsPer1kTokens: 40,
+        requiredTier: 'pro_max',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Real-time search capabilities',
+        complianceTags: [],
+      },
     },
     {
       id: 'grok-4-fast',
       name: 'grok-4-fast-reasoning',
-      displayName: 'Grok 4 Fast',
       provider: 'xai',
-      description: 'Fast reasoning model with 2M context window, ideal for complex tasks (September 2025)',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.long_context, ModelCapability.code],
-      contextLength: 2000000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 200,
-      outputCostPerMillionTokens: 500,
-      creditsPer1kTokens: 2,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok 4 Fast',
+        description: 'Fast reasoning model with 2M context window, ideal for complex tasks (September 2025)',
+        capabilities: ['text', 'function_calling', 'long_context', 'code'],
+        contextLength: 2000000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 200,
+        outputCostPerMillionTokens: 500,
+        creditsPer1kTokens: 2,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: '2M context - very large',
+        complianceTags: [],
+      },
     },
     {
       id: 'grok-code-fast-1',
       name: 'grok-code-fast-1',
-      displayName: 'Grok Code Fast 1',
       provider: 'xai',
-      description: 'Speedy and economical reasoning model excelling at agentic coding (September 2025)',
-      capabilities: [ModelCapability.text, ModelCapability.function_calling, ModelCapability.code],
-      contextLength: 128000,
-      maxOutputTokens: 8192,
-      inputCostPerMillionTokens: 200,
-      outputCostPerMillionTokens: 1500,
-      creditsPer1kTokens: 5,
-      requiredTier: SubscriptionTier.pro,
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok Code Fast 1',
+        description: 'Speedy and economical reasoning model excelling at agentic coding (September 2025)',
+        capabilities: ['text', 'function_calling', 'code'],
+        contextLength: 128000,
+        maxOutputTokens: 8192,
+        inputCostPerMillionTokens: 200,
+        outputCostPerMillionTokens: 1500,
+        creditsPer1kTokens: 5,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Agentic coding specialist',
+        complianceTags: [],
+      },
+    },
+
+    // ARCHIVED MODEL EXAMPLE: Text-Davinci-003 (GPT-3.5 - retired)
+    {
+      id: 'text-davinci-003',
+      name: 'text-davinci-003',
+      provider: 'openai',
+      isLegacy: false,
+      isArchived: true,
+      meta: {
+        displayName: 'Text-Davinci-003 (Archived)',
+        description: 'Archived GPT-3.5 model - no longer available for inference',
+        capabilities: ['text'],
+        contextLength: 4096,
+        maxOutputTokens: 4096,
+        inputCostPerMillionTokens: 2000,
+        outputCostPerMillionTokens: 2000,
+        creditsPer1kTokens: 5,
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          openai: {
+            modelFamily: 'gpt-3.5',
+            trainingCutoff: '2021-09',
+          },
+        },
+        internalNotes: 'Archived 2024-01-04 - superseded by GPT-4',
+        complianceTags: [],
+      },
     },
   ];
 
   const createdModels = [];
 
   for (const model of models) {
-    const created = await prisma.model.upsert({
+    const created = await prisma.models.upsert({
       where: { id: model.id },
       update: {
         name: model.name,
-        displayName: model.displayName,
         provider: model.provider,
-        description: model.description,
-        capabilities: model.capabilities,
-        contextLength: model.contextLength,
-        maxOutputTokens: model.maxOutputTokens,
-        inputCostPerMillionTokens: model.inputCostPerMillionTokens,
-        outputCostPerMillionTokens: model.outputCostPerMillionTokens,
-        creditsPer1kTokens: model.creditsPer1kTokens,
-        requiredTier: model.requiredTier,
-        isAvailable: true,
-        isDeprecated: false,
+        is_legacy: model.isLegacy,
+        is_archived: model.isArchived,
+        is_available: !model.isArchived, // Archived models are not available
+        meta: model.meta,
+        updated_at: new Date(),
       },
       create: {
         id: model.id,
         name: model.name,
-        displayName: model.displayName,
         provider: model.provider,
-        description: model.description,
-        capabilities: model.capabilities,
-        contextLength: model.contextLength,
-        maxOutputTokens: model.maxOutputTokens,
-        inputCostPerMillionTokens: model.inputCostPerMillionTokens,
-        outputCostPerMillionTokens: model.outputCostPerMillionTokens,
-        creditsPer1kTokens: model.creditsPer1kTokens,
-        requiredTier: model.requiredTier,
-        isAvailable: true,
-        isDeprecated: false,
+        is_legacy: model.isLegacy,
+        is_archived: model.isArchived,
+        is_available: !model.isArchived, // Archived models are not available
+        meta: model.meta,
+        updated_at: new Date(),
       },
     });
 
@@ -726,31 +1237,73 @@ async function seedProrations(users: any[], subscriptions: any[]) {
   const now = new Date();
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
+  // Helper function to get tier pricing - Plan 189
+  const getTierPricing = (tier: string): { basePrice: string; credits: number } => {
+    switch (tier) {
+      case 'free':
+        return { basePrice: '0.00', credits: 200 };
+      case 'pro':
+        return { basePrice: '15.00', credits: 1500 };
+      case 'pro_plus':
+        return { basePrice: '45.00', credits: 5000 };
+      case 'pro_max':
+        return { basePrice: '199.00', credits: 25000 };
+      case 'enterprise_pro':
+        return { basePrice: '30.00', credits: 3500 };
+      case 'enterprise_pro_plus':
+        return { basePrice: '90.00', credits: 11000 };
+      default:
+        return { basePrice: '15.00', credits: 1500 }; // Default to Pro
+    }
+  };
+
   for (let i = 0; i < Math.min(users.length, 3); i++) {
     const user = users[i];
     const persona = USER_PERSONAS[i];
+    if (!persona) continue;
+
+    const tierPricing = getTierPricing(persona.subscriptionTier);
 
     // Delete existing monetization subscription
-    await prisma.subscriptionMonetization.deleteMany({
-      where: { userId: user.userId },
+    await prisma.subscription_monetization.deleteMany({
+      where: { user_id: user.user_id },
     });
 
-    const monetizationSub = await prisma.subscriptionMonetization.create({
+    const monetizationSub = await prisma.subscription_monetization.create({
       data: {
-        userId: user.userId,
+        id: randomUUID(),
+        user_id: user.user_id,
         tier: persona.subscriptionTier, // Plain string - schema defines tier as String, not enum
-        billingCycle: 'monthly',
+        billing_cycle: 'monthly',
         status: 'active',
-        basePriceUsd: persona.subscriptionTier === 'free' ? '0.00' : '20.00',
-        monthlyCreditAllocation: persona.subscriptionTier === 'free' ? 100 : 10000,
-        currentPeriodStart: now,
-        currentPeriodEnd: endOfMonth,
+        base_price_usd: tierPricing.basePrice,
+        monthly_credit_allocation: tierPricing.credits,
+        current_period_start: now,
+        current_period_end: endOfMonth,
+        updated_at: new Date(),
+      },
+    });
+
+    // Create user credit balance (Bug #1 fix) - Updated to Plan 189 pricing
+    const monthlyAllocation = tierPricing.credits;
+    await prisma.user_credit_balance.upsert({
+      where: { user_id: user.user_id },
+      create: {
+        id: randomUUID(),
+        user_id: user.user_id,
+        amount: monthlyAllocation,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      update: {
+        amount: monthlyAllocation,
+        updated_at: new Date(),
       },
     });
 
     monetizationSubscriptions.push({
       subscriptionId: monetizationSub.id,
-      userId: monetizationSub.userId,
+      userId: monetizationSub.user_id,
       tier: monetizationSub.tier,
     });
   }
@@ -760,140 +1313,144 @@ async function seedProrations(users: any[], subscriptions: any[]) {
   const prorationsData = [
     // Upgrade from free to pro
     {
-      userId: users[0]?.userId,
-      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
-      fromTier: 'free',
-      toTier: 'pro',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 20,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '0.00', // Free tier has no value
-      newTierProratedCostUsd: '13.33', // (20/30) × $20
-      netChargeUsd: '13.33',
-      effectiveDate: new Date('2025-11-05'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_upgrade_free_pro_001',
+      user_id: users[0]?.userId,
+      subscription_id: monetizationSubscriptions[0]?.subscriptionId,
+      from_tier: 'free',
+      to_tier: 'pro',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 20,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '0.00', // Free tier has no value
+      new_tier_prorated_cost_usd: '13.33', // (20/30) × $20
+      net_charge_usd: '13.33',
+      effective_date: new Date('2025-11-05'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_upgrade_free_pro_001',
     },
     // Upgrade from pro to pro_max
     {
-      userId: users[1]?.userId,
-      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'pro_max',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 15,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '10.00', // (15/30) × $20
-      newTierProratedCostUsd: '25.00', // (15/30) × $50
-      netChargeUsd: '15.00',
-      effectiveDate: new Date('2025-11-08'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_upgrade_pro_promax_001',
+      user_id: users[1]?.userId,
+      subscription_id: monetizationSubscriptions[1]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'pro_max',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 15,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '10.00', // (15/30) × $20
+      new_tier_prorated_cost_usd: '25.00', // (15/30) × $50
+      net_charge_usd: '15.00',
+      effective_date: new Date('2025-11-08'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_upgrade_pro_promax_001',
     },
     // Downgrade from pro to free
     {
-      userId: users[2]?.userId,
-      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'free',
-      changeType: ProrationEventType.downgrade,
-      daysRemaining: 10,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '6.67', // (10/30) × $20
-      newTierProratedCostUsd: '0.00', // Free tier
-      netChargeUsd: '-6.67', // Credit back to user
-      effectiveDate: new Date('2025-11-10'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_downgrade_pro_free_001',
+      user_id: users[2]?.userId,
+      subscription_id: monetizationSubscriptions[2]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'free',
+      change_type: proration_event_type.downgrade,
+      days_remaining: 10,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '6.67', // (10/30) × $20
+      new_tier_prorated_cost_usd: '0.00', // Free tier
+      net_charge_usd: '-6.67', // Credit back to user
+      effective_date: new Date('2025-11-10'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_downgrade_pro_free_001',
     },
     // Interval change - monthly to annual
     {
-      userId: users[0]?.userId,
-      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'pro',
-      changeType: ProrationEventType.interval_change,
-      daysRemaining: 25,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '16.67', // (25/30) × $20
-      newTierProratedCostUsd: '183.33', // (25/30) × $220 (annual)
-      netChargeUsd: '166.66',
-      effectiveDate: new Date('2025-11-03'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_interval_monthly_annual_001',
+      user_id: users[0]?.userId,
+      subscription_id: monetizationSubscriptions[0]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'pro',
+      change_type: proration_event_type.interval_change,
+      days_remaining: 25,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '16.67', // (25/30) × $20
+      new_tier_prorated_cost_usd: '183.33', // (25/30) × $220 (annual)
+      net_charge_usd: '166.66',
+      effective_date: new Date('2025-11-03'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_interval_monthly_annual_001',
     },
     // Pending upgrade
     {
-      userId: users[1]?.userId,
-      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
-      fromTier: 'free',
-      toTier: 'pro',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 18,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '0.00',
-      newTierProratedCostUsd: '12.00',
-      netChargeUsd: '12.00',
-      effectiveDate: new Date('2025-11-12'),
-      status: ProrationStatus.pending,
+      user_id: users[1]?.userId,
+      subscription_id: monetizationSubscriptions[1]?.subscriptionId,
+      from_tier: 'free',
+      to_tier: 'pro',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 18,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '0.00',
+      new_tier_prorated_cost_usd: '12.00',
+      net_charge_usd: '12.00',
+      effective_date: new Date('2025-11-12'),
+      status: proration_status.pending,
     },
     // Failed proration
     {
-      userId: users[2]?.userId,
-      subscriptionId: monetizationSubscriptions[2]?.subscriptionId,
-      fromTier: 'pro',
-      toTier: 'pro_max',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 12,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '8.00',
-      newTierProratedCostUsd: '20.00',
-      netChargeUsd: '12.00',
-      effectiveDate: new Date('2025-11-09'),
-      status: ProrationStatus.failed,
+      user_id: users[2]?.userId,
+      subscription_id: monetizationSubscriptions[2]?.subscriptionId,
+      from_tier: 'pro',
+      to_tier: 'pro_max',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 12,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '8.00',
+      new_tier_prorated_cost_usd: '20.00',
+      net_charge_usd: '12.00',
+      effective_date: new Date('2025-11-09'),
+      status: proration_status.failed,
     },
     // Reversed proration (refund)
     {
-      userId: users[0]?.userId,
-      subscriptionId: monetizationSubscriptions[0]?.subscriptionId,
-      fromTier: 'pro_max',
-      toTier: 'pro',
-      changeType: ProrationEventType.downgrade,
-      daysRemaining: 22,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '36.67', // (22/30) × $50
-      newTierProratedCostUsd: '14.67', // (22/30) × $20
-      netChargeUsd: '-22.00', // Credit back
-      effectiveDate: new Date('2025-11-01'),
-      status: ProrationStatus.reversed,
-      stripeInvoiceId: 'in_test_reversed_promax_pro_001',
+      user_id: users[0]?.userId,
+      subscription_id: monetizationSubscriptions[0]?.subscriptionId,
+      from_tier: 'pro_max',
+      to_tier: 'pro',
+      change_type: proration_event_type.downgrade,
+      days_remaining: 22,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '36.67', // (22/30) × $50
+      new_tier_prorated_cost_usd: '14.67', // (22/30) × $20
+      net_charge_usd: '-22.00', // Credit back
+      effective_date: new Date('2025-11-01'),
+      status: proration_status.reversed,
+      stripe_invoice_id: 'in_test_reversed_promax_pro_001',
     },
     // Enterprise upgrade
     {
-      userId: users[1]?.userId,
-      subscriptionId: monetizationSubscriptions[1]?.subscriptionId,
-      fromTier: 'pro_max',
-      toTier: 'enterprise_pro',
-      changeType: ProrationEventType.upgrade,
-      daysRemaining: 28,
-      daysInCycle: 30,
-      unusedCreditValueUsd: '46.67', // (28/30) × $50
-      newTierProratedCostUsd: '93.33', // (28/30) × $100
-      netChargeUsd: '46.66',
-      effectiveDate: new Date('2025-11-02'),
-      status: ProrationStatus.applied,
-      stripeInvoiceId: 'in_test_upgrade_promax_ent_001',
+      user_id: users[1]?.userId,
+      subscription_id: monetizationSubscriptions[1]?.subscriptionId,
+      from_tier: 'pro_max',
+      to_tier: 'enterprise_pro',
+      change_type: proration_event_type.upgrade,
+      days_remaining: 28,
+      days_in_cycle: 30,
+      unused_credit_value_usd: '46.67', // (28/30) × $50
+      new_tier_prorated_cost_usd: '93.33', // (28/30) × $100
+      net_charge_usd: '46.66',
+      effective_date: new Date('2025-11-02'),
+      status: proration_status.applied,
+      stripe_invoice_id: 'in_test_upgrade_promax_ent_001',
     },
   ];
 
   const createdProrations = [];
 
   for (const proration of prorationsData) {
-    if (!proration.userId || !proration.subscriptionId) continue;
+    if (!proration.user_id || !proration.subscription_id) continue;
 
     try {
-      const created = await prisma.prorationEvent.create({
-        data: proration,
+      const created = await prisma.proration_event.create({
+        data: {
+          id: randomUUID(),
+          ...proration,
+          updated_at: new Date(),
+        },
       });
       createdProrations.push(created);
     } catch (err) {
@@ -905,6 +1462,754 @@ async function seedProrations(users: any[], subscriptions: any[]) {
   return createdProrations;
 }
 
+// ============================================================================
+// PROVIDER PRICING SYSTEM (Plan 161)
+// ============================================================================
+
+/**
+ * Seed AI providers (OpenAI, Anthropic, Google, Mistral, Azure OpenAI)
+ * Part of Plan 161: Provider Pricing System Activation
+ * Reference: docs/research/005-vendor-pricing-november-2025.md
+ */
+async function seedProviders() {
+  console.log('Creating AI provider records...');
+
+  const providers = await Promise.all([
+    // OpenAI
+    prisma.providers.upsert({
+      where: { name: 'openai' },
+      update: {
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+      create: {
+        name: 'openai',
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Anthropic
+    prisma.providers.upsert({
+      where: { name: 'anthropic' },
+      update: {
+        api_type: 'anthropic-sdk',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+      create: {
+        name: 'anthropic',
+        api_type: 'anthropic-sdk',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Google AI
+    prisma.providers.upsert({
+      where: { name: 'google' },
+      update: {
+        api_type: 'google-generative-ai',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+      create: {
+        name: 'google',
+        api_type: 'google-generative-ai',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Mistral AI
+    prisma.providers.upsert({
+      where: { name: 'mistral' },
+      update: {
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+      create: {
+        name: 'mistral',
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Azure OpenAI (uses same API as OpenAI)
+    prisma.providers.upsert({
+      where: { name: 'azure-openai' },
+      update: {
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+      create: {
+        name: 'azure-openai',
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+    }),
+  ]);
+
+  console.log(`✓ Created/Updated ${providers.length} provider records\n`);
+  return providers;
+}
+
+/**
+ * Seed model pricing from vendor research (November 2025)
+ * Prices are per 1,000 tokens (database format)
+ * Part of Plan 161: Provider Pricing System Activation
+ * Reference: docs/research/005-vendor-pricing-november-2025.md
+ */
+async function seedModelPricing(providers: any[]) {
+  console.log('Creating model pricing records...');
+
+  const effectiveFrom = new Date('2025-11-13');
+  const providerMap = Object.fromEntries(providers.map((p) => [p.name, p.id]));
+
+  const pricing = await Promise.all([
+    // ========================================================================
+    // OpenAI Models
+    // ========================================================================
+
+    // GPT-4o ($5.00/$15.00 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-4o',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-4o',
+        input_price_per_1k: 0.005, // $5.00 per 1M / 1000
+        output_price_per_1k: 0.015, // $15.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // GPT-4o-mini ($0.15/$0.60 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-4o-mini',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-4o-mini',
+        input_price_per_1k: 0.00015, // $0.15 per 1M / 1000
+        output_price_per_1k: 0.0006, // $0.60 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // GPT-5 (use GPT-4o pricing as placeholder until official release)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5',
+        input_price_per_1k: 0.005, // Same as GPT-4o
+        output_price_per_1k: 0.015,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // GPT-5 Mini (use GPT-4o-mini pricing as placeholder)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5-mini',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5-mini',
+        input_price_per_1k: 0.00015, // Same as gpt-4o-mini
+        output_price_per_1k: 0.0006,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // GPT-5 Nano (estimated $0.05/$0.20 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5-nano',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5-nano',
+        input_price_per_1k: 0.00005, // $0.05 per 1M / 1000
+        output_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // o1 ($15.00/$60.00 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'o1',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'o1',
+        input_price_per_1k: 0.015, // $15.00 per 1M / 1000
+        output_price_per_1k: 0.06, // $60.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // o1-mini ($1.10/$4.40 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'o1-mini',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'o1-mini',
+        input_price_per_1k: 0.0011, // $1.10 per 1M / 1000
+        output_price_per_1k: 0.0044, // $4.40 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // o3-mini ($1.10/$4.40 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'o3-mini',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'o3-mini',
+        input_price_per_1k: 0.0011, // $1.10 per 1M / 1000
+        output_price_per_1k: 0.0044, // $4.40 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // ========================================================================
+    // Anthropic Models (with prompt caching)
+    // ========================================================================
+
+    // Claude Opus 4.1 ($15/$75 per 1M tokens)
+    // Cache Write (5m): $18.75, Cache Hit: $1.50 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-opus-4.1',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-opus-4.1',
+        input_price_per_1k: 0.015, // $15 per 1M / 1000
+        output_price_per_1k: 0.075, // $75 per 1M / 1000
+        cache_input_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
+        cache_hit_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Claude Sonnet 4.5 ($3/$15 per 1M tokens)
+    // Cache Write (5m): $3.75, Cache Hit: $0.30 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-sonnet-4.5',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-sonnet-4.5',
+        input_price_per_1k: 0.003, // $3 per 1M / 1000
+        output_price_per_1k: 0.015, // $15 per 1M / 1000
+        cache_input_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
+        cache_hit_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Claude 3.5 Sonnet (use Sonnet 4.5 pricing)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-3-5-sonnet',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-3-5-sonnet',
+        input_price_per_1k: 0.003,
+        output_price_per_1k: 0.015,
+        cache_input_price_per_1k: 0.00375,
+        cache_hit_price_per_1k: 0.0003,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Claude Haiku 4.5 ($1/$5 per 1M tokens)
+    // Cache Write (5m): $1.25, Cache Hit: $0.10 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['anthropic'],
+          model_name: 'claude-haiku-4.5',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['anthropic'],
+        model_name: 'claude-haiku-4.5',
+        input_price_per_1k: 0.001, // $1 per 1M / 1000
+        output_price_per_1k: 0.005, // $5 per 1M / 1000
+        cache_input_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
+        cache_hit_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // ========================================================================
+    // Google Gemini Models (text/image/video pricing only, audio excluded)
+    // ========================================================================
+
+    // Gemini 2.5 Pro (≤200K context: $1.25/$10 per 1M tokens)
+    // Cache Write: $0.125, Cache storage not tracked in this table
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-5-pro',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-5-pro',
+        input_price_per_1k: 0.00125, // $1.25 per 1M / 1000
+        output_price_per_1k: 0.01, // $10 per 1M / 1000
+        cache_input_price_per_1k: 0.000125, // $0.125 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Gemini 2.5 Flash (text/image/video: $0.30/$2.50 per 1M tokens)
+    // Cache Write: $0.03 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-5-flash',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-5-flash',
+        input_price_per_1k: 0.0003, // $0.30 per 1M / 1000
+        output_price_per_1k: 0.0025, // $2.50 per 1M / 1000
+        cache_input_price_per_1k: 0.00003, // $0.03 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Gemini 2.0 Flash (use 2.5 Flash pricing)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-0-flash',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-0-flash',
+        input_price_per_1k: 0.0003, // Same as 2.5 Flash
+        output_price_per_1k: 0.0025,
+        cache_input_price_per_1k: 0.00003,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Gemini 2.5 Flash-Lite (text/image/video: $0.10/$0.40 per 1M tokens)
+    // Cache Write: $0.01 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-5-flash-lite',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-5-flash-lite',
+        input_price_per_1k: 0.0001, // $0.10 per 1M / 1000
+        output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
+        cache_input_price_per_1k: 0.00001, // $0.01 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Gemini 2.0 Flash-Lite (use 2.5 Flash-Lite pricing)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2-0-flash-lite',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2-0-flash-lite',
+        input_price_per_1k: 0.0001, // Same as 2.5 Flash-Lite
+        output_price_per_1k: 0.0004,
+        cache_input_price_per_1k: 0.00001,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // ========================================================================
+    // Mistral AI Models
+    // ========================================================================
+
+    // Mistral Large 2 ($2.00/$6.00 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['mistral'],
+          model_name: 'mistral-large-2',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['mistral'],
+        model_name: 'mistral-large-2',
+        input_price_per_1k: 0.002, // $2.00 per 1M / 1000
+        output_price_per_1k: 0.006, // $6.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Mistral Medium 3 ($0.40/$2.00 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['mistral'],
+          model_name: 'mistral-medium-3',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['mistral'],
+        model_name: 'mistral-medium-3',
+        input_price_per_1k: 0.0004, // $0.40 per 1M / 1000
+        output_price_per_1k: 0.002, // $2.00 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // ========================================================================
+    // Azure OpenAI (same pricing as OpenAI direct)
+    // ========================================================================
+
+    // GPT-4o via Azure ($5.00/$15.00 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['azure-openai'],
+          model_name: 'gpt-4o',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['azure-openai'],
+        model_name: 'gpt-4o',
+        input_price_per_1k: 0.005, // Same as OpenAI direct
+        output_price_per_1k: 0.015,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // GPT-4o-mini via Azure ($0.15/$0.60 per 1M tokens)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['azure-openai'],
+          model_name: 'gpt-4o-mini',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['azure-openai'],
+        model_name: 'gpt-4o-mini',
+        input_price_per_1k: 0.00015, // Same as OpenAI direct
+        output_price_per_1k: 0.0006,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+  ]);
+
+  console.log(`✓ Created/Updated ${pricing.length} model pricing records\n`);
+  return pricing;
+}
+
+/**
+ * Seed pricing configuration with tier-based margin multipliers
+ * Part of Plan 161: Provider Pricing System Activation
+ * Reference: docs/plan/161-provider-pricing-system-activation.md
+ *
+ * Note: Uses find-or-create pattern since there's no unique constraint
+ */
+async function seedPricingConfigs(providers: any[]) {
+  console.log('Creating pricing configuration records...');
+
+  const providerMap = Object.fromEntries(providers.map((p) => [p.name, p.id]));
+
+  // Get admin user to use as creator (admin.test@rephlo.ai from seed data)
+  const adminUser = await prisma.users.findFirst({
+    where: {
+      email: 'admin.test@rephlo.ai'
+    }
+  });
+
+  if (!adminUser) {
+    console.log('⚠️  No admin user found - skipping pricing configs');
+    return [];
+  }
+
+  const effectiveFrom = new Date('2025-11-13');
+
+  // Helper function to find-or-create pricing config
+  const findOrCreateConfig = async (data: any) => {
+    const existing = await prisma.pricing_configs.findFirst({
+      where: {
+        scope_type: data.scope_type,
+        subscription_tier: data.subscription_tier,
+        provider_id: data.provider_id || null,
+        is_active: true,
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return await prisma.pricing_configs.create({ data });
+  };
+
+  // Global tier configs (apply to all providers unless overridden)
+  const globalConfigs = await Promise.all([
+    // Free tier: 50% margin (1.50× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'free',
+      marginMultiplier: 1.5,
+      targetGrossMarginPercent: 50.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Pro tier: 30% margin (1.30× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'pro',
+      marginMultiplier: 1.3,
+      targetGrossMarginPercent: 30.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Pro Max tier: 25% margin (1.25× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'pro_max',
+      marginMultiplier: 1.25,
+      targetGrossMarginPercent: 25.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Enterprise Pro tier: 15% margin (1.15× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'enterprise_pro',
+      marginMultiplier: 1.15,
+      targetGrossMarginPercent: 15.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+
+    // Enterprise Max tier: 10% margin (1.10× multiplier)
+    findOrCreateConfig({
+      scopeType: 'tier',
+      subscriptionTier: 'enterprise_pro_plus',
+      marginMultiplier: 1.1,
+      targetGrossMarginPercent: 10.0,
+      effectiveFrom,
+      reason: 'initial_setup',
+      reasonDetails: 'Initial tier-based pricing configuration',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+  ]);
+
+  console.log(`✓ Created/Found ${globalConfigs.length} global tier pricing configs\n`);
+
+  // Provider-specific configs (optional - can override global for specific providers)
+  // Example: Higher margin for OpenAI on Free tier
+  const providerConfigs = await Promise.all([
+    // OpenAI Free tier: 60% margin (higher than global 50%)
+    findOrCreateConfig({
+      scopeType: 'provider',
+      subscriptionTier: 'free',
+      providerId: providerMap['openai'],
+      marginMultiplier: 1.6,
+      targetGrossMarginPercent: 60.0,
+      effectiveFrom,
+      reason: 'tier_optimization',
+      reasonDetails: 'Higher margin for OpenAI models on Free tier due to premium positioning',
+      createdBy: adminUser.id,
+      requiresApproval: false,
+      approvalStatus: 'approved',
+      isActive: true,
+    }),
+  ]);
+
+  console.log(`✓ Created/Found ${providerConfigs.length} provider-specific pricing configs\n`);
+
+  const totalConfigs = globalConfigs.length + providerConfigs.length;
+  console.log(`✓ Total pricing configurations: ${totalConfigs}\n`);
+
+  return [...globalConfigs, ...providerConfigs];
+}
+
 async function main() {
   console.log('🌱 Starting comprehensive database seed...\n');
 
@@ -914,18 +2219,37 @@ async function main() {
 
   const oauthClients = await seedOAuthClients();
   const users = await seedUserPersonas();
+  await seedTierConfigs(); // Plan 190: Seed tier configurations before subscriptions
 
   let subscriptions: any[] = [];
   let credits: any[] = [];
   let models: any[] = [];
+  let providers: any[] = [];
+  let modelPricing: any[] = [];
+  let pricingConfigs: any[] = [];
 
   try {
     subscriptions = await seedSubscriptions(users);
-    credits = await seedCredits(users);
+    credits = await seedCredits(users, subscriptions); // Pass subscriptions to link credits
     models = await seedModels();
     await seedProrations(users, subscriptions);
   } catch (err: any) {
     console.log('⚠️  Subscriptions, credits, models, or prorations tables not available - skipping');
+    console.log('Error details:', err.message);
+    console.log('');
+  }
+
+  // ========================================================================
+  // SEED DATA - PROVIDER PRICING SYSTEM (Plan 161)
+  // ========================================================================
+
+  try {
+    console.log('\n📊 PROVIDER PRICING SYSTEM (Plan 161):\n');
+    providers = await seedProviders();
+    modelPricing = await seedModelPricing(providers);
+    pricingConfigs = await seedPricingConfigs(providers);
+  } catch (err: any) {
+    console.log('⚠️  Provider pricing tables not available - skipping');
     console.log('Error details:', err.message);
     console.log('');
   }
@@ -936,39 +2260,44 @@ async function main() {
 
   console.log('Creating download records...');
   const downloads = await Promise.all([
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'macos',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'linux',
-        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
-    prisma.download.create({
+    prisma.downloads.create({
       data: {
+        id: randomUUID(),
         os: 'macos',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
-        ipHash: 'hash_' + Math.random().toString(36).substring(7),
+        user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
+        ip_hash: 'hash_' + Math.random().toString(36).substring(7),
       },
     }),
   ]);
@@ -976,34 +2305,39 @@ async function main() {
 
   console.log('Creating feedback entries...');
   const feedbacks = await Promise.all([
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Love the app! The AI rewriting feature is incredibly helpful for my daily writing tasks.',
         email: 'user1@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Great tool, but would love to see more customization options for the rewriting styles.',
         email: 'user2@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         message: 'Anonymous feedback: The interface is clean and intuitive. Keep up the good work!',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
         message: 'Found a bug with the clipboard integration on Linux. Submitted diagnostic logs.',
         email: 'user3@example.com',
       },
     }),
-    prisma.feedback.create({
+    prisma.feedbacks.create({
       data: {
+        id: randomUUID(),
         message: 'This has transformed my workflow! Thank you for creating such an amazing tool.',
         email: 'user4@example.com',
       },
@@ -1013,24 +2347,27 @@ async function main() {
 
   console.log('Creating diagnostic records...');
   const diagnostics = await Promise.all([
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
-        fileSize: 15240, // ~15KB
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-001.log',
+        file_size: 15240, // ~15KB
       },
     }),
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
-        userId: 'user_' + Math.random().toString(36).substring(7),
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
-        fileSize: 28900, // ~29KB
+        id: randomUUID(),
+        user_id: 'user_' + Math.random().toString(36).substring(7),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-002.log',
+        file_size: 28900, // ~29KB
       },
     }),
-    prisma.diagnostic.create({
+    prisma.diagnostics.create({
       data: {
-        filePath: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
-        fileSize: 45120, // ~45KB
+        id: randomUUID(),
+        file_path: 's3://rephlo-diagnostics/2025-11/diagnostic-003.log',
+        file_size: 45120, // ~45KB
       },
     }),
   ]);
@@ -1038,10 +2375,11 @@ async function main() {
 
   console.log('Creating app version records...');
   const versions = await Promise.all([
-    prisma.appVersion.upsert({
+    prisma.app_versions.upsert({
       where: { version: '1.0.0' },
       update: {},
       create: {
+        id: randomUUID(),
         version: '1.0.0',
         releaseDate: new Date('2025-10-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.0.0/rephlo-setup.exe',
@@ -1062,10 +2400,11 @@ Download and run the installer for your platform.`,
         isLatest: false, // Old version
       },
     }),
-    prisma.appVersion.upsert({
+    prisma.app_versions.upsert({
       where: { version: '1.1.0' },
       update: {},
       create: {
+        id: randomUUID(),
         version: '1.1.0',
         releaseDate: new Date('2025-10-15'),
         downloadUrl: 'https://releases.rephlo.ai/v1.1.0/rephlo-setup.exe',
@@ -1085,10 +2424,11 @@ Download and run the installer for your platform.`,
         isLatest: false,
       },
     }),
-    prisma.appVersion.upsert({
+    prisma.app_versions.upsert({
       where: { version: '1.2.0' },
       update: {},
       create: {
+        id: randomUUID(),
         version: '1.2.0',
         releaseDate: new Date('2025-11-01'),
         downloadUrl: 'https://releases.rephlo.ai/v1.2.0/rephlo-setup.exe',
@@ -1127,11 +2467,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'super_admin',
-        displayName: 'Super Administrator',
+        display_name: 'Super Administrator',
         description: 'Full system access with all permissions',
         hierarchy: 1,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -1141,7 +2481,8 @@ Download and run the installer for your platform.`,
           'roles.view', 'roles.create', 'roles.edit', 'roles.delete', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -1149,11 +2490,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'admin',
-        displayName: 'Administrator',
+        display_name: 'Administrator',
         description: 'Full administrative access except system configuration',
         hierarchy: 2,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view', 'subscriptions.create', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate', 'subscriptions.refund',
           'licenses.view', 'licenses.create', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend', 'licenses.revoke',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.delete', 'coupons.approve_redemption',
@@ -1163,7 +2504,8 @@ Download and run the installer for your platform.`,
           'roles.view', 'roles.assign', 'roles.view_audit_log',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -1171,11 +2513,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'ops',
-        displayName: 'Operations Manager',
+        display_name: 'Operations Manager',
         description: 'Operational access for managing subscriptions and licenses',
         hierarchy: 3,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view', 'subscriptions.edit', 'subscriptions.cancel', 'subscriptions.reactivate',
           'licenses.view', 'licenses.activate', 'licenses.deactivate', 'licenses.suspend',
           'coupons.view', 'coupons.create', 'coupons.edit', 'coupons.approve_redemption',
@@ -1183,7 +2525,8 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile', 'users.suspend', 'users.unsuspend',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -1191,11 +2534,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'support',
-        displayName: 'Support Specialist',
+        display_name: 'Support Specialist',
         description: 'Customer support access for resolving issues',
         hierarchy: 4,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view',
           'licenses.view',
           'coupons.view',
@@ -1203,7 +2546,8 @@ Download and run the installer for your platform.`,
           'users.view', 'users.edit_profile',
           'analytics.view_dashboard'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -1211,18 +2555,19 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'analyst',
-        displayName: 'Data Analyst',
+        display_name: 'Data Analyst',
         description: 'Analytics and reporting access',
         hierarchy: 5,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view',
           'licenses.view',
           'credits.view_history',
           'users.view',
           'analytics.view_dashboard', 'analytics.view_revenue', 'analytics.view_usage', 'analytics.export_data'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
     prisma.role.upsert({
@@ -1230,11 +2575,11 @@ Download and run the installer for your platform.`,
       update: {},
       create: {
         name: 'auditor',
-        displayName: 'Auditor',
+        display_name: 'Auditor',
         description: 'Read-only access for compliance and audit',
         hierarchy: 6,
-        isSystemRole: true, // NEW: Mark as system role
-        defaultPermissions: [
+        is_system_role: true, // NEW: Mark as system role
+        default_permissions: [
           'subscriptions.view',
           'licenses.view',
           'credits.view_history',
@@ -1242,7 +2587,8 @@ Download and run the installer for your platform.`,
           'roles.view_audit_log',
           'analytics.view_dashboard'
         ], // Changed: Removed JSON.stringify() - now using Json type
-        isActive: true,
+        is_active: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -1251,44 +2597,52 @@ Download and run the installer for your platform.`,
   // Create RBAC team users
   console.log('Creating RBAC team users...');
   const rbacTeamUsers = await Promise.all([
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'ops.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'ops.user@rephlo.ai',
-        firstName: 'Operations',
-        lastName: 'Manager',
-        emailVerified: true,
+        first_name: 'Operations',
+        last_name: 'Manager',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'support.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'support.user@rephlo.ai',
-        firstName: 'Support',
-        lastName: 'Specialist',
-        emailVerified: true,
+        first_name: 'Support',
+        last_name: 'Specialist',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'analyst.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'analyst.user@rephlo.ai',
-        firstName: 'Data',
-        lastName: 'Analyst',
-        emailVerified: true,
+        first_name: 'Data',
+        last_name: 'Analyst',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
-    prisma.user.upsert({
+    prisma.users.upsert({
       where: { email: 'auditor.user@rephlo.ai' },
       update: {},
       create: {
+        id: randomUUID(),
         email: 'auditor.user@rephlo.ai',
-        firstName: 'Security',
-        lastName: 'Auditor',
-        emailVerified: true,
+        first_name: 'Security',
+        last_name: 'Auditor',
+        email_verified: true,
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -1298,83 +2652,93 @@ Download and run the installer for your platform.`,
   console.log('Creating role assignments...');
   const roleAssignments = await Promise.all([
     // Super admin assignment to existing admin user
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: users[2].userId, // admin.test@rephlo.ai
-          roleId: roles[0].id, // super_admin
+        user_id_role_id: {
+          user_id: users[2].user_id, // admin.test@rephlo.ai
+          role_id: roles[0].id, // super_admin
         },
       },
       update: {},
       create: {
-        userId: users[2].userId,
-        roleId: roles[0].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: users[2].user_id,
+        role_id: roles[0].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Ops user - Ops role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[0].id,
-          roleId: roles[2].id, // ops
+        user_id_role_id: {
+          user_id: rbacTeamUsers[0].id,
+          role_id: roles[2].id, // ops
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[0].id,
-        roleId: roles[2].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[0].id,
+        role_id: roles[2].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Support user - Support role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[1].id,
-          roleId: roles[3].id, // support
+        user_id_role_id: {
+          user_id: rbacTeamUsers[1].id,
+          role_id: roles[3].id, // support
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[1].id,
-        roleId: roles[3].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[1].id,
+        role_id: roles[3].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Analyst user - Analyst role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[2].id,
-          roleId: roles[4].id, // analyst
+        user_id_role_id: {
+          user_id: rbacTeamUsers[2].id,
+          role_id: roles[4].id, // analyst
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[2].id,
-        roleId: roles[4].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[2].id,
+        role_id: roles[4].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
     // Auditor user - Auditor role
-    prisma.userRoleAssignment.upsert({
+    prisma.user_role_assignment.upsert({
       where: {
-        userId_roleId: {
-          userId: rbacTeamUsers[3].id,
-          roleId: roles[5].id, // auditor
+        user_id_role_id: {
+          user_id: rbacTeamUsers[3].id,
+          role_id: roles[5].id, // auditor
         },
       },
       update: {},
       create: {
-        userId: rbacTeamUsers[3].id,
-        roleId: roles[5].id,
-        assignedBy: users[2].userId,
-        assignedAt: new Date(),
+        id: randomUUID(),
+        user_id: rbacTeamUsers[3].id,
+        role_id: roles[5].id,
+        assigned_by: users[2].user_id,
+        assigned_at: new Date(),
+        updated_at: new Date(),
       },
     }),
   ]);
@@ -1413,6 +2777,11 @@ Download and run the installer for your platform.`,
   console.log(`   RBAC Users:    ${rbacTeamUsers.length}`);
   console.log(`   Role Assignments: ${roleAssignments.length}`);
 
+  console.log('\n💰 Provider Pricing System (Plan 161):');
+  console.log(`   Providers:     ${providers.length} (OpenAI, Anthropic, Google, Mistral, Azure)`);
+  console.log(`   Model Pricing: ${modelPricing.length} pricing records`);
+  console.log(`   Pricing Configs: ${pricingConfigs.length} margin configurations`);
+
   console.log('\n═══════════════════════════════════════════════════════════════\n');
 
   console.log('📋 TEST CREDENTIALS:\n');
@@ -1420,12 +2789,12 @@ Download and run the installer for your platform.`,
   console.log('Free Tier User:');
   console.log('   Email:    free.user@example.com');
   console.log('   Password: TestPassword123!');
-  console.log('   Credits:  100 monthly\n');
+  console.log('   Credits:  200 monthly\n');
 
   console.log('Pro Tier User (Local Auth):');
   console.log('   Email:    pro.user@example.com');
   console.log('   Password: TestPassword123!');
-  console.log('   Credits:  10,000 + 5,000 bonus monthly\n');
+  console.log('   Credits:  1,500 monthly\n');
 
   console.log('Admin User (MFA Enabled):');
   console.log('   Email:    admin.test@rephlo.ai');

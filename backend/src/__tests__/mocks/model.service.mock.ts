@@ -1,5 +1,5 @@
 import { IModelService } from '../../interfaces';
-import { SubscriptionTier } from '@prisma/client';
+import { subscription_tier } from '@prisma/client';
 import { TierAccessResult } from '../../utils/tier-access';
 
 export class MockModelService implements IModelService {
@@ -60,7 +60,7 @@ export class MockModelService implements IModelService {
       capability?: string[];
       provider?: string;
     },
-    userTier?: SubscriptionTier
+    userTier?: subscription_tier
   ): Promise<any> {
     let models = Array.from(this.models.values());
 
@@ -81,13 +81,13 @@ export class MockModelService implements IModelService {
     return { models, count: models.length, user_tier: userTier };
   }
 
-  async getModelDetails(modelId: string, _userTier?: SubscriptionTier): Promise<any> {
+  async getModelDetails(modelId: string, _userTier?: subscription_tier): Promise<any> {
     return this.models.get(modelId) || null;
   }
 
   async canUserAccessModel(
     _modelId: string,
-    _userTier: SubscriptionTier
+    _userTier: subscription_tier
   ): Promise<TierAccessResult> {
     // Mock implementation - always allow access in tests
     return {
@@ -141,8 +141,63 @@ export class MockModelService implements IModelService {
     models.forEach((model) => this.models.set(model.id, model));
   }
 
-  addModel(model: any) {
+  async addModel(data: any, _adminUserId: string): Promise<any> {
+    const model = { ...data, ...data.meta };
     this.models.set(model.id, model);
+    return this.getModelDetails(model.id);
+  }
+
+  async markAsLegacy(modelId: string, options: any, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isLegacy = true;
+      model.legacyReplacementModelId = options.replacementModelId;
+      model.deprecationNotice = options.deprecationNotice;
+      model.sunsetDate = options.sunsetDate;
+    }
+  }
+
+  async unmarkLegacy(modelId: string, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isLegacy = false;
+      delete model.legacyReplacementModelId;
+      delete model.deprecationNotice;
+      delete model.sunsetDate;
+    }
+  }
+
+  async archive(modelId: string, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isArchived = true;
+      model.isAvailable = false;
+    }
+  }
+
+  async unarchive(modelId: string, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      model.isArchived = false;
+      model.isAvailable = true;
+    }
+  }
+
+  async updateModelMeta(modelId: string, metaUpdates: any, _adminUserId: string): Promise<void> {
+    const model = this.models.get(modelId);
+    if (model) {
+      Object.assign(model, metaUpdates);
+    }
+  }
+
+  async getLegacyModels(): Promise<any> {
+    const legacy = Array.from(this.models.values()).filter(m => m.isLegacy);
+    return { models: legacy, total: legacy.length };
+  }
+
+  async getArchivedModels(): Promise<any> {
+    const archived = Array.from(this.models.values()).filter(m => m.isArchived);
+    return { models: archived, total: archived.length };
   }
 
   removeModel(modelId: string) {

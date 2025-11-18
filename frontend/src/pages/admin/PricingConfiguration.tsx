@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   RefreshCw,
   Edit,
   Plus,
@@ -14,6 +12,7 @@ import { MarginBadge, PricingConfigForm } from '@/components/admin/PricingCompon
 import { pricingApi, type PricingConfig } from '@/api/pricing';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
+import { safeArray } from '@/lib/safeUtils';
 
 /**
  * PricingConfiguration Page
@@ -55,9 +54,11 @@ function PricingConfiguration() {
         subscriptionTier: filterTier || undefined,
         isActive: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
       });
-      // Backend wraps responses in { success, data }
-      const unwrapped = (response as any).data || response;
-      setConfigs(unwrapped.configs || unwrapped || []);
+      // Handle multiple response formats: { data: { configs: [...] } }, { configs: [...] }, or direct array
+      const configs = (response as any).configs ||
+                     (response as any).data?.configs ||
+                     (response as any).data;
+      setConfigs(safeArray<PricingConfig>(configs));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load pricing configurations');
     } finally {
@@ -140,7 +141,7 @@ function PricingConfiguration() {
   };
 
   // Group configs by tier for summary
-  const tierSummary = (configs || [])
+  const tierSummary = safeArray<PricingConfig>(configs)
     .filter((c) => c.scopeType === 'tier' && c.isActive)
     .reduce((acc, config) => {
       if (config.subscriptionTier) {
@@ -152,292 +153,277 @@ function PricingConfiguration() {
   const tiers = ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'];
 
   // Model-specific overrides
-  const modelOverrides = (configs || []).filter(
+  const modelOverrides = safeArray<PricingConfig>(configs).filter(
     (c) => (c.scopeType === 'model' || c.scopeType === 'combination') && c.isActive
   );
 
   return (
-    <div className="min-h-screen bg-deep-navy-50 dark:bg-deep-navy-900">
-      {/* Breadcrumbs */}
+    <div className="space-y-6">
       <Breadcrumbs />
 
-{/* Header */}
-      <header className="bg-white dark:bg-deep-navy-800 border-b border-deep-navy-200">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Link
-                to="/admin"
-                className="inline-flex items-center text-body text-rephlo-blue hover:text-rephlo-blue-600 mb-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
-              </Link>
-              <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
-                Pricing Configuration
-              </h1>
-              <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                Manage margin multipliers and pricing strategy
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={loadConfigs} disabled={isLoading} variant="ghost">
-                <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-                Refresh
-              </Button>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Configuration
-              </Button>
-            </div>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 font-bold text-deep-navy-800 dark:text-white">
+            Pricing Configuration
+          </h1>
+          <p className="text-body text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Manage margin multipliers and pricing strategy
+          </p>
         </div>
-      </header>
+        <div className="flex gap-2">
+          <Button onClick={loadConfigs} disabled={isLoading} variant="ghost">
+            <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Configuration
+          </Button>
+        </div>
+      </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-600" />
-            <p className="text-body text-green-800">{successMessage}</p>
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-body text-red-800">{error}</p>
-          </div>
-        )}
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4 flex items-center gap-2">
+          <Check className="h-5 w-5 text-green-600" />
+          <p className="text-body text-green-800">{successMessage}</p>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <p className="text-body text-red-800">{error}</p>
+        </div>
+      )}
 
-        {/* Current Multipliers Summary */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
-          <div className="p-6 border-b border-deep-navy-200">
-            <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
-              Current Tier Multipliers
-            </h2>
-            <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-              Active pricing configurations by subscription tier
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
+      {/* Current Multipliers Summary */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
+        <div className="p-6 border-b border-deep-navy-200">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
+            Current Tier Multipliers
+          </h2>
+          <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Active pricing configurations by subscription tier
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Tier
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Multiplier
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Target Margin %
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Actual Margin %
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
+              {tiers.map((tier) => {
+                const config = tierSummary[tier];
+                const multiplier = config?.marginMultiplier || 1.5;
+                const targetMargin = config?.targetGrossMarginPercent || ((multiplier - 1) / multiplier) * 100;
+                // In real app, fetch actual margin from analytics API
+                const actualMargin = targetMargin - (Math.random() * 4 - 2); // Mock data
+
+                return (
+                  <tr key={tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-medium text-deep-navy-800 dark:text-white capitalize">
+                        {tier.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-h4 font-semibold text-rephlo-blue">
+                        {multiplier.toFixed(2)}×
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                        {targetMargin.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <MarginBadge marginPercent={actualMargin} targetMargin={targetMargin} />
+                    </td>
+                    <td className="px-6 py-4">
+                      {config ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-600 dark:text-deep-navy-200">
+                          Not Set
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Button size="sm" variant="ghost" onClick={() => handleEditTier(tier, config)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Model-Specific Overrides */}
+      <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden">
+        <div className="p-6 border-b border-deep-navy-200">
+          <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
+            Model-Specific Overrides
+          </h2>
+          <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+            Custom multipliers for specific providers and models
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Provider
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Model
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Base Multiplier
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Override
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Margin %
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Active
+                </th>
+                <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
+              {modelOverrides.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Tier
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Multiplier
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Target Margin %
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Actual Margin %
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Actions
-                  </th>
+                  <td colSpan={7} className="px-6 py-8 text-center">
+                    <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
+                      No model-specific overrides configured
+                    </p>
+                    <Button size="sm" className="mt-2" onClick={() => setIsCreateDialogOpen(true)}>
+                      Create Override
+                    </Button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
-                {tiers.map((tier) => {
-                  const config = tierSummary[tier];
-                  const multiplier = config?.marginMultiplier || 1.5;
-                  const targetMargin = config?.targetGrossMarginPercent || ((multiplier - 1) / multiplier) * 100;
-                  // In real app, fetch actual margin from analytics API
-                  const actualMargin = targetMargin - (Math.random() * 4 - 2); // Mock data
+              ) : (
+                modelOverrides.map((config) => {
+                  const baseMultiplier = 1.5; // Would lookup from tier config
+                  const marginPercent = ((config.marginMultiplier - 1) / config.marginMultiplier) * 100;
 
                   return (
-                    <tr key={tier} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
+                    <tr key={config.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="font-medium text-deep-navy-800 dark:text-white capitalize">
-                          {tier.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-h4 font-semibold text-rephlo-blue">
-                          {multiplier.toFixed(2)}×
+                        <span className="font-medium text-deep-navy-800 dark:text-white">
+                          {config.providerId || 'All Providers'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                          {targetMargin.toFixed(1)}%
+                          {config.modelId || 'All Models'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <MarginBadge marginPercent={actualMargin} targetMargin={targetMargin} />
+                        <span className="text-body text-deep-navy-600 dark:text-deep-navy-200">
+                          {baseMultiplier.toFixed(2)}×
+                        </span>
                       </td>
                       <td className="px-6 py-4">
-                        {config ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-green-100 text-green-700">
-                            Active
-                          </span>
+                        <span className="text-h4 font-semibold text-rephlo-blue">
+                          {config.marginMultiplier.toFixed(2)}×
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <MarginBadge marginPercent={marginPercent} />
+                      </td>
+                      <td className="px-6 py-4">
+                        {config.isActive ? (
+                          <Check className="h-5 w-5 text-green-600" />
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-caption font-medium bg-deep-navy-100 dark:bg-deep-navy-800 text-deep-navy-600 dark:text-deep-navy-200">
-                            Not Set
-                          </span>
+                          <X className="h-5 w-5 text-deep-navy-300" />
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <Button size="sm" variant="ghost" onClick={() => handleEditTier(tier, config)}>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingConfig(config)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        {/* Model-Specific Overrides */}
-        <div className="bg-white dark:bg-deep-navy-800 rounded-lg border border-deep-navy-200 dark:border-deep-navy-700 overflow-hidden mb-8">
-          <div className="p-6 border-b border-deep-navy-200">
-            <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
-              Model-Specific Overrides
-            </h2>
-            <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-              Custom multipliers for specific providers and models
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-deep-navy-50 dark:bg-deep-navy-900 border-b border-deep-navy-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Provider
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Model
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Base Multiplier
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Override
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Margin %
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Active
-                  </th>
-                  <th className="px-6 py-3 text-left text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-deep-navy-100 dark:divide-deep-navy-700">
-                {modelOverrides.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center">
-                      <p className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                        No model-specific overrides configured
-                      </p>
-                      <Button size="sm" className="mt-2" onClick={() => setIsCreateDialogOpen(true)}>
-                        Create Override
-                      </Button>
-                    </td>
-                  </tr>
-                ) : (
-                  modelOverrides.map((config) => {
-                    const baseMultiplier = 1.5; // Would lookup from tier config
-                    const marginPercent = ((config.marginMultiplier - 1) / config.marginMultiplier) * 100;
-
-                    return (
-                      <tr key={config.id} className="hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 dark:bg-deep-navy-900 transition-colors">
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-deep-navy-800 dark:text-white">
-                            {config.providerId || 'All Providers'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            {config.modelId || 'All Models'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-body text-deep-navy-600 dark:text-deep-navy-200">
-                            {baseMultiplier.toFixed(2)}×
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-h4 font-semibold text-rephlo-blue">
-                            {config.marginMultiplier.toFixed(2)}×
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <MarginBadge marginPercent={marginPercent} />
-                        </td>
-                        <td className="px-6 py-4">
-                          {config.isActive ? (
-                            <Check className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <X className="h-5 w-5 text-deep-navy-300" />
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Button size="sm" variant="ghost" onClick={() => setEditingConfig(config)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Pending Approvals */}
-        {configs && configs.filter((c) => c.approvalStatus === 'pending').length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-8">
-            <h3 className="text-h4 font-semibold text-amber-900 mb-4">
-              Pending Approvals ({configs.filter((c) => c.approvalStatus === 'pending').length})
-            </h3>
-            <div className="space-y-3">
-              {configs
-                .filter((c) => c.approvalStatus === 'pending')
-                .map((config) => (
-                  <div key={config.id} className="bg-white dark:bg-deep-navy-800 rounded-md p-4 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-deep-navy-800 dark:text-white">
-                        {config.scopeType === 'tier' && `${config.subscriptionTier} tier`}
-                        {config.scopeType === 'provider' && `Provider: ${config.providerId}`}
-                        {config.scopeType === 'model' && `Model: ${config.modelId}`}
-                        {' - '}
-                        <span className="text-rephlo-blue">{config.marginMultiplier.toFixed(2)}×</span>
-                      </p>
-                      <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
-                        {config.reason.replace(/_/g, ' ')} - {config.reasonDetails}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => handleReject(config.id)}>
-                        Reject
-                      </Button>
-                      <Button size="sm" onClick={() => handleApprove(config.id)}>
-                        Approve
-                      </Button>
-                    </div>
+      {/* Pending Approvals */}
+      {configs && configs.filter((c) => c.approvalStatus === 'pending').length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+          <h3 className="text-h4 font-semibold text-amber-900 mb-4">
+            Pending Approvals ({configs.filter((c) => c.approvalStatus === 'pending').length})
+          </h3>
+          <div className="space-y-3">
+            {configs
+              .filter((c) => c.approvalStatus === 'pending')
+              .map((config) => (
+                <div key={config.id} className="bg-white dark:bg-deep-navy-800 rounded-md p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-deep-navy-800 dark:text-white">
+                      {config.scopeType === 'tier' && `${config.subscriptionTier} tier`}
+                      {config.scopeType === 'provider' && `Provider: ${config.providerId}`}
+                      {config.scopeType === 'model' && `Model: ${config.modelId}`}
+                      {' - '}
+                      <span className="text-rephlo-blue">{config.marginMultiplier.toFixed(2)}×</span>
+                    </p>
+                    <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200 mt-1">
+                      {config.reason.replace(/_/g, ' ')} - {config.reasonDetails}
+                    </p>
                   </div>
-                ))}
-            </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => handleReject(config.id)}>
+                      Reject
+                    </Button>
+                    <Button size="sm" onClick={() => handleApprove(config.id)}>
+                      Approve
+                    </Button>
+                  </div>
+                </div>
+              ))}
           </div>
-        )}
-      </main>
+        </div>
+      )}
 
-      {/* Create/Edit Dialog */}
-      {(isCreateDialogOpen || editingConfig) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    {/* Create/Edit Dialog */}
+    {(isCreateDialogOpen || editingConfig) && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-deep-navy-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-deep-navy-200">
               <h2 className="text-h3 font-semibold text-deep-navy-800 dark:text-white">
                 {editingConfig?.id ? 'Edit Configuration' : 'Create Pricing Configuration'}
@@ -446,7 +432,15 @@ function PricingConfiguration() {
             <div className="p-6">
               <PricingConfigForm
                 key={editingConfig?.id || 'new'}
-                initialValues={editingConfig || undefined}
+                initialValues={editingConfig ? {
+                  scopeType: editingConfig.scopeType as any,
+                  subscriptionTier: editingConfig.subscriptionTier ?? undefined,
+                  providerId: editingConfig.providerId ?? undefined,
+                  modelId: editingConfig.modelId ?? undefined,
+                  marginMultiplier: editingConfig.marginMultiplier,
+                  reason: editingConfig.reason ?? undefined,
+                  reasonDetails: editingConfig.reasonDetails ?? undefined,
+                } : undefined}
                 onSubmit={handleCreateConfig}
                 onCancel={() => {
                   setIsCreateDialogOpen(false);

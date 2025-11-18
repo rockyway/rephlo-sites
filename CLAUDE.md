@@ -244,6 +244,83 @@ Three independent services sharing a single PostgreSQL database:
 - Prisma error helpers (P2002, P2003, P2025)
 - Strategic indexes on foreign keys and common queries
 
+### API Development Standards
+
+**IMPORTANT: All API development must follow consistent naming and response format standards**
+
+This project enforces strict API standards to ensure consistency across frontend and backend:
+
+**Quick Reference:**
+- **Database fields (Prisma):** `snake_case` (PostgreSQL standard)
+- **API response fields (JSON):** `camelCase` (REST API standard)
+- **TypeScript interfaces:** `camelCase` (JavaScript standard)
+- **URL endpoints:** `kebab-case` (e.g., `/user-management`, `/usage-history`)
+- **Query parameters:** `snake_case` (e.g., `?start_date=&end_date=`)
+- **Error codes:** `SCREAMING_SNAKE_CASE` (e.g., `USER_NOT_FOUND`)
+
+**Transformation Layer:**
+
+The project uses a centralized transformation layer to convert between database and API conventions:
+
+```
+Database (snake_case) → Type Mappers → API Response (camelCase)
+```
+
+**Type Mappers:** `backend/src/utils/typeMappers.ts`
+- `mapCouponToApiType()`, `mapUserToApiType()`, `mapSubscriptionToApiType()`
+- Handles ALL database → API conversions
+- Never manually transform in controllers or services
+
+**Example Pattern:**
+
+```typescript
+// Database query (snake_case OK)
+const dbUser = await prisma.user.findUnique({
+  select: { credit_balance: true, created_at: true }
+});
+
+// Transform to API response (camelCase required)
+return mapUserToApiType(dbUser);
+// → { creditBalance: 10000, createdAt: "2025-01-15T10:30:00.000Z" }
+```
+
+**DTO Pattern (Alternative/Advanced):**
+
+For complex transformations with business logic, use the DTO (Data Transfer Object) pattern:
+
+```typescript
+class UserDTO {
+  static fromPrisma(dbUser: PrismaUser): UserDTO {
+    return {
+      creditBalance: dbUser.credit_balance,
+      remainingCredits: calculateRemaining(dbUser),  // Computed field
+      createdAt: dbUser.created_at.toISOString(),
+    };
+  }
+}
+```
+
+**Complete Standards Documentation:**
+
+For comprehensive guidelines including response formats, error handling, testing requirements, and code review checklists, see:
+
+📖 **[API Development Standards (docs/reference/156-api-standards.md)](docs/reference/156-api-standards.md)**
+
+This document includes:
+- Detailed naming conventions for all contexts
+- Standard response format templates
+- Error handling patterns and HTTP status codes
+- Code review checklist (15 mandatory checks)
+- Testing requirements and examples
+- Quick reference tables
+
+**Additional References:**
+- DTO Pattern Guide: `docs/reference/155-dto-pattern-guide.md`
+- ESLint Prevention: `docs/guides/017-eslint-snake-case-prevention.md`
+- Implementation Report: `docs/progress/161-camelcase-standardization-completion-report.md`
+- Type mappers: `backend/src/utils/typeMappers.ts`
+- Shared types: `shared-types/src/*.types.ts`
+
 ---
 
 ## Database Schema (Backend)
@@ -525,16 +602,32 @@ class UserService {
 ### Adding a New API Endpoint
 
 1. Create controller method
-2. Create service method
+2. Create service method (with database → API transformation)
 3. Create route in api module
 4. Add Zod validation schema
 5. Add auth middleware (`@Requires(['scope', 'role'])`)
 6. Register route in server.ts
 7. Write integration test
 
+**IMPORTANT:** Always transform database results to API format using type mappers or DTOs. See `docs/reference/156-api-standards.md` for complete guidelines.
+
 **Authentication Decorator Pattern:**
 ```typescript
 app.post('/admin/users', authenticate(), requireScopes(['admin']), userController.createUser);
+```
+
+**Response Transformation Pattern:**
+```typescript
+// ✅ CORRECT - Transform database results
+async getUser(id: string) {
+  const dbUser = await this.prisma.user.findUnique({ where: { id } });
+  return mapUserToApiType(dbUser);  // camelCase response
+}
+
+// ❌ WRONG - Direct Prisma return exposes snake_case
+async getUser(id: string) {
+  return await this.prisma.user.findUnique({ where: { id } });
+}
 ```
 
 ---
@@ -629,31 +722,6 @@ npm run prisma:studio
 
 ---
 
-## Performance Considerations
-
-### Frontend
-
-- Use React Query for server state (automatic caching)
-- Code splitting with React Router lazy imports
-- Image optimization (use responsive sizes)
-- TailwindCSS purges unused styles in production build
-
-### Backend
-
-- Connection pooling (20 default) prevents exhaustion
-- JWKS caching (5 minutes) reduces Identity Provider calls
-- Redis rate limiting distributes load
-- Database indexes on foreign keys and common queries
-- Async/await for concurrent I/O
-
-### Identity Provider
-
-- Session storage in PostgreSQL (no in-memory)
-- Token caching in client applications
-- JWKS endpoint cached by clients
-- Graceful shutdown waits for active requests
-
----
 
 ## Important Notes
 
@@ -704,11 +772,6 @@ npm run prisma:studio
 **Workaround:** Use integer TTL values for all token types.
 **Reference:** `identity-provider/src/config/oidc.ts` lines 175-190
 
-### PostgreSQL on Windows
-
-**Issue:** Some Windows PostgreSQL installations may have permission issues.
-**Workaround:** Use postgres user account or create dedicated database user with full privileges.
-
 ---
 
 ## When to Use Specialized Agents
@@ -723,7 +786,64 @@ If delegating tasks to Claude Code agents:
 
 ---
 
-**Last Updated:** November 9, 2025
-**Version:** 1.0.0 (Production Ready)
-**Node.js:** >=18.0.0
-**PostgreSQL:** >=14.0
+## When testing API
+
+- use temporary raw access token in the text file in `temp_token.txt`
+
+## Working Protocol
+
+- Must read the [[working-protocol.md]]
+
+---
+
+## Type Transformation Layer
+### Purpose
+Ensure consistent type transformations between **database (snake_case)** and **API/TypeScript (camelCase)** layers. All conversions must be centralized and standardized.
+
+---
+
+### Naming Convention Standards
+
+| Context              | Convention   | Example                          |
+|----------------------|-------------|----------------------------------|
+| Database (Prisma)    | `snake_case` | `monthly_credit_allocation`      |
+| API Responses (JSON) | `camelCase`  | `monthlyCreditAllocation`        |
+| TypeScript Interfaces| `camelCase`  | `interface TierConfig { monthlyCreditAllocation: number }` |
+
+---
+
+### Shared Types
+- **Location**: `shared-types/src/*.types.ts`  
+- All TypeScript interfaces live in the shared-types package.  
+- Always define API/service types in **camelCase** for consistency across backend and frontend.
+
+---
+
+### Mapper Functions
+- **Location**: `backend/src/utils/typeMappers.ts`  
+- All transformations between DB and API must use centralized mappers.  
+- Never expose raw Prisma objects directly to API consumers.  
+
+**Helpers:**
+- `decimalToNumber()` → Prisma Decimal → JS number  
+- `dateToIsoString()` → Date | null → ISO 8601 string | null  
+- `mapXToApiType()` → snake_case → camelCase  
+
+---
+
+### Correct Usage Pattern
+✅ Query DB → Transform with mapper → Return API type  
+❌ Do not return raw Prisma objects (snake_case leaks into API)
+
+---
+
+### References
+- 📖 API Development Standards (`docs/reference/156-api-standards.md`)  
+- 📖 DTO Pattern Guide (`docs/reference/155-dto-pattern-guide.md`)  
+- 📖 camelCase Standardization Report (`docs/progress/161-camelcase-standardization-completion-report.md`)  
+
+---
+
+## Launch Plan
+- The application is scheduled to launch in March 2026.
+- It is currently in the development phase and undergoing local testing.

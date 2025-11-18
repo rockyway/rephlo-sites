@@ -29,13 +29,22 @@ export const cleanDatabase = async (): Promise<void> => {
   const db = getTestDatabase();
 
   // Delete in order to respect foreign key constraints
-  await db.usageHistory.deleteMany();
-  await db.credit.deleteMany();
-  await db.subscription.deleteMany();
-  await db.userPreference.deleteMany();
-  await db.webhookConfig.deleteMany();
-  await db.user.deleteMany();
-  // Don't delete models and oauth_clients as they are seeded
+  await db.credits.deleteMany(); // Updated to plural form
+  await db.subscription_monetization.deleteMany(); // Updated to new table name
+  await db.subscriptions.deleteMany(); // Legacy table (still exists for backward compatibility)
+  await db.user_preferences.deleteMany(); // Updated to snake_case plural
+  await db.webhook_configs.deleteMany(); // Updated to snake_case plural
+
+  // Delete audit logs and ledger tables
+  await db.$executeRawUnsafe('DELETE FROM model_tier_audit_logs');
+  await db.$executeRawUnsafe('DELETE FROM token_usage_ledger');
+  await db.$executeRawUnsafe('DELETE FROM credit_deduction_ledger');
+  await db.$executeRawUnsafe('DELETE FROM token_usage_daily_summary');
+  await db.$executeRawUnsafe('DELETE FROM user_credit_balance');
+  await db.$executeRawUnsafe('DELETE FROM pricing_configs');
+
+  await db.users.deleteMany(); // Updated to plural form
+  // Don't delete models, oauth_clients, providers, or model_provider_pricing as they are seeded
 };
 
 /**
@@ -67,10 +76,37 @@ export const runMigrations = async (): Promise<void> => {
 };
 
 /**
- * Seed test data (models and oauth clients)
+ * Seed test data (providers, models, and oauth clients)
  */
 export const seedTestData = async (): Promise<void> => {
   const db = getTestDatabase();
+
+  // Seed providers first (required for token_usage_ledger foreign key)
+  const providerCount = await db.provider.count();
+  if (providerCount === 0) {
+    await db.provider.createMany({
+      data: [
+        {
+          name: 'openai',
+          apiType: 'openai',
+          isEnabled: true,
+          updatedAt: new Date(),
+        },
+        {
+          name: 'anthropic',
+          apiType: 'anthropic',
+          isEnabled: true,
+          updatedAt: new Date(),
+        },
+        {
+          name: 'google',
+          apiType: 'gemini',
+          isEnabled: true,
+          updatedAt: new Date(),
+        },
+      ],
+    });
+  }
 
   // Check if oauth_clients exist
   const clientCount = await db.oAuthClient.count();
@@ -93,56 +129,74 @@ export const seedTestData = async (): Promise<void> => {
   // Check if models exist
   const modelCount = await db.model.count();
   if (modelCount === 0) {
-    // Seed models
+    // Seed models with new JSONB meta structure
     await db.model.createMany({
       data: [
         {
           id: 'gpt-5',
           name: 'gpt-5',
-          displayName: 'GPT-5',
           provider: 'openai',
-          description: 'Latest GPT model with enhanced reasoning',
-          capabilities: ['text', 'vision', 'function_calling'],
-          contextLength: 128000,
-          maxOutputTokens: 4096,
-          inputCostPerMillionTokens: 500,
-          outputCostPerMillionTokens: 1500,
-          creditsPer1kTokens: 2,
           isAvailable: true,
-          isDeprecated: false,
-          version: '1.0',
+          isLegacy: false,
+          isArchived: false,
+          meta: {
+            displayName: 'GPT-5',
+            description: 'Latest GPT model with enhanced reasoning',
+            version: '1.0',
+            capabilities: ['text', 'vision', 'function_calling'],
+            contextLength: 128000,
+            maxOutputTokens: 4096,
+            inputCostPerMillionTokens: 500,
+            outputCostPerMillionTokens: 1500,
+            creditsPer1kTokens: 2,
+            requiredTier: 'free',
+            tierRestrictionMode: 'minimum',
+            allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+          },
         },
         {
           id: 'gemini-2.0-pro',
           name: 'gemini-2.0-pro',
-          displayName: 'Gemini 2.0 Pro',
           provider: 'google',
-          description: "Google's most capable model",
-          capabilities: ['text', 'vision', 'long_context'],
-          contextLength: 2000000,
-          maxOutputTokens: 8192,
-          inputCostPerMillionTokens: 350,
-          outputCostPerMillionTokens: 1050,
-          creditsPer1kTokens: 1,
           isAvailable: true,
-          isDeprecated: false,
-          version: '2.0',
+          isLegacy: false,
+          isArchived: false,
+          meta: {
+            displayName: 'Gemini 2.0 Pro',
+            description: "Google's most capable model",
+            version: '2.0',
+            capabilities: ['text', 'vision', 'long_context'],
+            contextLength: 2000000,
+            maxOutputTokens: 8192,
+            inputCostPerMillionTokens: 350,
+            outputCostPerMillionTokens: 1050,
+            creditsPer1kTokens: 1,
+            requiredTier: 'free',
+            tierRestrictionMode: 'minimum',
+            allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+          },
         },
         {
           id: 'claude-3.5-sonnet',
           name: 'claude-3.5-sonnet',
-          displayName: 'Claude 3.5 Sonnet',
           provider: 'anthropic',
-          description: "Anthropic's balanced model",
-          capabilities: ['text', 'vision', 'code'],
-          contextLength: 200000,
-          maxOutputTokens: 4096,
-          inputCostPerMillionTokens: 300,
-          outputCostPerMillionTokens: 1500,
-          creditsPer1kTokens: 2,
           isAvailable: true,
-          isDeprecated: false,
-          version: '3.5',
+          isLegacy: false,
+          isArchived: false,
+          meta: {
+            displayName: 'Claude 3.5 Sonnet',
+            description: "Anthropic's balanced model",
+            version: '3.5',
+            capabilities: ['text', 'vision', 'code'],
+            contextLength: 200000,
+            maxOutputTokens: 4096,
+            inputCostPerMillionTokens: 300,
+            outputCostPerMillionTokens: 1500,
+            creditsPer1kTokens: 2,
+            requiredTier: 'free',
+            tierRestrictionMode: 'minimum',
+            allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+          },
         },
       ],
     });

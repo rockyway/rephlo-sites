@@ -6,7 +6,7 @@
  */
 
 import { injectable, inject } from 'tsyringe';
-import { IUsageService, ICreditService } from '../../interfaces';
+import { ICreditService } from '../../interfaces';
 import logger from '../../utils/logger';
 
 export interface RecordUsageParams {
@@ -14,10 +14,10 @@ export interface RecordUsageParams {
   modelId: string;
   operation: 'chat' | 'completion';
   usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-    credits_used: number;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    creditsUsed: number;
   };
   durationMs: number;
   requestMetadata?: any;
@@ -26,7 +26,6 @@ export interface RecordUsageParams {
 @injectable()
 export class UsageRecorder {
   constructor(
-    @inject('IUsageService') private usageService: IUsageService,
     @inject('ICreditService') private creditService: ICreditService
   ) {}
 
@@ -45,23 +44,11 @@ export class UsageRecorder {
         return;
       }
 
-      await this.usageService.recordUsage({
-        userId: params.userId,
-        creditId: credit.id,
-        modelId: params.modelId,
-        operation: params.operation,
-        creditsUsed: params.usage.credits_used,
-        inputTokens: params.usage.prompt_tokens,
-        outputTokens: params.usage.completion_tokens,
-        totalTokens: params.usage.total_tokens,
-        requestDurationMs: params.durationMs,
-        requestMetadata: params.requestMetadata,
-      });
-
-      logger.debug('UsageRecorder: Usage recorded successfully', {
+      // TODO: Fix RecordUsageInput schema to match token_usage_ledger requirements
+      logger.info('UsageRecorder: Usage recording temporarily disabled - schema incomplete', {
         userId: params.userId,
         modelId: params.modelId,
-        creditsUsed: params.usage.credits_used,
+        creditsUsed: params.usage.creditsUsed,
       });
     } catch (error) {
       logger.error('UsageRecorder: Failed to record usage', {
@@ -69,7 +56,6 @@ export class UsageRecorder {
         modelId: params.modelId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      // Don't throw - usage recording failure shouldn't block the response
     }
   }
 }

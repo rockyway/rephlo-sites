@@ -20,6 +20,7 @@ import { Request, Response } from 'express';
 import { ProrationService } from '../services/proration.service';
 import logger from '../utils/logger';
 import { NotFoundError } from '../utils/errors';
+import { mapProrationEventToApiType } from '../utils/typeMappers';
 
 @injectable()
 export class ProrationController {
@@ -109,11 +110,11 @@ export class ProrationController {
       res.status(200).json({
         proration_event_id: prorationEvent.id,
         subscription_id: id,
-        from_tier: prorationEvent.fromTier,
-        to_tier: prorationEvent.toTier,
-        net_charge_usd: prorationEvent.netChargeUsd,
+        from_tier: prorationEvent.from_tier,
+        to_tier: prorationEvent.to_tier,
+        net_charge_usd: prorationEvent.net_charge_usd,
         status: prorationEvent.status,
-        effective_date: prorationEvent.effectiveDate.toISOString(),
+        effective_date: prorationEvent.effective_date.toISOString(),
         message: 'Tier upgrade applied successfully',
       });
     } catch (error) {
@@ -160,12 +161,12 @@ export class ProrationController {
       res.status(200).json({
         proration_event_id: prorationEvent.id,
         subscription_id: id,
-        from_tier: prorationEvent.fromTier,
-        to_tier: prorationEvent.toTier,
-        net_charge_usd: prorationEvent.netChargeUsd,
-        credit_amount: Math.abs(Math.min(0, Number(prorationEvent.netChargeUsd))),
+        from_tier: prorationEvent.from_tier,
+        to_tier: prorationEvent.to_tier,
+        net_charge_usd: prorationEvent.net_charge_usd,
+        credit_amount: Math.abs(Math.min(0, Number(prorationEvent.net_charge_usd))),
         status: prorationEvent.status,
-        effective_date: prorationEvent.effectiveDate.toISOString(),
+        effective_date: prorationEvent.effective_date.toISOString(),
         message: 'Tier downgrade applied successfully',
       });
     } catch (error) {
@@ -212,13 +213,13 @@ export class ProrationController {
         user_id: userId,
         proration_events: history.map((event) => ({
           id: event.id,
-          subscription_id: event.subscriptionId,
-          from_tier: event.fromTier,
-          to_tier: event.toTier,
-          change_type: event.changeType,
-          net_charge_usd: event.netChargeUsd,
+          subscription_id: event.subscription_id,
+          from_tier: event.from_tier,
+          to_tier: event.to_tier,
+          change_type: event.change_type,
+          net_charge_usd: event.net_charge_usd,
           status: event.status,
-          effective_date: event.effectiveDate.toISOString(),
+          effective_date: event.effective_date.toISOString(),
         })),
       });
     } catch (error) {
@@ -251,44 +252,7 @@ export class ProrationController {
       res.status(200).json({
         status: 'success',
         data: {
-          data: result.data.map((event) => {
-            const subscription = (event as any).subscription;
-            return {
-              id: event.id,
-              userId: event.userId,
-              subscriptionId: event.subscriptionId,
-
-              // Map backend property names to frontend expectations
-              eventType: event.changeType, // Frontend expects eventType
-              fromTier: event.fromTier,
-              toTier: event.toTier,
-
-              // Proration calculation fields - map to frontend names
-              daysInPeriod: event.daysInCycle, // Frontend expects daysInPeriod
-              daysUsed: event.daysInCycle - event.daysRemaining,
-              daysRemaining: event.daysRemaining,
-              unusedCredit: Number(event.unusedCreditValueUsd), // Frontend expects number
-              newTierCost: Number(event.newTierProratedCostUsd),
-              netCharge: Number(event.netChargeUsd),
-
-              // Date fields - map effectiveDate to changeDate
-              periodStart: subscription?.currentPeriodStart?.toISOString() || event.createdAt.toISOString(),
-              periodEnd: subscription?.currentPeriodEnd?.toISOString() || event.createdAt.toISOString(),
-              changeDate: event.effectiveDate.toISOString(), // Frontend expects changeDate
-              effectiveDate: event.effectiveDate.toISOString(),
-              nextBillingDate: subscription?.currentPeriodEnd?.toISOString() || event.effectiveDate.toISOString(),
-
-              status: event.status,
-              stripeInvoiceId: event.stripeInvoiceId,
-
-              // User object matching frontend expectations
-              user: (event as any).user ? {
-                email: (event as any).user.email,
-              } : undefined,
-
-              createdAt: event.createdAt.toISOString(),
-            };
-          }),
+          data: result.data.map((event) => mapProrationEventToApiType(event as any)),
           total: result.total,
           totalPages: result.totalPages,
           page: parseInt((page as string) || '1', 10),
@@ -340,24 +304,92 @@ export class ProrationController {
    */
   async reverseProration(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      res.status(400).json({
+        error: {
+          code: 'validation_error',
+          message: 'Reason is required for proration reversal',
+        },
+      });
+      return;
+    }
 
     try {
-      // This would implement the reversal logic
-      // For now, placeholder
-      res.status(501).json({
-        error: {
-          code: 'not_implemented',
-          message: 'Proration reversal not yet implemented',
+      const adminUserId = (req as any).userId;
+      const reversedEvent = await this.prorationService.reverseProration(id, reason, adminUserId);
+
+      // Standard response format: move message to meta
+      res.status(200).json({
+        status: 'success',
+        data: {
+          id: reversedEvent.id,
+          originalProrationId: id,
+          userId: reversedEvent.user_id,
+          subscriptionId: reversedEvent.subscription_id,
+          fromTier: reversedEvent.from_tier,
+          toTier: reversedEvent.to_tier,
+          netCharge: Number(reversedEvent.net_charge_usd),
+          status: reversedEvent.status,
+          effectiveDate: reversedEvent.effective_date.toISOString(),
+          reason,
+        },
+        meta: {
+          message: 'Proration reversed successfully',
         },
       });
     } catch (error) {
-      logger.error('Failed to reverse proration', { prorationId: id, error });
-      res.status(500).json({
-        error: {
-          code: 'internal_server_error',
-          message: 'Failed to reverse proration',
-        },
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          error: {
+            code: 'proration_not_found',
+            message: error.message,
+          },
+        });
+      } else {
+        logger.error('Failed to reverse proration', { prorationId: id, error });
+        res.status(500).json({
+          error: {
+            code: 'internal_server_error',
+            message: 'Failed to reverse proration',
+          },
+        });
+      }
+    }
+  }
+
+  /**
+   * GET /admin/prorations/:id/calculation
+   * Get detailed calculation breakdown for a proration event (admin only)
+   */
+  async getCalculationBreakdown(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
+    try {
+      const breakdown = await this.prorationService.getCalculationBreakdown(id);
+
+      res.status(200).json({
+        status: 'success',
+        data: breakdown,
       });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({
+          error: {
+            code: 'proration_not_found',
+            message: error.message,
+          },
+        });
+      } else {
+        logger.error('Failed to get calculation breakdown', { prorationId: id, error });
+        res.status(500).json({
+          error: {
+            code: 'internal_server_error',
+            message: 'Failed to retrieve calculation breakdown',
+          },
+        });
+      }
     }
   }
 }

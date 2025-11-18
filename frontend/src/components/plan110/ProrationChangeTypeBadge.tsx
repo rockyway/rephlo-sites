@@ -4,7 +4,7 @@
  * Badge for displaying proration change type with icon and color
  */
 
-import { ProrationChangeType } from '@/types/plan110.types';
+import { ProrationEventType } from '@/types/plan110.types';
 import {
   getProrationChangeTypeColor,
   getProrationChangeTypeIcon,
@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface ProrationChangeTypeBadgeProps {
-  type: ProrationChangeType;
+  type: ProrationEventType;
   className?: string;
 }
 

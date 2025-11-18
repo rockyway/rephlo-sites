@@ -26,7 +26,7 @@ describe('GET /api/user/credits', () => {
     prisma = container.resolve<PrismaClient>('PrismaClient');
 
     // Create test user
-    const testUser = await prisma.user.create({
+    const testUser = await prisma.users.create({
       data: {
         id: 'test-user-credits-api',
         email: 'credits-api-test@example.com',
@@ -36,7 +36,7 @@ describe('GET /api/user/credits', () => {
     testUserId = testUser.id;
 
     // Create free credits for test user
-    await prisma.credit.create({
+    await prisma.credits.create({
       data: {
         id: 'free-credit-test-api',
         userId: testUserId,
@@ -52,7 +52,7 @@ describe('GET /api/user/credits', () => {
     });
 
     // Create pro credits for test user
-    await prisma.credit.create({
+    await prisma.credits.create({
       data: {
         id: 'pro-credit-test-api-1',
         userId: testUserId,
@@ -73,8 +73,8 @@ describe('GET /api/user/credits', () => {
 
   afterAll(async () => {
     // Cleanup test data
-    await prisma.credit.deleteMany({ where: { userId: testUserId } });
-    await prisma.user.delete({ where: { id: testUserId } });
+    await prisma.credits.deleteMany({ where: { userId: testUserId } });
+    await prisma.users.delete({ where: { id: testUserId } });
     await prisma.$disconnect();
   });
 
@@ -199,7 +199,7 @@ describe('GET /api/user/credits', () => {
   describe('Edge Cases', () => {
     it('should handle user with no pro credits', async () => {
       // Create user with only free credits
-      const userNoProCredits = await prisma.user.create({
+      const userNoProCredits = await prisma.users.create({
         data: {
           id: 'user-no-pro-credits',
           email: 'no-pro@example.com',
@@ -207,7 +207,7 @@ describe('GET /api/user/credits', () => {
         },
       });
 
-      await prisma.credit.create({
+      await prisma.credits.create({
         data: {
           id: 'free-credit-only',
           userId: userNoProCredits.id,
@@ -242,8 +242,8 @@ describe('GET /api/user/credits', () => {
       expect(response.body.totalAvailable).toBe(2000); // Only free credits
 
       // Cleanup
-      await prisma.credit.deleteMany({ where: { userId: userNoProCredits.id } });
-      await prisma.user.delete({ where: { id: userNoProCredits.id } });
+      await prisma.credits.deleteMany({ where: { userId: userNoProCredits.id } });
+      await prisma.users.delete({ where: { id: userNoProCredits.id } });
     });
   });
 });

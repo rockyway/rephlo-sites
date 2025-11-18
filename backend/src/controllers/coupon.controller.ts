@@ -19,6 +19,7 @@
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { CouponValidationService } from '../services/coupon-validation.service';
 import { CouponRedemptionService } from '../services/coupon-redemption.service';
 import {
@@ -29,6 +30,8 @@ import {
   safeValidateRequest,
 } from '../types/coupon-validation';
 import logger from '../utils/logger';
+import { sendPaginatedResponse, successResponse } from '../utils/responses';
+import { mapCouponToApiType } from '../utils/typeMappers';
 
 @injectable()
 export class CouponController {
@@ -45,7 +48,7 @@ export class CouponController {
    * Validate a coupon code
    */
   async validateCoupon(req: Request, res: Response): Promise<void> {
-    const userId = (req as any).userId;
+    const userId = (req as any).user_id;
 
     try {
       const data = safeValidateRequest(validateCouponRequestSchema, req.body);
@@ -91,7 +94,7 @@ export class CouponController {
    * Redeem a coupon
    */
   async redeemCoupon(req: Request, res: Response): Promise<void> {
-    const userId = (req as any).userId;
+    const userId = (req as any).user_id;
 
     if (!userId) {
       res.status(401).json({
@@ -129,11 +132,15 @@ export class CouponController {
         userAgent: req.headers['user-agent'],
       });
 
+      // Standard response format: flat data
       res.json({
-        redemption_id: redemption.id,
-        discount_applied: parseFloat(redemption.discountAppliedUsd.toString()),
-        final_amount: parseFloat(redemption.finalAmountUsd.toString()),
-        status: redemption.redemptionStatus,
+        status: 'success',
+        data: {
+          redemptionId: redemption.id,
+          discountApplied: parseFloat(redemption.discount_applied_usd.toString()),
+          finalAmount: parseFloat(redemption.final_amount_usd.toString()),
+          redemptionStatus: redemption.redemption_status,
+        }
       });
     } catch (error: any) {
       logger.error('Failed to redeem coupon', { userId, error });
@@ -152,7 +159,7 @@ export class CouponController {
    */
   async getUserCoupons(req: Request, res: Response): Promise<void> {
     const { userId } = req.params;
-    const requestingUserId = (req as any).userId;
+    const requestingUserId = (req as any).user_id;
 
     // Users can only see their own coupons unless admin
     if (userId !== requestingUserId && (req as any).role !== 'admin') {
@@ -172,9 +179,9 @@ export class CouponController {
         redemptions: redemptions.map((r) => ({
           id: r.id,
           coupon_code: (r as any).coupon.code,
-          discount_applied: parseFloat(r.discountAppliedUsd.toString()),
-          status: r.redemptionStatus,
-          redeemed_at: r.redemptionDate.toISOString(),
+          discount_applied: parseFloat(r.discount_applied_usd.toString()),
+          status: r.redemption_status,
+          redeemed_at: r.redemption_date.toISOString(),
         })),
       });
     } catch (error: any) {
@@ -193,51 +200,70 @@ export class CouponController {
    * Create a coupon (admin only)
    */
   async createCoupon(req: Request, res: Response): Promise<void> {
-    const adminUserId = (req as any).userId;
+    const adminUserId = (req as any).user_id;
 
     try {
       const data = safeValidateRequest(createCouponRequestSchema, req.body);
 
       const coupon = await this.prisma.coupon.create({
         data: {
+          id: randomUUID(),
           code: data.code.toUpperCase(),
-          couponType: data.coupon_type,
-          discountValue: new Prisma.Decimal(data.discount_value),
-          discountType: data.discount_type,
-          currency: data.currency || 'usd',
-          maxUses: data.max_uses,
-          maxUsesPerUser: data.max_uses_per_user || 1,
-          minPurchaseAmount: data.min_purchase_amount ? new Prisma.Decimal(data.min_purchase_amount) : null,
-          tierEligibility: data.tier_eligibility || ['free', 'pro', 'enterprise'],
-          billingCycles: data.billing_cycles || ['monthly', 'annual'],
-          validFrom: new Date(data.valid_from),
-          validUntil: new Date(data.valid_until),
-          isActive: data.is_active ?? true,
-          campaignId: data.campaign_id || null,
+          coupon_type: data.type,
+          discount_value: new Prisma.Decimal(data.discountValue),
+          discount_type: data.discountType,
+          currency: 'usd',
+          max_uses: data.maxUses,
+          max_uses_per_user: data.maxUsesPerUser || 1,
+          min_purchase_amount: data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null,
+          tier_eligibility: data.tierEligibility || ['free', 'pro', 'enterprise'],
+          billing_cycles: data.billingCycles || ['monthly', 'annual'],
+          valid_from: new Date(data.validFrom),
+          valid_until: new Date(data.validUntil),
+          is_active: data.isActive ?? true,
+          campaign_id: data.campaignId || null,
           description: data.description || null,
-          internalNotes: data.internal_notes || null,
-          createdBy: adminUserId,
+          internal_notes: data.internalNotes || null,
+          created_by: adminUserId,
+          updated_at: new Date(),
+        },
+        include: {
+          coupon_usage_limit: true,
+          coupon_campaign: {
+            select: {
+              campaign_name: true,
+            },
+          },
         },
       });
 
       // Create usage limits record
-      await this.prisma.couponUsageLimit.create({
+      await this.prisma.coupon_usage_limit.create({
         data: {
-          couponId: coupon.id,
-          totalUses: 0,
-          uniqueUsers: 0,
-          totalDiscountAppliedUsd: 0,
+          id: randomUUID(),
+          coupon_id: coupon.id,
+          total_uses: 0,
+          unique_users: 0,
+          total_discount_applied_usd: 0,
+          updated_at: new Date(),
         },
       });
 
-      res.status(201).json({
-        id: coupon.id,
-        code: coupon.code,
-        coupon_type: coupon.couponType,
-        discount_value: parseFloat(coupon.discountValue.toString()),
-        discount_type: coupon.discountType,
-        created_at: coupon.createdAt.toISOString(),
+      // Refetch coupon with usageLimits to use mapper
+      const createdCoupon = await this.prisma.coupon.findUnique({
+        where: { id: coupon.id },
+        include: {
+          coupon_usage_limit: true,
+          coupon_campaign: {
+            select: {
+              campaign_name: true,
+            },
+          },
+        },
       });
+
+      // Use mapper for consistent camelCase response
+      res.status(201).json(mapCouponToApiType(createdCoupon!));
     } catch (error: any) {
       logger.error('Failed to create coupon', { error });
       res.status(400).json({
@@ -260,27 +286,37 @@ export class CouponController {
       const data = safeValidateRequest(updateCouponRequestSchema, req.body);
 
       const updateData: any = {};
-      if (data.discount_value !== undefined) updateData.discountValue = new Prisma.Decimal(data.discount_value);
-      if (data.max_uses !== undefined) updateData.maxUses = data.max_uses;
-      if (data.max_uses_per_user !== undefined) updateData.maxUsesPerUser = data.max_uses_per_user;
-      if (data.min_purchase_amount !== undefined)
-        updateData.minPurchaseAmount = data.min_purchase_amount ? new Prisma.Decimal(data.min_purchase_amount) : null;
-      if (data.valid_from) updateData.validFrom = new Date(data.valid_from);
-      if (data.valid_until) updateData.validUntil = new Date(data.valid_until);
-      if (data.is_active !== undefined) updateData.isActive = data.is_active;
+      if (data.code !== undefined) updateData.code = data.code.toUpperCase();
+      if (data.type !== undefined) updateData.couponType = data.type;
+      if (data.discountValue !== undefined) updateData.discountValue = new Prisma.Decimal(data.discountValue);
+      if (data.discountType !== undefined) updateData.discountType = data.discountType;
+      if (data.maxUses !== undefined) updateData.maxUses = data.maxUses;
+      if (data.maxUsesPerUser !== undefined) updateData.maxUsesPerUser = data.maxUsesPerUser;
+      if (data.minPurchaseAmount !== undefined)
+        updateData.minPurchaseAmount = data.minPurchaseAmount ? new Prisma.Decimal(data.minPurchaseAmount) : null;
+      if (data.tierEligibility !== undefined) updateData.tierEligibility = data.tierEligibility;
+      if (data.billingCycles !== undefined) updateData.billingCycles = data.billingCycles;
+      if (data.validFrom) updateData.validFrom = new Date(data.validFrom);
+      if (data.validUntil) updateData.validUntil = new Date(data.validUntil);
+      if (data.isActive !== undefined) updateData.isActive = data.isActive;
       if (data.description !== undefined) updateData.description = data.description;
-      if (data.internal_notes !== undefined) updateData.internalNotes = data.internal_notes;
+      if (data.internalNotes !== undefined) updateData.internalNotes = data.internalNotes;
 
       const coupon = await this.prisma.coupon.update({
         where: { id },
         data: updateData,
+        include: {
+          coupon_usage_limit: true,
+          coupon_campaign: {
+            select: {
+              campaign_name: true,
+            },
+          },
+        },
       });
 
-      res.json({
-        id: coupon.id,
-        code: coupon.code,
-        updated_at: coupon.updatedAt.toISOString(),
-      });
+      // Use mapper for consistent camelCase response
+      res.json(mapCouponToApiType(coupon));
     } catch (error: any) {
       logger.error('Failed to update coupon', { id, error });
       res.status(400).json({
@@ -315,34 +351,90 @@ export class CouponController {
   }
 
   /**
-   * GET /admin/coupons
-   * List all coupons (admin only)
+   * GET /admin/coupons/:id
+   * Get a single coupon by ID (admin only)
    */
-  async listCoupons(_req: Request, res: Response): Promise<void> {
+  async getSingleCoupon(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+
     try {
-      const coupons = await this.prisma.coupon.findMany({
-        orderBy: { createdAt: 'desc' },
+      const coupon = await this.prisma.coupon.findUnique({
+        where: { id },
         include: {
-          usageLimits: true,
-          campaign: true,
+          coupon_usage_limit: true,
+          coupon_campaign: true,
         },
       });
 
-      res.json({
-        coupons: coupons.map((c) => ({
-          id: c.id,
-          code: c.code,
-          coupon_type: c.couponType,
-          discount_value: parseFloat(c.discountValue.toString()),
-          discount_type: c.discountType,
-          max_uses: c.maxUses,
-          total_uses: c.usageLimits?.totalUses || 0,
-          is_active: c.isActive,
-          valid_from: c.validFrom.toISOString(),
-          valid_until: c.validUntil.toISOString(),
-          campaign_name: (c as any).campaign?.campaignName || null,
-        })),
+      if (!coupon) {
+        res.status(404).json({
+          error: {
+            code: 'coupon_not_found',
+            message: 'Coupon not found',
+          },
+        });
+        return;
+      }
+
+      // Map to shared Coupon type using mapper
+      const mappedCoupon = mapCouponToApiType(coupon);
+      res.json(mappedCoupon);
+    } catch (error: any) {
+      logger.error('Failed to get coupon', { id, error });
+      res.status(500).json({
+        error: {
+          code: 'internal_server_error',
+          message: 'Failed to retrieve coupon',
+        },
       });
+    }
+  }
+
+  /**
+   * GET /admin/coupons
+   * List all coupons (admin only)
+   *
+   * Query params:
+   * - page: number (default: 0)
+   * - limit: number (default: 50)
+   * - status: string (optional filter)
+   * - type: string (optional filter)
+   */
+  async listCoupons(req: Request, res: Response): Promise<void> {
+    try {
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Cap at 100
+
+      // Build filter conditions
+      const where: any = {};
+      if (req.query.status) {
+        where.isActive = req.query.status === 'active';
+      }
+      if (req.query.type) {
+        where.couponType = req.query.type;
+      }
+
+      // Fetch coupons with pagination
+      const [coupons, total] = await Promise.all([
+        this.prisma.coupon.findMany({
+          where,
+          skip: page * limit,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+          include: {
+            coupon_usage_limit: true,
+            coupon_campaign: true,
+          },
+        }),
+        this.prisma.coupon.count({ where }),
+      ]);
+
+      // Map to shared Coupon type using mapper
+      const mappedCoupons = coupons.map((c) => mapCouponToApiType(c));
+
+      // Send modern paginated response
+      sendPaginatedResponse(res, mappedCoupons, total, page, limit);
     } catch (error: any) {
       logger.error('Failed to list coupons', { error });
       res.status(500).json({
@@ -357,25 +449,52 @@ export class CouponController {
   /**
    * GET /admin/coupons/:id/redemptions
    * Get redemption history (admin only)
+   *
+   * Query params:
+   * - page: number (default: 0)
+   * - limit: number (default: 50)
    */
   async getCouponRedemptions(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
 
     try {
-      const redemptions = await this.redemptionService.getCouponRedemptions(id);
-      const stats = await this.redemptionService.getRedemptionStats(id);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
-      res.json({
-        stats,
-        redemptions: redemptions.map((r) => ({
-          id: r.id,
-          user_id: r.userId,
-          discount_applied: parseFloat(r.discountAppliedUsd.toString()),
-          status: r.redemptionStatus,
-          redeemed_at: r.redemptionDate.toISOString(),
-          ip_address: r.ipAddress,
-        })),
-      });
+      // Fetch redemptions with pagination
+      const [redemptions, total, stats] = await Promise.all([
+        this.prisma.coupon_redemption.findMany({
+          where: { coupon_id: id },
+          skip: page * limit,
+          take: limit,
+          orderBy: { redemption_date: 'desc' },
+        }),
+        this.prisma.coupon_redemption.count({ where: { coupon_id: id } }),
+        this.redemptionService.getRedemptionStats(id),
+      ]);
+
+      // Map redemptions to response format
+      const mappedRedemptions = redemptions.map((r) => ({
+        id: r.id,
+        user_id: r.user_id,
+        discount_applied: parseFloat(r.discount_applied_usd.toString()),
+        status: r.redemption_status,
+        redeemed_at: r.redemption_date.toISOString(),
+        ip_address: r.ip_address,
+      }));
+
+      // Send modern response with stats in data object
+      res.json(successResponse({
+        redemptions: mappedRedemptions,
+        stats
+      }, {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit + redemptions.length < total
+      }));
     } catch (error: any) {
       logger.error('Failed to get coupon redemptions', { id, error });
       res.status(500).json({

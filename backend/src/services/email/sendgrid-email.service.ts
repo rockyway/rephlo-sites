@@ -427,4 +427,213 @@ Rephlo - Advanced AI-Powered Text Processing
 Questions? Contact us at support@rephlo.com
     `.trim();
   }
+
+  // =============================================================================
+  // Plan 192: Billing & Refund Email Methods
+  // =============================================================================
+
+  /**
+   * Send billing reminder 3 days before charge date
+   */
+  async sendBillingReminderEmail(
+    email: string,
+    username: string,
+    dueDate: Date,
+    amount: number,
+    tier: string
+  ): Promise<void> {
+    try {
+      if (!this.isConfigured) {
+        logger.warn('SendGridEmailService: Email not sent (not configured)', {
+          to: email,
+          type: 'billing_reminder',
+        });
+        return;
+      }
+
+      const subject = `Billing Reminder: Your ${tier} subscription renews on ${dueDate.toLocaleDateString()}`;
+      const text = `Hi ${username},\n\nYour ${tier} subscription will renew on ${dueDate.toLocaleDateString()} for $${amount.toFixed(2)}.\n\nIf you have any questions or want to make changes to your subscription, please visit your account dashboard.\n\nThank you for using Rephlo!\n\n---\nRephlo Team\nsupport@rephlo.com`;
+
+      const msg = {
+        to: email,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName,
+        },
+        subject,
+        text,
+        html: `<p>Hi ${username},</p><p>Your <strong>${tier}</strong> subscription will renew on <strong>${dueDate.toLocaleDateString()}</strong> for <strong>$${amount.toFixed(2)}</strong>.</p><p>If you have any questions or want to make changes to your subscription, please visit your account dashboard.</p><p>Thank you for using Rephlo!</p>`,
+      };
+
+      await sgMail.send(msg);
+
+      logger.info('SendGridEmailService: Billing reminder email sent successfully', {
+        to: email,
+        username,
+        tier,
+        amount,
+      });
+    } catch (error) {
+      logger.error('SendGridEmailService: Failed to send billing reminder email', {
+        to: email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Send cancellation confirmation
+   */
+  async sendCancellationConfirmationEmail(
+    email: string,
+    username: string,
+    cancelAtPeriodEnd: boolean,
+    periodEndDate?: Date
+  ): Promise<void> {
+    try {
+      if (!this.isConfigured) {
+        logger.warn('SendGridEmailService: Email not sent (not configured)', {
+          to: email,
+          type: 'cancellation_confirmation',
+        });
+        return;
+      }
+
+      const subject = 'Subscription Cancellation Confirmed - Rephlo';
+      let text: string;
+      let html: string;
+
+      if (cancelAtPeriodEnd && periodEndDate) {
+        text = `Hi ${username},\n\nYour subscription cancellation has been confirmed. Your subscription will remain active until ${periodEndDate.toLocaleDateString()}, after which it will be cancelled.\n\nYou can reactivate your subscription at any time before this date.\n\nThank you for using Rephlo!\n\n---\nRephlo Team\nsupport@rephlo.com`;
+        html = `<p>Hi ${username},</p><p>Your subscription cancellation has been confirmed. Your subscription will remain active until <strong>${periodEndDate.toLocaleDateString()}</strong>, after which it will be cancelled.</p><p>You can reactivate your subscription at any time before this date.</p><p>Thank you for using Rephlo!</p>`;
+      } else {
+        text = `Hi ${username},\n\nYour subscription has been cancelled immediately and is no longer active.\n\nThank you for using Rephlo. We hope to see you again in the future!\n\n---\nRephlo Team\nsupport@rephlo.com`;
+        html = `<p>Hi ${username},</p><p>Your subscription has been cancelled immediately and is no longer active.</p><p>Thank you for using Rephlo. We hope to see you again in the future!</p>`;
+      }
+
+      const msg = {
+        to: email,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName,
+        },
+        subject,
+        text,
+        html,
+      };
+
+      await sgMail.send(msg);
+
+      logger.info('SendGridEmailService: Cancellation confirmation email sent successfully', {
+        to: email,
+        username,
+        cancelAtPeriodEnd,
+      });
+    } catch (error) {
+      logger.error('SendGridEmailService: Failed to send cancellation confirmation email', {
+        to: email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Send refund confirmation
+   */
+  async sendRefundConfirmationEmail(
+    email: string,
+    username: string,
+    refundAmount: number,
+    refundDate: Date
+  ): Promise<void> {
+    try {
+      if (!this.isConfigured) {
+        logger.warn('SendGridEmailService: Email not sent (not configured)', {
+          to: email,
+          type: 'refund_confirmation',
+        });
+        return;
+      }
+
+      const subject = 'Refund Processed - Rephlo';
+      const text = `Hi ${username},\n\nYour refund of $${refundAmount.toFixed(2)} has been processed on ${refundDate.toLocaleDateString()}.\n\nPlease allow 5-10 business days for the refund to appear in your account, depending on your bank or card issuer.\n\nIf you have any questions, please contact our support team.\n\nThank you for using Rephlo!\n\n---\nRephlo Team\nsupport@rephlo.com`;
+      const html = `<p>Hi ${username},</p><p>Your refund of <strong>$${refundAmount.toFixed(2)}</strong> has been processed on <strong>${refundDate.toLocaleDateString()}</strong>.</p><p>Please allow 5-10 business days for the refund to appear in your account, depending on your bank or card issuer.</p><p>If you have any questions, please contact our support team.</p><p>Thank you for using Rephlo!</p>`;
+
+      const msg = {
+        to: email,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName,
+        },
+        subject,
+        text,
+        html,
+      };
+
+      await sgMail.send(msg);
+
+      logger.info('SendGridEmailService: Refund confirmation email sent successfully', {
+        to: email,
+        username,
+        refundAmount,
+      });
+    } catch (error) {
+      logger.error('SendGridEmailService: Failed to send refund confirmation email', {
+        to: email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Send proration charge notification
+   */
+  async sendProrationChargeEmail(
+    email: string,
+    username: string,
+    fromTier: string,
+    toTier: string,
+    chargeAmount: number,
+    invoiceUrl: string
+  ): Promise<void> {
+    try {
+      if (!this.isConfigured) {
+        logger.warn('SendGridEmailService: Email not sent (not configured)', {
+          to: email,
+          type: 'proration_charge',
+        });
+        return;
+      }
+
+      const subject = `Tier Change Invoice: ${fromTier} → ${toTier} - Rephlo`;
+      const text = `Hi ${username},\n\nYour subscription tier has been changed from ${fromTier} to ${toTier}.\n\nA prorated charge of $${chargeAmount.toFixed(2)} has been applied to your account for the remaining billing period.\n\nView your invoice: ${invoiceUrl}\n\nThank you for using Rephlo!\n\n---\nRephlo Team\nsupport@rephlo.com`;
+      const html = `<p>Hi ${username},</p><p>Your subscription tier has been changed from <strong>${fromTier}</strong> to <strong>${toTier}</strong>.</p><p>A prorated charge of <strong>$${chargeAmount.toFixed(2)}</strong> has been applied to your account for the remaining billing period.</p><p><a href="${invoiceUrl}" style="color: #2563EB; text-decoration: underline;">View your invoice</a></p><p>Thank you for using Rephlo!</p>`;
+
+      const msg = {
+        to: email,
+        from: {
+          email: this.fromEmail,
+          name: this.fromName,
+        },
+        subject,
+        text,
+        html,
+      };
+
+      await sgMail.send(msg);
+
+      logger.info('SendGridEmailService: Proration charge email sent successfully', {
+        to: email,
+        username,
+        fromTier,
+        toTier,
+        chargeAmount,
+      });
+    } catch (error) {
+      logger.error('SendGridEmailService: Failed to send proration charge email', {
+        to: email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 }

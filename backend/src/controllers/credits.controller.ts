@@ -67,19 +67,19 @@ export class CreditsController {
 
     const response: CurrentCreditsResponse = {
       id: credit.id,
-      user_id: credit.userId,
-      total_credits: credit.totalCredits,
-      used_credits: credit.usedCredits,
-      remaining_credits: this.creditService.calculateRemainingCredits(credit),
-      billing_period_start: credit.billingPeriodStart.toISOString(),
-      billing_period_end: credit.billingPeriodEnd.toISOString(),
-      usage_percentage: this.creditService.calculateUsagePercentage(credit),
+      userId: credit.user_id,
+      totalCredits: credit.total_credits,
+      usedCredits: credit.used_credits,
+      remainingCredits: this.creditService.calculateRemainingCredits(credit),
+      billingPeriodStart: credit.billing_period_start.toISOString(),
+      billingPeriodEnd: credit.billing_period_end.toISOString(),
+      usagePercentage: this.creditService.calculateUsagePercentage(credit),
     };
 
     logger.info('CreditsController: Current credits retrieved', {
       userId,
       creditId: credit.id,
-      remainingCredits: response.remaining_credits,
+      remainingCredits: response.remainingCredits,
     });
 
     res.status(200).json(response);
@@ -144,14 +144,14 @@ export class CreditsController {
     const response: UsageHistoryResponse = {
       usage: result.usage.map((item) => ({
         id: item.id,
-        model_id: item.modelId,
-        operation: item.operation,
-        credits_used: item.creditsUsed,
-        input_tokens: item.inputTokens,
-        output_tokens: item.outputTokens,
-        total_tokens: item.totalTokens,
-        request_duration_ms: item.requestDurationMs,
-        created_at: item.createdAt.toISOString(),
+        modelId: item.model_id,
+        operation: item.request_type,
+        creditsUsed: item.credits_deducted,
+        inputTokens: item.input_tokens,
+        outputTokens: item.output_tokens,
+        totalTokens: item.input_tokens + item.output_tokens,
+        requestDurationMs: item.processing_time_ms,
+        createdAt: item.created_at.toISOString(),
       })),
       pagination: result.pagination,
       summary: result.summary,
@@ -287,28 +287,39 @@ export class CreditsController {
 
   /**
    * GET /api/user/credits
-   * Get detailed credit usage information
+   * Get detailed credit usage information with subscription vs purchased credit separation
    *
-   * Returns separate breakdown of free credits (monthly allocation with reset date)
-   * and pro credits (purchased credits with lifetime usage)
+   * BREAKING CHANGE (Plan 189): Response structure changed to split subscription credits
+   * from purchased addon credits. Old "proCredits" field replaced with "subscriptionCredits"
+   * and "purchasedCredits".
    *
    * Response 200:
    * {
    *   "freeCredits": {
-   *     "remaining": 1500,
-   *     "monthlyAllocation": 2000,
-   *     "used": 500,
-   *     "resetDate": "2025-12-01T00:00:00Z",
-   *     "daysUntilReset": 25
+   *     "remaining": 200,              // Free tier monthly credits
+   *     "monthlyAllocation": 200,
+   *     "used": 0,
+   *     "resetDate": "2025-02-01T00:00:00Z",
+   *     "daysUntilReset": 15
    *   },
-   *   "proCredits": {
+   *   "subscriptionCredits": {         // NEW: Monthly credits from subscription tier
+   *     "remaining": 1500,
+   *     "monthlyAllocation": 1500,
+   *     "used": 0,
+   *     "resetDate": "2025-02-01T00:00:00Z",
+   *     "daysUntilReset": 15
+   *   },
+   *   "purchasedCredits": {            // NEW: One-time purchased credit packs (no reset)
    *     "remaining": 5000,
-   *     "purchasedTotal": 10000,
+   *     "totalPurchased": 10000,
    *     "lifetimeUsed": 5000
    *   },
-   *   "totalAvailable": 6500,
-   *   "lastUpdated": "2025-11-06T14:30:00Z"
+   *   "totalAvailable": 6700,          // Sum of all remaining credits
+   *   "lastUpdated": "2025-01-17T14:30:00Z"
    * }
+   *
+   * @see docs/reference/190-credit-deduction-flow-documentation.md
+   * @see docs/plan/189-credit-api-option2-implementation.md (Plan 189)
    */
   async getDetailedCredits(req: Request, res: Response): Promise<void> {
     const userId = req.user!.sub;
@@ -319,7 +330,7 @@ export class CreditsController {
       // Fetch detailed credits from service
       const detailedCredits = await this.creditService.getDetailedCredits(userId);
 
-      // Format response according to API specification
+      // Format response according to API specification (Plan 189 - Split subscription vs purchased)
       const response = {
         freeCredits: {
           remaining: detailedCredits.freeCredits.remaining,
@@ -328,10 +339,17 @@ export class CreditsController {
           resetDate: detailedCredits.freeCredits.resetDate.toISOString(),
           daysUntilReset: detailedCredits.freeCredits.daysUntilReset
         },
-        proCredits: {
-          remaining: detailedCredits.proCredits.remaining,
-          purchasedTotal: detailedCredits.proCredits.purchasedTotal,
-          lifetimeUsed: detailedCredits.proCredits.lifetimeUsed
+        subscriptionCredits: {
+          remaining: detailedCredits.proCredits.subscriptionCredits.remaining,
+          monthlyAllocation: detailedCredits.proCredits.subscriptionCredits.monthlyAllocation,
+          used: detailedCredits.proCredits.subscriptionCredits.used,
+          resetDate: detailedCredits.proCredits.subscriptionCredits.resetDate.toISOString(),
+          daysUntilReset: detailedCredits.proCredits.subscriptionCredits.daysUntilReset
+        },
+        purchasedCredits: {
+          remaining: detailedCredits.proCredits.purchasedCredits.remaining,
+          totalPurchased: detailedCredits.proCredits.purchasedCredits.totalPurchased,
+          lifetimeUsed: detailedCredits.proCredits.purchasedCredits.lifetimeUsed
         },
         totalAvailable: detailedCredits.totalAvailable,
         lastUpdated: detailedCredits.lastUpdated.toISOString()
@@ -341,7 +359,8 @@ export class CreditsController {
         userId,
         totalAvailable: response.totalAvailable,
         freeRemaining: response.freeCredits.remaining,
-        proRemaining: response.proCredits.remaining
+        subscriptionRemaining: response.subscriptionCredits.remaining,
+        purchasedRemaining: response.purchasedCredits.remaining
       });
 
       res.status(200).json(response);

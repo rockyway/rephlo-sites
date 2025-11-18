@@ -2,19 +2,21 @@
  * Swagger UI Routes
  *
  * Provides interactive API documentation using Swagger UI.
- * Serves the OpenAPI specification from docs/openapi/enhanced-api.yaml
+ * Serves the auto-generated OpenAPI specification from Tspec.
  *
  * Endpoints:
  * - GET /api-docs - Swagger UI interface
  * - GET /api-docs/swagger.json - OpenAPI spec in JSON format
  *
- * Reference: backend/docs/openapi/enhanced-api.yaml
+ * Reference: backend/docs/openapi/generated-api.json (auto-generated from Tspec spec files)
+ * Generation: npm run generate:openapi
+ * Validation: npm run validate:openapi:generated
  */
 
 import { Request, Response, Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import YAML from 'yamljs';
 import path from 'path';
+import fs from 'fs';
 import logger from '../utils/logger';
 
 /**
@@ -25,14 +27,16 @@ export function createSwaggerRouter(): Router {
   const router = Router();
 
   try {
-    // Load OpenAPI specification from YAML file
-    const swaggerDocPath = path.join(__dirname, '../../docs/openapi/enhanced-api.yaml');
-    const swaggerDocument = YAML.load(swaggerDocPath);
+    // Load auto-generated OpenAPI specification from Tspec
+    const swaggerDocPath = path.join(__dirname, '../../docs/openapi/generated-api.json');
+    const swaggerDocumentRaw = fs.readFileSync(swaggerDocPath, 'utf-8');
+    const swaggerDocument = JSON.parse(swaggerDocumentRaw);
 
-    logger.info('Swagger: Loaded OpenAPI specification', {
+    logger.info('Swagger: Loaded auto-generated OpenAPI specification from Tspec', {
       path: swaggerDocPath,
       title: swaggerDocument?.info?.title,
       version: swaggerDocument?.info?.version,
+      endpoints: Object.keys(swaggerDocument?.paths || {}).length,
     });
 
     // Swagger UI configuration options

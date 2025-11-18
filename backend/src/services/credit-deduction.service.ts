@@ -36,6 +36,96 @@ export class CreditDeductionService implements ICreditDeductionService {
   }
 
   /**
+   * Estimate credit cost for a request (pre-flight check)
+   * Uses conservative estimation to prevent undercharging
+   * Formula: credits = ceil(estimatedTokens × maxPricePerToken × marginMultiplier × 100)
+   */
+  async estimateCreditsForRequest(
+    userId: string,
+    modelId: string,
+    providerName: string,
+    estimatedInputTokens: number,
+    estimatedOutputTokens: number
+  ): Promise<number> {
+    try {
+      // Get provider ID
+      const provider = await this.prisma.providers.findUnique({
+        where: { name: providerName },
+        select: { id: true },
+      });
+
+      if (!provider) {
+        // Conservative fallback: assume high cost
+        logger.warn('CreditDeductionService: Provider not found for estimation, using fallback', {
+          providerName,
+          modelId,
+        });
+        return Math.ceil(((estimatedInputTokens + estimatedOutputTokens) / 1000) * 20);
+      }
+
+      // Get pricing from model_provider_pricing table
+      const pricingRecords = await this.prisma.$queryRaw<any[]>`
+        SELECT
+          input_price_per_1k as "inputPricePer1k",
+          output_price_per_1k as "outputPricePer1k"
+        FROM model_provider_pricing
+        WHERE provider_id = ${provider.id}::uuid
+          AND model_name = ${modelId}
+          AND is_active = true
+        ORDER BY effective_from DESC
+        LIMIT 1
+      `;
+
+      if (!pricingRecords || pricingRecords.length === 0) {
+        // Conservative fallback
+        logger.warn('CreditDeductionService: Pricing not found, using fallback', {
+          providerId: provider.id,
+          modelId,
+        });
+        return Math.ceil(((estimatedInputTokens + estimatedOutputTokens) / 1000) * 20);
+      }
+
+      const pricing = pricingRecords[0];
+
+      // Calculate with token pricing (prices are per 1k tokens)
+      const inputCost = (estimatedInputTokens / 1000) * parseFloat(pricing.inputPricePer1k);
+      const outputCost = (estimatedOutputTokens / 1000) * parseFloat(pricing.outputPricePer1k);
+      const vendorCost = inputCost + outputCost;
+
+      // Get margin multiplier from pricing config service
+      // Note: This requires IPricingConfigService to be injected
+      // For now, use a conservative default multiplier of 1.5
+      // TODO: Inject IPricingConfigService and call getApplicableMultiplier
+      const marginMultiplier = 1.5; // Conservative default
+
+      // Apply formula with 10% safety margin
+      const estimatedCredits = Math.ceil(vendorCost * marginMultiplier * 100 * 1.1);
+
+      logger.debug('CreditDeductionService: Estimated credits', {
+        userId,
+        modelId,
+        providerName,
+        estimatedInputTokens,
+        estimatedOutputTokens,
+        vendorCost,
+        marginMultiplier,
+        estimatedCredits,
+      });
+
+      return estimatedCredits;
+    } catch (error) {
+      logger.error('CreditDeductionService: Error estimating credits', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+        modelId,
+        providerName,
+      });
+      // Conservative fallback on error
+      return Math.ceil(((estimatedInputTokens + estimatedOutputTokens) / 1000) * 20);
+    }
+  }
+
+  /**
    * Pre-check: Does user have sufficient credits?
    */
   async validateSufficientCredits(
@@ -67,20 +157,20 @@ export class CreditDeductionService implements ICreditDeductionService {
       ];
 
       // Add tier-specific suggestions
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.users.findUnique({
         where: { id: userId },
         include: {
-          subscriptions: {
+          subscription_monetization: {
             where: { status: 'active' },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
             take: 1,
           },
         },
       });
 
-      if (user?.subscriptions[0]?.tier === 'free') {
+      if (user?.subscription_monetization[0]?.tier === 'free') {
         suggestions.push('Upgrade to Pro tier for 20,000 credits/month ($19/month)');
-      } else if (user?.subscriptions[0]?.tier === 'pro') {
+      } else if (user?.subscription_monetization[0]?.tier === 'pro') {
         suggestions.push('Upgrade to Pro Max for 60,000 credits/month ($49/month)');
       }
 
@@ -163,7 +253,48 @@ export class CreditDeductionService implements ICreditDeductionService {
             `;
           }
 
-          // Step 5: Record deduction in ledger (immutable audit trail)
+          // Step 4.5: Update credits.used_credits table (synchronize with user_credit_balance)
+          // This ensures the API endpoints that read from credits table show correct usage
+          await tx.$executeRaw`
+            UPDATE credits
+            SET used_credits = used_credits + ${creditsToDeduct},
+                updated_at = NOW()
+            WHERE user_id = ${userId}::uuid
+              AND is_current = true
+          `;
+
+          // Step 5: Create token usage ledger record FIRST (FK requirement for credit_deduction_ledger)
+          await tx.$executeRaw`
+            INSERT INTO token_usage_ledger (
+              request_id, user_id, subscription_id, model_id, provider_id,
+              input_tokens, output_tokens, cached_input_tokens,
+              vendor_cost, margin_multiplier, credit_value_usd, credits_deducted,
+              request_type, request_started_at, request_completed_at,
+              processing_time_ms, status, gross_margin_usd, created_at
+            ) VALUES (
+              ${requestId}::uuid,
+              ${userId}::uuid,
+              NULL,
+              ${tokenUsageRecord.modelId},
+              ${tokenUsageRecord.providerId}::uuid,
+              ${tokenUsageRecord.inputTokens},
+              ${tokenUsageRecord.outputTokens},
+              ${tokenUsageRecord.cachedInputTokens || 0},
+              ${tokenUsageRecord.vendorCost},
+              ${tokenUsageRecord.marginMultiplier},
+              ${tokenUsageRecord.vendorCost * tokenUsageRecord.marginMultiplier},
+              ${creditsToDeduct},
+              ${tokenUsageRecord.requestType}::request_type,
+              ${tokenUsageRecord.requestStartedAt},
+              ${tokenUsageRecord.requestCompletedAt},
+              ${tokenUsageRecord.processingTime},
+              ${tokenUsageRecord.status}::request_status,
+              ${tokenUsageRecord.grossMargin},
+              NOW()
+            )
+          `;
+
+          // Step 6: Record deduction in ledger (immutable audit trail)
           const deductionRecords = await tx.$queryRaw<any[]>`
             INSERT INTO credit_deduction_ledger (
               user_id, amount, balance_before, balance_after,
@@ -179,33 +310,37 @@ export class CreditDeductionService implements ICreditDeductionService {
 
           const deductionRecordId = deductionRecords[0].id;
 
-          // Step 6: Update token ledger status (link token usage to deduction)
+          // Step 7: Link token usage to deduction record
           await tx.$executeRaw`
             UPDATE token_usage_ledger
             SET deduction_record_id = ${deductionRecordId}::uuid
             WHERE request_id = ${requestId}::uuid
           `;
 
-          // Step 7: Update daily summary for analytics
+          // Step 8: Update daily summary for analytics (matches schema: user_id, date, model_name)
           const today = new Date().toISOString().split('T')[0];
           await tx.$executeRaw`
             INSERT INTO token_usage_daily_summary (
-              user_id, summary_date,
-              total_requests, total_input_tokens, total_output_tokens,
-              total_vendor_cost, total_credits_deducted, total_gross_margin
+              id, user_id, date, model_name,
+              total_input_tokens, total_output_tokens,
+              total_cost_usd, total_credits, created_at
             ) VALUES (
-              ${userId}::uuid, ${today}::date,
-              1, ${tokenUsageRecord.inputTokens}, ${tokenUsageRecord.outputTokens},
-              ${tokenUsageRecord.vendorCost}, ${creditsToDeduct}, ${tokenUsageRecord.grossMargin}
+              gen_random_uuid(),
+              ${userId}::uuid,
+              ${today}::date,
+              ${tokenUsageRecord.modelId},
+              ${tokenUsageRecord.inputTokens},
+              ${tokenUsageRecord.outputTokens},
+              ${tokenUsageRecord.vendorCost},
+              ${creditsToDeduct},
+              NOW()
             )
-            ON CONFLICT (user_id, summary_date)
+            ON CONFLICT (user_id, date, model_name)
             DO UPDATE SET
-              total_requests = token_usage_daily_summary.total_requests + 1,
               total_input_tokens = token_usage_daily_summary.total_input_tokens + ${tokenUsageRecord.inputTokens},
               total_output_tokens = token_usage_daily_summary.total_output_tokens + ${tokenUsageRecord.outputTokens},
-              total_vendor_cost = token_usage_daily_summary.total_vendor_cost + ${tokenUsageRecord.vendorCost},
-              total_credits_deducted = token_usage_daily_summary.total_credits_deducted + ${creditsToDeduct},
-              total_gross_margin = token_usage_daily_summary.total_gross_margin + ${tokenUsageRecord.grossMargin}
+              total_cost_usd = token_usage_daily_summary.total_cost_usd + ${tokenUsageRecord.vendorCost},
+              total_credits = token_usage_daily_summary.total_credits + ${creditsToDeduct}
           `;
 
           return {

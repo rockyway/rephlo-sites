@@ -8,6 +8,7 @@
 
 import { injectable, inject } from 'tsyringe';
 import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { CampaignManagementService } from '../services/campaign-management.service';
 import {
   createCampaignRequestSchema,
@@ -16,10 +17,12 @@ import {
   safeValidateRequest,
 } from '../types/coupon-validation';
 import logger from '../utils/logger';
+import { sendPaginatedResponse } from '../utils/responses';
 
 @injectable()
 export class CampaignController {
   constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
     @inject(CampaignManagementService) private campaignService: CampaignManagementService
   ) {
     logger.debug('CampaignController: Initialized');
@@ -32,21 +35,44 @@ export class CampaignController {
       const data = safeValidateRequest(createCampaignRequestSchema, req.body);
 
       const campaign = await this.campaignService.createCampaign({
-        campaignName: data.campaign_name,
-        campaignType: data.campaign_type,
-        startDate: new Date(data.start_date),
-        endDate: new Date(data.end_date),
-        budgetLimitUsd: data.budget_limit_usd,
-        targetTier: data.target_tier || undefined,
-        isActive: data.is_active ?? true,
+        campaignName: data.campaign_name as string,
+        campaignType: data.campaign_type as any,
+        startDate: new Date(data.start_date as string | Date),
+        endDate: new Date(data.end_date as string | Date),
+        budgetLimitUsd: data.budget_limit_usd as number,
+        targetTier: (data.target_tier as string) || undefined,
+        isActive: (data.is_active as boolean) ?? true,
         createdBy: adminUserId,
       });
 
+      // Calculate status from dates (same as getSingleCampaign)
+      const now = new Date();
+      let status: 'planning' | 'active' | 'paused' | 'ended';
+      if (!campaign.is_active) {
+        status = 'paused';
+      } else if (now < campaign.start_date) {
+        status = 'planning';
+      } else if (now > campaign.end_date) {
+        status = 'ended';
+      } else {
+        status = 'active';
+      }
+
+      // Return full object like getSingleCampaign
       res.status(201).json({
         id: campaign.id,
-        campaign_name: campaign.campaignName,
-        campaign_type: campaign.campaignType,
-        created_at: campaign.createdAt.toISOString(),
+        name: campaign.campaign_name,
+        type: campaign.campaign_type,
+        starts_at: campaign.start_date.toISOString(),
+        ends_at: campaign.end_date.toISOString(),
+        status,
+        budget_cap: parseFloat(campaign.budget_limit_usd.toString()),
+        current_spend: parseFloat(campaign.total_spent_usd.toString()),
+        target_audience: campaign.target_tier ? { user_tiers: [campaign.target_tier] } : undefined,
+        is_active: campaign.is_active,
+        coupon_count: 0, // New campaign has no coupons yet
+        created_at: campaign.created_at.toISOString(),
+        updated_at: campaign.updated_at.toISOString(),
       });
     } catch (error: any) {
       logger.error('Failed to create campaign', { error });
@@ -63,19 +89,61 @@ export class CampaignController {
       const data = safeValidateRequest(updateCampaignRequestSchema, req.body);
 
       const updateData: any = {};
-      if (data.campaign_name) updateData.campaignName = data.campaign_name;
-      if (data.start_date) updateData.startDate = new Date(data.start_date);
-      if (data.end_date) updateData.endDate = new Date(data.end_date);
-      if (data.budget_limit_usd) updateData.budgetLimitUsd = data.budget_limit_usd;
-      if (data.target_tier !== undefined) updateData.targetTier = data.target_tier;
-      if (data.is_active !== undefined) updateData.isActive = data.is_active;
+      if (data.campaign_name) updateData.campaignName = data.campaign_name as string;
+      if (data.start_date) updateData.startDate = new Date(data.start_date as string | Date);
+      if (data.end_date) updateData.endDate = new Date(data.end_date as string | Date);
+      if (data.budget_limit_usd) updateData.budgetLimitUsd = data.budget_limit_usd as number;
+      if (data.target_tier !== undefined) updateData.targetTier = data.target_tier as string | null;
+      if (data.is_active !== undefined) updateData.isActive = data.is_active as boolean;
 
-      const campaign = await this.campaignService.updateCampaign(id, updateData);
+      await this.campaignService.updateCampaign(id, updateData);
 
+      // Fetch full campaign with coupon count
+      const fullCampaign = await this.prisma.coupon_campaign.findUnique({
+        where: { id },
+        include: {
+          coupon: true,
+        },
+      });
+
+      if (!fullCampaign) {
+        res.status(404).json({
+          error: {
+            code: 'campaign_not_found',
+            message: 'Campaign not found after update',
+          },
+        });
+        return;
+      }
+
+      // Calculate status from dates (same as getSingleCampaign)
+      const now = new Date();
+      let status: 'planning' | 'active' | 'paused' | 'ended';
+      if (!fullCampaign.is_active) {
+        status = 'paused';
+      } else if (now < fullCampaign.start_date) {
+        status = 'planning';
+      } else if (now > fullCampaign.end_date) {
+        status = 'ended';
+      } else {
+        status = 'active';
+      }
+
+      // Return full object like getSingleCampaign
       res.json({
-        id: campaign.id,
-        campaign_name: campaign.campaignName,
-        updated_at: campaign.updatedAt.toISOString(),
+        id: fullCampaign.id,
+        name: fullCampaign.campaign_name,
+        type: fullCampaign.campaign_type,
+        starts_at: fullCampaign.start_date.toISOString(),
+        ends_at: fullCampaign.end_date.toISOString(),
+        status,
+        budget_cap: parseFloat(fullCampaign.budget_limit_usd.toString()),
+        current_spend: parseFloat(fullCampaign.total_spent_usd.toString()),
+        target_audience: fullCampaign.target_tier ? { user_tiers: [fullCampaign.target_tier] } : undefined,
+        is_active: fullCampaign.is_active,
+        coupon_count: (fullCampaign as any).coupon?.length || 0,
+        created_at: fullCampaign.created_at.toISOString(),
+        updated_at: fullCampaign.updated_at.toISOString(),
       });
     } catch (error: any) {
       logger.error('Failed to update campaign', { id, error });
@@ -99,22 +167,121 @@ export class CampaignController {
     }
   }
 
-  async listCampaigns(_req: Request, res: Response): Promise<void> {
-    try {
-      const campaigns = await this.campaignService.getAllCampaigns();
+  /**
+   * GET /admin/campaigns/:id
+   * Get a single campaign by ID (admin only)
+   */
+  async getSingleCampaign(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
 
-      res.json({
-        campaigns: campaigns.map((c) => ({
-          id: c.id,
-          campaign_name: c.campaignName,
-          campaign_type: c.campaignType,
-          start_date: c.startDate.toISOString(),
-          end_date: c.endDate.toISOString(),
-          budget_limit_usd: parseFloat(c.budgetLimitUsd.toString()),
-          total_spent_usd: parseFloat(c.totalSpentUsd.toString()),
-          is_active: c.isActive,
-        })),
+    try {
+      const campaign = await this.prisma.coupon_campaign.findUnique({
+        where: { id },
+        include: {
+          coupon: true,
+        },
       });
+
+      if (!campaign) {
+        res.status(404).json({
+          error: {
+            code: 'campaign_not_found',
+            message: 'Campaign not found',
+          },
+        });
+        return;
+      }
+
+      // Calculate status from dates
+      const now = new Date();
+      let status: 'planning' | 'active' | 'paused' | 'ended';
+      if (!campaign.is_active) {
+        status = 'paused';
+      } else if (now < campaign.start_date) {
+        status = 'planning';
+      } else if (now > campaign.end_date) {
+        status = 'ended';
+      } else {
+        status = 'active';
+      }
+
+      // Map to frontend format with all fields
+      res.json({
+        id: campaign.id,
+        name: campaign.campaign_name,
+        type: campaign.campaign_type,
+        starts_at: campaign.start_date.toISOString(),
+        ends_at: campaign.end_date.toISOString(),
+        status,
+        budget_cap: parseFloat(campaign.budget_limit_usd.toString()),
+        current_spend: parseFloat(campaign.total_spent_usd.toString()),
+        target_audience: campaign.target_tier ? { user_tiers: [campaign.target_tier] } : undefined,
+        is_active: campaign.is_active,
+        coupon_count: (campaign as any).coupon?.length || 0,
+        created_at: campaign.created_at.toISOString(),
+        updated_at: campaign.updated_at.toISOString(),
+      });
+    } catch (error: any) {
+      logger.error('Failed to get campaign', { id, error });
+      res.status(500).json({
+        error: {
+          code: 'internal_server_error',
+          message: 'Failed to retrieve campaign',
+        },
+      });
+    }
+  }
+
+  /**
+   * GET /admin/campaigns
+   * List all campaigns (admin only)
+   *
+   * Query params:
+   * - page: number (default: 0)
+   * - limit: number (default: 50)
+   * - status: string (optional filter: active/inactive)
+   * - type: string (optional filter by campaign type)
+   */
+  async listCampaigns(req: Request, res: Response): Promise<void> {
+    try {
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+
+      // Build filter conditions
+      const where: any = {};
+      if (req.query.status) {
+        where.isActive = req.query.status === 'active';
+      }
+      if (req.query.type) {
+        where.campaignType = req.query.type;
+      }
+
+      // Fetch campaigns with pagination
+      const [campaigns, total] = await Promise.all([
+        this.prisma.coupon_campaign.findMany({
+          where,
+          skip: page * limit,
+          take: limit,
+          orderBy: { created_at: 'desc' },
+        }),
+        this.prisma.coupon_campaign.count({ where }),
+      ]);
+
+      // Map to response format
+      const mappedCampaigns = campaigns.map((c) => ({
+        id: c.id,
+        campaign_name: c.campaign_name,
+        campaign_type: c.campaign_type,
+        start_date: c.start_date.toISOString(),
+        end_date: c.end_date.toISOString(),
+        budget_limit_usd: parseFloat(c.budget_limit_usd.toString()),
+        total_spent_usd: parseFloat(c.total_spent_usd.toString()),
+        is_active: c.is_active,
+      }));
+
+      // Send modern paginated response
+      sendPaginatedResponse(res, mappedCampaigns, total, page, limit);
     } catch (error: any) {
       logger.error('Failed to list campaigns', { error });
       res.status(500).json({

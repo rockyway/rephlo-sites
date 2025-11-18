@@ -61,22 +61,22 @@ export class UserSuspensionService implements IUserSuspensionService {
       }
 
       // Create the suspension record
-      const suspension = await this.prisma.userSuspension.create({
+      const suspension = await this.prisma.user_suspensions.create({
         data: {
-          userId,
-          suspendedBy,
+          user_id: userId,
+          suspended_by: suspendedBy,
           reason,
-          expiresAt,
+          expires_at: expiresAt,
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
@@ -86,11 +86,11 @@ export class UserSuspensionService implements IUserSuspensionService {
       });
 
       // Update user status to suspended
-      await this.prisma.user.update({
+      await this.prisma.users.update({
         where: { id: userId },
         data: {
           status: 'suspended',
-          suspendedUntil: expiresAt,
+          suspended_until: expiresAt,
         },
       });
 
@@ -125,10 +125,10 @@ export class UserSuspensionService implements IUserSuspensionService {
 
     try {
       // First, verify the suspension exists and is active
-      const existing = await this.prisma.userSuspension.findUnique({
+      const existing = await this.prisma.user_suspensions.findUnique({
         where: { id: suspensionId },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
@@ -142,37 +142,37 @@ export class UserSuspensionService implements IUserSuspensionService {
         throw new Error(`Suspension not found: ${suspensionId}`);
       }
 
-      if (existing.liftedAt) {
+      if (existing.lifted_at) {
         throw new Error(`Suspension ${suspensionId} has already been lifted`);
       }
 
       // Check if suspension has expired
-      if (existing.expiresAt && existing.expiresAt < new Date()) {
+      if (existing.expires_at && existing.expires_at < new Date()) {
         throw new Error(`Suspension ${suspensionId} has already expired`);
       }
 
       // Update the suspension record
-      const updated = await this.prisma.userSuspension.update({
+      const updated = await this.prisma.user_suspensions.update({
         where: { id: suspensionId },
         data: {
-          liftedAt: new Date(),
-          liftedBy,
+          lifted_at: new Date(),
+          lifted_by: liftedBy,
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -182,11 +182,11 @@ export class UserSuspensionService implements IUserSuspensionService {
       });
 
       // Update user status back to active
-      await this.prisma.user.update({
-        where: { id: existing.userId },
+      await this.prisma.users.update({
+        where: { id: existing.user_id },
         data: {
           status: 'active',
-          suspendedUntil: null,
+          suspended_until: null,
         },
       });
 
@@ -214,23 +214,23 @@ export class UserSuspensionService implements IUserSuspensionService {
     logger.debug('UserSuspensionService: Getting user suspensions', { userId });
 
     try {
-      const suspensions = await this.prisma.userSuspension.findMany({
-        where: { userId },
+      const suspensions = await this.prisma.user_suspensions.findMany({
+        where: { user_id: userId },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -238,7 +238,7 @@ export class UserSuspensionService implements IUserSuspensionService {
           },
         },
         orderBy: {
-          suspendedAt: 'desc',
+          suspended_at: 'desc',
         },
       });
 
@@ -261,24 +261,24 @@ export class UserSuspensionService implements IUserSuspensionService {
     try {
       const now = new Date();
 
-      const suspension = await this.prisma.userSuspension.findFirst({
+      const suspension = await this.prisma.user_suspensions.findFirst({
         where: {
-          userId,
-          liftedAt: null,
+          user_id: userId,
+          lifted_at: null,
           OR: [
-            { expiresAt: null }, // Permanent suspension
-            { expiresAt: { gt: now } }, // Not expired yet
+            { expires_at: null }, // Permanent suspension
+            { expires_at: { gt: now } }, // Not expired yet
           ],
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
@@ -286,7 +286,7 @@ export class UserSuspensionService implements IUserSuspensionService {
           },
         },
         orderBy: {
-          suspendedAt: 'desc',
+          suspended_at: 'desc',
         },
       });
 
@@ -328,45 +328,45 @@ export class UserSuspensionService implements IUserSuspensionService {
       const where: any = {};
 
       if (filters) {
-        if (filters.userId) where.userId = filters.userId;
-        if (filters.suspendedBy) where.suspendedBy = filters.suspendedBy;
+        if (filters.userId) where.user_id = filters.userId;
+        if (filters.suspendedBy) where.suspended_by = filters.suspendedBy;
 
         if (filters.active !== undefined) {
           const now = new Date();
           if (filters.active) {
             // Only active suspensions
-            where.liftedAt = null;
-            where.OR = [{ expiresAt: null }, { expiresAt: { gt: now } }];
+            where.lifted_at = null;
+            where.OR = [{ expires_at: null }, { expires_at: { gt: now } }];
           } else {
             // Only lifted or expired suspensions
-            where.OR = [{ liftedAt: { not: null } }, { expiresAt: { lte: now } }];
+            where.OR = [{ lifted_at: { not: null } }, { expires_at: { lte: now } }];
           }
         }
 
         if (filters.suspendedAfter || filters.suspendedBefore) {
-          where.suspendedAt = {};
-          if (filters.suspendedAfter) where.suspendedAt.gte = filters.suspendedAfter;
-          if (filters.suspendedBefore) where.suspendedAt.lte = filters.suspendedBefore;
+          where.suspended_at = {};
+          if (filters.suspendedAfter) where.suspended_at.gte = filters.suspendedAfter;
+          if (filters.suspendedBefore) where.suspended_at.lte = filters.suspendedBefore;
         }
       }
 
-      const suspensions = await this.prisma.userSuspension.findMany({
+      const suspensions = await this.prisma.user_suspensions.findMany({
         where,
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -374,7 +374,7 @@ export class UserSuspensionService implements IUserSuspensionService {
           },
         },
         orderBy: {
-          suspendedAt: 'desc',
+          suspended_at: 'desc',
         },
       });
 
@@ -399,16 +399,16 @@ export class UserSuspensionService implements IUserSuspensionService {
       const now = new Date();
 
       // Find all expired suspensions that haven't been lifted
-      const expiredSuspensions = await this.prisma.userSuspension.findMany({
+      const expiredSuspensions = await this.prisma.user_suspensions.findMany({
         where: {
-          liftedAt: null,
-          expiresAt: {
+          lifted_at: null,
+          expires_at: {
             lte: now,
           },
         },
         select: {
           id: true,
-          userId: true,
+          user_id: true,
         },
       });
 
@@ -419,19 +419,19 @@ export class UserSuspensionService implements IUserSuspensionService {
 
       // Update each suspension
       for (const suspension of expiredSuspensions) {
-        await this.prisma.userSuspension.update({
+        await this.prisma.user_suspensions.update({
           where: { id: suspension.id },
           data: {
-            liftedAt: now,
+            lifted_at: now,
           },
         });
 
         // Update user status back to active
-        await this.prisma.user.update({
-          where: { id: suspension.userId },
+        await this.prisma.users.update({
+          where: { id: suspension.user_id },
           data: {
             status: 'active',
-            suspendedUntil: null,
+            suspended_until: null,
           },
         });
       }
@@ -464,7 +464,7 @@ export class UserSuspensionService implements IUserSuspensionService {
 
     try {
       // First, verify the suspension exists and is active
-      const existing = await this.prisma.userSuspension.findUnique({
+      const existing = await this.prisma.user_suspensions.findUnique({
         where: { id: suspensionId },
       });
 
@@ -472,37 +472,37 @@ export class UserSuspensionService implements IUserSuspensionService {
         throw new Error(`Suspension not found: ${suspensionId}`);
       }
 
-      if (existing.liftedAt) {
+      if (existing.lifted_at) {
         throw new Error(`Cannot extend a lifted suspension: ${suspensionId}`);
       }
 
       // Check if suspension has already expired
-      if (existing.expiresAt && existing.expiresAt < new Date()) {
+      if (existing.expires_at && existing.expires_at < new Date()) {
         throw new Error(`Cannot extend an expired suspension: ${suspensionId}`);
       }
 
       // Update the suspension
-      const updated = await this.prisma.userSuspension.update({
+      const updated = await this.prisma.user_suspensions.update({
         where: { id: suspensionId },
         data: {
-          expiresAt: newExpiresAt,
+          expires_at: newExpiresAt,
           reason: `${existing.reason}\n\nExtension: ${extendReason}`,
         },
         include: {
-          user: {
+          users_user_suspensions_user_idTousers: {
             select: {
               id: true,
               email: true,
               status: true,
             },
           },
-          suspender: {
+          users_user_suspensions_suspended_byTousers: {
             select: {
               id: true,
               email: true,
             },
           },
-          lifter: {
+          users_user_suspensions_lifted_byTousers: {
             select: {
               id: true,
               email: true,
@@ -512,10 +512,10 @@ export class UserSuspensionService implements IUserSuspensionService {
       });
 
       // Update user's suspendedUntil field
-      await this.prisma.user.update({
-        where: { id: existing.userId },
+      await this.prisma.users.update({
+        where: { id: existing.user_id },
         data: {
-          suspendedUntil: newExpiresAt,
+          suspended_until: newExpiresAt,
         },
       });
 
@@ -541,13 +541,13 @@ export class UserSuspensionService implements IUserSuspensionService {
   private mapToResponse(suspension: any): UserSuspensionResponse {
     return {
       id: suspension.id,
-      userId: suspension.userId,
-      suspendedBy: suspension.suspendedBy,
+      userId: suspension.user_id,
+      suspendedBy: suspension.suspended_by,
       reason: suspension.reason,
-      expiresAt: suspension.expiresAt,
-      liftedAt: suspension.liftedAt,
-      liftedBy: suspension.liftedBy,
-      suspendedAt: suspension.suspendedAt,
+      expiresAt: suspension.expires_at,
+      liftedAt: suspension.lifted_at,
+      liftedBy: suspension.lifted_by,
+      suspendedAt: suspension.suspended_at,
       user: suspension.user
         ? {
             id: suspension.user.id,
