@@ -51,6 +51,23 @@ export class AuthService {
   }
 
   /**
+   * Mask license key for security (show last 4 characters)
+   * Example: REPHLO-V1-XXXX-XXXX-AB12 → REPHLO-V1-****-****-AB12
+   */
+  private maskLicenseKey(key: string): string {
+    const parts = key.split('-');
+    if (parts.length < 3) return key;
+
+    return [
+      parts[0], // REPHLO
+      parts[1], // V1
+      '****',
+      '****',
+      parts[parts.length - 1], // Last segment
+    ].join('-');
+  }
+
+  /**
    * Authenticate user with email and password
    * @returns User object if authentication succeeds, null otherwise
    *
@@ -142,16 +159,35 @@ export class AuthService {
     getOIDCScopeFiltered: (scopes: string[]) => string[];
   } | undefined> {
     try {
-      const user = await this.findById(accountId);
+      // Fetch user with perpetual license data (join query)
+      const user = await this.prisma.user.findUnique({
+        where: { id: accountId },
+        include: {
+          perpetualLicenses: {
+            where: { status: 'active' },
+            orderBy: { purchasedAt: 'desc' },
+            take: 1, // Most recent active license
+            select: {
+              licenseKey: true,
+              status: true,
+              purchasedVersion: true,
+              eligibleUntilVersion: true,
+            },
+          },
+        },
+      });
 
       if (!user) {
         return undefined;
       }
 
+      // Get the most recent active license (if exists)
+      const activeLicense = user.perpetualLicenses[0] || null;
+
       return {
         accountId: user.id,
         claims: async (_use: string, scope: string) => {
-          return this.getClaimsForUser(user, scope);
+          return this.getClaimsForUser(user, scope, activeLicense);
         },
         /**
          * Filter OIDC scopes based on what the user has previously granted
@@ -180,8 +216,18 @@ export class AuthService {
 
   /**
    * Get OIDC claims for a user based on requested scope
+   * Now includes perpetual license information in JWT tokens
    */
-  getClaimsForUser(user: User, scope: string): Record<string, any> {
+  getClaimsForUser(
+    user: User,
+    scope: string,
+    activeLicense?: {
+      licenseKey: string;
+      status: string;
+      purchasedVersion: string;
+      eligibleUntilVersion: string;
+    } | null
+  ): Record<string, any> {
     const scopes = scope.split(' ');
     const claims: Record<string, any> = {
       sub: user.id,
@@ -229,6 +275,29 @@ export class AuthService {
 
       // Future: Add permissions when RBAC implemented (Plan 119)
       // claims.permissions = await getUserPermissions(user.id);
+    }
+
+    // License claims - Add perpetual license information to JWT
+    // This enables Desktop App auto-activation and offline validation
+    if (activeLicense) {
+      claims.licenseStatus = activeLicense.status; // 'active' | 'suspended' | 'revoked'
+      claims.licenseKey = this.maskLicenseKey(activeLicense.licenseKey); // Masked for security
+      claims.licenseTier = 'perpetual';
+      claims.licenseVersion = activeLicense.purchasedVersion;
+
+      logger.debug('AuthService: Including license claims in token', {
+        userId: user.id,
+        licenseStatus: claims.licenseStatus,
+        maskedKey: claims.licenseKey,
+      });
+    } else {
+      // No active license - user is on free tier or subscription
+      claims.licenseStatus = null;
+      claims.licenseTier = 'free'; // Default tier for users without perpetual license
+
+      logger.debug('AuthService: No active license found, using free tier', {
+        userId: user.id,
+      });
     }
 
     return claims;

@@ -1858,3 +1858,14 @@ npm run test -- src/components/admin/__tests__/EditModelDialog.test.tsx
 - Add snapshot tests for UI consistency
 
 
+2025-11-19 14:47 - Created Plan 203: Perpetual License Auto-Activation Coordination (docs/plan/203-perpetual-license-auto-activation-coordination-plan.md). Analyzed existing Plan 110 implementation, identified missing GET /api/licenses/me endpoint and IDP JWT claims integration. Updated desktop requirements to leverage Text Assistant WPF infrastructure (OAuth, encryption, EF Core). Reduced desktop effort from 4 weeks to 2.5 weeks.
+
+## 2025-01-19: JWT License Claims Integration (Plan 203, Phase 2)
+
+Implemented perpetual license claims in Identity Provider JWT tokens:
+- Added `maskLicenseKey()` helper function to mask license keys (REPHLO-V1-****-****-AB12)
+- Enhanced `findAccount()` to include perpetualLicenses relation (active licenses only)
+- Modified `getClaimsForUser()` to include license claims: licenseStatus, licenseKey (masked), licenseTier, licenseVersion
+- Updated identity-provider Prisma schema to include PerpetualLicense model and LicenseStatus enum
+- JWT now includes license info for Desktop App auto-activation and offline validation
+- Userinfo endpoint automatically includes license claims via shared claims() function
