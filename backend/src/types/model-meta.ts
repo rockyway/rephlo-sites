@@ -202,6 +202,22 @@ export const updateModelMetaRequestSchema = ModelMetaSchema.partial();
 
 export type UpdateModelMetaRequest = z.infer<typeof updateModelMetaRequestSchema>;
 
+/**
+ * Schema for full model update
+ * PUT /admin/models/:id
+ *
+ * Allows updating model core fields, metadata, and pricing in a single atomic operation.
+ * All fields are optional except the ones being changed.
+ * Model ID and provider cannot be changed after creation.
+ */
+export const updateModelRequestSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  meta: ModelMetaSchema.partial().optional(),
+  reason: z.string().max(1000).optional(), // Admin reason for audit trail
+});
+
+export type UpdateModelRequest = z.infer<typeof updateModelRequestSchema>;
+
 // =============================================================================
 // Utility Functions
 // =============================================================================

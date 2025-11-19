@@ -16,6 +16,7 @@ interface LifecycleActionMenuProps {
   onArchive: () => void;
   onUnarchive: () => void;
   onEditMeta: () => void;
+  onEditFull?: () => void;
   permissions: {
     canManageLifecycle: boolean;
     canEditMeta: boolean;
@@ -27,8 +28,8 @@ interface LifecycleActionMenuProps {
  *
  * Dropdown menu for lifecycle actions on a model.
  * Shows different menu items based on current model status:
- * - Active → Mark Legacy, Archive, Edit Meta
- * - Legacy → Unmark Legacy, Archive, Edit Meta
+ * - Active → Mark Legacy, Archive, Edit Meta, Edit Full Model
+ * - Legacy → Unmark Legacy, Archive, Edit Meta, Edit Full Model
  * - Archived → Unarchive only
  *
  * Respects RBAC permissions for showing/hiding actions.
@@ -40,6 +41,7 @@ function LifecycleActionMenu({
   onArchive,
   onUnarchive,
   onEditMeta,
+  onEditFull,
   permissions,
 }: LifecycleActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -193,12 +195,29 @@ function LifecycleActionMenu({
             </>
           )}
 
-          {/* Edit Meta - Available for all non-archived models */}
+          {/* Edit Actions - Available for all non-archived models */}
           {!isArchived && permissions.canEditMeta && (
             <>
               {/* Separator if there are other actions */}
               {permissions.canManageLifecycle && (
                 <div className="my-1 h-px bg-deep-navy-200 dark:bg-deep-navy-700" />
+              )}
+              {onEditFull && (
+                <button
+                  onClick={() => handleAction(onEditFull)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-2',
+                    'text-body-sm text-left',
+                    'text-rephlo-blue dark:text-electric-cyan',
+                    'hover:bg-rephlo-blue/10 dark:hover:bg-electric-cyan/10',
+                    'transition-colors duration-fast',
+                    'font-medium'
+                  )}
+                  role="menuitem"
+                >
+                  <Edit className="h-4 w-4" />
+                  <span>Edit Full Model</span>
+                </button>
               )}
               <button
                 onClick={() => handleAction(onEditMeta)}
@@ -212,7 +231,7 @@ function LifecycleActionMenu({
                 role="menuitem"
               >
                 <Edit className="h-4 w-4" />
-                <span>Edit Metadata</span>
+                <span>Edit Tier Only</span>
               </button>
             </>
           )}

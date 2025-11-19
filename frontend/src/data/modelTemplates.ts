@@ -51,7 +51,7 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       capabilities: ['text', 'function_calling'],
       tierRestrictionMode: 'minimum',
       requiredTier: 'pro',
-      allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+      allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
       providerMetadata: {
         openai: {
           modelFamily: '', // Admin fills: "gpt-4", "gpt-3.5", "gpt-5"
@@ -63,8 +63,8 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       displayName: 'e.g., GPT-5, GPT-4 Turbo',
       description: 'e.g., OpenAI GPT-5 with 272K context and enhanced reasoning',
       contextLength: 'e.g., 128000 (128K), 272000 (272K)',
-      inputCost: 'Cost per 1M input tokens in cents (e.g., 1250 = $1.25)',
-      outputCost: 'Cost per 1M output tokens in cents (e.g., 10000 = $10.00)',
+      inputCost: 'e.g., 1.25 for $1.25 per 1M tokens',
+      outputCost: 'e.g., 10.00 for $10.00 per 1M tokens',
     },
   },
   anthropic: {
@@ -74,7 +74,7 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       capabilities: ['text', 'vision', 'long_context'],
       tierRestrictionMode: 'minimum',
       requiredTier: 'pro',
-      allowedTiers: ['pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+      allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
       providerMetadata: {
         anthropic: {
           modelSeries: '', // Admin fills: "claude-3", "claude-2", "claude-4"
@@ -86,8 +86,8 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       displayName: 'e.g., Claude Opus 4.5, Claude Sonnet 4.5',
       description: 'e.g., Anthropic Claude with 200K context and advanced vision',
       contextLength: 'e.g., 200000 (200K)',
-      inputCost: 'Cost per 1M input tokens in cents (e.g., 1500 = $1.50)',
-      outputCost: 'Cost per 1M output tokens in cents (e.g., 7500 = $7.50)',
+      inputCost: 'e.g., 1.50 for $1.50 per 1M tokens',
+      outputCost: 'e.g., 7.50 for $7.50 per 1M tokens',
     },
   },
   google: {
@@ -97,7 +97,7 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       capabilities: ['text', 'vision'],
       tierRestrictionMode: 'minimum',
       requiredTier: 'free',
-      allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+      allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
       providerMetadata: {
         google: {
           modelType: '', // Admin fills: "gemini-pro", "gemini-ultra", "palm"
@@ -109,8 +109,8 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       displayName: 'e.g., Gemini 2.0 Pro, Gemini Ultra',
       description: 'e.g., Google Gemini 2.0 Pro with multimodal capabilities',
       contextLength: 'e.g., 1048576 (1M), 2097152 (2M)',
-      inputCost: 'Cost per 1M input tokens in cents (e.g., 350 = $0.35)',
-      outputCost: 'Cost per 1M output tokens in cents (e.g., 1050 = $1.05)',
+      inputCost: 'e.g., 0.35 for $0.35 per 1M tokens',
+      outputCost: 'e.g., 1.05 for $1.05 per 1M tokens',
     },
   },
   custom: {
@@ -120,14 +120,14 @@ export const MODEL_TEMPLATES: Record<string, ModelTemplate> = {
       capabilities: ['text'],
       tierRestrictionMode: 'minimum',
       requiredTier: 'free',
-      allowedTiers: ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+      allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
     },
     hints: {
       displayName: 'e.g., My Custom Model 1.0',
       description: 'e.g., Custom model with specialized capabilities',
       contextLength: 'e.g., 8000, 16000, 128000',
-      inputCost: 'Cost per 1M input tokens in cents',
-      outputCost: 'Cost per 1M output tokens in cents',
+      inputCost: 'e.g., 1.00 for $1.00 per 1M tokens',
+      outputCost: 'e.g., 3.00 for $3.00 per 1M tokens',
     },
   },
 };
@@ -149,10 +149,10 @@ export const CAPABILITY_OPTIONS = [
 export const TIER_OPTIONS = [
   { value: 'free', label: 'Free' },
   { value: 'pro', label: 'Pro' },
+  { value: 'pro_plus', label: 'Pro Plus' },
   { value: 'pro_max', label: 'Pro Max' },
   { value: 'enterprise_pro', label: 'Enterprise Pro' },
-  { value: 'enterprise_max', label: 'Enterprise Max' },
-  { value: 'perpetual', label: 'Perpetual' },
+  { value: 'enterprise_pro_plus', label: 'Enterprise Pro Plus' },
 ];
 
 /**

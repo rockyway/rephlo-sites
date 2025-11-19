@@ -195,7 +195,7 @@ function ModelTierEditDialog({
                 Allowed Tiers (for whitelist mode)
               </label>
               <div className="flex gap-3 flex-wrap">
-                {(['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'] as SubscriptionTier[]).map(
+                {(['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'] as SubscriptionTier[]).map(
                   (tier) => (
                     <label
                       key={tier}

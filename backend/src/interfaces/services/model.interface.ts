@@ -4,6 +4,7 @@ import {
   CreateModelRequest,
   MarkLegacyRequest,
   UpdateModelMetaRequest,
+  UpdateModelRequest,
 } from '../../types/model-meta';
 import {
   ModelListResponse,
@@ -112,6 +113,17 @@ export interface IModelService {
     metaUpdates: UpdateModelMetaRequest,
     adminUserId: string
   ): Promise<void>;
+
+  /**
+   * Full model update with atomic pricing record update
+   * Updates model record AND pricing record in a single transaction
+   * Auto-calculates credits when pricing changes
+   */
+  updateModel(
+    modelId: string,
+    updates: UpdateModelRequest,
+    adminUserId: string
+  ): Promise<ModelDetailsResponse>;
 
   /**
    * Get all legacy models

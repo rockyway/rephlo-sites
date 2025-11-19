@@ -195,6 +195,7 @@ import { UserService } from './services/user.service';
 import { CreditService } from './services/credit.service';
 import { UsageService } from './services/usage.service';
 import { ModelService } from './services/model.service';
+import { ModelVersionHistoryService } from './services/model-version-history.service';
 import { WebhookService } from './services/webhook.service';
 import { UsageRecorder } from './services/llm/usage-recorder';
 import { LLMService } from './services/llm.service';
@@ -278,6 +279,9 @@ container.register('ProrationService', { useClass: ProrationService });
 
 // Register Audit Logging service (Phase 4 P0 Fixes)
 container.registerSingleton(AuditLogService);
+
+// Register Model Version History service
+container.registerSingleton(ModelVersionHistoryService);
 
 // Register Admin Analytics & User Detail services (Phase 4 Backend)
 container.registerSingleton(AdminAnalyticsService);

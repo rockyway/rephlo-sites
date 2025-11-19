@@ -92,11 +92,17 @@ function AddModelDialog({
 
   // Auto-calculate credits when pricing changes
   useEffect(() => {
-    const input = parseInt(inputCost);
-    const output = parseInt(outputCost);
+    // Convert dollar amounts to cents
+    const inputDollars = parseFloat(inputCost);
+    const outputDollars = parseFloat(outputCost);
 
-    if (input > 0 && output > 0) {
-      const suggested = calculateSuggestedCredits(input, output);
+    // Convert to cents (multiply by 100)
+    const inputCents = Math.round(inputDollars * 100);
+    const outputCents = Math.round(outputDollars * 100);
+
+    // Auto-calc requires at least output cost > 0 (input can be free for some models)
+    if (!isNaN(inputCents) && !isNaN(outputCents) && outputCents > 0) {
+      const suggested = calculateSuggestedCredits(inputCents, outputCents);
       setShowAutoCalculation(true);
 
       // Only auto-fill if user hasn't manually set credits
@@ -154,6 +160,12 @@ function AddModelDialog({
   const handleConfirm = async () => {
     if (!validateForm()) return;
 
+    // Convert dollar amounts to cents for storage
+    const inputDollars = parseFloat(inputCost);
+    const outputDollars = parseFloat(outputCost);
+    const inputCostInCents = Math.round(inputDollars * 100);
+    const outputCostInCents = Math.round(outputDollars * 100);
+
     const modelData = {
       id: modelId.trim(),
       name: modelName.trim(),
@@ -165,8 +177,8 @@ function AddModelDialog({
         capabilities,
         contextLength: parseInt(contextLength),
         maxOutputTokens: maxOutputTokens ? parseInt(maxOutputTokens) : undefined,
-        inputCostPerMillionTokens: parseInt(inputCost),
-        outputCostPerMillionTokens: parseInt(outputCost),
+        inputCostPerMillionTokens: inputCostInCents,
+        outputCostPerMillionTokens: outputCostInCents,
         creditsPer1kTokens: parseInt(creditsPerK),
         requiredTier,
         tierRestrictionMode,
@@ -461,36 +473,44 @@ function AddModelDialog({
 
                 <div>
                   <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
-                    Input Cost (per 1M tokens) <span className="text-red-500">*</span>
+                    Input Cost (per 1M tokens in USD) <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="number"
+                    step="0.01"
                     value={inputCost}
                     onChange={(e) => setInputCost(e.target.value)}
-                    placeholder={currentTemplate.hints.inputCost}
+                    placeholder="e.g., 1.25 for $1.25 per 1M tokens"
                     disabled={isSaving}
                     error={!!errors.inputCost}
                   />
                   {errors.inputCost && (
                     <p className="mt-1 text-caption text-red-600 dark:text-red-400">{errors.inputCost}</p>
                   )}
+                  <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                    Enter cost in dollars (e.g., 1.25 = $1.25, 0.25 = $0.25)
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
-                    Output Cost (per 1M tokens) <span className="text-red-500">*</span>
+                    Output Cost (per 1M tokens in USD) <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="number"
+                    step="0.01"
                     value={outputCost}
                     onChange={(e) => setOutputCost(e.target.value)}
-                    placeholder={currentTemplate.hints.outputCost}
+                    placeholder="e.g., 10.00 for $10.00 per 1M tokens"
                     disabled={isSaving}
                     error={!!errors.outputCost}
                   />
                   {errors.outputCost && (
                     <p className="mt-1 text-caption text-red-600 dark:text-red-400">{errors.outputCost}</p>
                   )}
+                  <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                    Enter cost in dollars (e.g., 10.00 = $10.00, 2.50 = $2.50)
+                  </p>
                 </div>
 
                 <div className="col-span-2">

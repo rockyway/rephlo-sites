@@ -31,8 +31,10 @@ import {
   CreateModelRequest,
   MarkLegacyRequest,
   UpdateModelMetaRequest,
+  UpdateModelRequest,
   calculateCreditsPerKTokens,
 } from '../types/model-meta';
+import { ModelVersionHistoryService } from './model-version-history.service';
 
 // =============================================================================
 // In-Memory Cache
@@ -78,7 +80,10 @@ const modelCache = new ModelCache();
 
 @injectable()
 export class ModelService implements IModelService {
-  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+  constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
+    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService
+  ) {
     logger.debug('ModelService: Initialized');
   }
 
@@ -592,7 +597,20 @@ export class ModelService implements IModelService {
       throw new Error(`Model with ID '${data.id}' already exists`);
     }
 
-    // Create model in database
+    // Step 1: Look up provider UUID
+    const provider = await this.prisma.providers.findUnique({
+      where: { name: data.provider },
+      select: { id: true },
+    });
+
+    if (!provider) {
+      throw new Error(
+        `Provider '${data.provider}' not found in providers table. ` +
+        `Please ensure the provider exists before creating models.`
+      );
+    }
+
+    // Step 2: Create model in database
     // Tier fields stored ONLY in meta JSONB (not in root columns)
     const model = await this.prisma.models.create({
       data: {
@@ -608,13 +626,42 @@ export class ModelService implements IModelService {
       },
     });
 
+    // Step 3: Create pricing record in model_provider_pricing table
+    // Convert per-million pricing to per-1k pricing (divide by 1000)
+    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 1000;
+    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 1000;
+
+    logger.info('ModelService: Creating pricing record', {
+      modelId: model.id,
+      providerId: provider.id,
+      inputPricePer1k,
+      outputPricePer1k,
+    });
+
+    await this.prisma.model_provider_pricing.create({
+      data: {
+        provider_id: provider.id,
+        model_name: model.id,
+        input_price_per_1k: inputPricePer1k,
+        output_price_per_1k: outputPricePer1k,
+        cache_input_price_per_1k: null, // Future: Support prompt caching pricing
+        cache_hit_price_per_1k: null,
+        effective_from: new Date(),
+        effective_until: null, // Active indefinitely
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
     // Clear cache
     modelCache.clear();
 
     // Log audit trail (future: use dedicated audit log table)
-    logger.info('ModelService: Model created successfully', {
+    logger.info('ModelService: Model and pricing created successfully', {
       modelId: model.id,
       adminUserId,
+      pricingCreated: true,
     });
 
     // Return model details
@@ -873,6 +920,199 @@ export class ModelService implements IModelService {
   }
 
   /**
+   * Full model update with atomic pricing record update
+   * Updates model record AND pricing record in a single transaction
+   *
+   * @param modelId - Model ID to update
+   * @param updates - Partial model updates (name, meta)
+   * @param adminUserId - Admin user ID for audit logging
+   * @returns Updated model details
+   * @throws Error if model not found, validation fails, or transaction fails
+   */
+  async updateModel(
+    modelId: string,
+    updates: UpdateModelRequest,
+    adminUserId: string
+  ): Promise<ModelDetailsResponse> {
+    logger.info('ModelService: Updating model with full edit', {
+      modelId,
+      adminUserId,
+      hasNameUpdate: !!updates.name,
+      hasMetaUpdate: !!updates.meta,
+      reason: updates.reason,
+    });
+
+    // Step 1: Validate model exists and fetch current data
+    const existingModel = await this.prisma.models.findUnique({
+      where: { id: modelId },
+      select: {
+        id: true,
+        name: true,
+        provider: true,
+        meta: true,
+      },
+    });
+
+    if (!existingModel) {
+      throw new Error(`Model '${modelId}' not found`);
+    }
+
+    const currentMeta = validateModelMeta(existingModel.meta);
+
+    // Step 2: Merge meta updates
+    let newMeta = currentMeta;
+    if (updates.meta) {
+      newMeta = {
+        ...currentMeta,
+        ...updates.meta,
+      };
+
+      // Auto-calculate creditsPer1kTokens if pricing changed but credits not provided
+      if (
+        (updates.meta.inputCostPerMillionTokens !== undefined ||
+          updates.meta.outputCostPerMillionTokens !== undefined) &&
+        updates.meta.creditsPer1kTokens === undefined
+      ) {
+        newMeta.creditsPer1kTokens = calculateCreditsPerKTokens(
+          newMeta.inputCostPerMillionTokens,
+          newMeta.outputCostPerMillionTokens
+        );
+        logger.info('ModelService: Auto-calculated creditsPer1kTokens', {
+          modelId,
+          credits: newMeta.creditsPer1kTokens,
+        });
+      }
+
+      // Validate merged meta
+      newMeta = validateModelMeta(newMeta);
+    }
+
+    // Step 3: Detect pricing changes
+    const pricingChanged =
+      updates.meta?.inputCostPerMillionTokens !== undefined ||
+      updates.meta?.outputCostPerMillionTokens !== undefined;
+
+    // Step 4: Atomic transaction - Update model + pricing
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // Update model record
+        await tx.models.update({
+          where: { id: modelId },
+          data: {
+            name: updates.name ?? existingModel.name,
+            meta: newMeta as any,
+            updated_at: new Date(),
+          },
+        });
+
+        // Update pricing if pricing fields changed
+        if (pricingChanged) {
+          // Look up provider UUID
+          const provider = await tx.providers.findUnique({
+            where: { name: existingModel.provider },
+            select: { id: true },
+          });
+
+          if (!provider) {
+            throw new Error(
+              `Provider '${existingModel.provider}' not found in providers table`
+            );
+          }
+
+          // Convert per-million pricing to per-1k pricing
+          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 1000;
+          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 1000;
+
+          logger.info('ModelService: Updating pricing record', {
+            modelId,
+            providerId: provider.id,
+            inputPricePer1k,
+            outputPricePer1k,
+          });
+
+          // Update existing pricing record
+          await tx.model_provider_pricing.updateMany({
+            where: {
+              provider_id: provider.id,
+              model_name: modelId,
+              is_active: true,
+            },
+            data: {
+              input_price_per_1k: inputPricePer1k,
+              output_price_per_1k: outputPricePer1k,
+              updated_at: new Date(),
+            },
+          });
+        }
+
+        logger.info('ModelService: Model updated successfully in transaction', {
+          modelId,
+          pricingUpdated: pricingChanged,
+        });
+      });
+    } catch (error) {
+      logger.error('ModelService: Failed to update model', {
+        modelId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new Error(
+        `Failed to update model '${modelId}': ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+
+    // Step 5: Create version history entry
+    const previousState = {
+      id: existingModel.id,
+      name: existingModel.name,
+      provider: existingModel.provider,
+      meta: currentMeta,
+    };
+
+    const newState = {
+      id: modelId,
+      name: updates.name ?? existingModel.name,
+      provider: existingModel.provider,
+      meta: newMeta,
+    };
+
+    try {
+      await this.versionHistory.createVersionEntry({
+        model_id: modelId,
+        changed_by: adminUserId,
+        change_type: 'update',
+        change_reason: updates.reason,
+        previous_state: previousState,
+        new_state: newState,
+      });
+
+      logger.info('ModelService: Version history entry created', {
+        modelId,
+        adminUserId,
+      });
+    } catch (error) {
+      // Log error but don't fail the update
+      logger.error('ModelService: Failed to create version history entry', {
+        modelId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+
+    // Step 6: Clear cache
+    modelCache.clear();
+
+    // Step 7: Audit log
+    logger.info('ModelService: Model fully updated', {
+      modelId,
+      adminUserId,
+      reason: updates.reason,
+      pricingUpdated: pricingChanged,
+    });
+
+    // Return updated model details
+    return this.getModelDetails(modelId);
+  }
+
+  /**
    * Get all legacy models
    * Returns models where isLegacy = true
    *
@@ -985,6 +1225,9 @@ export class ModelService implements IModelService {
  * Create model service instance
  * Factory function to create service with Prisma client
  */
-export function createModelService(prisma: PrismaClient): ModelService {
-  return new ModelService(prisma);
+export function createModelService(
+  prisma: PrismaClient,
+  versionHistory: ModelVersionHistoryService
+): ModelService {
+  return new ModelService(prisma, versionHistory);
 }

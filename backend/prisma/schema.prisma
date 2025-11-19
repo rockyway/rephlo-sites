@@ -528,17 +528,18 @@ model model_tier_audit_logs {
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model models {
-  id                    String                  @id @db.VarChar(100)
-  name                  String                  @db.VarChar(255)
-  provider              String                  @db.VarChar(100)
-  is_available          Boolean                 @default(true)
-  created_at            DateTime                @default(now())
-  updated_at            DateTime
-  is_legacy             Boolean                 @default(false)
-  is_archived           Boolean                 @default(false)
-  meta                  Json
-  model_tier_audit_logs model_tier_audit_logs[]
-  user_preferences      user_preferences[]
+  id                      String                    @id @db.VarChar(100)
+  name                    String                    @db.VarChar(255)
+  provider                String                    @db.VarChar(100)
+  is_available            Boolean                   @default(true)
+  created_at              DateTime                  @default(now())
+  updated_at              DateTime
+  is_legacy               Boolean                   @default(false)
+  is_archived             Boolean                   @default(false)
+  meta                    Json
+  model_tier_audit_logs   model_tier_audit_logs[]
+  user_preferences        user_preferences[]
+  model_version_history   model_version_history[]
 
   @@index([is_archived], map: "idx_models_is_archived")
   @@index([is_available, is_archived], map: "idx_models_is_available_is_archived")
@@ -546,6 +547,37 @@ model models {
   @@index([meta], map: "idx_models_meta_gin", type: Gin)
   @@index([is_available])
   @@index([provider])
+}
+
+/// Model version history table
+/// Tracks all changes to models for audit trail and rollback capability
+model model_version_history {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  model_id            String   @db.VarChar(100)
+  version_number      Int      // Incremental version number per model
+  changed_by          String   @db.Uuid // Admin user ID who made the change
+  change_type         String   @db.VarChar(50) // 'update', 'legacy_mark', 'archive', 'tier_change'
+  change_reason       String?  @db.VarChar(1000) // Admin-provided reason
+
+  // Snapshot data
+  previous_state      Json     // Complete previous state before change
+  new_state           Json     // Complete new state after change
+  changes_summary     Json     // { field: { old: value, new: value } }
+
+  // Metadata
+  ip_address          String?  @db.VarChar(45)
+  user_agent          String?
+  created_at          DateTime @default(now())
+
+  // Relations
+  model               models   @relation(fields: [model_id], references: [id], onDelete: Cascade)
+  admin               users    @relation(fields: [changed_by], references: [id])
+
+  @@unique([model_id, version_number])
+  @@index([model_id, created_at])
+  @@index([changed_by])
+  @@index([change_type])
+  @@index([created_at])
 }
 
 model oauth_clients {
@@ -1129,6 +1161,7 @@ model users {
   license_activation                                                 license_activation[]
   margin_audit_log                                                   margin_audit_log[]
   model_tier_audit_logs                                              model_tier_audit_logs[]
+  model_version_history                                              model_version_history[]
   payment_transaction                                                payment_transaction[]
   permission_override_permission_override_granted_byTousers          permission_override[]        @relation("permission_override_granted_byTousers")
   permission_override_permission_override_user_idTousers             permission_override[]        @relation("permission_override_user_idTousers")

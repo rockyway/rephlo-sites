@@ -82,63 +82,63 @@ export const seedTestData = async (): Promise<void> => {
   const db = getTestDatabase();
 
   // Seed providers first (required for token_usage_ledger foreign key)
-  const providerCount = await db.provider.count();
+  const providerCount = await db.providers.count();
   if (providerCount === 0) {
-    await db.provider.createMany({
+    await db.providers.createMany({
       data: [
         {
           name: 'openai',
-          apiType: 'openai',
-          isEnabled: true,
-          updatedAt: new Date(),
+          api_type: 'openai',
+          is_enabled: true,
+          updated_at: new Date(),
         },
         {
           name: 'anthropic',
-          apiType: 'anthropic',
-          isEnabled: true,
-          updatedAt: new Date(),
+          api_type: 'anthropic',
+          is_enabled: true,
+          updated_at: new Date(),
         },
         {
           name: 'google',
-          apiType: 'gemini',
-          isEnabled: true,
-          updatedAt: new Date(),
+          api_type: 'gemini',
+          is_enabled: true,
+          updated_at: new Date(),
         },
       ],
     });
   }
 
   // Check if oauth_clients exist
-  const clientCount = await db.oAuthClient.count();
+  const clientCount = await db.oauth_clients.count();
   if (clientCount === 0) {
     // Seed oauth client
-    await db.oAuthClient.create({
+    await db.oauth_clients.create({
       data: {
-        clientId: 'textassistant-desktop',
-        clientName: 'Text Assistant Desktop',
-        clientSecretHash: null,
-        redirectUris: ['http://localhost:8080/callback'],
-        grantTypes: ['authorization_code', 'refresh_token'],
-        responseTypes: ['code'],
+        client_id: 'textassistant-desktop',
+        client_name: 'Text Assistant Desktop',
+        client_secret_hash: null,
+        redirect_uris: ['http://localhost:8080/callback'],
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
         scope: 'openid email profile llm.inference models.read user.info credits.read',
-        isActive: true,
+        is_active: true,
       },
     });
   }
 
   // Check if models exist
-  const modelCount = await db.model.count();
+  const modelCount = await db.models.count();
   if (modelCount === 0) {
     // Seed models with new JSONB meta structure
-    await db.model.createMany({
+    await db.models.createMany({
       data: [
         {
           id: 'gpt-5',
           name: 'gpt-5',
           provider: 'openai',
-          isAvailable: true,
-          isLegacy: false,
-          isArchived: false,
+          is_available: true,
+          is_legacy: false,
+          is_archived: false,
           meta: {
             displayName: 'GPT-5',
             description: 'Latest GPT model with enhanced reasoning',
@@ -158,9 +158,9 @@ export const seedTestData = async (): Promise<void> => {
           id: 'gemini-2.0-pro',
           name: 'gemini-2.0-pro',
           provider: 'google',
-          isAvailable: true,
-          isLegacy: false,
-          isArchived: false,
+          is_available: true,
+          is_legacy: false,
+          is_archived: false,
           meta: {
             displayName: 'Gemini 2.0 Pro',
             description: "Google's most capable model",
@@ -180,9 +180,9 @@ export const seedTestData = async (): Promise<void> => {
           id: 'claude-3.5-sonnet',
           name: 'claude-3.5-sonnet',
           provider: 'anthropic',
-          isAvailable: true,
-          isLegacy: false,
-          isArchived: false,
+          is_available: true,
+          is_legacy: false,
+          is_archived: false,
           meta: {
             displayName: 'Claude 3.5 Sonnet',
             description: "Anthropic's balanced model",

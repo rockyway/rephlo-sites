@@ -140,19 +140,13 @@ export class LLMService {
       });
 
       if (!provider) {
-        logger.warn('LLMService: Provider not found in database, using fallback calculation', {
+        const error = `Provider '${providerName}' not found in database. Available providers: ${await this.getAvailableProviders()}`;
+        logger.error('LLMService: Provider not found', {
           providerName,
           modelId,
+          userId,
         });
-        // Fallback: Use simple calculation (this should not happen in production)
-        const fallbackCredits = Math.ceil(((inputTokens + outputTokens) / 1000) * 10);
-        return {
-          credits: fallbackCredits,
-          providerId: '00000000-0000-0000-0000-000000000000', // Placeholder UUID
-          vendorCost: fallbackCredits * 0.01, // Estimate
-          marginMultiplier: 1.0,
-          grossMargin: 0,
-        };
+        throw new Error(error);
       }
 
       // Step 2: Calculate vendor cost
@@ -206,15 +200,12 @@ export class LLMService {
         modelId,
         providerName,
       });
-      // Fallback: Use simple calculation
-      const fallbackCredits = Math.ceil(((inputTokens + outputTokens) / 1000) * 10);
-      return {
-        credits: fallbackCredits,
-        providerId: '00000000-0000-0000-0000-000000000000', // Placeholder UUID
-        vendorCost: fallbackCredits * 0.01, // Estimate
-        marginMultiplier: 1.0,
-        grossMargin: 0,
-      };
+      // Re-throw error - do NOT use fallback with placeholder UUID
+      // This prevents FK constraint violations in token_usage_ledger
+      throw new Error(
+        `Failed to calculate credits for model '${modelId}' from provider '${providerName}'. ` +
+        `${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -928,5 +919,19 @@ export class LLMService {
       return error.message;
     }
     return `${provider} API error`;
+  }
+
+  /**
+   * Get available providers from database
+   */
+  private async getAvailableProviders(): Promise<string> {
+    try {
+      const providers = await this.prisma.providers.findMany({
+        select: { name: true },
+      });
+      return providers.map((p) => p.name).join(', ');
+    } catch {
+      return 'Unable to fetch providers';
+    }
   }
 }

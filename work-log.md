@@ -1665,3 +1665,196 @@ credit_deduction_ledger.request_id → token_usage_ledger.request_id
 - Included non-streaming and streaming response formats with examples
 - Added client integration guide with TypeScript examples
 - Documented validation rules, error handling, and OpenAPI specifications
+## 2025-11-19 - Fixed Foreign Key Constraint Violation in Credit Deduction
+- **Issue**: Desktop client completion requests failed with FK constraint violation on token_usage_ledger
+- **Root Cause**: Admin UI created models without pricing records + dangerous fallback with placeholder UUID
+- **Fix 1**: Enhanced error handling in LLMService (removed placeholder UUID fallback, fail fast)
+- **Fix 2**: Auto-create pricing records when creating models via admin UI
+- **Fix 3**: Verified existing gpt-5-chat pricing record exists
+- **Files**: llm.service.ts, model.service.ts
+- **Documentation**: docs/troubleshooting/014-foreign-key-constraint-violation-credit-deduction.md
+
+## 2025-11-19 - Deleted gpt-5-chat Model for Admin UI Testing
+- Deleted gpt-5-chat model and all related data (pricing, usage ledger, daily summaries)
+- Ready to test admin UI model creation flow end-to-end
+- Will verify pricing record auto-creation works correctly
+
+
+## 2025-11-19 - Deleted gpt-5-mini Model for Admin UI Testing
+- Deleted gpt-5-mini model and all related data (5 usage ledger records, 1 daily summary, 1 pricing record)
+- This model had actual usage history from previous testing
+- Both gpt-5-chat and gpt-5-mini are now ready to be recreated via Admin UI
+
+
+## 2025-11-19 - Fixed Admin UI Tier Options in Add New Model Dialog
+- Corrected TIER_OPTIONS in frontend/src/data/modelTemplates.ts
+- Added missing 'Pro Plus' tier (pro_plus)
+- Renamed 'Enterprise Max' to 'Enterprise Pro Plus' (enterprise_pro_plus)
+- Removed 'Perpetual' tier (not in use)
+- Updated all template defaults (OpenAI, Anthropic, Google, Custom) with correct tier arrays
+- Frontend will hot-reload automatically
+
+
+## 2025-11-19 - Fixed Edit Model Tier Dialog Tier Options
+- Updated ModelTierEditDialog.tsx line 198: Fixed allowed tiers array
+- Added 'pro_plus' tier (was missing)
+- Changed 'enterprise_max' to 'enterprise_pro_plus'
+- Now shows all 6 correct tiers: Free, Pro, Pro Plus, Pro Max, Enterprise Pro, Enterprise Pro Plus
+- TierSelect component was already correct (no changes needed)
+
+
+## 2025-11-19 - Fixed Admin UI Pricing Input (USD vs Cents Confusion)
+**Root Cause**: parseInt() truncated decimal values + UI expected cents but users entered dollars
+**Issues Fixed**:
+1. Changed input from cents to USD (more user-friendly)
+2. Auto-convert USD to cents internally (multiply by 100)
+3. Fixed auto-calculation to work with $0 input costs
+4. Added clear labels: 'Input Cost (per 1M tokens in USD)'
+5. Added step='0.01' for decimal input support
+6. Updated all provider template hints to show dollar examples
+
+**Impact**: Users can now enter $1.25 instead of 125 (cents)
+**Files Modified**:
+- frontend/src/components/admin/AddModelDialog.tsx (lines 93-115, 159-195, 474-514)
+- frontend/src/data/modelTemplates.ts (all provider hints updated)
+
+**Action Needed**: User should recreate gpt-5-chat and gpt-5-mini models with correct pricing
+
+
+## 2025-11-19 10:36:36 - Implemented PUT /admin/models/:id endpoint
+Added full model update endpoint supporting name, meta, and pricing updates in atomic transaction. Updated controller, routes, interface, and test mocks. Build successful.
+
+## 2025-11-19 - Comprehensive Backend Tests for Model Update and Version History
+- Created unit tests for ModelService.updateModel (12 tests, all passing)
+- Created integration tests for PUT /admin/models/:id and GET /admin/models/:id/history (27 tests)
+- Fixed test database setup to use correct snake_case Prisma model names (providers, oauth_clients, models, users)
+- Fixed test factory to generate UUIDs for user records
+- Unit tests: 12/12 passing. Integration tests: pending app initialization fixes (503 errors)
+Edit Model Dialog Comprehensive Frontend Component Tests
+
+## Test Summary
+
+### Total Tests: 28
+- Rendering Tests: 5
+- Form Interaction Tests: 8  
+- API Integration Tests: 6
+- State Management Tests: 4
+- Edge Case Tests: 3
+- Validation Tests: 1
+- Auto-Calculation Tests: 1
+
+### Test Results
+All 28 tests PASSING ✓
+
+### Test Categories Implemented
+
+#### 1. Rendering Tests (5 tests)
+- ✓ Renders dialog when isOpen is true
+- ✓ Does not render dialog when isOpen is false
+- ✓ Displays model name in dialog title when model is provided
+- ✓ Displays all required form fields
+- ✓ Displays tier configuration fields
+
+#### 2. Form Interaction Tests (8 tests)
+- ✓ Updates text input fields on user input
+- ✓ Updates number input fields on user input
+- ✓ Updates pricing fields
+- ✓ Toggles capability checkboxes
+- ✓ Toggles allowed tier checkboxes
+- ✓ Updates select dropdowns
+- ✓ Shows validation error for invalid inputs
+- ✓ Disables submit button when isSaving is true
+
+#### 3. API Integration Tests (6 tests)
+- ✓ Calls onConfirm with updated fields on form submit
+- ✓ Sends correct pricing values in cents to API
+- ✓ Does not call onConfirm when no changes are made
+- ✓ Includes reason in payload if provided
+- ✓ Calls onCancel when cancel button is clicked
+- ✓ Calls onCancel when close button (X) is clicked
+
+#### 4. State Management Tests (4 tests)
+- ✓ Resets form when dialog is closed and reopened
+- ✓ Initializes form with model data when opened
+- ✓ Handles model prop changes correctly
+- ✓ Preserves unsaved changes when dialog remains open
+
+#### 5. Edge Case Tests (3 tests)
+- ✓ Handles null model prop gracefully
+- ✓ Handles missing optional fields in model data
+- ✓ Handles provider-specific metadata for different providers (OpenAI, Anthropic, Google)
+
+#### 6. Validation Tests (1 test)
+- ✓ Shows error when capabilities list is empty
+
+#### 7. Auto-Calculation Tests (1 test)
+- ✓ Shows auto-calculation message when pricing is updated
+
+### Files Created
+
+1. **Test Setup Files:**
+   - frontend/vitest.config.ts - Vitest configuration
+   - frontend/src/test/setup.ts - Test setup and globals
+
+2. **Test Fixtures:**
+   - frontend/src/test/fixtures/modelFixtures.ts - Mock model data
+
+3. **Test File:**
+   - frontend/src/components/admin/__tests__/EditModelDialog.test.tsx - Comprehensive test suite
+
+### Testing Best Practices Followed
+
+1. ✓ Used React Testing Library for DOM queries
+2. ✓ Used userEvent for realistic user interactions
+3. ✓ Tested component behavior, not implementation
+4. ✓ Used descriptive test names
+5. ✓ Organized tests into logical groups
+6. ✓ Created reusable mock data fixtures
+7. ✓ Properly cleaned up after each test
+8. ✓ Used waitFor for async operations
+9. ✓ Mocked external dependencies appropriately
+10. ✓ Tested edge cases and error scenarios
+
+### Test Execution
+
+Run tests:
+```bash
+cd frontend
+npm run test              # Run in watch mode
+npm run test:run          # Run once
+npm run test:ui           # Run with UI
+npm run test:coverage     # Run with coverage
+```
+
+Run specific test file:
+```bash
+npm run test -- src/components/admin/__tests__/EditModelDialog.test.tsx
+```
+
+### Dependencies Installed
+
+- vitest ^4.0.10
+- @vitest/ui ^4.0.10
+- @testing-library/react ^16.3.0
+- @testing-library/jest-dom ^6.9.1
+- @testing-library/user-event ^14.6.1
+- jsdom ^27.2.0
+- happy-dom ^20.0.10
+
+### Notes
+
+- The EditModelDialog component is a complex form with multiple input types
+- Tests cover all major user interactions and state transitions
+- Tests validate proper data transformation (USD to cents conversion)
+- Tests ensure proper validation and error messaging
+- Provider-specific metadata rendering is tested for OpenAI, Anthropic, and Google
+
+### Future Enhancements
+
+- Add tests for concurrent API calls (race conditions)
+- Add tests for network failure scenarios
+- Add tests for whitelist mode with tier validation
+- Add accessibility tests (ARIA labels, keyboard navigation)
+- Add snapshot tests for UI consistency
+
+

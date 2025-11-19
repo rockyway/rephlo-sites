@@ -6,11 +6,13 @@
  *
  * Endpoints:
  * - POST   /admin/models                 - Create new model
+ * - PUT    /admin/models/:id             - Full model update (name, meta, pricing)
  * - POST   /admin/models/:id/mark-legacy - Mark model as legacy
  * - POST   /admin/models/:id/unmark-legacy - Remove legacy status
  * - POST   /admin/models/:id/archive     - Archive model
  * - POST   /admin/models/:id/unarchive   - Restore archived model
  * - PATCH  /admin/models/:id/meta        - Update model metadata
+ * - GET    /admin/models/:id/history     - Get version history for model
  * - GET    /admin/models/legacy          - List legacy models
  * - GET    /admin/models/archived        - List archived models
  *
@@ -48,6 +50,23 @@ const adminModelsController = container.resolve(AdminModelsController);
 router.post(
   '/',
   asyncHandler(adminModelsController.createModel.bind(adminModelsController))
+);
+
+/**
+ * PUT /admin/models/:id
+ * Full model update (name, meta, pricing)
+ *
+ * Request body:
+ * - name: string (optional) - Update model name
+ * - meta: Partial<ModelMeta> (optional) - Partial metadata updates
+ * - reason: string (optional) - Admin reason for audit trail
+ *
+ * Note: Updates model + pricing record in atomic transaction.
+ * Auto-calculates credits when pricing changes.
+ */
+router.put(
+  '/:id',
+  asyncHandler(adminModelsController.updateModel.bind(adminModelsController))
 );
 
 // =============================================================================
@@ -142,6 +161,32 @@ router.get(
   '/archived',
   asyncHandler(
     adminModelsController.listArchivedModels.bind(adminModelsController)
+  )
+);
+
+// =============================================================================
+// Version History
+// =============================================================================
+
+/**
+ * GET /admin/models/:id/history
+ * Get version history for a model
+ *
+ * Query parameters:
+ * - limit: number (optional, default 50, max 100)
+ * - offset: number (optional, default 0)
+ * - change_type: string (optional) - Filter by change type
+ *
+ * Returns:
+ * - history: Array of version entries with admin user details
+ * - total: Total number of entries
+ * - limit: Applied limit
+ * - offset: Applied offset
+ */
+router.get(
+  '/:id/history',
+  asyncHandler(
+    adminModelsController.getModelHistory.bind(adminModelsController)
   )
 );
 

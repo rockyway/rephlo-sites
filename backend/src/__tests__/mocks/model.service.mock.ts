@@ -190,6 +190,25 @@ export class MockModelService implements IModelService {
     }
   }
 
+  async updateModel(modelId: string, updates: any, _adminUserId: string): Promise<any> {
+    const model = this.models.get(modelId);
+    if (!model) {
+      throw new Error(`Model '${modelId}' not found`);
+    }
+
+    // Update name if provided
+    if (updates.name) {
+      model.name = updates.name;
+    }
+
+    // Merge meta updates if provided
+    if (updates.meta) {
+      Object.assign(model, updates.meta);
+    }
+
+    return this.getModelDetails(modelId);
+  }
+
   async getLegacyModels(): Promise<any> {
     const legacy = Array.from(this.models.values()).filter(m => m.isLegacy);
     return { models: legacy, total: legacy.length };

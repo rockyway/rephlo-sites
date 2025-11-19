@@ -12,6 +12,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import TierBadge from '@/components/admin/TierBadge';
 import TierSelect from '@/components/admin/TierSelect';
 import ModelTierEditDialog from '@/components/admin/ModelTierEditDialog';
+import EditModelDialog from '@/components/admin/EditModelDialog';
 import TierAuditLog from '@/components/admin/TierAuditLog';
 import ModelStatusBadge from '@/components/admin/ModelStatusBadge';
 import LifecycleActionMenu from '@/components/admin/LifecycleActionMenu';
@@ -73,6 +74,10 @@ function ModelManagement() {
   const [editingModel, setEditingModel] = useState<ModelTierInfo | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Full edit dialog state
+  const [editingFullModel, setEditingFullModel] = useState<ModelInfo | null>(null);
+  const [isFullEditDialogOpen, setIsFullEditDialogOpen] = useState(false);
 
   // Lifecycle dialog state
   const [markLegacyDialogOpen, setMarkLegacyDialogOpen] = useState(false);
@@ -148,6 +153,34 @@ function ModelManagement() {
   const handleEditModel = (model: ModelTierInfo) => {
     setEditingModel(model);
     setIsEditDialogOpen(true);
+  };
+
+  const handleFullEditModel = (model: ModelInfo) => {
+    setEditingFullModel(model);
+    setIsFullEditDialogOpen(true);
+  };
+
+  const handleSaveFullModel = async (updates: {
+    name?: string;
+    meta?: any;
+    reason?: string;
+  }) => {
+    if (!editingFullModel) return;
+
+    setIsSaving(true);
+    try {
+      const updatedModel = await adminAPI.updateModel(editingFullModel.id, updates);
+      setSuccessMessage(`Successfully updated ${updatedModel.meta?.displayName || editingFullModel.name}`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setIsFullEditDialogOpen(false);
+      loadModels();
+      loadAuditLogs();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update model');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveModel = async (
@@ -613,6 +646,7 @@ function ModelManagement() {
                           setUnarchiveDialogOpen(true);
                         }}
                         onEditMeta={() => handleEditModel(model)}
+                        onEditFull={() => handleFullEditModel(model as any as ModelInfo)}
                         permissions={{
                           canManageLifecycle: permissions.canManageLifecycle,
                           canEditMeta: permissions.canEditMeta,
@@ -679,6 +713,15 @@ function ModelManagement() {
         isOpen={addModelDialogOpen}
         onConfirm={handleAddModelConfirm}
         onCancel={() => setAddModelDialogOpen(false)}
+        isSaving={isSaving}
+      />
+
+      {/* Full Edit Dialog */}
+      <EditModelDialog
+        model={editingFullModel}
+        isOpen={isFullEditDialogOpen}
+        onConfirm={handleSaveFullModel}
+        onCancel={() => setIsFullEditDialogOpen(false)}
         isSaving={isSaving}
       />
     </div>

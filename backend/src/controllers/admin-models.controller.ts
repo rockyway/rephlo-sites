@@ -6,11 +6,13 @@
  *
  * Endpoints:
  * - POST /admin/models - Create new model
+ * - PUT /admin/models/:id - Full model update (name, meta, pricing)
  * - POST /admin/models/:id/mark-legacy - Mark model as legacy
  * - POST /admin/models/:id/unmark-legacy - Remove legacy status
  * - POST /admin/models/:id/archive - Archive model
  * - POST /admin/models/:id/unarchive - Restore archived model
  * - PATCH /admin/models/:id/meta - Update model metadata
+ * - GET /admin/models/:id/history - Get version history for model
  * - GET /admin/models/legacy - List legacy models
  * - GET /admin/models/archived - List archived models
  *
@@ -31,13 +33,16 @@ import {
   markLegacyRequestSchema,
   archiveModelRequestSchema,
   updateModelMetaRequestSchema,
+  updateModelRequestSchema,
 } from '../types/model-meta';
 import { IModelService } from '../interfaces';
+import { ModelVersionHistoryService } from '../services/model-version-history.service';
 
 @injectable()
 export class AdminModelsController {
   constructor(
-    @inject('IModelService') private modelService: IModelService
+    @inject('IModelService') private modelService: IModelService,
+    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService
   ) {
     logger.debug('AdminModelsController: Initialized');
   }
@@ -82,6 +87,57 @@ export class AdminModelsController {
       }
       if (error instanceof Error && error.message.includes('already exists')) {
         throw badRequestError(error.message);
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * PUT /admin/models/:id
+   * Full model update (name, meta, pricing)
+   *
+   * Request body:
+   * - name: string (optional) - Update model name
+   * - meta: Partial<ModelMeta> (optional) - Partial metadata updates
+   * - reason: string (optional) - Admin reason for audit trail
+   */
+  updateModel = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId } = req.params;
+    const adminUserId = getUserId(req);
+
+    logger.info('Admin: Updating model', {
+      modelId,
+      adminUserId,
+      hasNameUpdate: !!req.body.name,
+      hasMetaUpdate: !!req.body.meta,
+    });
+
+    if (!adminUserId) {
+      throw badRequestError('Admin user ID not found');
+    }
+
+    try {
+      // Validate request body
+      const updates = updateModelRequestSchema.parse(req.body);
+
+      // Update model (service handles atomic transaction for model + pricing)
+      const updatedModel = await this.modelService.updateModel(
+        modelId,
+        updates,
+        adminUserId
+      );
+
+      res.status(200).json({
+        status: 'success',
+        message: `Model '${modelId}' updated successfully`,
+        data: updatedModel,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        throw validationError('Invalid request body', (error as any).flatten());
+      }
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw notFoundError(`Model '${modelId}'`);
       }
       throw error;
     }
@@ -323,6 +379,60 @@ export class AdminModelsController {
       });
     } catch (error) {
       logger.error('Failed to list archived models', { error });
+      throw error;
+    }
+  };
+
+  /**
+   * GET /admin/models/:id/history
+   * Get version history for a model
+   *
+   * Query parameters:
+   * - limit: number (optional, default 50, max 100) - Number of entries to return
+   * - offset: number (optional, default 0) - Offset for pagination
+   * - change_type: string (optional) - Filter by change type
+   */
+  getModelHistory = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId } = req.params;
+    const { limit, offset, change_type } = req.query;
+
+    logger.info('Admin: Getting model history', {
+      modelId,
+      limit,
+      offset,
+      change_type,
+    });
+
+    try {
+      // Parse and validate query parameters
+      const parsedLimit = limit
+        ? Math.min(parseInt(limit as string, 10), 100)
+        : 50;
+      const parsedOffset = offset ? parseInt(offset as string, 10) : 0;
+
+      if (isNaN(parsedLimit) || parsedLimit < 1) {
+        throw badRequestError('Invalid limit parameter');
+      }
+
+      if (isNaN(parsedOffset) || parsedOffset < 0) {
+        throw badRequestError('Invalid offset parameter');
+      }
+
+      // Get version history
+      const result = await this.versionHistory.getModelHistory(modelId, {
+        limit: parsedLimit,
+        offset: parsedOffset,
+        change_type: change_type as string,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        data: result,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
       throw error;
     }
   };
