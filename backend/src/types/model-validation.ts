@@ -267,12 +267,24 @@ export interface TextCompletionChoice {
   finish_reason: string | null;
 }
 
+/**
+ * Credit balance information returned in API responses
+ * Enables Desktop Client to display updated credit info without additional API calls
+ */
+export interface CreditInfo {
+  deducted: number;              // Credits deducted for this request
+  remaining: number;             // Total credits remaining after deduction
+  subscriptionRemaining: number; // Subscription credits remaining
+  purchasedRemaining: number;    // Purchased addon credits remaining
+}
+
 export interface CompletionUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
   creditsUsed: number;
   cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
+  credits?: CreditInfo;   // Optional: Credit balance info (non-streaming: always included, streaming: final chunk only)
 }
 
 export interface TextCompletionResponse {

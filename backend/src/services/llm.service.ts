@@ -22,13 +22,16 @@ import {
   ILLMProvider,
   ICostCalculationService,
   IPricingConfigService,
-  ICreditDeductionService
+  ICreditDeductionService,
+  ICreditService
 } from '../interfaces';
 import {
   TextCompletionRequest,
   ChatCompletionRequest,
   TextCompletionResponse,
   ChatCompletionResponse,
+  ChatCompletionChunk,
+  TextCompletionChunk,
 } from '../types/model-validation';
 import logger from '../utils/logger';
 import { randomUUID } from 'crypto';
@@ -42,6 +45,7 @@ export class LLMService {
     @inject('ICostCalculationService') private costCalculationService: ICostCalculationService,
     @inject('IPricingConfigService') private pricingConfigService: IPricingConfigService,
     @inject('ICreditDeductionService') private creditDeductionService: ICreditDeductionService,
+    @inject('ICreditService') private creditService: ICreditService,
     @inject('PrismaClient') private prisma: PrismaClient
   ) {
     // Manually resolve providers to handle the case when none are registered
@@ -331,11 +335,20 @@ export class LLMService {
         tokenUsageRecord
       );
 
+      // Fetch updated credit balance for response
+      const creditInfo = await this.creditService.getDetailedCredits(userId);
+
       const finalResponse: ChatCompletionResponse = {
         ...response,
         usage: {
           ...usage,
           creditsUsed: pricingData.credits,
+          credits: {
+            deducted: pricingData.credits,
+            remaining: creditInfo.totalAvailable,
+            subscriptionRemaining: creditInfo.proCredits.subscriptionCredits.remaining,
+            purchasedRemaining: creditInfo.proCredits.purchasedCredits.remaining,
+          },
         },
       };
 
@@ -488,6 +501,9 @@ export class LLMService {
         tokenUsageRecord
       );
 
+      // Fetch updated credit balance for final chunk
+      const creditInfo = await this.creditService.getDetailedCredits(userId);
+
       logger.info('LLMService: Streaming chat completion successful', {
         model: request.model,
         provider: modelProvider,
@@ -502,6 +518,29 @@ export class LLMService {
 
       // Note: Usage recording now handled by CreditDeductionService → TokenTrackingService
       // The atomic deduction call above already wrote to token_usage_ledger
+
+      // Send final chunk with usage information (including credit info)
+      const finalChunk: ChatCompletionChunk = {
+        id: requestId,
+        object: 'chat.completion.chunk',
+        created: Math.floor(startTime / 1000),
+        model: request.model,
+        choices: [],
+        usage: {
+          promptTokens: estimatedPromptTokens,
+          completionTokens: estimatedCompletionTokens,
+          totalTokens: totalTokens,
+          creditsUsed: pricingData.credits,
+          credits: {
+            deducted: pricingData.credits,
+            remaining: creditInfo.totalAvailable,
+            subscriptionRemaining: creditInfo.proCredits.subscriptionCredits.remaining,
+            purchasedRemaining: creditInfo.proCredits.purchasedCredits.remaining,
+          },
+        },
+      };
+
+      res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
 
       // Send [DONE] marker
       res.write('data: [DONE]\n\n');
@@ -635,11 +674,20 @@ export class LLMService {
         tokenUsageRecord
       );
 
+      // Fetch updated credit balance for response
+      const creditInfo = await this.creditService.getDetailedCredits(userId);
+
       const finalResponse: TextCompletionResponse = {
         ...response,
         usage: {
           ...usage,
           creditsUsed: pricingData.credits,
+          credits: {
+            deducted: pricingData.credits,
+            remaining: creditInfo.totalAvailable,
+            subscriptionRemaining: creditInfo.proCredits.subscriptionCredits.remaining,
+            purchasedRemaining: creditInfo.proCredits.purchasedCredits.remaining,
+          },
         },
       };
 
@@ -789,6 +837,9 @@ export class LLMService {
         tokenUsageRecord
       );
 
+      // Fetch updated credit balance for final chunk
+      const creditInfo = await this.creditService.getDetailedCredits(userId);
+
       logger.info('LLMService: Streaming text completion successful', {
         model: request.model,
         provider: modelProvider,
@@ -803,6 +854,34 @@ export class LLMService {
 
       // Note: Usage recording now handled by CreditDeductionService → TokenTrackingService
       // The atomic deduction call above already wrote to token_usage_ledger
+
+      // Send final chunk with usage information (including credit info)
+      const finalChunk: TextCompletionChunk = {
+        id: requestId,
+        object: 'text_completion.chunk',
+        created: Math.floor(startTime / 1000),
+        model: request.model,
+        choices: [],
+      };
+
+      // Add usage property with credit info
+      const finalChunkWithUsage = {
+        ...finalChunk,
+        usage: {
+          promptTokens: estimatedPromptTokens,
+          completionTokens: estimatedCompletionTokens,
+          totalTokens: totalTokens,
+          creditsUsed: pricingData.credits,
+          credits: {
+            deducted: pricingData.credits,
+            remaining: creditInfo.totalAvailable,
+            subscriptionRemaining: creditInfo.proCredits.subscriptionCredits.remaining,
+            purchasedRemaining: creditInfo.proCredits.purchasedCredits.remaining,
+          },
+        },
+      };
+
+      res.write(`data: ${JSON.stringify(finalChunkWithUsage)}\n\n`);
 
       res.write('data: [DONE]\n\n');
       res.end();

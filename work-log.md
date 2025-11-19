@@ -1658,3 +1658,10 @@ credit_deduction_ledger.request_id → token_usage_ledger.request_id
 2025-11-17 23:08:10 - Created comprehensive Credit Deduction Flow documentation (docs/reference/190-credit-deduction-flow-documentation.md)
 2025-11-17 23:32:55 - Updated TSDoc comments for Plan 189 credit API changes in controllers and routes
 2025-11-17 23:32:55 - Created Desktop Client Credit API Migration Guide (docs/reference/191-desktop-client-credit-api-migration-guide.md)
+
+## 2025-11-18 - LLM Completion Credit Info API Documentation
+- Created comprehensive API reference (docs/reference/192-llm-completion-credit-info-api-reference.md)
+- Documented credit info feature for /v1/chat/completions and /v1/completions endpoints
+- Included non-streaming and streaming response formats with examples
+- Added client integration guide with TypeScript examples
+- Documented validation rules, error handling, and OpenAPI specifications
