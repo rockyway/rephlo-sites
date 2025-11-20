@@ -190,4 +190,72 @@ router.get(
   )
 );
 
+// =============================================================================
+// Parameter Constraint Management (Plan 203)
+// =============================================================================
+
+/**
+ * GET /admin/models/:id/parameters
+ * Get parameter constraints for a model
+ *
+ * Returns:
+ * - modelId: string
+ * - modelName: string
+ * - provider: string
+ * - parameterConstraints: object (empty if no constraints defined)
+ */
+router.get(
+  '/:id/parameters',
+  asyncHandler(
+    adminModelsController.getParameterConstraints.bind(adminModelsController)
+  )
+);
+
+/**
+ * PUT /admin/models/:id/parameters
+ * Update parameter constraints for a model
+ *
+ * Request body:
+ * {
+ *   parameterConstraints: {
+ *     temperature: { supported: true, min: 0, max: 2, default: 1 },
+ *     max_tokens: { supported: true, min: 1, max: 4096, default: 1024 },
+ *     ...
+ *   }
+ * }
+ *
+ * Returns:
+ * - status: 'success'
+ * - message: string
+ * - modelId: string
+ * - parameterConstraints: object
+ */
+router.put(
+  '/:id/parameters',
+  asyncHandler(
+    adminModelsController.updateParameterConstraints.bind(adminModelsController)
+  )
+);
+
+/**
+ * DELETE /admin/models/:id/parameters/:paramName
+ * Remove a specific parameter constraint
+ *
+ * Path parameters:
+ * - id: Model ID
+ * - paramName: Parameter name to remove (e.g., 'temperature', 'max_tokens')
+ *
+ * Returns:
+ * - status: 'success'
+ * - message: string
+ * - modelId: string
+ * - paramName: string
+ */
+router.delete(
+  '/:id/parameters/:paramName',
+  asyncHandler(
+    adminModelsController.deleteParameterConstraint.bind(adminModelsController)
+  )
+);
+
 export default router;

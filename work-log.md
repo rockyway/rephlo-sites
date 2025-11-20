@@ -2418,3 +2418,113 @@ Created comprehensive integration tests for the separate input/output pricing sy
   - Updated token counter utility to handle multimodal content
   - Fixed provider compatibility with type assertions (Phase 2 will add proper transformations)
   - All TypeScript compilation successful with no errors
+
+
+## 2025-11-20: ParameterValidationService Implementation Progress (Plan 203/205)
+
+**Status**: Partial Implementation (Unit Tests Complete, Service Update In Progress)
+
+### Completed
+1. Created comprehensive unit tests for ParameterValidationService
+   - Tests for GPT-5-mini temperature restriction (allowedValues=[1.0])
+   - Tests for Claude 4.5 mutually exclusive temperature/top_p
+   - Tests for min/max range validation
+   - Tests for parameter transformation (max_tokens → max_completion_tokens)
+   - Tests for provider spec fallback behavior
+   - Tests for model constraint precedence
+
+   **File**: `backend/src/__tests__/unit/services/parameter-validation.service.test.ts`
+
+### Remaining Work
+1. Update `ParameterValidationService` implementation to use Provider Registry:
+   - Change dependency from `IModelService` to `PrismaClient`
+   - Import `getProviderSpec` from `config/providers`
+   - Implement provider spec fallback logic
+   - Ensure model-specific constraints (meta.parameterConstraints) take precedence
+
+   **File**: `backend/src/services/parameter-validation.service.ts`
+
+2. Register `ParameterValidationService` in DI container:
+   - Add import in `backend/src/container.ts`
+   - Register with `container.register` or `container.registerSingleton`
+
+3. Run unit tests to verify implementation:
+   ```bash
+   cd backend && npm test -- parameter-validation.service.test.ts
+   ```
+
+### Implementation Notes
+- Existing service uses `IModelService.getModelForInference()` which is deprecated
+- New service should use `prisma.models.findUnique()` for direct database access
+- Provider specifications already exist in `backend/src/config/providers/`
+- Service already exists but needs refactoring to integrate Provider Registry (Plan 205)
+
+### Next Steps
+1. Complete service refactoring to integrate Provider Registry
+2. Verify TypeScript compilation succeeds
+3. Run unit tests and fix any issues
+4. Update any controllers/services that use ParameterValidationService
+
+
+## 2025-11-20: Build and Test Verification Report
+
+### Status: CRITICAL - Tests Incompatible with Current Schema
+
+**Problem:** The test suite is extensively broken due to schema refactoring. The tests reference data models that have been significantly changed.
+
+**Root Causes:**
+1. **Schema Changes**: The Prisma schema has been refactored with:
+   - Model names changed to snake_case (e.g., `subscription` → `subscriptions`)
+   - Enum names changed (e.g., `SubscriptionStatus` and `SubscriptionTier` not directly exported)
+   - Old models removed or renamed
+
+2. **Test Incompatibilities**:
+   - Tests import `Subscription`, `SubscriptionTier`, `SubscriptionStatus` from `@prisma/client` - these don't exist in current client
+   - Test factories reference undefined Prisma model names
+   - Integration tests fail because of 503 Service Unavailable errors (likely Redis/database setup issues in test environment)
+
+### Build Status
+- **TypeScript Build**: ✓ PASSES (0 errors)
+- **Unit Tests**: 15 failed, 3 passed (477 tests total)
+- **Integration Tests**: 17 failed, 17 total (385 failed, 5 passed)
+- **E2E Tests**: NOT RUN
+
+### Affected Test Files
+- `tests/unit/services/subscription.service.test.ts`
+- `tests/unit/services/credit.service.test.ts`
+- `tests/unit/services/model.service.test.ts`
+- `tests/helpers/factories.ts` (outdated factory functions)
+- Multiple integration tests failing due to environment setup
+
+### Immediate Fixes Needed
+1. Update test factories to use correct Prisma model names:
+   - `prisma.subscription` → `prisma.subscriptions`
+   - `prisma.credit` → `prisma.credits`
+   - `prisma.model` → `prisma.models`
+   - `prisma.appSetting` → `prisma.app_settings`
+
+2. Fix enum imports - need to use Prisma.$Enums or direct enum values
+   - Example: `subscription_status.active` instead of `SubscriptionStatus.active`
+
+3. Address service test failures (likely due to factory issues cascading)
+
+### Frontend & Other Services
+- Frontend: No build/test run performed
+- Identity Provider: No build/test run performed
+
+### Recommendations
+1. **Priority 1**: Update factories.ts with correct model/field names
+2. **Priority 2**: Fix enum references in test files
+3. **Priority 3**: Run `npm run db:reset` in backend if test database is out of sync
+4. **Priority 4**: Check Redis connectivity for integration tests (503 errors suggest service unavailability)
+
+### Validation Checklist
+- [x] TypeScript compiles successfully
+- [ ] Unit tests pass
+- [ ] Integration tests pass
+- [ ] E2E tests pass
+- [ ] Database schema verified (Plan 204: image_count, image_tokens fields added)
+- [ ] Model parameter constraints verified
+
+**Action**: Tests need comprehensive refactoring before marking implementation complete.
+

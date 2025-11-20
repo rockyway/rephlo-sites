@@ -436,4 +436,197 @@ export class AdminModelsController {
       throw error;
     }
   };
+
+  // =============================================================================
+  // Parameter Constraint Management (Plan 203)
+  // =============================================================================
+
+  /**
+   * GET /admin/models/:id/parameters
+   * Get parameter constraints for a specific model
+   *
+   * Returns the parameterConstraints from the model's meta field.
+   * If no constraints are defined, returns an empty object.
+   */
+  getParameterConstraints = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId } = req.params;
+    const adminUserId = getUserId(req);
+
+    logger.debug('Admin: Get parameter constraints', {
+      modelId,
+      adminUserId,
+    });
+
+    try {
+      // Get model details
+      const model = await this.modelService.getModelDetails(modelId);
+      if (!model) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+
+      // Extract parameterConstraints from meta field
+      const parameterConstraints = (model.meta as any)?.parameterConstraints || {};
+
+      res.status(200).json({
+        modelId: model.id,
+        modelName: model.model,
+        provider: model.provider,
+        parameterConstraints,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * PUT /admin/models/:id/parameters
+   * Update parameter constraints for a model
+   *
+   * Request body:
+   * {
+   *   parameterConstraints: {
+   *     temperature: { supported: true, min: 0, max: 2, default: 1 },
+   *     max_tokens: { supported: true, min: 1, max: 4096, default: 1024 },
+   *     ...
+   *   }
+   * }
+   *
+   * Updates the model's meta.parameterConstraints field.
+   * Creates version history entry for audit trail.
+   */
+  updateParameterConstraints = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId } = req.params;
+    const { parameterConstraints } = req.body;
+    const adminUserId = getUserId(req);
+
+    logger.info('Admin: Update parameter constraints', {
+      modelId,
+      adminUserId,
+      parametersCount: Object.keys(parameterConstraints || {}).length,
+    });
+
+    if (!adminUserId) {
+      throw badRequestError('Admin user ID not found');
+    }
+
+    try {
+      // Validate parameterConstraints exists and is an object
+      if (!parameterConstraints || typeof parameterConstraints !== 'object') {
+        throw validationError('Invalid parameterConstraints format: must be an object');
+      }
+
+      // Get current model to preserve other meta fields
+      const model = await this.modelService.getModelDetails(modelId);
+      if (!model) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+
+      // Update model with new parameter constraints
+      const updatedMeta = {
+        ...(model.meta as any),
+        parameterConstraints,
+      };
+
+      await this.modelService.updateModelMeta(
+        modelId,
+        { parameterConstraints },
+        adminUserId
+      );
+
+      logger.info('Admin: Parameter constraints updated successfully', {
+        modelId,
+        parametersCount: Object.keys(parameterConstraints).length,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Parameter constraints updated successfully',
+        modelId,
+        parameterConstraints,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        throw validationError('Invalid request body', (error as any).flatten());
+      }
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * DELETE /admin/models/:id/parameters/:paramName
+   * Remove a specific parameter constraint
+   *
+   * Path parameters:
+   * - id: Model ID
+   * - paramName: Parameter name to remove (e.g., 'temperature', 'max_tokens')
+   *
+   * Removes the specified parameter from meta.parameterConstraints.
+   * Creates version history entry for audit trail.
+   */
+  deleteParameterConstraint = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId, paramName } = req.params;
+    const adminUserId = getUserId(req);
+
+    logger.info('Admin: Delete parameter constraint', {
+      modelId,
+      paramName,
+      adminUserId,
+    });
+
+    if (!adminUserId) {
+      throw badRequestError('Admin user ID not found');
+    }
+
+    try {
+      // Get current model
+      const model = await this.modelService.getModelDetails(modelId);
+      if (!model) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+
+      const meta = model.meta as any;
+      const parameterConstraints = { ...(meta?.parameterConstraints || {}) };
+
+      // Check if parameter constraint exists
+      if (!parameterConstraints[paramName]) {
+        throw notFoundError(
+          `Parameter constraint '${paramName}' for model '${modelId}'`
+        );
+      }
+
+      // Remove the parameter constraint
+      delete parameterConstraints[paramName];
+
+      // Update model with modified constraints
+      await this.modelService.updateModelMeta(
+        modelId,
+        { parameterConstraints },
+        adminUserId
+      );
+
+      logger.info('Admin: Parameter constraint deleted successfully', {
+        modelId,
+        paramName,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: `Parameter constraint '${paramName}' deleted successfully`,
+        modelId,
+        paramName,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
+        // Re-throw as-is if it's already a not found error
+        throw error;
+      }
+      throw error;
+    }
+  };
 }
