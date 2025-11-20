@@ -2616,3 +2616,55 @@ The implementation itself did NOT delete users. If users are missing, it's becau
 - Never run `npm run db:reset` with production data
 - Use `npm run prisma:migrate` for schema updates (preserves data)
 - Seed script is safe to run (uses upsert for users)
+
+
+## 2025-11-20 10:05:41 - Database Backup System Testing Complete
+
+**Fixed:**
+- Added dotenv to all backup scripts (db-backup.ts, db-restore.ts, pre-reset-safety.ts)
+- Installed cross-env for Windows environment variable compatibility
+- Updated db:reset:force to use cross-env SKIP_BACKUP_PROMPT
+
+**Tested:**
+- ✅ Manual backup creation (npm run db:backup:auto) - creates timestamped gzip files
+- ✅ Automatic backup before db:reset - pre-reset-safety.ts works correctly
+- ✅ 4 backups successfully created during testing (0.04 MB each compressed)
+
+**Discovered:**
+- Prisma now detects Claude Code and blocks destructive operations for safety
+- Backup system works correctly - backups are created BEFORE Prisma blocks reset
+- Users can run db:reset manually or set PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION
+
+**Documentation:**
+- Updated docs/guides/021-database-backup-restore-guide.md with Prisma AI safety workaround
+
+**Commits:**
+- d0ea712: fix(db): Add dotenv support and cross-env to backup scripts
+- 9f6d73a: docs(db): Add Prisma AI safety mechanism documentation
+
+
+## 2025-01-20: Implemented Admin UI for Parameter Constraints (Plans 203 & 205)
+
+**Completed**: Admin UI implementation for model parameter constraints configuration
+
+**Implementation Details**:
+- Created `ParameterConstraintsEditor.tsx` component (669 lines) with template system for OpenAI GPT-4/5, Claude 3/4.5, Google Gemini
+- Integrated component into `AddModelDialog.tsx` (Step 7) and `EditModelDialog.tsx`
+- Added `parameterConstraints?: Record<string, any>` to `ModelMeta` interface in `model-lifecycle.ts:52`
+- Fixed TypeScript errors: unused variables, missing icon import, boolean type conversion for Input component
+- Successfully built frontend with zero TypeScript errors
+
+**Key Features**:
+- Template-based constraints (pre-defined for major LLM families)
+- Range constraints editor (min/max/default)
+- Allowed values editor (discrete sets)
+- Mutually exclusive parameters display
+- Custom parameter addition support
+
+**Files Modified**:
+- `frontend/src/components/admin/ParameterConstraintsEditor.tsx` (NEW)
+- `frontend/src/components/admin/AddModelDialog.tsx`
+- `frontend/src/components/admin/EditModelDialog.tsx`
+- `frontend/src/types/model-lifecycle.ts`
+
+**Status**: ✅ Complete - Backend (Plans 203 & 205) + Admin UI fully implemented

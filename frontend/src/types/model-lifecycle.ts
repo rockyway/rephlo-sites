@@ -48,6 +48,9 @@ export interface ModelMeta {
   // Provider-specific metadata (optional)
   providerMetadata?: Record<string, any>;
 
+  // Parameter constraints (Plans 203 & 205)
+  parameterConstraints?: Record<string, any>;
+
   // Admin notes (optional)
   internalNotes?: string;
   complianceTags?: string[];

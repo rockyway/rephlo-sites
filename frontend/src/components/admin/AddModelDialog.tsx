@@ -12,6 +12,9 @@ import {
   TIER_RESTRICTION_MODE_OPTIONS,
   calculateSeparateCreditsPerKTokens,
 } from '@/data/modelTemplates';
+import ParameterConstraintsEditor, {
+  type ParameterConstraints,
+} from './ParameterConstraintsEditor';
 
 interface AddModelDialogProps {
   isOpen: boolean;
@@ -67,6 +70,9 @@ function AddModelDialog({
 
   // Provider metadata
   const [providerMeta, setProviderMeta] = useState<any>({});
+
+  // Parameter constraints (Plans 203 & 205)
+  const [parameterConstraints, setParameterConstraints] = useState<ParameterConstraints>({});
 
   // Internal fields
   const [internalNotes, setInternalNotes] = useState<string>('');
@@ -136,6 +142,7 @@ function AddModelDialog({
       setInputCreditsPerK('');
       setOutputCreditsPerK('');
       setEstimatedTotalPerK('');
+      setParameterConstraints({});
       setInternalNotes('');
       setComplianceTags('');
       setErrors({});
@@ -194,6 +201,7 @@ function AddModelDialog({
         tierRestrictionMode,
         allowedTiers,
         providerMetadata: Object.keys(providerMeta).length > 0 ? providerMeta : undefined,
+        parameterConstraints: Object.keys(parameterConstraints).length > 0 ? parameterConstraints : undefined,
         internalNotes: internalNotes.trim() || undefined,
         complianceTags: complianceTags.trim()
           ? complianceTags.split(',').map((tag) => tag.trim()).filter(Boolean)
@@ -732,6 +740,23 @@ function AddModelDialog({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Step 7: Parameter Constraints (Plans 203 & 205) */}
+            <div>
+              <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
+                Step 7: Parameter Constraints (Optional)
+              </h3>
+              <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mb-4">
+                Configure allowed parameter ranges and restrictions for this model (e.g., temperature limits, mutually exclusive parameters).
+                These constraints will be validated when users make API requests.
+              </p>
+              <ParameterConstraintsEditor
+                provider={provider}
+                constraints={parameterConstraints}
+                onChange={setParameterConstraints}
+                disabled={isSaving}
+              />
             </div>
           </div>
 

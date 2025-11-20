@@ -17,6 +17,9 @@ import {
 import type { ModelInfo } from '@/types/model-lifecycle';
 import { SubscriptionTier } from '@rephlo/shared-types';
 import type { TierRestrictionMode } from '@/types/model-tier';
+import ParameterConstraintsEditor, {
+  type ParameterConstraints,
+} from './ParameterConstraintsEditor';
 
 interface EditModelDialogProps {
   model: ModelInfo | null;
@@ -74,6 +77,9 @@ function EditModelDialog({
   // Provider metadata state
   const [providerMetadata, setProviderMetadata] = useState<any>({});
 
+  // Parameter constraints (Plans 203 & 205)
+  const [parameterConstraints, setParameterConstraints] = useState<ParameterConstraints>({});
+
   // Auto-calculation state
   const [showAutoCalculation, setShowAutoCalculation] = useState(false);
 
@@ -109,6 +115,7 @@ function EditModelDialog({
       setAllowedTiers(new Set(meta?.allowedTiers || []));
 
       setProviderMetadata(meta?.providerMetadata || {});
+      setParameterConstraints(meta?.parameterConstraints || {});
       setReason('');
       setValidationError(null);
     }
@@ -258,6 +265,10 @@ function EditModelDialog({
 
     if (JSON.stringify(providerMetadata) !== JSON.stringify(currentMeta?.providerMetadata || {})) {
       metaUpdates.providerMetadata = providerMetadata;
+    }
+
+    if (JSON.stringify(parameterConstraints) !== JSON.stringify(currentMeta?.parameterConstraints || {})) {
+      metaUpdates.parameterConstraints = parameterConstraints;
     }
 
     if (Object.keys(metaUpdates).length > 0) {
@@ -710,6 +721,22 @@ function EditModelDialog({
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Parameter Constraints (Plans 203 & 205) */}
+            <div>
+              <h3 className="text-h5 font-semibold text-deep-navy-800 dark:text-white mb-3">
+                Parameter Constraints (Optional)
+              </h3>
+              <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mb-4">
+                Configure allowed parameter ranges and restrictions for this model (e.g., temperature limits, mutually exclusive parameters).
+              </p>
+              <ParameterConstraintsEditor
+                provider={model.provider}
+                constraints={parameterConstraints}
+                onChange={setParameterConstraints}
+                disabled={false}
+              />
             </div>
 
             {/* Reason for Changes */}
