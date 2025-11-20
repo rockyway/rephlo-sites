@@ -448,25 +448,26 @@ function EditModelDialog({
               <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
                 Capabilities *
               </label>
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
                 {CAPABILITY_OPTIONS.map((cap) => (
                   <label
                     key={cap.value}
-                    className="flex items-start space-x-3 cursor-pointer hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700 p-2 rounded transition-colors"
+                    className={cn(
+                      'flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-all',
+                      capabilities.has(cap.value as any)
+                        ? 'border-rephlo-blue dark:border-electric-cyan bg-rephlo-blue/5 dark:bg-electric-cyan/5'
+                        : 'border-deep-navy-200 dark:border-deep-navy-700 hover:border-deep-navy-300'
+                    )}
                   >
                     <input
                       type="checkbox"
                       checked={capabilities.has(cap.value as any)}
                       onChange={() => toggleCapability(cap.value as any)}
-                      className="mt-0.5 h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
+                      className="h-4 w-4 mt-0.5 rounded border-deep-navy-400 text-rephlo-blue focus:ring-rephlo-blue"
                     />
-                    <div className="flex-1">
-                      <p className="text-body-sm font-medium text-deep-navy-800 dark:text-white">
-                        {cap.label}
-                      </p>
-                      <p className="text-caption text-deep-navy-600 dark:text-deep-navy-300">
-                        {cap.description}
-                      </p>
+                    <div>
+                      <p className="font-semibold text-deep-navy-900 dark:text-white">{cap.label}</p>
+                      <p className="text-caption text-deep-navy-600 dark:text-deep-navy-300">{cap.description}</p>
                     </div>
                   </label>
                 ))}

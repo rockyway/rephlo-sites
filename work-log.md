@@ -2265,3 +2265,9 @@ Created comprehensive integration tests for the separate input/output pricing sy
 - Aligned model meta costs with model_provider_pricing table
 - Verification: All models with pricing data now pass cost validation
 
+
+2025-11-19: Updated EditModelDialog capabilities UI
+- Changed from vertical list to 2-column grid layout with bordered blocks
+- Added selected state styling (blue border and background)
+- Matches AddModelDialog design for consistency
+
