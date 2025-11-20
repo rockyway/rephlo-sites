@@ -680,8 +680,8 @@ export class ModelService implements IModelService {
         model_name: model.id,
         input_price_per_1k: inputPricePer1k,
         output_price_per_1k: outputPricePer1k,
-        cache_input_price_per_1k: null, // Future: Support prompt caching pricing
-        cache_hit_price_per_1k: null,
+        cache_write_price_per_1k: null, // Plan 207: Cache write pricing (1.25x for Anthropic)
+        cache_read_price_per_1k: null, // Plan 207: Cache read pricing (0.1x for Anthropic)
         effective_from: new Date(),
         effective_until: null, // Active indefinitely
         is_active: true,

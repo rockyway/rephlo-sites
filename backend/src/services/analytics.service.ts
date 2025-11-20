@@ -885,14 +885,6 @@ export class AnalyticsService {
         endDate: endDate.toISOString(),
       });
 
-      const whereClause: Prisma.token_usage_ledgerWhereInput = {
-        created_at: { gte: startDate, lte: endDate },
-        status: 'success',
-        cost_savings_percent: { not: null },
-        ...(tier && { user_tier_at_request: tier }),
-        ...(models && models.length > 0 && { model_id: { in: models } }),
-      };
-
       // Group by provider
       const providerData = await this.prisma.$queryRaw<Array<{
         provider_id: string;

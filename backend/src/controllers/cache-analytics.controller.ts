@@ -80,7 +80,11 @@ export class CacheAnalyticsController {
         throw validationError('Invalid query parameters', validation.error);
       }
 
-      const params: AnalyticsQueryParams = validation.data;
+      const params: AnalyticsQueryParams = {
+        ...validation.data,
+        startDate: validation.data.startDate?.toISOString(),
+        endDate: validation.data.endDate?.toISOString(),
+      };
 
       // Get cache performance KPI for this user only
       const kpi = await this.analyticsService.getCachePerformanceKPI(params);
@@ -119,7 +123,11 @@ export class CacheAnalyticsController {
         throw validationError('Invalid query parameters', validation.error);
       }
 
-      const params: TrendQueryParams = validation.data;
+      const params: TrendQueryParams = {
+        ...validation.data,
+        startDate: validation.data.startDate?.toISOString(),
+        endDate: validation.data.endDate?.toISOString(),
+      };
 
       // Get cache hit rate trend for this user only
       const trend = await this.analyticsService.getCacheHitRateTrend(params);
@@ -160,7 +168,11 @@ export class CacheAnalyticsController {
         throw validationError('Invalid query parameters', validation.error);
       }
 
-      const params: AnalyticsQueryParams = validation.data;
+      const params: AnalyticsQueryParams = {
+        ...validation.data,
+        startDate: validation.data.startDate?.toISOString(),
+        endDate: validation.data.endDate?.toISOString(),
+      };
 
       // Get cache performance KPI for entire platform
       const kpi = await this.analyticsService.getCachePerformanceKPI(params);
@@ -200,7 +212,11 @@ export class CacheAnalyticsController {
         throw validationError('Invalid query parameters', validation.error);
       }
 
-      const params: TrendQueryParams = validation.data;
+      const params: TrendQueryParams = {
+        ...validation.data,
+        startDate: validation.data.startDate?.toISOString(),
+        endDate: validation.data.endDate?.toISOString(),
+      };
 
       // Get cache hit rate trend for entire platform
       const trend = await this.analyticsService.getCacheHitRateTrend(params);
@@ -240,7 +256,11 @@ export class CacheAnalyticsController {
         throw validationError('Invalid query parameters', validation.error);
       }
 
-      const params: AnalyticsQueryParams = validation.data;
+      const params: AnalyticsQueryParams = {
+        ...validation.data,
+        startDate: validation.data.startDate?.toISOString(),
+        endDate: validation.data.endDate?.toISOString(),
+      };
 
       // Get cache savings by provider
       const savings = await this.analyticsService.getCacheSavingsByProvider(params);
@@ -279,7 +299,11 @@ export class CacheAnalyticsController {
         throw validationError('Invalid query parameters', validation.error);
       }
 
-      const params: AnalyticsQueryParams = validation.data;
+      const params: AnalyticsQueryParams = {
+        ...validation.data,
+        startDate: validation.data.startDate?.toISOString(),
+        endDate: validation.data.endDate?.toISOString(),
+      };
 
       // Get cache efficiency by model
       const efficiency = await this.analyticsService.getCacheEfficiencyByModel(params);
