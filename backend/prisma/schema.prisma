@@ -527,6 +527,107 @@ model model_tier_audit_logs {
 }
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+///
+/// Plan 203: Model Parameter Constraints
+/// The `meta` field stores JSONB data with the following structure:
+///
+/// ```typescript
+/// interface ModelMeta {
+///   displayName: string;
+///   description: string;
+///   capabilities: string[];
+///   contextLength: number;
+///   maxOutputTokens: number;
+///   inputCostPerMillionTokens: number;
+///   outputCostPerMillionTokens: number;
+///   requiredTier: string;
+///   tierRestrictionMode: 'minimum' | 'exact' | 'whitelist';
+///   allowedTiers: string[];
+///
+///   // Plan 203: Parameter Constraints
+///   parameterConstraints?: {
+///     temperature?: {
+///       supported: boolean;           // Can this parameter be used?
+///       min?: number;                 // Minimum allowed value
+///       max?: number;                 // Maximum allowed value
+///       default?: number;             // Default value if not specified
+///       allowedValues?: number[];     // Discrete allowed values (e.g., [1.0])
+///       mutuallyExclusiveWith?: string[];  // Cannot be used with these params
+///       reason?: string;              // Admin note explaining the restriction
+///     };
+///     max_tokens?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       alternativeName?: string;     // e.g., "max_completion_tokens" for GPT-5
+///       reason?: string;
+///     };
+///     top_p?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       mutuallyExclusiveWith?: string[];  // e.g., ["temperature"]
+///       reason?: string;
+///     };
+///     top_k?: {                       // Anthropic, Google only
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       reason?: string;
+///     };
+///     presence_penalty?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       reason?: string;
+///     };
+///     frequency_penalty?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       reason?: string;
+///     };
+///     stop?: {
+///       supported: boolean;
+///       maxSequences?: number;        // Max number of stop sequences
+///       maxLength?: number;           // Max length per sequence
+///       reason?: string;
+///     };
+///     n?: {
+///       supported: boolean;
+///       max?: number;                 // Max number of completions
+///       reason?: string;
+///     };
+///   };
+/// }
+/// ```
+///
+/// Example (GPT-5-mini with restricted temperature):
+/// ```json
+/// {
+///   "displayName": "GPT-5 Mini",
+///   "parameterConstraints": {
+///     "temperature": {
+///       "supported": true,
+///       "allowedValues": [1.0],
+///       "default": 1.0,
+///       "reason": "GPT-5-mini only supports temperature=1.0"
+///     },
+///     "max_tokens": {
+///       "supported": true,
+///       "min": 1,
+///       "max": 4096,
+///       "default": 1000,
+///       "alternativeName": "max_completion_tokens"
+///     }
+///   }
+/// }
+/// ```
 model models {
   id                    String                  @id @db.VarChar(100)
   name                  String                  @db.VarChar(255)
@@ -1010,6 +1111,11 @@ model token_usage_ledger {
   input_tokens        Int
   output_tokens       Int
   cached_input_tokens Int     @default(0)
+
+  // Plan 204: Vision/Image Support - Image tracking fields
+  image_count         Int     @default(0)  // Number of images in the request
+  image_tokens        Int     @default(0)  // Tokens consumed by image processing
+
   vendor_cost         Decimal @db.Decimal(10, 8)
   margin_multiplier   Decimal @db.Decimal(4, 2)
   credit_value_usd    Decimal @db.Decimal(10, 8)
@@ -1049,6 +1155,7 @@ model token_usage_ledger {
   @@index([status])
   @@index([user_id, created_at])
   @@index([user_id, vendor_cost])
+  @@index([image_count], map: "idx_token_usage_image_count") // Plan 204: Filter vision requests
 }
 
 model user_credit_balance {

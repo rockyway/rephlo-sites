@@ -27,6 +27,10 @@ export interface TokenUsageRecord {
   inputCredits?: number;
   outputCredits?: number;
 
+  // Plan 204: Vision/Image Support
+  imageCount?: number;     // Number of images in the request
+  imageTokens?: number;    // Tokens consumed by image processing
+
   // Request metadata
   requestType: 'completion' | 'streaming' | 'batch';
   streamingSegments?: number;

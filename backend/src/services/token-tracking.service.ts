@@ -156,6 +156,7 @@ export class TokenTrackingService implements ITokenTrackingService {
 
   /**
    * Record token usage to ledger
+   * Plan 204: Includes vision metrics (imageCount, imageTokens)
    */
   async recordToLedger(record: TokenUsageRecord): Promise<void> {
     try {
@@ -163,6 +164,7 @@ export class TokenTrackingService implements ITokenTrackingService {
         INSERT INTO token_usage_ledger (
           request_id, user_id, model_id, provider_id,
           input_tokens, output_tokens, cached_input_tokens,
+          image_count, image_tokens,
           vendor_cost, margin_multiplier, credit_value_usd, credits_deducted, gross_margin_usd,
           request_type, streaming_segments,
           request_started_at, request_completed_at, processing_time_ms,
@@ -171,6 +173,7 @@ export class TokenTrackingService implements ITokenTrackingService {
         ) VALUES (
           ${record.requestId}::uuid, ${record.userId}::uuid, ${record.modelId}, ${record.providerId}::uuid,
           ${record.inputTokens}, ${record.outputTokens}, ${record.cachedInputTokens || 0},
+          ${record.imageCount || 0}, ${record.imageTokens || 0},
           ${record.vendorCost}, ${record.marginMultiplier}, ${record.vendorCost * record.marginMultiplier}, ${record.creditDeducted}, ${record.grossMargin},
           ${record.requestType}, ${record.streamingSegments},
           ${record.requestStartedAt}, ${record.requestCompletedAt}, ${record.processingTime},
@@ -183,6 +186,8 @@ export class TokenTrackingService implements ITokenTrackingService {
         requestId: record.requestId,
         userId: record.userId,
         creditsDeducted: record.creditDeducted,
+        imageCount: record.imageCount || 0,
+        imageTokens: record.imageTokens || 0,
       });
     } catch (error) {
       logger.error('TokenTrackingService: Error recording to ledger', {

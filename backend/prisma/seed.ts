@@ -775,6 +775,53 @@ async function seedModels() {
         },
         internalNotes: 'Cost-efficient variant for pro tier',
         complianceTags: ['SOC2', 'GDPR'],
+        // Plan 203: Parameter Constraints
+        parameterConstraints: {
+          temperature: {
+            supported: true,
+            allowedValues: [1.0],
+            default: 1.0,
+            reason: 'GPT-5-mini only supports temperature=1.0',
+          },
+          max_tokens: {
+            supported: true,
+            min: 1,
+            max: 4096,
+            default: 1000,
+            alternativeName: 'max_completion_tokens',
+            reason: 'Use max_completion_tokens parameter for GPT-5 models',
+          },
+          top_p: {
+            supported: true,
+            min: 0,
+            max: 1,
+            default: 1,
+            mutuallyExclusiveWith: ['temperature'],
+            reason: 'Cannot use both temperature and top_p',
+          },
+          presence_penalty: {
+            supported: true,
+            min: -2.0,
+            max: 2.0,
+            default: 0,
+          },
+          frequency_penalty: {
+            supported: true,
+            min: -2.0,
+            max: 2.0,
+            default: 0,
+          },
+          stop: {
+            supported: true,
+            maxSequences: 4,
+            maxLength: 64,
+          },
+          n: {
+            supported: true,
+            max: 5,
+            reason: 'Maximum 5 completions per request',
+          },
+        },
       },
     },
     {
@@ -861,6 +908,43 @@ async function seedModels() {
         },
         internalNotes: 'Best for agentic coding',
         complianceTags: ['SOC2', 'GDPR', 'HIPAA'],
+        // Plan 203: Parameter Constraints (Anthropic specific)
+        parameterConstraints: {
+          temperature: {
+            supported: true,
+            min: 0,
+            max: 1,
+            default: 1,
+            reason: 'Anthropic models support temperature 0-1',
+          },
+          max_tokens: {
+            supported: true,
+            min: 1,
+            max: 8192,
+            default: 1024,
+            reason: 'Maximum 8192 tokens for Claude Sonnet 4.5',
+          },
+          top_p: {
+            supported: true,
+            min: 0,
+            max: 1,
+            default: 1,
+            reason: 'Nucleus sampling parameter',
+          },
+          top_k: {
+            supported: true,
+            min: 1,
+            max: 500,
+            default: 40,
+            reason: 'Anthropic-specific top-k sampling',
+          },
+          stop: {
+            supported: true,
+            maxSequences: 16,
+            maxLength: 256,
+            reason: 'Anthropic supports up to 16 stop sequences',
+          },
+        },
       },
     },
     {

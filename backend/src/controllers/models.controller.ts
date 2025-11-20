@@ -336,12 +336,20 @@ export class ModelsController {
       throw unauthorizedError('Authentication required');
     }
 
-    logger.debug('ModelsController.chatCompletion', {
+    // ENHANCED: Log complete request data from client
+    logger.debug('ModelsController.chatCompletion: Request from client', {
       userId,
-      body: {
-        ...req.body,
-        messages: req.body.messages?.length + ' messages',
-      },
+      model: req.body.model,
+      stream: req.body.stream,
+      messagesCount: req.body.messages?.length,
+      firstMessage: req.body.messages?.[0] ? {
+        role: req.body.messages[0].role,
+        contentLength: req.body.messages[0].content?.length || 0,
+        contentPreview: req.body.messages[0].content?.substring(0, 100)
+      } : null,
+      maxTokens: req.body.max_tokens,
+      temperature: req.body.temperature,
+      fullRequest: JSON.stringify(req.body).substring(0, 500) // First 500 chars of raw request
     });
 
     // Validate request body

@@ -39,6 +39,8 @@ import { randomUUID } from 'crypto';
 import { InsufficientCreditsError } from './credit-deduction.service';
 import { ImageValidationService } from './image-validation.service';
 import { VisionTokenCalculatorService } from './vision-token-calculator.service';
+import { ParameterValidationService } from './parameter-validation.service';
+import { validationError } from '../middleware/error.middleware';
 
 @injectable()
 export class LLMService {
@@ -51,7 +53,8 @@ export class LLMService {
     @inject('ICreditService') private creditService: ICreditService,
     @inject('PrismaClient') private prisma: PrismaClient,
     @inject(ImageValidationService) private imageValidationService: ImageValidationService,
-    @inject(VisionTokenCalculatorService) private visionTokenCalculatorService: VisionTokenCalculatorService
+    @inject(VisionTokenCalculatorService) private visionTokenCalculatorService: VisionTokenCalculatorService,
+    @inject(ParameterValidationService) private parameterValidationService: ParameterValidationService
   ) {
     // Manually resolve providers to handle the case when none are registered
     let allProviders: ILLMProvider[] = [];
@@ -451,11 +454,57 @@ export class LLMService {
       });
 
       // ============================================================================
-      // LLM API CALL (only executes if credits sufficient)
+      // PARAMETER VALIDATION (Plan 203 - Validate request parameters)
       // ============================================================================
 
-      // 1. Delegate to provider (Strategy Pattern)
-      const { response, usage } = await provider.chatCompletion(request);
+      const paramValidation = await this.parameterValidationService.validateParameters(
+        request.model,
+        {
+          temperature: request.temperature,
+          max_tokens: request.max_tokens,
+          top_p: request.top_p,
+          presence_penalty: request.presence_penalty,
+          frequency_penalty: request.frequency_penalty,
+          stop: request.stop,
+          n: request.n,
+        }
+      );
+
+      if (!paramValidation.valid) {
+        logger.error('LLMService: Parameter validation failed', {
+          model: request.model,
+          errors: paramValidation.errors,
+        });
+        throw validationError(
+          `Invalid parameters for model '${request.model}': ${paramValidation.errors.join('; ')}`
+        );
+      }
+
+      if (paramValidation.warnings.length > 0) {
+        logger.warn('LLMService: Parameter validation warnings', {
+          model: request.model,
+          warnings: paramValidation.warnings,
+        });
+      }
+
+      // Apply parameter transformations (e.g., max_tokens → max_completion_tokens)
+      const transformedRequest = {
+        ...request,
+        ...paramValidation.transformedParams,
+      };
+
+      logger.debug('LLMService: Parameters validated and transformed', {
+        model: request.model,
+        originalParams: Object.keys(request).filter(k => !['messages', 'model', 'stream'].includes(k)),
+        transformedParams: Object.keys(paramValidation.transformedParams),
+      });
+
+      // ============================================================================
+      // LLM API CALL (only executes if credits sufficient and parameters valid)
+      // ============================================================================
+
+      // 1. Delegate to provider (Strategy Pattern) with transformed request
+      const { response, usage } = await provider.chatCompletion(transformedRequest);
 
       // 2. Business logic (credit calculation using Plan 161 provider pricing)
       const duration = Date.now() - startTime;
@@ -487,6 +536,9 @@ export class LLMService {
         grossMargin: pricingData.grossMargin,
         inputCredits: pricingData.inputCredits,
         outputCredits: pricingData.outputCredits,
+        // Plan 204: Vision metrics
+        imageCount: visionInfo.imageCount,
+        imageTokens: visionInfo.imageTokens,
         requestType: 'completion' as const,
         requestStartedAt,
         requestCompletedAt,
@@ -654,7 +706,53 @@ export class LLMService {
       });
 
       // ============================================================================
-      // LLM API CALL (only executes if credits sufficient)
+      // PARAMETER VALIDATION (Plan 203 - Validate request parameters)
+      // ============================================================================
+
+      const paramValidation = await this.parameterValidationService.validateParameters(
+        request.model,
+        {
+          temperature: request.temperature,
+          max_tokens: request.max_tokens,
+          top_p: request.top_p,
+          presence_penalty: request.presence_penalty,
+          frequency_penalty: request.frequency_penalty,
+          stop: request.stop,
+          n: request.n,
+        }
+      );
+
+      if (!paramValidation.valid) {
+        logger.error('LLMService: Parameter validation failed (streaming)', {
+          model: request.model,
+          errors: paramValidation.errors,
+        });
+        throw validationError(
+          `Invalid parameters for model '${request.model}': ${paramValidation.errors.join('; ')}`
+        );
+      }
+
+      if (paramValidation.warnings.length > 0) {
+        logger.warn('LLMService: Parameter validation warnings (streaming)', {
+          model: request.model,
+          warnings: paramValidation.warnings,
+        });
+      }
+
+      // Apply parameter transformations (e.g., max_tokens → max_completion_tokens)
+      const transformedRequest = {
+        ...request,
+        ...paramValidation.transformedParams,
+      };
+
+      logger.debug('LLMService: Parameters validated and transformed (streaming)', {
+        model: request.model,
+        originalParams: Object.keys(request).filter(k => !['messages', 'model', 'stream'].includes(k)),
+        transformedParams: Object.keys(paramValidation.transformedParams),
+      });
+
+      // ============================================================================
+      // LLM API CALL (only executes if credits sufficient and parameters valid)
       // ============================================================================
 
       // ENHANCED: Log before delegating to provider
@@ -665,8 +763,8 @@ export class LLMService {
         messagesCount: request.messages.length
       });
 
-      // 1. Delegate to provider
-      const totalTokens = await provider.streamChatCompletion(request, res);
+      // 1. Delegate to provider with transformed request
+      const totalTokens = await provider.streamChatCompletion(transformedRequest, res);
 
       // 2. Business logic (credit calculation using Plan 161 provider pricing)
       // Note: Streaming providers only return totalTokens, so we estimate the breakdown
@@ -702,6 +800,9 @@ export class LLMService {
         grossMargin: pricingData.grossMargin,
         inputCredits: pricingData.inputCredits,
         outputCredits: pricingData.outputCredits,
+        // Plan 204: Vision metrics
+        imageCount: visionInfo.imageCount,
+        imageTokens: visionInfo.imageTokens,
         requestType: 'streaming' as const,
         requestStartedAt,
         requestCompletedAt,

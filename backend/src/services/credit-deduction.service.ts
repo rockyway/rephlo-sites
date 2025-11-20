@@ -273,6 +273,7 @@ export class CreditDeductionService implements ICreditDeductionService {
             INSERT INTO token_usage_ledger (
               request_id, user_id, subscription_id, model_id, provider_id,
               input_tokens, output_tokens, cached_input_tokens,
+              image_count, image_tokens,
               vendor_cost, margin_multiplier, credit_value_usd, credits_deducted,
               input_credits, output_credits, total_credits,
               request_type, request_started_at, request_completed_at,
@@ -286,6 +287,8 @@ export class CreditDeductionService implements ICreditDeductionService {
               ${tokenUsageRecord.inputTokens},
               ${tokenUsageRecord.outputTokens},
               ${tokenUsageRecord.cachedInputTokens || 0},
+              ${tokenUsageRecord.imageCount || 0},
+              ${tokenUsageRecord.imageTokens || 0},
               ${tokenUsageRecord.vendorCost},
               ${tokenUsageRecord.marginMultiplier},
               ${tokenUsageRecord.vendorCost * tokenUsageRecord.marginMultiplier},
