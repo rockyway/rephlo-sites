@@ -260,7 +260,7 @@ export function PricingConfigForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
-  tiers = ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+  tiers = ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
   providers = [],
   models = [],
 }: PricingConfigFormProps) {

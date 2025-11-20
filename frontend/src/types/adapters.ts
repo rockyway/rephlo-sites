@@ -214,9 +214,10 @@ export function formatTierDisplay(tier: string): string {
   const tierMap: Record<string, string> = {
     'free': 'Free',
     'pro': 'Pro',
+    'pro_plus': 'Pro+',
     'pro_max': 'Pro Max',
     'enterprise_pro': 'Enterprise Pro',
-    'enterprise_max': 'Enterprise Max',
+    'enterprise_pro_plus': 'Enterprise Pro+',
     'perpetual': 'Perpetual',
   };
   return tierMap[tier] || tier;

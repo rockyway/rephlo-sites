@@ -150,7 +150,7 @@ function PricingConfiguration() {
       return acc;
     }, {} as Record<string, PricingConfig>);
 
-  const tiers = ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'];
+  const tiers = ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'];
 
   // Model-specific overrides
   const modelOverrides = safeArray<PricingConfig>(configs).filter(
