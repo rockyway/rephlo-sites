@@ -264,11 +264,17 @@ export class CreditDeductionService implements ICreditDeductionService {
           `;
 
           // Step 5: Create token usage ledger record FIRST (FK requirement for credit_deduction_ledger)
+          // Phase 3: Track separate input/output credits
+          const inputCredits = tokenUsageRecord.inputCredits || 0;
+          const outputCredits = tokenUsageRecord.outputCredits || 0;
+          const totalCredits = inputCredits + outputCredits;
+
           await tx.$executeRaw`
             INSERT INTO token_usage_ledger (
               request_id, user_id, subscription_id, model_id, provider_id,
               input_tokens, output_tokens, cached_input_tokens,
               vendor_cost, margin_multiplier, credit_value_usd, credits_deducted,
+              input_credits, output_credits, total_credits,
               request_type, request_started_at, request_completed_at,
               processing_time_ms, status, gross_margin_usd, created_at
             ) VALUES (
@@ -284,6 +290,9 @@ export class CreditDeductionService implements ICreditDeductionService {
               ${tokenUsageRecord.marginMultiplier},
               ${tokenUsageRecord.vendorCost * tokenUsageRecord.marginMultiplier},
               ${creditsToDeduct},
+              ${inputCredits},
+              ${outputCredits},
+              ${totalCredits},
               ${tokenUsageRecord.requestType}::request_type,
               ${tokenUsageRecord.requestStartedAt},
               ${tokenUsageRecord.requestCompletedAt},

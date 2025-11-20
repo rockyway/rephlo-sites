@@ -23,6 +23,10 @@ export interface TokenUsageRecord {
   marginMultiplier: number;
   grossMargin: number;
 
+  // Phase 3: Separate input/output credits
+  inputCredits?: number;
+  outputCredits?: number;
+
   // Request metadata
   requestType: 'completion' | 'streaming' | 'batch';
   streamingSegments?: number;

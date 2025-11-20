@@ -196,6 +196,7 @@ export interface LegacyInfo {
 
 /**
  * Model listing response
+ * Phase 3: Includes separate input/output pricing
  */
 export interface ModelListItem {
   id: string;
@@ -205,7 +206,14 @@ export interface ModelListItem {
   capabilities: string[];
   context_length: number;
   max_output_tokens: number | null;
+
+  // Phase 3: Separate input/output pricing
+  input_credits_per_k?: number;
+  output_credits_per_k?: number;
+
+  // DEPRECATED: Kept for backward compatibility
   credits_per_1k_tokens: number;
+
   is_available: boolean;
   is_legacy?: boolean; // NEW: Legacy status
   is_archived?: boolean; // NEW: Archived status
@@ -226,6 +234,7 @@ export interface ModelListResponse {
 
 /**
  * Model details response
+ * Phase 3: Includes separate input/output pricing
  */
 export interface ModelDetailsResponse {
   id: string;
@@ -238,7 +247,14 @@ export interface ModelDetailsResponse {
   max_output_tokens: number | null;
   input_cost_per_million_tokens: number;
   output_cost_per_million_tokens: number;
+
+  // Phase 3: Separate input/output pricing
+  input_credits_per_k?: number;
+  output_credits_per_k?: number;
+
+  // DEPRECATED: Kept for backward compatibility
   credits_per_1k_tokens: number;
+
   is_available: boolean;
   is_deprecated: boolean;
   is_legacy?: boolean; // NEW: Legacy status
@@ -282,7 +298,14 @@ export interface CompletionUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+
+  // Phase 3: Separate input/output credit tracking
+  inputCredits?: number;   // Credits for input tokens
+  outputCredits?: number;  // Credits for output tokens
+
+  // DEPRECATED: Kept for backward compatibility
   creditsUsed: number;
+
   cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
   credits?: CreditInfo;   // Optional: Credit balance info (non-streaming: always included, streaming: final chunk only)
 }

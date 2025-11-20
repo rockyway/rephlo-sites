@@ -40,6 +40,9 @@ export class MockUsageService implements IUsageService {
       deduction_record_id: data.deductionRecordId || null,
       created_at: now,
       gross_margin_usd: 0 as any,
+      total_credits: null,
+      input_credits: null,
+      output_credits: null,
     };
 
     this.usageHistory.set(usage.id, usage);

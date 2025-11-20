@@ -110,13 +110,15 @@ export class LLMService {
    * Formula: credits = ceil(vendorCost × marginMultiplier × 100)
    * Where 100 is the conversion factor (1 credit = $0.01)
    *
+   * Phase 3: Now also calculates separate input/output credits
+   *
    * @param userId - User ID for tier lookup
    * @param modelId - Model identifier
    * @param providerName - Provider name (e.g., 'openai', 'anthropic')
    * @param inputTokens - Number of input tokens
    * @param outputTokens - Number of output tokens
    * @param cachedInputTokens - Number of cached input tokens (optional, for Anthropic/Google)
-   * @returns Object containing credits, providerId, vendorCost, marginMultiplier, and grossMargin
+   * @returns Object containing credits, providerId, vendorCost, marginMultiplier, grossMargin, inputCredits, outputCredits
    */
   private async calculateCreditsFromVendorCost(
     userId: string,
@@ -131,6 +133,8 @@ export class LLMService {
     vendorCost: number;
     marginMultiplier: number;
     grossMargin: number;
+    inputCredits: number;
+    outputCredits: number;
   }> {
     try {
       // Step 1: Look up provider UUID from provider name
@@ -148,6 +152,20 @@ export class LLMService {
         });
         throw new Error(error);
       }
+
+      // Step 1.5: Fetch model meta to get inputCreditsPerK and outputCreditsPerK
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { meta: true },
+      });
+
+      if (!model) {
+        throw new Error(`Model '${modelId}' not found in database`);
+      }
+
+      const meta = model.meta as any;
+      const inputCreditsPerK = meta?.inputCreditsPerK;
+      const outputCreditsPerK = meta?.outputCreditsPerK;
 
       // Step 2: Calculate vendor cost
       const costCalculation = await this.costCalculationService.calculateVendorCost({
@@ -169,6 +187,23 @@ export class LLMService {
       // Where × 100 converts USD to credits (1 credit = $0.01)
       const credits = Math.ceil(costCalculation.vendorCost * marginMultiplier * 100);
 
+      // Step 4.5: Calculate separate input/output credits (Phase 3)
+      let inputCredits = 0;
+      let outputCredits = 0;
+
+      if (inputCreditsPerK && outputCreditsPerK) {
+        // Use pre-calculated credits from model meta
+        inputCredits = Math.ceil((inputTokens / 1000) * inputCreditsPerK);
+        outputCredits = Math.ceil((outputTokens / 1000) * outputCreditsPerK);
+      } else {
+        // Fallback: Split total credits proportionally by tokens
+        const totalTokens = inputTokens + outputTokens;
+        if (totalTokens > 0) {
+          inputCredits = Math.ceil((inputTokens / totalTokens) * credits);
+          outputCredits = Math.ceil((outputTokens / totalTokens) * credits);
+        }
+      }
+
       // Step 5: Calculate gross margin (revenue - cost)
       const creditValueUsd = credits * 0.01; // Convert credits to USD
       const grossMargin = creditValueUsd - costCalculation.vendorCost;
@@ -183,6 +218,8 @@ export class LLMService {
         vendorCost: costCalculation.vendorCost,
         marginMultiplier,
         credits,
+        inputCredits,
+        outputCredits,
         grossMargin,
       });
 
@@ -192,6 +229,8 @@ export class LLMService {
         vendorCost: costCalculation.vendorCost,
         marginMultiplier,
         grossMargin,
+        inputCredits,
+        outputCredits,
       };
     } catch (error) {
       logger.error('LLMService: Error calculating credits from vendor cost', {
@@ -311,6 +350,8 @@ export class LLMService {
         creditDeducted: pricingData.credits,
         marginMultiplier: pricingData.marginMultiplier,
         grossMargin: pricingData.grossMargin,
+        inputCredits: pricingData.inputCredits,
+        outputCredits: pricingData.outputCredits,
         requestType: 'completion' as const,
         requestStartedAt,
         requestCompletedAt,
@@ -477,6 +518,8 @@ export class LLMService {
         creditDeducted: pricingData.credits,
         marginMultiplier: pricingData.marginMultiplier,
         grossMargin: pricingData.grossMargin,
+        inputCredits: pricingData.inputCredits,
+        outputCredits: pricingData.outputCredits,
         requestType: 'streaming' as const,
         requestStartedAt,
         requestCompletedAt,
@@ -650,6 +693,8 @@ export class LLMService {
         creditDeducted: pricingData.credits,
         marginMultiplier: pricingData.marginMultiplier,
         grossMargin: pricingData.grossMargin,
+        inputCredits: pricingData.inputCredits,
+        outputCredits: pricingData.outputCredits,
         requestType: 'completion' as const,
         requestStartedAt,
         requestCompletedAt,
@@ -813,6 +858,8 @@ export class LLMService {
         creditDeducted: pricingData.credits,
         marginMultiplier: pricingData.marginMultiplier,
         grossMargin: pricingData.grossMargin,
+        inputCredits: pricingData.inputCredits,
+        outputCredits: pricingData.outputCredits,
         requestType: 'streaming' as const,
         requestStartedAt,
         requestCompletedAt,

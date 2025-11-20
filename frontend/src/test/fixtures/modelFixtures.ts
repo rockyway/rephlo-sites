@@ -16,7 +16,7 @@ export const mockModelMeta: ModelMeta = {
   creditsPer1kTokens: 50,
   requiredTier: SubscriptionTier.PRO,
   tierRestrictionMode: 'minimum',
-  allowedTiers: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
+  allowedTiers: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE_PRO],
   providerMetadata: {
     openai: {
       modelFamily: 'gpt-4',
@@ -85,9 +85,9 @@ export const mockAnthropicModel: ModelInfo = {
     inputCostPerMillionTokens: 1500,
     outputCostPerMillionTokens: 7500,
     creditsPer1kTokens: 100,
-    requiredTier: SubscriptionTier.ENTERPRISE,
+    requiredTier: SubscriptionTier.ENTERPRISE_PRO,
     tierRestrictionMode: 'exact',
-    allowedTiers: [SubscriptionTier.ENTERPRISE],
+    allowedTiers: [SubscriptionTier.ENTERPRISE_PRO],
     providerMetadata: {
       anthropic: {
         modelSeries: 'claude-3',

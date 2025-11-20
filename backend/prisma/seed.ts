@@ -17,6 +17,7 @@
 import { PrismaClient, proration_event_type, proration_status } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
+import { calculateSeparateCreditsPerKTokens } from '../src/types/model-meta';
 
 const prisma = new PrismaClient();
 
@@ -667,6 +668,50 @@ async function seedCredits(users: any[], subscriptions: any[]) {
 }
 
 /**
+ * Helper function to calculate separate input/output credits for models
+ * Uses the centralized calculation function with tier-specific margins
+ *
+ * @param inputCostPerMillion - Input cost in cents per million tokens
+ * @param outputCostPerMillion - Output cost in cents per million tokens
+ * @param tier - Subscription tier (determines margin multiplier)
+ * @returns Object with inputCreditsPerK, outputCreditsPerK, and creditsPer1kTokens (deprecated)
+ */
+function calculateModelCredits(
+  inputCostPerMillion: number,
+  outputCostPerMillion: number,
+  tier: 'free' | 'pro' | 'pro_plus' | 'pro_max' | 'enterprise_pro' | 'enterprise_pro_plus'
+): {
+  inputCreditsPerK: number;
+  outputCreditsPerK: number;
+  creditsPer1kTokens: number;
+} {
+  // Margin multipliers by tier (from Plan 189)
+  const marginMap = {
+    free: 2.0,                 // 50% margin (abuse prevention)
+    pro: 1.0,                  // Break-even (volume play)
+    pro_plus: 1.1,             // 10% margin
+    pro_max: 1.25,             // 25% margin (premium)
+    enterprise_pro: 1.15,      // 15% margin
+    enterprise_pro_plus: 1.20, // 20% margin
+  };
+
+  const margin = marginMap[tier];
+
+  // Calculate separate credits using the utility function
+  const result = calculateSeparateCreditsPerKTokens(
+    inputCostPerMillion,
+    outputCostPerMillion,
+    margin
+  );
+
+  return {
+    inputCreditsPerK: result.inputCreditsPerK,
+    outputCreditsPerK: result.outputCreditsPerK,
+    creditsPer1kTokens: result.estimatedTotalPerK, // Deprecated: for backward compatibility
+  };
+}
+
+/**
  * Seed LLM Models
  * Seeds top-tier models from major providers with current pricing
  * Uses new JSONB meta format for all model metadata
@@ -690,7 +735,7 @@ async function seedModels() {
         maxOutputTokens: 128000,
         inputCostPerMillionTokens: 1250,
         outputCostPerMillionTokens: 10000,
-        creditsPer1kTokens: 28,
+        ...calculateModelCredits(1250, 10000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -718,7 +763,7 @@ async function seedModels() {
         maxOutputTokens: 128000,
         inputCostPerMillionTokens: 250,
         outputCostPerMillionTokens: 2000,
-        creditsPer1kTokens: 6,
+        ...calculateModelCredits(250, 2000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -746,7 +791,7 @@ async function seedModels() {
         maxOutputTokens: 128000,
         inputCostPerMillionTokens: 50,
         outputCostPerMillionTokens: 400,
-        creditsPer1kTokens: 1,
+        ...calculateModelCredits(50, 400, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -776,7 +821,7 @@ async function seedModels() {
         maxOutputTokens: 16384,
         inputCostPerMillionTokens: 15000,
         outputCostPerMillionTokens: 75000,
-        creditsPer1kTokens: 180,
+        ...calculateModelCredits(15000, 75000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -804,7 +849,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 3000,
         outputCostPerMillionTokens: 15000,
-        creditsPer1kTokens: 40,
+        ...calculateModelCredits(3000, 15000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -832,7 +877,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 1000,
         outputCostPerMillionTokens: 5000,
-        creditsPer1kTokens: 15,
+        ...calculateModelCredits(1000, 5000, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -861,7 +906,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 3000,
         outputCostPerMillionTokens: 15000,
-        creditsPer1kTokens: 40,
+        ...calculateModelCredits(3000, 15000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -894,7 +939,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 1250,
         outputCostPerMillionTokens: 5000,
-        creditsPer1kTokens: 20,
+        ...calculateModelCredits(1250, 5000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -922,7 +967,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 100,
         outputCostPerMillionTokens: 400,
-        creditsPer1kTokens: 3,
+        ...calculateModelCredits(100, 400, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -949,7 +994,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 38,
         outputCostPerMillionTokens: 150,
-        creditsPer1kTokens: 1,
+        ...calculateModelCredits(38, 150, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -978,7 +1023,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 400,
         outputCostPerMillionTokens: 2000,
-        creditsPer1kTokens: 8,
+        ...calculateModelCredits(400, 2000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1001,7 +1046,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 600,
-        creditsPer1kTokens: 3,
+        ...calculateModelCredits(200, 600, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1026,7 +1071,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 800,
-        creditsPer1kTokens: 5,
+        ...calculateModelCredits(200, 800, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1049,7 +1094,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 100,
         outputCostPerMillionTokens: 400,
-        creditsPer1kTokens: 2,
+        ...calculateModelCredits(100, 400, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1072,7 +1117,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 300,
         outputCostPerMillionTokens: 1200,
-        creditsPer1kTokens: 6,
+        ...calculateModelCredits(300, 1200, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1097,7 +1142,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 3000,
         outputCostPerMillionTokens: 15000,
-        creditsPer1kTokens: 40,
+        ...calculateModelCredits(3000, 15000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1120,7 +1165,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 500,
-        creditsPer1kTokens: 2,
+        ...calculateModelCredits(200, 500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1143,7 +1188,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 1500,
-        creditsPer1kTokens: 5,
+        ...calculateModelCredits(200, 1500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1168,7 +1213,7 @@ async function seedModels() {
         maxOutputTokens: 4096,
         inputCostPerMillionTokens: 2000,
         outputCostPerMillionTokens: 2000,
-        creditsPer1kTokens: 5,
+        ...calculateModelCredits(2000, 2000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],

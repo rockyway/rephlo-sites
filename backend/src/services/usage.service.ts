@@ -414,7 +414,7 @@ export class UsageService {
     startDate?: Date,
     endDate?: Date
   ): Promise<number> {
-    const where: any = { userId };
+    const where: any = { user_id: userId };
 
     if (startDate || endDate) {
       where.created_at = {};

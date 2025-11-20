@@ -110,7 +110,7 @@ function FraudDetection() {
 
     // Set up auto-refresh
     if (autoRefresh) {
-      intervalRef.current = setInterval(loadData, 30000); // 30 seconds
+      intervalRef.current = setInterval(loadData, 30000) as unknown as number; // 30 seconds
     }
 
     return () => {

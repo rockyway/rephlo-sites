@@ -528,18 +528,18 @@ model model_tier_audit_logs {
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model models {
-  id                      String                    @id @db.VarChar(100)
-  name                    String                    @db.VarChar(255)
-  provider                String                    @db.VarChar(100)
-  is_available            Boolean                   @default(true)
-  created_at              DateTime                  @default(now())
-  updated_at              DateTime
-  is_legacy               Boolean                   @default(false)
-  is_archived             Boolean                   @default(false)
-  meta                    Json
-  model_tier_audit_logs   model_tier_audit_logs[]
-  user_preferences        user_preferences[]
-  model_version_history   model_version_history[]
+  id                    String                  @id @db.VarChar(100)
+  name                  String                  @db.VarChar(255)
+  provider              String                  @db.VarChar(100)
+  is_available          Boolean                 @default(true)
+  created_at            DateTime                @default(now())
+  updated_at            DateTime
+  is_legacy             Boolean                 @default(false)
+  is_archived           Boolean                 @default(false)
+  meta                  Json
+  model_tier_audit_logs model_tier_audit_logs[]
+  user_preferences      user_preferences[]
+  model_version_history model_version_history[]
 
   @@index([is_archived], map: "idx_models_is_archived")
   @@index([is_available, is_archived], map: "idx_models_is_available_is_archived")
@@ -552,26 +552,26 @@ model models {
 /// Model version history table
 /// Tracks all changes to models for audit trail and rollback capability
 model model_version_history {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  model_id            String   @db.VarChar(100)
-  version_number      Int      // Incremental version number per model
-  changed_by          String   @db.Uuid // Admin user ID who made the change
-  change_type         String   @db.VarChar(50) // 'update', 'legacy_mark', 'archive', 'tier_change'
-  change_reason       String?  @db.VarChar(1000) // Admin-provided reason
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  model_id       String  @db.VarChar(100)
+  version_number Int // Incremental version number per model
+  changed_by     String  @db.Uuid // Admin user ID who made the change
+  change_type    String  @db.VarChar(50) // 'update', 'legacy_mark', 'archive', 'tier_change'
+  change_reason  String? @db.VarChar(1000) // Admin-provided reason
 
   // Snapshot data
-  previous_state      Json     // Complete previous state before change
-  new_state           Json     // Complete new state after change
-  changes_summary     Json     // { field: { old: value, new: value } }
+  previous_state  Json // Complete previous state before change
+  new_state       Json // Complete new state after change
+  changes_summary Json // { field: { old: value, new: value } }
 
   // Metadata
-  ip_address          String?  @db.VarChar(45)
-  user_agent          String?
-  created_at          DateTime @default(now())
+  ip_address String?  @db.VarChar(45)
+  user_agent String?
+  created_at DateTime @default(now())
 
   // Relations
-  model               models   @relation(fields: [model_id], references: [id], onDelete: Cascade)
-  admin               users    @relation(fields: [changed_by], references: [id])
+  model models @relation(fields: [model_id], references: [id], onDelete: Cascade)
+  admin users  @relation(fields: [changed_by], references: [id])
 
   @@unique([model_id, version_number])
   @@index([model_id, created_at])
@@ -1001,19 +1001,27 @@ model token_usage_daily_summary {
 }
 
 model token_usage_ledger {
-  id                                                                                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  request_id                                                                              String                   @unique @db.Uuid
-  user_id                                                                                 String                   @db.Uuid
-  subscription_id                                                                         String?                  @db.Uuid
-  model_id                                                                                String                   @db.VarChar(255)
-  provider_id                                                                             String                   @db.Uuid
-  input_tokens                                                                            Int
-  output_tokens                                                                           Int
-  cached_input_tokens                                                                     Int                      @default(0)
-  vendor_cost                                                                             Decimal                  @db.Decimal(10, 8)
-  margin_multiplier                                                                       Decimal                  @db.Decimal(4, 2)
-  credit_value_usd                                                                        Decimal                  @db.Decimal(10, 8)
-  credits_deducted                                                                        Int
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  request_id          String  @unique @db.Uuid
+  user_id             String  @db.Uuid
+  subscription_id     String? @db.Uuid
+  model_id            String  @db.VarChar(255)
+  provider_id         String  @db.Uuid
+  input_tokens        Int
+  output_tokens       Int
+  cached_input_tokens Int     @default(0)
+  vendor_cost         Decimal @db.Decimal(10, 8)
+  margin_multiplier   Decimal @db.Decimal(4, 2)
+  credit_value_usd    Decimal @db.Decimal(10, 8)
+
+  // Phase 3: Separate input/output pricing - NEW fields
+  input_credits  Int? @map("input_credits")
+  output_credits Int? @map("output_credits")
+  total_credits  Int? @map("total_credits")
+
+  // DEPRECATED: Will be removed in future version after migration
+  credits_deducted Int
+
   request_type                                                                            request_type
   streaming_segments                                                                      Int?
   request_started_at                                                                      DateTime

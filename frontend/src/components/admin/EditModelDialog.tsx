@@ -12,8 +12,7 @@ import {
   MODEL_TEMPLATES,
   CAPABILITY_OPTIONS,
   TIER_OPTIONS,
-  calculateSuggestedCredits,
-  type ModelTemplate,
+  calculateSeparateCreditsPerKTokens,
 } from '@/data/modelTemplates';
 import type { ModelInfo } from '@/types/model-lifecycle';
 import { SubscriptionTier } from '@rephlo/shared-types';
@@ -63,8 +62,10 @@ function EditModelDialog({
   const [version, setVersion] = useState('');
   const [inputCost, setInputCost] = useState(''); // USD
   const [outputCost, setOutputCost] = useState(''); // USD
-  const [creditsPerK, setCreditsPerK] = useState('');
-  const [capabilities, setCapabilities] = useState<Set<string>>(new Set());
+  const [inputCreditsPerK, setInputCreditsPerK] = useState('');
+  const [outputCreditsPerK, setOutputCreditsPerK] = useState('');
+  const [estimatedTotalPerK, setEstimatedTotalPerK] = useState('');
+  const [capabilities, setCapabilities] = useState<Set<'text' | 'vision' | 'function_calling' | 'code' | 'long_context'>>(new Set());
   const [requiredTier, setRequiredTier] = useState<SubscriptionTier>(SubscriptionTier.FREE);
   const [restrictionMode, setRestrictionMode] = useState<TierRestrictionMode>('minimum');
   const [allowedTiers, setAllowedTiers] = useState<Set<SubscriptionTier>>(new Set());
@@ -96,7 +97,11 @@ function EditModelDialog({
       const outputUSD = (meta?.outputCostPerMillionTokens || 0) / 100;
       setInputCost(String(inputUSD));
       setOutputCost(String(outputUSD));
-      setCreditsPerK(String(meta?.creditsPer1kTokens || ''));
+
+      // Load separate credit fields (Phase 3)
+      setInputCreditsPerK(String(meta?.inputCreditsPerK || ''));
+      setOutputCreditsPerK(String(meta?.outputCreditsPerK || ''));
+      setEstimatedTotalPerK(String(meta?.creditsPer1kTokens || ''));
 
       setCapabilities(new Set(meta?.capabilities || []));
       setRequiredTier((meta?.requiredTier as SubscriptionTier) || SubscriptionTier.FREE);
@@ -116,18 +121,23 @@ function EditModelDialog({
     const inputCents = Math.round(inputDollars * 100);
     const outputCents = Math.round(outputDollars * 100);
 
-    if (!isNaN(inputCents) && !isNaN(outputCents) && outputCents > 0) {
-      const suggested = calculateSuggestedCredits(inputCents, outputCents);
+    if (!isNaN(inputCents) && !isNaN(outputCents) && inputCents >= 0 && outputCents >= 0) {
+      const result = calculateSeparateCreditsPerKTokens(inputCents, outputCents);
       setShowAutoCalculation(true);
-      if (!creditsPerK || creditsPerK === '0') {
-        setCreditsPerK(suggested.toString());
-      }
+
+      // Auto-fill calculated values
+      setInputCreditsPerK(result.inputCreditsPerK.toString());
+      setOutputCreditsPerK(result.outputCreditsPerK.toString());
+      setEstimatedTotalPerK(result.estimatedTotalPerK.toString());
     } else {
       setShowAutoCalculation(false);
+      setInputCreditsPerK('0');
+      setOutputCreditsPerK('0');
+      setEstimatedTotalPerK('0');
     }
   }, [inputCost, outputCost]);
 
-  const toggleCapability = (capability: string) => {
+  const toggleCapability = (capability: 'text' | 'vision' | 'function_calling' | 'code' | 'long_context') => {
     const newSet = new Set(capabilities);
     if (newSet.has(capability)) {
       newSet.delete(capability);
@@ -164,8 +174,12 @@ function EditModelDialog({
       setValidationError('Input and output costs are required');
       return false;
     }
-    if (!creditsPerK || parseInt(creditsPerK) <= 0) {
-      setValidationError('Valid credits per 1K tokens is required');
+    if (!inputCreditsPerK || parseInt(inputCreditsPerK) < 0) {
+      setValidationError('Valid input credits per 1K is required');
+      return false;
+    }
+    if (!outputCreditsPerK || parseInt(outputCreditsPerK) <= 0) {
+      setValidationError('Valid output credits per 1K is required');
       return false;
     }
     if (restrictionMode === 'whitelist' && allowedTiers.size === 0) {
@@ -215,8 +229,18 @@ function EditModelDialog({
     if (outputCostInCents !== currentMeta?.outputCostPerMillionTokens) {
       metaUpdates.outputCostPerMillionTokens = outputCostInCents;
     }
-    if (parseInt(creditsPerK) !== currentMeta?.creditsPer1kTokens) {
-      metaUpdates.creditsPer1kTokens = parseInt(creditsPerK);
+
+    // Phase 3: Separate input/output pricing
+    if (parseInt(inputCreditsPerK) !== currentMeta?.inputCreditsPerK) {
+      metaUpdates.inputCreditsPerK = parseInt(inputCreditsPerK);
+    }
+    if (parseInt(outputCreditsPerK) !== currentMeta?.outputCreditsPerK) {
+      metaUpdates.outputCreditsPerK = parseInt(outputCreditsPerK);
+    }
+
+    // DEPRECATED: For backward compatibility
+    if (parseInt(estimatedTotalPerK) !== currentMeta?.creditsPer1kTokens) {
+      metaUpdates.creditsPer1kTokens = parseInt(estimatedTotalPerK);
     }
 
     const currentCaps = new Set(currentMeta?.capabilities || []);
@@ -432,8 +456,8 @@ function EditModelDialog({
                   >
                     <input
                       type="checkbox"
-                      checked={capabilities.has(cap.value)}
-                      onChange={() => toggleCapability(cap.value)}
+                      checked={capabilities.has(cap.value as any)}
+                      onChange={() => toggleCapability(cap.value as any)}
                       className="mt-0.5 h-4 w-4 rounded border-deep-navy-300 dark:border-deep-navy-600 text-rephlo-blue focus:ring-rephlo-blue dark:focus:ring-electric-cyan"
                     />
                     <div className="flex-1">
@@ -493,20 +517,68 @@ function EditModelDialog({
               </div>
 
               <div className="mt-4">
-                <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
-                  Credits per 1K Tokens *
-                </label>
+                <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white mb-3">
+                  Calculated Credits (Auto-filled) *
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
+                      Input Credits per 1K
+                    </label>
+                    <Input
+                      type="number"
+                      value={inputCreditsPerK}
+                      onChange={(e) => setInputCreditsPerK(e.target.value)}
+                      placeholder="Auto-calculated"
+                      disabled={true}
+                      className="bg-deep-navy-50 dark:bg-deep-navy-900"
+                    />
+                    <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                      Credits charged per 1K input tokens
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
+                      Output Credits per 1K
+                    </label>
+                    <Input
+                      type="number"
+                      value={outputCreditsPerK}
+                      onChange={(e) => setOutputCreditsPerK(e.target.value)}
+                      placeholder="Auto-calculated"
+                      disabled={true}
+                      className="bg-deep-navy-50 dark:bg-deep-navy-900"
+                    />
+                    <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                      Credits charged per 1K output tokens
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-1">
+                      Estimated Total per 1K
+                    </label>
+                    <Input
+                      type="number"
+                      value={estimatedTotalPerK}
+                      onChange={(e) => setEstimatedTotalPerK(e.target.value)}
+                      placeholder="Auto-calculated"
+                      disabled={true}
+                      className="bg-deep-navy-50 dark:bg-deep-navy-900"
+                    />
+                    <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                      Typical usage (1:10 input:output ratio)
+                    </p>
+                  </div>
+                </div>
                 {showAutoCalculation && (
-                  <p className="text-caption text-green-600 dark:text-green-400 mb-1">
-                    ✓ Auto-calculated based on pricing
-                  </p>
+                  <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md">
+                    <p className="text-caption text-green-800 dark:text-green-200">
+                      ✓ Credits auto-calculated: Input {inputCreditsPerK} | Output {outputCreditsPerK} | Est. {estimatedTotalPerK} per 1K
+                    </p>
+                  </div>
                 )}
-                <Input
-                  type="number"
-                  value={creditsPerK}
-                  onChange={(e) => setCreditsPerK(e.target.value)}
-                  placeholder="Auto-calculated or enter manually"
-                />
               </div>
             </div>
 
