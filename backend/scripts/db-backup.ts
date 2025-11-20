@@ -20,6 +20,10 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
+import { config } from 'dotenv';
+
+// Load environment variables from .env file
+config();
 
 // ============================================================================
 // Configuration
