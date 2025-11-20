@@ -382,6 +382,31 @@ psql -h localhost -p 5432 -U postgres -d rephlo-dev
 
 ---
 
+**Error**: `Prisma Migrate detected that it was invoked by Claude Code`
+
+**Context**: Prisma has added a safety mechanism that detects when commands are run by AI agents (like Claude Code) and requires explicit user consent before executing destructive operations.
+
+**Solution**: This is a safety feature, not a bug. If you want to proceed:
+
+1. **For manual testing**: Run the command directly in your terminal
+   ```bash
+   npm run db:reset:force
+   ```
+
+2. **For AI-assisted testing**: Set the environment variable with explicit consent
+   ```bash
+   # Windows (PowerShell)
+   $env:PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="I explicitly consent to this database reset operation"
+   npm run db:reset:force
+
+   # Linux/macOS
+   PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="I explicitly consent to this database reset operation" npm run db:reset:force
+   ```
+
+**Note**: The backup system still works correctly - backups are created before Prisma blocks the reset operation. This ensures maximum safety during AI-assisted development.
+
+---
+
 ### Restore Fails
 
 **Error**: `database "rephlo-dev" is being accessed by other users`
