@@ -17,6 +17,10 @@
 import { PrismaClient, proration_event_type, proration_status } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const prisma = new PrismaClient();
 
@@ -161,6 +165,20 @@ const USER_PERSONAS = [
     subscriptionTier: 'pro' as const,
     subscriptionStatus: 'active' as const,
     description: 'User authenticated via Google',
+  },
+  {
+    email: 'perpetual.user@example.com',
+    firstName: 'Perpetual',
+    lastName: 'License',
+    username: 'perpetualuser',
+    password: 'TestPassword123!',
+    role: 'user',
+    emailVerified: true,
+    authProvider: 'local',
+    mfaEnabled: false,
+    subscriptionTier: 'free' as const,
+    subscriptionStatus: 'active' as const,
+    description: 'User with active perpetual license for auto-activation testing',
   },
 ];
 
@@ -570,6 +588,116 @@ async function seedSubscriptions(users: any[]) {
   console.log('');
 
   return createdSubscriptions;
+}
+
+/**
+ * Seed Perpetual Licenses (Plan 110 + Plan 203)
+ * Creates test perpetual licenses for auto-activation testing
+ */
+async function seedPerpetualLicenses(users: any[]) {
+  console.log('Creating perpetual licenses...');
+  const createdLicenses = [];
+
+  // Find the perpetual license test user
+  const perpetualUser = users.find((u) => u.email === 'perpetual.user@example.com');
+  if (!perpetualUser) {
+    console.log('⚠️  Perpetual user not found - skipping perpetual license seed');
+    return [];
+  }
+
+  try {
+    // Create a perpetual license for the test user
+    const license = await prisma.perpetual_license.upsert({
+      where: { license_key: 'REPHLO-V1-TEST-AUTO-ACT1' },
+      update: {
+        user_id: perpetualUser.user_id,
+        purchase_price_usd: 299.00,
+        status: 'active',
+        purchased_version: '1.0.0',
+        eligible_until_version: '1.99.99',
+        max_activations: 3,
+        current_activations: 2,
+        purchased_at: new Date('2025-01-15T10:00:00.000Z'),
+        activated_at: new Date('2025-01-15T10:00:00.000Z'),
+        updated_at: new Date(),
+      },
+      create: {
+        id: randomUUID(),
+        user_id: perpetualUser.user_id,
+        license_key: 'REPHLO-V1-TEST-AUTO-ACT1',
+        purchase_price_usd: 299.00,
+        status: 'active',
+        purchased_version: '1.0.0',
+        eligible_until_version: '1.99.99',
+        max_activations: 3,
+        current_activations: 2,
+        purchased_at: new Date('2025-01-15T10:00:00.000Z'),
+        activated_at: new Date('2025-01-15T10:00:00.000Z'),
+        updated_at: new Date(),
+      },
+    });
+
+    // Create test device activations (2 out of 3 slots used)
+    await prisma.license_activation.upsert({
+      where: { id: randomUUID() }, // Using random UUID for where clause
+      update: {},
+      create: {
+        id: randomUUID(),
+        license_id: license.id,
+        user_id: perpetualUser.user_id,
+        machine_fingerprint: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+        device_name: 'Test-Desktop-PC',
+        os_type: 'Windows',
+        os_version: '11 Pro',
+        cpu_info: 'Intel Core i7-12700K',
+        activated_at: new Date('2025-01-15T11:30:00.000Z'),
+        last_seen_at: new Date(),
+        status: 'active',
+        updated_at: new Date(),
+      },
+    });
+
+    await prisma.license_activation.upsert({
+      where: { id: randomUUID() },
+      update: {},
+      create: {
+        id: randomUUID(),
+        license_id: license.id,
+        user_id: perpetualUser.user_id,
+        machine_fingerprint: 'z6y5x4w3v2u1t0s9r8q7p6o5n4m3l2k1j0i9h8g7f6e5d4c3b2a1',
+        device_name: 'Test-Laptop',
+        os_type: 'Windows',
+        os_version: '10 Pro',
+        cpu_info: 'AMD Ryzen 7 5800H',
+        activated_at: new Date('2025-01-16T09:15:00.000Z'),
+        last_seen_at: new Date(),
+        status: 'active',
+        updated_at: new Date(),
+      },
+    });
+
+    createdLicenses.push({
+      license_id: license.id,
+      license_key: license.license_key,
+      user_email: perpetualUser.email,
+      status: license.status,
+      active_devices: 2,
+      max_activations: license.max_activations,
+    });
+
+    console.log(`✓ Created/Updated ${createdLicenses.length} perpetual licenses`);
+    console.log('  License Details:');
+    createdLicenses.forEach((lic) => {
+      console.log(`    - ${lic.license_key} (User: ${lic.user_email}, Devices: ${lic.active_devices}/${lic.max_activations})`);
+    });
+    console.log('');
+  } catch (error: any) {
+    console.log('⚠️  Perpetual license table not available - skipping');
+    console.log('Error details:', error.message);
+    console.log('');
+  }
+
+  return createdLicenses;
 }
 
 /**
@@ -2230,6 +2358,7 @@ async function main() {
 
   try {
     subscriptions = await seedSubscriptions(users);
+    await seedPerpetualLicenses(users); // Plan 203: Perpetual licenses for auto-activation testing
     credits = await seedCredits(users, subscriptions); // Pass subscriptions to link credits
     models = await seedModels();
     await seedProrations(users, subscriptions);
