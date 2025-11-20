@@ -21,6 +21,7 @@
 
 import { Request, Response } from 'express';
 import { injectable, inject } from 'tsyringe';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { getUserId } from '../middleware/auth.middleware';
 import {
@@ -42,7 +43,8 @@ import { ModelVersionHistoryService } from '../services/model-version-history.se
 export class AdminModelsController {
   constructor(
     @inject('IModelService') private modelService: IModelService,
-    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService
+    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService,
+    @inject('PrismaClient') private prisma: PrismaClient
   ) {
     logger.debug('AdminModelsController: Initialized');
   }
@@ -458,8 +460,12 @@ export class AdminModelsController {
     });
 
     try {
-      // Get model details
-      const model = await this.modelService.getModelDetails(modelId);
+      // Get raw model from database (with meta field)
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { id: true, name: true, provider: true, meta: true },
+      });
+
       if (!model) {
         throw notFoundError(`Model '${modelId}'`);
       }
@@ -469,7 +475,7 @@ export class AdminModelsController {
 
       res.status(200).json({
         modelId: model.id,
-        modelName: model.model,
+        modelName: model.name,
         provider: model.provider,
         parameterConstraints,
       });
@@ -519,22 +525,36 @@ export class AdminModelsController {
       }
 
       // Get current model to preserve other meta fields
-      const model = await this.modelService.getModelDetails(modelId);
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { id: true, meta: true },
+      });
+
       if (!model) {
         throw notFoundError(`Model '${modelId}'`);
       }
 
-      // Update model with new parameter constraints
+      // Merge parameterConstraints into meta (preserving other meta fields)
       const updatedMeta = {
         ...(model.meta as any),
         parameterConstraints,
       };
 
-      await this.modelService.updateModelMeta(
-        modelId,
-        { parameterConstraints },
-        adminUserId
-      );
+      // Update via Prisma to ensure proper JSONB handling
+      await this.prisma.models.update({
+        where: { id: modelId },
+        data: { meta: updatedMeta },
+      });
+
+      // Create version history entry
+      await this.versionHistory.createVersionEntry({
+        model_id: modelId,
+        changed_by: adminUserId,
+        change_type: 'update',
+        change_reason: 'Admin updated parameter constraints',
+        previous_state: { parameterConstraints: (model.meta as any)?.parameterConstraints || {} },
+        new_state: { parameterConstraints },
+      });
 
       logger.info('Admin: Parameter constraints updated successfully', {
         modelId,
@@ -585,13 +605,18 @@ export class AdminModelsController {
 
     try {
       // Get current model
-      const model = await this.modelService.getModelDetails(modelId);
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { id: true, meta: true },
+      });
+
       if (!model) {
         throw notFoundError(`Model '${modelId}'`);
       }
 
       const meta = model.meta as any;
       const parameterConstraints = { ...(meta?.parameterConstraints || {}) };
+      const oldValue = parameterConstraints[paramName];
 
       // Check if parameter constraint exists
       if (!parameterConstraints[paramName]) {
@@ -604,11 +629,25 @@ export class AdminModelsController {
       delete parameterConstraints[paramName];
 
       // Update model with modified constraints
-      await this.modelService.updateModelMeta(
-        modelId,
-        { parameterConstraints },
-        adminUserId
-      );
+      const updatedMeta = {
+        ...meta,
+        parameterConstraints,
+      };
+
+      await this.prisma.models.update({
+        where: { id: modelId },
+        data: { meta: updatedMeta },
+      });
+
+      // Create version history entry
+      await this.versionHistory.createVersionEntry({
+        model_id: modelId,
+        changed_by: adminUserId,
+        change_type: 'update',
+        change_reason: `Admin deleted parameter constraint '${paramName}'`,
+        previous_state: { [`parameterConstraints.${paramName}`]: oldValue },
+        new_state: { [`parameterConstraints.${paramName}`]: null },
+      });
 
       logger.info('Admin: Parameter constraint deleted successfully', {
         modelId,
