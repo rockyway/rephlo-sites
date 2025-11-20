@@ -43,6 +43,8 @@ export class MockUsageService implements IUsageService {
       total_credits: null,
       input_credits: null,
       output_credits: null,
+      image_count: 0,
+      image_tokens: 0,
     };
 
     this.usageHistory.set(usage.id, usage);

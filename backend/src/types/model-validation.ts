@@ -108,11 +108,46 @@ export const chatMessageRoleSchema = z.enum([
 ]);
 
 /**
+ * Content part types for multimodal messages (text + images)
+ */
+export const textContentPartSchema = z.object({
+  type: z.literal('text'),
+  text: z.string().min(1, 'Text content cannot be empty'),
+});
+
+export const imageUrlSchema = z.object({
+  url: z.string().refine(
+    (url) => url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/'),
+    { message: 'Invalid image URL: must be HTTP(S) URL or data URI (data:image/...)' }
+  ),
+  detail: z.enum(['auto', 'low', 'high']).optional().default('auto'),
+});
+
+export const imageContentPartSchema = z.object({
+  type: z.literal('image_url'),
+  image_url: imageUrlSchema,
+});
+
+export const contentPartSchema = z.union([
+  textContentPartSchema,
+  imageContentPartSchema,
+]);
+
+export type TextContentPart = z.infer<typeof textContentPartSchema>;
+export type ImageUrl = z.infer<typeof imageUrlSchema>;
+export type ImageContentPart = z.infer<typeof imageContentPartSchema>;
+export type ContentPart = z.infer<typeof contentPartSchema>;
+
+/**
  * Chat message schema
+ * Supports both text-only (string) and multimodal (ContentPart[]) content
  */
 export const chatMessageSchema = z.object({
   role: chatMessageRoleSchema,
-  content: z.string().min(1, 'Message content cannot be empty'),
+  content: z.union([
+    z.string().min(1, 'Message content cannot be empty'),  // Text-only (backward compatible)
+    z.array(contentPartSchema).min(1, 'Content array cannot be empty'),  // Multimodal (new)
+  ]),
   name: z.string().optional(), // For function messages
   function_call: z
     .object({
@@ -132,7 +167,19 @@ export const chatCompletionSchema = z.object({
   model: z.string().min(1, 'Model ID is required'),
   messages: z
     .array(chatMessageSchema)
-    .min(1, 'At least one message is required'),
+    .min(1, 'At least one message is required')
+    .refine(
+      (messages) => {
+        const imageCount = messages.reduce((count, msg) => {
+          if (Array.isArray(msg.content)) {
+            return count + msg.content.filter(part => part.type === 'image_url').length;
+          }
+          return count;
+        }, 0);
+        return imageCount <= 10;
+      },
+      { message: 'Maximum 10 images per request' }
+    ),
   max_tokens: z
     .number()
     .int()

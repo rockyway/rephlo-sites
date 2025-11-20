@@ -32,10 +32,13 @@ import {
   ChatCompletionResponse,
   ChatCompletionChunk,
   TextCompletionChunk,
+  ImageUrl,
 } from '../types/model-validation';
 import logger from '../utils/logger';
 import { randomUUID } from 'crypto';
 import { InsufficientCreditsError } from './credit-deduction.service';
+import { ImageValidationService } from './image-validation.service';
+import { VisionTokenCalculatorService } from './vision-token-calculator.service';
 
 @injectable()
 export class LLMService {
@@ -46,7 +49,9 @@ export class LLMService {
     @inject('IPricingConfigService') private pricingConfigService: IPricingConfigService,
     @inject('ICreditDeductionService') private creditDeductionService: ICreditDeductionService,
     @inject('ICreditService') private creditService: ICreditService,
-    @inject('PrismaClient') private prisma: PrismaClient
+    @inject('PrismaClient') private prisma: PrismaClient,
+    @inject(ImageValidationService) private imageValidationService: ImageValidationService,
+    @inject(VisionTokenCalculatorService) private visionTokenCalculatorService: VisionTokenCalculatorService
   ) {
     // Manually resolve providers to handle the case when none are registered
     let allProviders: ILLMProvider[] = [];
@@ -86,10 +91,20 @@ export class LLMService {
    * Estimate input tokens from messages (rough approximation)
    * GPT tokenization: ~4 characters per token on average
    * Using conservative estimate: 3 chars per token (slightly higher than average)
+   * Note: For messages with images, this only estimates text tokens.
+   *       Use visionInfo.imageTokens for image token count.
    */
   private estimateInputTokens(messages: any[]): number {
     const totalChars = messages.reduce((sum, msg) => {
-      return sum + (msg.content?.length || 0);
+      if (typeof msg.content === 'string') {
+        return sum + msg.content.length;
+      } else if (Array.isArray(msg.content)) {
+        // For content arrays, only count text parts
+        const textParts = msg.content.filter((part: any) => part.type === 'text');
+        const textChars = textParts.reduce((chars: number, part: any) => chars + (part.text?.length || 0), 0);
+        return sum + textChars;
+      }
+      return sum;
     }, 0);
 
     // Conservative estimate: 3 chars per token (slightly higher than average)
@@ -249,6 +264,99 @@ export class LLMService {
   }
 
   // ============================================================================
+  // Vision Support (Plan 204 - Phase 1)
+  // ============================================================================
+
+  /**
+   * Validates vision request and calculates image tokens
+   * Called before chat completion to validate images and estimate vision tokens
+   *
+   * @param request - Chat completion request
+   * @param modelMeta - Model metadata (with vision configuration)
+   * @returns Object with imageCount, imageTokens, and validation errors
+   */
+  private async processVisionRequest(
+    request: ChatCompletionRequest,
+    modelMeta: any
+  ): Promise<{
+    imageCount: number;
+    imageTokens: number;
+    validationErrors: string[];
+  }> {
+    const images: ImageUrl[] = [];
+    const validationErrors: string[] = [];
+
+    // Check if model supports vision
+    const visionSupport = modelMeta?.vision?.supported;
+    const maxImages = modelMeta?.vision?.maxImages || 10;
+    const maxImageSize = modelMeta?.vision?.maxImageSize || 20971520; // 20MB default
+
+    // Check if request contains images
+    const hasImages = request.messages.some(msg =>
+      Array.isArray(msg.content) && msg.content.some(part => part.type === 'image_url')
+    );
+
+    if (hasImages && !visionSupport) {
+      throw new Error(`Model '${request.model}' does not support vision/image processing`);
+    }
+
+    if (!hasImages) {
+      return { imageCount: 0, imageTokens: 0, validationErrors: [] };
+    }
+
+    // Extract and validate all images
+    for (const message of request.messages) {
+      if (!Array.isArray(message.content)) continue;
+
+      for (const part of message.content) {
+        if (part.type !== 'image_url') continue;
+
+        const imageUrl = part.image_url.url;
+        const detail = part.image_url.detail || 'auto';
+
+        // Validate image
+        const validation = await this.imageValidationService.validateImage(
+          imageUrl,
+          maxImageSize
+        );
+
+        if (!validation.valid) {
+          validationErrors.push(`Image validation failed: ${validation.error}`);
+          continue;
+        }
+
+        images.push({
+          url: imageUrl,
+          detail,
+        });
+      }
+    }
+
+    // Check image count limit
+    if (images.length > maxImages) {
+      throw new Error(
+        `Too many images: ${images.length} exceeds maximum ${maxImages}`
+      );
+    }
+
+    // Calculate image tokens
+    const imageTokens = this.visionTokenCalculatorService.calculateTotalImageTokens(images);
+
+    logger.debug('LLMService: Vision request processed', {
+      model: request.model,
+      imageCount: images.length,
+      imageTokens,
+      validationErrors,
+    });
+
+    return {
+      imageCount: images.length,
+      imageTokens,
+      validationErrors,
+    };
+  }
+
+  // ============================================================================
   // Chat Completion Operations
   // ============================================================================
 
@@ -270,11 +378,38 @@ export class LLMService {
 
     try {
       // ============================================================================
+      // VISION PROCESSING (Plan 204 - Phase 1)
+      // ============================================================================
+
+      // Fetch model metadata for vision support check
+      const model = await this.prisma.models.findUnique({
+        where: { id: request.model },
+        select: { meta: true },
+      });
+
+      if (!model) {
+        throw new Error(`Model '${request.model}' not found in database`);
+      }
+
+      const modelMeta = model.meta as any;
+
+      // Process vision request (validation + token calculation)
+      const visionInfo = await this.processVisionRequest(request, modelMeta);
+
+      if (visionInfo.validationErrors.length > 0) {
+        logger.warn('LLMService: Vision validation warnings', {
+          model: request.model,
+          errors: visionInfo.validationErrors,
+        });
+      }
+
+      // ============================================================================
       // PRE-FLIGHT CREDIT VALIDATION (Bug #3 Fix)
       // ============================================================================
 
-      // Step 1: Estimate tokens from messages
-      const estimatedInputTokens = this.estimateInputTokens(request.messages);
+      // Step 1: Estimate tokens from messages (including vision tokens)
+      const estimatedTextTokens = this.estimateInputTokens(request.messages);
+      const estimatedInputTokens = estimatedTextTokens + visionInfo.imageTokens;
       const estimatedOutputTokens = request.max_tokens || 1000; // Use max_tokens or default
 
       // Step 2: Estimate credit cost
@@ -417,10 +552,22 @@ export class LLMService {
     userId: string,
     res: Response
   ): Promise<void> {
+    // ENHANCED: Log complete request data before processing
     logger.debug('LLMService: Streaming chat completion request', {
       model: request.model,
       provider: modelProvider,
       userId,
+      messagesCount: request.messages.length,
+      messages: request.messages.map((msg, idx) => ({
+        index: idx,
+        role: msg.role,
+        contentLength: typeof msg.content === 'string' ? msg.content.length : JSON.stringify(msg.content).length,
+        contentPreview: typeof msg.content === 'string' ? msg.content.substring(0, 100) : JSON.stringify(msg.content).substring(0, 100)
+      })),
+      maxTokens: request.max_tokens,
+      temperature: request.temperature,
+      stream: request.stream,
+      fullRequest: JSON.stringify(request).substring(0, 1000)
     });
 
     // Set SSE headers
@@ -434,11 +581,38 @@ export class LLMService {
 
     try {
       // ============================================================================
+      // VISION PROCESSING (Plan 204 - Phase 1)
+      // ============================================================================
+
+      // Fetch model metadata for vision support check
+      const model = await this.prisma.models.findUnique({
+        where: { id: request.model },
+        select: { meta: true },
+      });
+
+      if (!model) {
+        throw new Error(`Model '${request.model}' not found in database`);
+      }
+
+      const modelMeta = model.meta as any;
+
+      // Process vision request (validation + token calculation)
+      const visionInfo = await this.processVisionRequest(request, modelMeta);
+
+      if (visionInfo.validationErrors.length > 0) {
+        logger.warn('LLMService: Vision validation warnings (streaming)', {
+          model: request.model,
+          errors: visionInfo.validationErrors,
+        });
+      }
+
+      // ============================================================================
       // PRE-FLIGHT CREDIT VALIDATION (Bug #3 Fix)
       // ============================================================================
 
-      // Step 1: Estimate tokens from messages
-      const estimatedInputTokens = this.estimateInputTokens(request.messages);
+      // Step 1: Estimate tokens from messages (including vision tokens)
+      const estimatedTextTokens = this.estimateInputTokens(request.messages);
+      const estimatedInputTokens = estimatedTextTokens + visionInfo.imageTokens;
       const estimatedOutputTokens = request.max_tokens || 1000; // Use max_tokens or default
 
       // Step 2: Estimate credit cost
@@ -482,6 +656,14 @@ export class LLMService {
       // ============================================================================
       // LLM API CALL (only executes if credits sufficient)
       // ============================================================================
+
+      // ENHANCED: Log before delegating to provider
+      logger.debug('LLMService: Delegating to provider for streaming', {
+        provider: modelProvider,
+        model: request.model,
+        userId,
+        messagesCount: request.messages.length
+      });
 
       // 1. Delegate to provider
       const totalTokens = await provider.streamChatCompletion(request, res);
@@ -580,12 +762,22 @@ export class LLMService {
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (error) {
+      // ENHANCED: Log complete error with full context
       logger.error('LLMService: Streaming chat completion failed', {
         model: request.model,
         provider: modelProvider,
         userId,
         error: error instanceof Error ? error.message : 'Unknown error',
+        errorName: error instanceof Error ? error.name : typeof error,
+        errorCode: (error as any)?.code,
+        errorStatus: (error as any)?.status,
         stack: error instanceof Error ? error.stack : undefined,
+        requestContext: {
+          messagesCount: request.messages.length,
+          maxTokens: request.max_tokens,
+          estimatedInputTokens: this.estimateInputTokens(request.messages),
+          stream: request.stream
+        }
       });
 
       const errorMessage = this.getErrorMessage(error, modelProvider);

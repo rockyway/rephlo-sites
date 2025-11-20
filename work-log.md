@@ -2271,3 +2271,150 @@ Created comprehensive integration tests for the separate input/output pricing sy
 - Added selected state styling (blue border and background)
 - Matches AddModelDialog design for consistency
 
+
+## 2025-11-19 - Fixed Model Creation Tier Validation & Error Display
+
+**Issues Resolved:**
+1. Backend validation rejected new tier values (pro_plus, enterprise_pro_plus) with 422 error
+2. Frontend showed generic error instead of detailed validation messages
+
+**Changes:**
+- Updated `SubscriptionTierSchema` in backend/src/types/model-meta.ts with all 8 tier values
+- Enhanced error handling in frontend ModelManagement to extract field-level errors from API
+- Both builds successful, commit f818e71
+
+
+## 2025-11-19 - Fixed gpt-5.1-chat temperature restriction error
+
+**Problem**: Desktop Client calling /v1/chat/completions with model gpt-5.1-chat was receiving 400 error from Azure OpenAI API: 'temperature does not support 0.7 with this model. Only the default (1) value is supported.'
+
+**Root Cause**: The model gpt-5.1-chat only supports temperature=1.0 (default), but backend was sending temperature=0.7 from client request.
+
+**Solution**: 
+- Added gpt-5.1-chat to the restricted temperature models list in backend/src/providers/openai.provider.ts
+- Renamed isGPT5Mini() to hasRestrictedTemperature() to handle both gpt-5-mini and gpt-5.1-chat
+- Updated buildChatParams() to exclude temperature/top_p for restricted models
+- Enhanced logging to show hasTemperatureRestriction flag
+
+**Files Modified**:
+- backend/src/providers/openai.provider.ts: lines 83-90, 92-122, 153-159, 203-222
+
+**Status**: Fixed and tested. Backend now correctly omits temperature parameter for gpt-5.1-chat model.
+
+
+---
+2025-01-19: Enhanced Plan 203 with parameter research and UI mockups
+- Researched LLM parameters from OpenAI, Anthropic, Google (2025 standards)
+- Confirmed snake_case naming: max_tokens, top_p, frequency_penalty, etc.
+- Added comprehensive ASCII UI mockups (4 different views)
+- Added custom parameter support for future/unknown params
+- Documented all parameter ranges, defaults, and constraints
+- Included template selector UI for quick configuration
+
+## 2025-01-19: Completed Three Implementation Plans
+- ✅ Plan 203: Model Parameter Constraints - Admin Configuration (comprehensive parameter research, ASCII UI mockups, custom field support)
+- ✅ Plan 204: Vision/Image Support in Chat Completions (multimodal messages, SSRF protection, vision token calculation)
+- ✅ Plan 205: Provider Parameter Specifications - Modular Architecture (separated provider specs into dedicated files for easy maintenance)
+- Fixed: gpt-5.1-chat temperature restriction (only supports temperature=1.0)
+- Enhanced: Comprehensive logging at Controller/Service/Provider layers for diagnostics
+
+## 2025-01-19: Desktop Client Vision Support Alignment Analysis
+- Created Analysis 087: Desktop Client vision support alignment with Plan 204
+- Finding: Client has PARTIAL vision support using JSON string workaround (non-standard)
+- Issue: Current implementation will fail when backend enforces Plan 204 schema (content array vs. JSON string)
+- Recommendation: Backend implements Plan 204 Phase 1 first, then Client updates ChatMessage DTO
+- Timeline: 2-4 weeks for complete alignment (backend + client updates)
+
+## 2025-01-19: Desktop Client Vision Alignment Plan Created
+- Created Plan 206: Desktop Client Vision Support Alignment (comprehensive implementation guide)
+- Phase 1 (Critical): Fix content serialization from JSON string to proper arrays (8-12 hours)
+- Phase 2 (Enhanced): Add HTTP URL support and dynamic model capability detection (6-10 hours)
+- Phase 3 (Validation): Add image format validation and token estimation (4-6 hours)
+- Timeline: 2-3 sprints (2-6 weeks), 16-24 developer hours total
+- Deployment: Backend first (Plan 204), then Desktop Client updates
+
+## 2025-01-20: Plan 205 - Provider Parameter Specifications Architecture (COMPLETED)
+
+**Implemented complete modular provider specification architecture for LLM parameter management.**
+
+### Files Created (14 files):
+
+**Base Architecture:**
+- backend/src/config/providers/base-provider-spec.ts (Base interfaces and types)
+- backend/src/config/providers/index.ts (Provider registry and exports)
+- backend/src/config/providers/README.md (Documentation)
+
+**OpenAI Provider (4 files):**
+- backend/src/config/providers/openai/openai-spec.ts
+- backend/src/config/providers/openai/gpt4-family.ts
+- backend/src/config/providers/openai/gpt5-family.ts
+- backend/src/config/providers/openai/transformers.ts
+
+**Anthropic Provider (4 files):**
+- backend/src/config/providers/anthropic/anthropic-spec.ts
+- backend/src/config/providers/anthropic/claude3-family.ts
+- backend/src/config/providers/anthropic/claude4-family.ts
+- backend/src/config/providers/anthropic/transformers.ts
+
+**Google Provider (3 files):**
+- backend/src/config/providers/google/google-spec.ts
+- backend/src/config/providers/google/gemini-family.ts
+- backend/src/config/providers/google/transformers.ts
+
+**Tests:**
+- backend/src/__tests__/unit/config/provider-specs.test.ts (38 tests, all passing)
+
+### Key Features Implemented:
+
+1. **Modular Architecture**: Each provider isolated in dedicated directory
+2. **Type-Safe Specifications**: TypeScript interfaces for all provider specs
+3. **Model Family Support**: RegEx pattern matching for model families
+4. **Parameter Constraints**: Min/max ranges, allowed values, mutually exclusive params
+5. **Parameter Transformers**: Provider-specific transformations (e.g., Google camelCase)
+6. **Version Tracking**: API version and lastUpdated timestamps
+7. **Comprehensive Testing**: 38 unit tests covering all functionality
+
+### Test Results:
+- 38/38 tests passed
+- Provider registry works correctly
+- Model family pattern matching verified
+- Parameter transformers tested (OpenAI GPT-5, Google camelCase)
+- TypeScript compilation successful (no errors in provider config files)
+
+### Benefits:
+- Single-file updates when provider APIs change
+- No code changes needed for parameter constraint updates
+- Easy to add new providers
+- Self-documenting code with inline notes
+- Type-safe parameter handling
+
+### Next Steps:
+- Integrate with ParameterValidationService (Plan 203)
+- Update LLM service to use provider specs
+- Create admin UI for parameter configuration
+
+
+## 2025-11-20 - Database Schema Implementation (Plan 203 & 204)
+
+**Plan 203: Model Parameter Constraints**
+- Added comprehensive documentation for parameterConstraints structure in models table meta field
+- Updated seed data with parameter constraints for GPT-5-mini (temperature restricted to 1.0)
+- Updated seed data with parameter constraints for Claude Sonnet 4.5 (Anthropic-specific parameters)
+
+**Plan 204: Vision/Image Support**
+- Added image_count and image_tokens fields to token_usage_ledger table
+- Created migration 20251120064221_add_image_tracking_fields
+- Added index idx_token_usage_image_count for efficient filtering of vision requests
+
+**Testing:**
+- Verified image tracking columns exist in database (image_count, image_tokens)
+- Confirmed parameter constraints exist for GPT-5-mini and Claude Sonnet 4.5
+- All seed data populated successfully with new schema
+2025-11-20 00:49:28 - Completed Plan 204 Phase 1: Vision/Image Support in Chat Completions API
+  - Updated chat message schema to support content arrays (text + images)
+  - Created ImageValidationService with SSRF protection and 20MB limit
+  - Created VisionTokenCalculatorService for OpenAI token calculation
+  - Integrated vision processing into LLMService (chatCompletion and streamChatCompletion)
+  - Updated token counter utility to handle multimodal content
+  - Fixed provider compatibility with type assertions (Phase 2 will add proper transformations)
+  - All TypeScript compilation successful with no errors

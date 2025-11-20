@@ -53,18 +53,20 @@ export class GoogleProvider implements ILLMProvider {
     // Convert messages to Google format
     const history = request.messages.slice(0, -1).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }] as any, // TODO: Transform vision content for Google (Plan 204 Phase 2)
     }));
 
     const lastMessage = request.messages[request.messages.length - 1];
 
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(lastMessage.content);
+    const chat = model.startChat({ history: history as any }); // TODO: Proper typing for vision content (Plan 204 Phase 2)
+    const result = await chat.sendMessage(
+      typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content)
+    );
     const response = result.response;
     const text = response.text();
 
     // Estimate tokens (Google doesn't provide token counts in response)
-    const promptText = request.messages.map((m) => m.content).join(' ');
+    const promptText = request.messages.map((m) => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join(' ');
     const promptTokens = Math.ceil(promptText.length / 4);
     const completionTokens = Math.ceil(text.length / 4);
 
@@ -105,13 +107,15 @@ export class GoogleProvider implements ILLMProvider {
 
     const history = request.messages.slice(0, -1).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }] as any, // TODO: Transform vision content for Google (Plan 204 Phase 2)
     }));
 
     const lastMessage = request.messages[request.messages.length - 1];
 
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessageStream(lastMessage.content);
+    const chat = model.startChat({ history: history as any }); // TODO: Proper typing for vision content (Plan 204 Phase 2)
+    const result = await chat.sendMessageStream(
+      typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content)
+    );
 
     let completionText = '';
     let isFirstChunk = true;

@@ -53,7 +53,7 @@ export class AnthropicProvider implements ILLMProvider {
       .filter((m) => m.role !== 'system')
       .map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content,
+        content: m.content as any, // TODO: Transform vision content for Anthropic (Plan 204 Phase 2)
       }));
 
     const systemMessage = request.messages.find((m) => m.role === 'system');
@@ -61,8 +61,8 @@ export class AnthropicProvider implements ILLMProvider {
     const message = await this.client.messages.create({
       model: request.model,
       max_tokens: request.max_tokens || 1000,
-      messages: anthropicMessages,
-      system: systemMessage?.content,
+      messages: anthropicMessages as any, // TODO: Proper typing for vision content (Plan 204 Phase 2)
+      system: (typeof systemMessage?.content === 'string' ? systemMessage?.content : undefined) as any,
       temperature: request.temperature,
       top_p: request.top_p,
       stop_sequences: Array.isArray(request.stop)
@@ -112,7 +112,7 @@ export class AnthropicProvider implements ILLMProvider {
       .filter((m) => m.role !== 'system')
       .map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content,
+        content: m.content as any, // TODO: Transform vision content for Anthropic (Plan 204 Phase 2)
       }));
 
     const systemMessage = request.messages.find((m) => m.role === 'system');
@@ -120,8 +120,8 @@ export class AnthropicProvider implements ILLMProvider {
     const stream = await this.client.messages.stream({
       model: request.model,
       max_tokens: request.max_tokens || 1000,
-      messages: anthropicMessages,
-      system: systemMessage?.content,
+      messages: anthropicMessages as any, // TODO: Proper typing for vision content (Plan 204 Phase 2)
+      system: (typeof systemMessage?.content === 'string' ? systemMessage?.content : undefined) as any,
       temperature: request.temperature,
     });
 
