@@ -110,6 +110,69 @@ export interface TrendQueryParams extends AnalyticsQueryParams {
   granularity: 'hour' | 'day' | 'week' | 'month';
 }
 
+/**
+ * Cache Performance Analytics Types (Plan 207)
+ */
+export interface CachePerformanceKPIData {
+  avgCacheHitRate: number;
+  totalCachedTokens: number;
+  totalCacheSavings: number;
+  avgSavingsPercent: number;
+  cacheEnabledRequests: number;
+  totalRequests: number;
+  cacheAdoptionRate: number;
+  breakdown: {
+    cacheWriteTokens: number;
+    cacheReadTokens: number;
+    cachedPromptTokens: number;
+  };
+  trend: {
+    previousPeriodHitRate: number;
+    hitRateChange: number;
+    direction: 'up' | 'down' | 'neutral';
+  };
+}
+
+export interface CacheHitRateTrendData {
+  dataPoints: Array<{
+    timestamp: string;
+    avgHitRate: number;
+    requestCount: number;
+    cachedTokens: number;
+    savingsPercent: number;
+  }>;
+  summary: {
+    peakHitRate: number;
+    peakDate: string;
+    avgHitRate: number;
+    trend: 'improving' | 'declining' | 'stable';
+  };
+}
+
+export interface CacheSavingsByProviderData {
+  providers: Array<{
+    providerId: string;
+    providerName: string;
+    totalSavings: number;
+    avgHitRate: number;
+    requestCount: number;
+    savingsPercent: number;
+  }>;
+  totalSavings: number;
+}
+
+export interface CacheEfficiencyByModelData {
+  models: Array<{
+    modelId: string;
+    providerId: string;
+    avgHitRate: number;
+    totalCachedTokens: number;
+    costSavings: number;
+    requestCount: number;
+    efficiency: 'high' | 'medium' | 'low';
+  }>;
+}
+
 // =============================================================================
 // Service Implementation
 // =============================================================================
@@ -586,6 +649,373 @@ export class AnalyticsService {
       return stream;
     } catch (error) {
       logger.error('AnalyticsService.exportToCSV: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  // ===========================================================================
+  // Cache Performance Analytics (Plan 207)
+  // ===========================================================================
+
+  /**
+   * Get cache performance KPI summary
+   * Aggregates cache metrics from token_usage_ledger
+   * Calculates hit rates, savings, and adoption metrics
+   */
+  async getCachePerformanceKPI(params: AnalyticsQueryParams): Promise<CachePerformanceKPIData> {
+    try {
+      const { startDate, endDate, tier, providers, models } = this.parseParams(params);
+
+      logger.info('AnalyticsService.getCachePerformanceKPI: Fetching cache KPIs', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+
+      const whereClause: Prisma.token_usage_ledgerWhereInput = {
+        created_at: { gte: startDate, lte: endDate },
+        status: 'success',
+        ...(tier && { user_tier_at_request: tier }),
+        ...(providers && providers.length > 0 && { provider_id: { in: providers } }),
+        ...(models && models.length > 0 && { model_id: { in: models } }),
+      };
+
+      // Current period aggregation
+      const currentPeriod = await this.prisma.token_usage_ledger.aggregate({
+        where: whereClause,
+        _avg: {
+          cache_hit_rate: true,
+          cost_savings_percent: true,
+        },
+        _sum: {
+          cache_creation_tokens: true,
+          cache_read_tokens: true,
+          cached_prompt_tokens: true,
+        },
+        _count: true,
+      });
+
+      // Count cache-enabled requests (where cache_hit_rate > 0)
+      const cacheEnabledCount = await this.prisma.token_usage_ledger.count({
+        where: {
+          ...whereClause,
+          cache_hit_rate: { gt: 0 },
+        },
+      });
+
+      // Calculate total savings from cost_savings_percent
+      const savingsData = await this.prisma.$queryRaw<Array<{ total_savings: number }>>`
+        SELECT COALESCE(SUM(vendor_cost * cost_savings_percent / 100), 0) as total_savings
+        FROM token_usage_ledger
+        WHERE created_at >= ${startDate}
+          AND created_at <= ${endDate}
+          AND status = 'success'
+          AND cost_savings_percent IS NOT NULL
+          ${tier ? Prisma.sql`AND user_tier_at_request = ${tier}` : Prisma.empty}
+          ${providers && providers.length > 0 ? Prisma.sql`AND provider_id = ANY(${providers}::uuid[])` : Prisma.empty}
+          ${models && models.length > 0 ? Prisma.sql`AND model_id = ANY(${models}::text[])` : Prisma.empty}
+      `;
+
+      // Previous period for trend
+      const periodDays = this.getPeriodDays(params.period);
+      const previousStart = new Date(startDate);
+      previousStart.setDate(previousStart.getDate() - periodDays);
+      const previousEnd = new Date(startDate);
+
+      const previousPeriod = await this.prisma.token_usage_ledger.aggregate({
+        where: {
+          created_at: { gte: previousStart, lte: previousEnd },
+          status: 'success',
+        },
+        _avg: { cache_hit_rate: true },
+      });
+
+      // Calculate metrics
+      const avgCacheHitRate = Number(currentPeriod._avg.cache_hit_rate || 0);
+      const avgSavingsPercent = Number(currentPeriod._avg.cost_savings_percent || 0);
+      const totalCachedTokens = Number(currentPeriod._sum.cache_creation_tokens || 0) +
+                                Number(currentPeriod._sum.cache_read_tokens || 0) +
+                                Number(currentPeriod._sum.cached_prompt_tokens || 0);
+      const totalRequests = currentPeriod._count;
+      const cacheAdoptionRate = totalRequests > 0 ? (cacheEnabledCount / totalRequests) * 100 : 0;
+      const totalSavings = Number(savingsData[0]?.total_savings || 0);
+      const previousHitRate = Number(previousPeriod._avg.cache_hit_rate || 0);
+
+      const result: CachePerformanceKPIData = {
+        avgCacheHitRate,
+        totalCachedTokens,
+        totalCacheSavings: totalSavings,
+        avgSavingsPercent,
+        cacheEnabledRequests: cacheEnabledCount,
+        totalRequests,
+        cacheAdoptionRate,
+        breakdown: {
+          cacheWriteTokens: Number(currentPeriod._sum.cache_creation_tokens || 0),
+          cacheReadTokens: Number(currentPeriod._sum.cache_read_tokens || 0),
+          cachedPromptTokens: Number(currentPeriod._sum.cached_prompt_tokens || 0),
+        },
+        trend: {
+          previousPeriodHitRate: previousHitRate,
+          hitRateChange: avgCacheHitRate - previousHitRate,
+          direction: avgCacheHitRate > previousHitRate ? 'up' :
+                     avgCacheHitRate < previousHitRate ? 'down' : 'neutral',
+        },
+      };
+
+      logger.info('AnalyticsService.getCachePerformanceKPI: Cache KPIs calculated', {
+        avgCacheHitRate: result.avgCacheHitRate,
+        totalSavings: result.totalCacheSavings,
+        adoptionRate: result.cacheAdoptionRate,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('AnalyticsService.getCachePerformanceKPI: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get cache hit rate trend over time
+   * Time-bucketed aggregation of cache performance
+   */
+  async getCacheHitRateTrend(params: TrendQueryParams): Promise<CacheHitRateTrendData> {
+    try {
+      const { startDate, endDate, granularity, tier, providers } = this.parseParams(params);
+
+      logger.info('AnalyticsService.getCacheHitRateTrend: Fetching cache trend', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        granularity,
+      });
+
+      const truncFunc = granularity === 'hour' ? 'hour' :
+                        granularity === 'day' ? 'day' :
+                        granularity === 'week' ? 'week' : 'month';
+
+      const dataPoints = await this.prisma.$queryRaw<Array<{
+        bucket: Date;
+        avg_hit_rate: number;
+        request_count: number;
+        cached_tokens: number;
+        savings_percent: number;
+      }>>`
+        SELECT
+          DATE_TRUNC(${truncFunc}, created_at) as bucket,
+          COALESCE(AVG(cache_hit_rate), 0) as avg_hit_rate,
+          COUNT(*) as request_count,
+          COALESCE(SUM(cache_creation_tokens + cache_read_tokens + cached_prompt_tokens), 0) as cached_tokens,
+          COALESCE(AVG(cost_savings_percent), 0) as savings_percent
+        FROM token_usage_ledger
+        WHERE created_at >= ${startDate}
+          AND created_at <= ${endDate}
+          AND status = 'success'
+          AND cache_hit_rate IS NOT NULL
+          ${tier ? Prisma.sql`AND user_tier_at_request = ${tier}` : Prisma.empty}
+          ${providers && providers.length > 0 ? Prisma.sql`AND provider_id = ANY(${providers}::uuid[])` : Prisma.empty}
+        GROUP BY bucket
+        ORDER BY bucket ASC
+      `;
+
+      const mappedPoints = dataPoints.map(d => ({
+        bucket: d.bucket,
+        avg_hit_rate: Number(d.avg_hit_rate),
+        request_count: Number(d.request_count),
+        cached_tokens: Number(d.cached_tokens),
+        savings_percent: Number(d.savings_percent),
+      }));
+
+      // Determine trend
+      const hitRates = mappedPoints.map(p => p.avg_hit_rate);
+      const firstHalf = hitRates.slice(0, Math.floor(hitRates.length / 2));
+      const secondHalf = hitRates.slice(Math.floor(hitRates.length / 2));
+      const avgFirst = firstHalf.length > 0 ? firstHalf.reduce((sum, v) => sum + v, 0) / firstHalf.length : 0;
+      const avgSecond = secondHalf.length > 0 ? secondHalf.reduce((sum, v) => sum + v, 0) / secondHalf.length : 0;
+      const trend = avgSecond > avgFirst * 1.05 ? 'improving' :
+                    avgSecond < avgFirst * 0.95 ? 'declining' : 'stable';
+
+      const peakPoint = mappedPoints.reduce((max, p) =>
+        p.avg_hit_rate > max.avg_hit_rate ? p : max,
+        mappedPoints[0] || { avg_hit_rate: 0, bucket: new Date() }
+      );
+
+      const result: CacheHitRateTrendData = {
+        dataPoints: mappedPoints.map(p => ({
+          timestamp: p.bucket.toISOString(),
+          avgHitRate: p.avg_hit_rate,
+          requestCount: p.request_count,
+          cachedTokens: p.cached_tokens,
+          savingsPercent: p.savings_percent,
+        })),
+        summary: {
+          peakHitRate: peakPoint.avg_hit_rate,
+          peakDate: peakPoint.bucket.toISOString(),
+          avgHitRate: hitRates.length > 0 ? hitRates.reduce((sum, v) => sum + v, 0) / hitRates.length : 0,
+          trend,
+        },
+      };
+
+      logger.info('AnalyticsService.getCacheHitRateTrend: Trend calculated', {
+        dataPointCount: result.dataPoints.length,
+        trend: result.summary.trend,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('AnalyticsService.getCacheHitRateTrend: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get cache savings breakdown by provider
+   * Shows which providers benefit most from caching
+   */
+  async getCacheSavingsByProvider(params: AnalyticsQueryParams): Promise<CacheSavingsByProviderData> {
+    try {
+      const { startDate, endDate, tier, models } = this.parseParams(params);
+
+      logger.info('AnalyticsService.getCacheSavingsByProvider: Fetching provider savings', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+
+      const whereClause: Prisma.token_usage_ledgerWhereInput = {
+        created_at: { gte: startDate, lte: endDate },
+        status: 'success',
+        cost_savings_percent: { not: null },
+        ...(tier && { user_tier_at_request: tier }),
+        ...(models && models.length > 0 && { model_id: { in: models } }),
+      };
+
+      // Group by provider
+      const providerData = await this.prisma.$queryRaw<Array<{
+        provider_id: string;
+        total_savings: number;
+        avg_hit_rate: number;
+        request_count: number;
+        savings_percent: number;
+      }>>`
+        SELECT
+          provider_id,
+          COALESCE(SUM(vendor_cost * cost_savings_percent / 100), 0) as total_savings,
+          COALESCE(AVG(cache_hit_rate), 0) as avg_hit_rate,
+          COUNT(*) as request_count,
+          COALESCE(AVG(cost_savings_percent), 0) as savings_percent
+        FROM token_usage_ledger
+        WHERE created_at >= ${startDate}
+          AND created_at <= ${endDate}
+          AND status = 'success'
+          AND cost_savings_percent IS NOT NULL
+          ${tier ? Prisma.sql`AND user_tier_at_request = ${tier}` : Prisma.empty}
+          ${models && models.length > 0 ? Prisma.sql`AND model_id = ANY(${models}::text[])` : Prisma.empty}
+        GROUP BY provider_id
+        ORDER BY total_savings DESC
+      `;
+
+      // Get provider names
+      const providerIds = providerData.map(p => p.provider_id);
+      const providers = await this.prisma.providers.findMany({
+        where: { id: { in: providerIds } },
+        select: { id: true, name: true },
+      });
+
+      const providerMap = new Map(providers.map(p => [p.id, p.name]));
+      const totalSavings = providerData.reduce((sum, p) => sum + Number(p.total_savings), 0);
+
+      const result: CacheSavingsByProviderData = {
+        providers: providerData.map(p => ({
+          providerId: p.provider_id,
+          providerName: providerMap.get(p.provider_id) || 'Unknown',
+          totalSavings: Number(p.total_savings),
+          avgHitRate: Number(p.avg_hit_rate),
+          requestCount: Number(p.request_count),
+          savingsPercent: Number(p.savings_percent),
+        })),
+        totalSavings,
+      };
+
+      logger.info('AnalyticsService.getCacheSavingsByProvider: Savings calculated', {
+        providerCount: result.providers.length,
+        totalSavings: result.totalSavings,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('AnalyticsService.getCacheSavingsByProvider: Error', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get cache efficiency by model
+   * Identifies which models have best cache performance
+   */
+  async getCacheEfficiencyByModel(params: AnalyticsQueryParams): Promise<CacheEfficiencyByModelData> {
+    try {
+      const { startDate, endDate, tier, providers } = this.parseParams(params);
+
+      logger.info('AnalyticsService.getCacheEfficiencyByModel: Fetching model efficiency', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+
+      const modelData = await this.prisma.$queryRaw<Array<{
+        model_id: string;
+        provider_id: string;
+        avg_hit_rate: number;
+        total_cached_tokens: number;
+        cost_savings: number;
+        request_count: number;
+      }>>`
+        SELECT
+          model_id,
+          provider_id,
+          COALESCE(AVG(cache_hit_rate), 0) as avg_hit_rate,
+          COALESCE(SUM(cache_creation_tokens + cache_read_tokens + cached_prompt_tokens), 0) as total_cached_tokens,
+          COALESCE(SUM(vendor_cost * cost_savings_percent / 100), 0) as cost_savings,
+          COUNT(*) as request_count
+        FROM token_usage_ledger
+        WHERE created_at >= ${startDate}
+          AND created_at <= ${endDate}
+          AND status = 'success'
+          AND cache_hit_rate IS NOT NULL
+          ${tier ? Prisma.sql`AND user_tier_at_request = ${tier}` : Prisma.empty}
+          ${providers && providers.length > 0 ? Prisma.sql`AND provider_id = ANY(${providers}::uuid[])` : Prisma.empty}
+        GROUP BY model_id, provider_id
+        ORDER BY avg_hit_rate DESC
+      `;
+
+      const result: CacheEfficiencyByModelData = {
+        models: modelData.map(m => {
+          const hitRate = Number(m.avg_hit_rate);
+          const efficiency = hitRate > 50 ? 'high' : hitRate > 20 ? 'medium' : 'low';
+          return {
+            modelId: m.model_id,
+            providerId: m.provider_id,
+            avgHitRate: hitRate,
+            totalCachedTokens: Number(m.total_cached_tokens),
+            costSavings: Number(m.cost_savings),
+            requestCount: Number(m.request_count),
+            efficiency,
+          };
+        }),
+      };
+
+      logger.info('AnalyticsService.getCacheEfficiencyByModel: Efficiency calculated', {
+        modelCount: result.models.length,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('AnalyticsService.getCacheEfficiencyByModel: Error', {
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;

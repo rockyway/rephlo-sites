@@ -30,6 +30,7 @@ export class TokenTrackingService implements ITokenTrackingService {
 
   /**
    * Parse vendor-specific token counts from API responses
+   * Enhanced for Prompt Caching (Plan 207)
    */
   parseTokenUsage(
     apiResponse: any,
@@ -37,36 +38,49 @@ export class TokenTrackingService implements ITokenTrackingService {
   ): {
     inputTokens: number;
     outputTokens: number;
-    cachedInputTokens?: number;
     totalTokens: number;
+    // DEPRECATED: Legacy field
+    cachedInputTokens?: number;
+    // Anthropic Prompt Caching
+    cacheCreationInputTokens?: number;
+    cacheReadInputTokens?: number;
+    // OpenAI/Google Prompt Caching
+    cachedPromptTokens?: number;
+    cachedContentTokenCount?: number;
   } {
     // OpenAI/Azure format
     if (apiResponse.usage?.prompt_tokens !== undefined) {
+      const usage = apiResponse.usage;
       return {
-        inputTokens: apiResponse.usage.prompt_tokens || 0,
-        outputTokens: apiResponse.usage.completion_tokens || 0,
-        cachedInputTokens: apiResponse.usage.prompt_tokens_details?.cached_tokens || 0,
-        totalTokens: apiResponse.usage.total_tokens || 0,
+        inputTokens: usage.prompt_tokens || 0,
+        outputTokens: usage.completion_tokens || 0,
+        totalTokens: usage.total_tokens || 0,
+        cachedPromptTokens: usage.prompt_tokens_details?.cached_tokens || 0,
       };
     }
 
     // Anthropic format
     if (apiResponse.usage?.input_tokens !== undefined) {
+      const usage = apiResponse.usage;
       return {
-        inputTokens: apiResponse.usage.input_tokens || 0,
-        outputTokens: apiResponse.usage.output_tokens || 0,
-        cachedInputTokens: apiResponse.usage.cache_read_input_tokens || 0,
-        totalTokens: (apiResponse.usage.input_tokens || 0) + (apiResponse.usage.output_tokens || 0),
+        inputTokens: usage.input_tokens || 0,
+        outputTokens: usage.output_tokens || 0,
+        totalTokens: (usage.input_tokens || 0) + (usage.output_tokens || 0),
+        cacheCreationInputTokens: usage.cache_creation_input_tokens || 0,
+        cacheReadInputTokens: usage.cache_read_input_tokens || 0,
+        // Legacy compatibility
+        cachedInputTokens: usage.cache_read_input_tokens || 0,
       };
     }
 
     // Google Gemini format
     if (apiResponse.usage?.promptTokenCount !== undefined) {
+      const usage = apiResponse.usage;
       return {
-        inputTokens: apiResponse.usage.promptTokenCount || 0,
-        outputTokens: apiResponse.usage.candidatesTokenCount || 0,
-        cachedInputTokens: apiResponse.usage.cachedContentInputTokenCount || 0,
-        totalTokens: apiResponse.usage.totalTokenCount || 0,
+        inputTokens: usage.promptTokenCount || 0,
+        outputTokens: usage.candidatesTokenCount || 0,
+        totalTokens: usage.totalTokenCount || 0,
+        cachedContentTokenCount: usage.cachedContentTokenCount || 0,
       };
     }
 
@@ -76,6 +90,7 @@ export class TokenTrackingService implements ITokenTrackingService {
 
   /**
    * Capture and record token usage from completion
+   * Enhanced for Prompt Caching (Plan 207)
    */
   async captureTokenUsage(
     userId: string,
@@ -84,13 +99,17 @@ export class TokenTrackingService implements ITokenTrackingService {
   ): Promise<TokenUsageRecord> {
     const usage = this.parseTokenUsage(apiResponse, requestMetadata.providerId);
 
-    // Calculate vendor cost
+    // Calculate vendor cost with cache metrics
     const costCalc = await this.costCalc.calculateVendorCost({
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       modelId: requestMetadata.modelId,
       providerId: requestMetadata.providerId,
       cachedInputTokens: usage.cachedInputTokens,
+      cacheCreationInputTokens: usage.cacheCreationInputTokens,
+      cacheReadInputTokens: usage.cacheReadInputTokens,
+      cachedPromptTokens: usage.cachedPromptTokens,
+      cachedContentTokenCount: usage.cachedContentTokenCount,
     });
 
     // Get applicable multiplier
@@ -100,10 +119,29 @@ export class TokenTrackingService implements ITokenTrackingService {
       requestMetadata.modelId
     );
 
-    // Calculate credit deduction
+    // Calculate credit deduction with cache breakdown
     const creditValue = costCalc.vendorCost * multiplier;
     const creditsDeducted = Math.ceil(creditValue / 0.01); // Round up to nearest credit
     const grossMargin = creditValue - costCalc.vendorCost;
+
+    // Calculate cache-specific credits
+    const cacheWriteCredits = costCalc.cacheWriteCost
+      ? Math.ceil((costCalc.cacheWriteCost * multiplier) / 0.01)
+      : undefined;
+    const cacheReadCredits = costCalc.cacheReadCost
+      ? Math.ceil((costCalc.cacheReadCost * multiplier) / 0.01)
+      : undefined;
+
+    // Calculate cache hit rate (percentage of prompt served from cache)
+    let cacheHitRate: number | undefined;
+    const totalCachedTokens = (usage.cacheReadInputTokens || 0) +
+                              (usage.cachedPromptTokens || 0) +
+                              (usage.cachedContentTokenCount || 0);
+    const totalPromptTokens = usage.inputTokens + totalCachedTokens;
+
+    if (totalPromptTokens > 0 && totalCachedTokens > 0) {
+      cacheHitRate = (totalCachedTokens / totalPromptTokens) * 100;
+    }
 
     const record: TokenUsageRecord = {
       requestId: crypto.randomUUID(),
@@ -114,6 +152,16 @@ export class TokenTrackingService implements ITokenTrackingService {
       outputTokens: usage.outputTokens,
       cachedInputTokens: usage.cachedInputTokens,
       totalTokens: usage.totalTokens,
+
+      // Cache metrics (Plan 207)
+      cacheCreationTokens: usage.cacheCreationInputTokens,
+      cacheReadTokens: usage.cacheReadInputTokens,
+      cachedPromptTokens: usage.cachedPromptTokens || usage.cachedContentTokenCount,
+      cacheHitRate,
+      costSavingsPercent: costCalc.costSavingsPercent,
+      cacheWriteCredits,
+      cacheReadCredits,
+
       vendorCost: costCalc.vendorCost,
       creditDeducted: creditsDeducted,
       marginMultiplier: multiplier,
@@ -158,6 +206,7 @@ export class TokenTrackingService implements ITokenTrackingService {
   /**
    * Record token usage to ledger
    * Plan 204: Includes vision metrics (imageCount, imageTokens)
+   * Plan 207: Includes prompt caching metrics
    */
   async recordToLedger(record: TokenUsageRecord): Promise<void> {
     try {
@@ -166,6 +215,9 @@ export class TokenTrackingService implements ITokenTrackingService {
           request_id, user_id, model_id, provider_id,
           input_tokens, output_tokens, cached_input_tokens,
           image_count, image_tokens,
+          cache_creation_tokens, cache_read_tokens, cached_prompt_tokens,
+          cache_hit_rate, cost_savings_percent,
+          cache_write_credits, cache_read_credits,
           vendor_cost, margin_multiplier, credit_value_usd, credits_deducted, gross_margin_usd,
           request_type, streaming_segments,
           request_started_at, request_completed_at, processing_time_ms,
@@ -175,6 +227,9 @@ export class TokenTrackingService implements ITokenTrackingService {
           ${record.requestId}::uuid, ${record.userId}::uuid, ${record.modelId}, ${record.providerId}::uuid,
           ${record.inputTokens}, ${record.outputTokens}, ${record.cachedInputTokens || 0},
           ${record.imageCount || 0}, ${record.imageTokens || 0},
+          ${record.cacheCreationTokens || 0}, ${record.cacheReadTokens || 0}, ${record.cachedPromptTokens || 0},
+          ${record.cacheHitRate}, ${record.costSavingsPercent},
+          ${record.cacheWriteCredits}, ${record.cacheReadCredits},
           ${record.vendorCost}, ${record.marginMultiplier}, ${record.vendorCost * record.marginMultiplier}, ${record.creditDeducted}, ${record.grossMargin},
           ${record.requestType}, ${record.streamingSegments},
           ${record.requestStartedAt}, ${record.requestCompletedAt}, ${record.processingTime},
@@ -189,6 +244,11 @@ export class TokenTrackingService implements ITokenTrackingService {
         creditsDeducted: record.creditDeducted,
         imageCount: record.imageCount || 0,
         imageTokens: record.imageTokens || 0,
+        cacheCreationTokens: record.cacheCreationTokens || 0,
+        cacheReadTokens: record.cacheReadTokens || 0,
+        cachedPromptTokens: record.cachedPromptTokens || 0,
+        cacheHitRate: record.cacheHitRate,
+        costSavingsPercent: record.costSavingsPercent,
       });
     } catch (error) {
       logger.error('TokenTrackingService: Error recording to ledger', {
