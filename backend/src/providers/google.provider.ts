@@ -8,7 +8,7 @@
 import { injectable, inject } from 'tsyringe';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Response } from 'express';
-import { ILLMProvider } from '../interfaces';
+import { ILLMProvider, LLMUsageData } from '../interfaces';
 import {
   ChatCompletionRequest,
   TextCompletionRequest,
@@ -33,11 +33,7 @@ export class GoogleProvider implements ILLMProvider {
 
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('Google AI client not initialized. Set GOOGLE_API_KEY environment variable.');
@@ -53,22 +49,45 @@ export class GoogleProvider implements ILLMProvider {
     // Convert messages to Google format
     const history = request.messages.slice(0, -1).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }] as any, // TODO: Transform vision content for Google (Plan 204 Phase 2)
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }] as any,
     }));
 
     const lastMessage = request.messages[request.messages.length - 1];
 
-    const chat = model.startChat({ history: history as any }); // TODO: Proper typing for vision content (Plan 204 Phase 2)
+    const chat = model.startChat({ history: history as any });
     const result = await chat.sendMessage(
       typeof lastMessage.content === 'string' ? lastMessage.content : JSON.stringify(lastMessage.content)
     );
     const response = result.response;
     const text = response.text();
 
-    // Estimate tokens (Google doesn't provide token counts in response)
-    const promptText = request.messages.map((m) => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join(' ');
-    const promptTokens = Math.ceil(promptText.length / 4);
-    const completionTokens = Math.ceil(text.length / 4);
+    // Extract usage metadata from Google response (if available)
+    const usage: LLMUsageData = {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    };
+
+    // Check if Google provides usage metadata (Gemini API may include this)
+    if (response.usageMetadata) {
+      usage.promptTokens = response.usageMetadata.promptTokenCount || 0;
+      usage.completionTokens = response.usageMetadata.candidatesTokenCount || 0;
+      usage.totalTokens = response.usageMetadata.totalTokenCount || 0;
+
+      // Google caching metrics (if present)
+      if (response.usageMetadata.cachedContentTokenCount) {
+        usage.cachedContentTokenCount = response.usageMetadata.cachedContentTokenCount;
+        logger.debug('GoogleProvider: Cached content tokens detected', {
+          cachedContentTokenCount: usage.cachedContentTokenCount,
+        });
+      }
+    } else {
+      // Fallback: Estimate tokens (Google might not provide counts for all models)
+      const promptText = request.messages.map((m) => typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).join(' ');
+      usage.promptTokens = Math.ceil(promptText.length / 4);
+      usage.completionTokens = Math.ceil(text.length / 4);
+      usage.totalTokens = usage.promptTokens + usage.completionTokens;
+    }
 
     return {
       response: {
@@ -87,11 +106,7 @@ export class GoogleProvider implements ILLMProvider {
           },
         ],
       },
-      usage: {
-        promptTokens: promptTokens,
-        completionTokens: completionTokens,
-        totalTokens: promptTokens + completionTokens,
-      },
+      usage,
     };
   }
 
@@ -155,11 +170,7 @@ export class GoogleProvider implements ILLMProvider {
 
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('Google AI client not initialized');
@@ -170,8 +181,28 @@ export class GoogleProvider implements ILLMProvider {
     const response = result.response;
     const text = response.text();
 
-    const promptTokens = Math.ceil(request.prompt.length / 4);
-    const completionTokens = Math.ceil(text.length / 4);
+    // Extract usage metadata from Google response (if available)
+    const usage: LLMUsageData = {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    };
+
+    if (response.usageMetadata) {
+      usage.promptTokens = response.usageMetadata.promptTokenCount || 0;
+      usage.completionTokens = response.usageMetadata.candidatesTokenCount || 0;
+      usage.totalTokens = response.usageMetadata.totalTokenCount || 0;
+
+      // Google caching metrics (if present)
+      if (response.usageMetadata.cachedContentTokenCount) {
+        usage.cachedContentTokenCount = response.usageMetadata.cachedContentTokenCount;
+      }
+    } else {
+      // Fallback: Estimate tokens
+      usage.promptTokens = Math.ceil(request.prompt.length / 4);
+      usage.completionTokens = Math.ceil(text.length / 4);
+      usage.totalTokens = usage.promptTokens + usage.completionTokens;
+    }
 
     return {
       response: {
@@ -187,11 +218,7 @@ export class GoogleProvider implements ILLMProvider {
           },
         ],
       },
-      usage: {
-        promptTokens: promptTokens,
-        completionTokens: completionTokens,
-        totalTokens: promptTokens + completionTokens,
-      },
+      usage,
     };
   }
 

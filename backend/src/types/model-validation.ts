@@ -108,11 +108,25 @@ export const chatMessageRoleSchema = z.enum([
 ]);
 
 /**
+ * Anthropic Prompt Caching: cache_control block
+ * Specifies caching behavior for prompt segments
+ * - ephemeral: 5-minute cache (default)
+ * - extended: 1-hour cache (requires extended_cache_control feature)
+ */
+export const anthropicCacheControlSchema = z.object({
+  type: z.enum(['ephemeral', 'extended']),
+});
+
+export type AnthropicCacheControl = z.infer<typeof anthropicCacheControlSchema>;
+
+/**
  * Content part types for multimodal messages (text + images)
+ * Supports Anthropic's cache_control for prompt caching optimization
  */
 export const textContentPartSchema = z.object({
   type: z.literal('text'),
   text: z.string().min(1, 'Text content cannot be empty'),
+  cache_control: anthropicCacheControlSchema.optional(), // Anthropic prompt caching
 });
 
 export const imageUrlSchema = z.object({
@@ -141,6 +155,7 @@ export type ContentPart = z.infer<typeof contentPartSchema>;
 /**
  * Chat message schema
  * Supports both text-only (string) and multimodal (ContentPart[]) content
+ * Supports Anthropic's message-level cache_control for prompt caching
  */
 export const chatMessageSchema = z.object({
   role: chatMessageRoleSchema,
@@ -155,7 +170,8 @@ export const chatMessageSchema = z.object({
       arguments: z.string(),
     })
     .optional(), // For assistant messages with function calls
-});
+  cache_control: anthropicCacheControlSchema.optional(), // Anthropic message-level caching
+}).passthrough(); // Allow provider-specific fields (e.g., Anthropic extensions)
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
@@ -353,7 +369,20 @@ export interface CompletionUsage {
   // DEPRECATED: Kept for backward compatibility
   creditsUsed: number;
 
-  cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
+  // Prompt Caching Support (Phase 4)
+  cachedTokens?: number; // DEPRECATED: Generic cached tokens (for backward compatibility)
+
+  // Anthropic Prompt Caching Metrics
+  cacheCreationInputTokens?: number; // Tokens written to cache (billed at 1.25x)
+  cacheReadInputTokens?: number;     // Tokens read from cache (billed at 0.1x)
+
+  // OpenAI/Google Prompt Caching Metrics
+  cachedPromptTokens?: number;       // OpenAI: cached tokens (billed at 0.5x)
+
+  // Cache Performance Metrics
+  cacheHitRate?: number;             // Percentage of prompt served from cache (0-100)
+  costSavingsPercent?: number;       // Cost savings due to caching (0-100)
+
   credits?: CreditInfo;   // Optional: Credit balance info (non-streaming: always included, streaming: final chunk only)
 }
 

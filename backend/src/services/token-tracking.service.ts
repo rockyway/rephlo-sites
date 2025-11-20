@@ -45,6 +45,7 @@ export class TokenTrackingService implements ITokenTrackingService {
       return {
         inputTokens: apiResponse.usage.prompt_tokens || 0,
         outputTokens: apiResponse.usage.completion_tokens || 0,
+        cachedInputTokens: apiResponse.usage.prompt_tokens_details?.cached_tokens || 0,
         totalTokens: apiResponse.usage.total_tokens || 0,
       };
     }

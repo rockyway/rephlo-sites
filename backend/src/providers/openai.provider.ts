@@ -8,7 +8,7 @@
 import { injectable, inject } from 'tsyringe';
 import OpenAI from 'openai';
 import { Response } from 'express';
-import { ILLMProvider } from '../interfaces';
+import { ILLMProvider, LLMUsageData } from '../interfaces';
 import {
   ChatCompletionRequest,
   TextCompletionRequest,
@@ -140,11 +140,7 @@ export class OpenAIProvider implements ILLMProvider {
 
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('OpenAI client not initialized. Set OPENAI_API_KEY environment variable.');
@@ -165,6 +161,24 @@ export class OpenAIProvider implements ILLMProvider {
     const params = this.buildChatParams(request, false);
     const completion = await clientForModel.chat.completions.create(params);
 
+    // Extract cache metrics from OpenAI response
+    const usage: LLMUsageData = {
+      promptTokens: completion.usage?.prompt_tokens || 0,
+      completionTokens: completion.usage?.completion_tokens || 0,
+      totalTokens: completion.usage?.total_tokens || 0,
+    };
+
+    // Add OpenAI cache metrics if present (prompt caching)
+    if (completion.usage && 'prompt_tokens_details' in completion.usage) {
+      const details = (completion.usage as any).prompt_tokens_details;
+      if (details && details.cached_tokens) {
+        usage.cachedPromptTokens = details.cached_tokens;
+        logger.debug('OpenAIProvider: Cached prompt tokens detected', {
+          cachedPromptTokens: usage.cachedPromptTokens,
+        });
+      }
+    }
+
     return {
       response: {
         id: completion.id,
@@ -180,11 +194,7 @@ export class OpenAIProvider implements ILLMProvider {
           finish_reason: choice.finish_reason,
         })),
       },
-      usage: {
-        promptTokens: completion.usage?.prompt_tokens || 0,
-        completionTokens: completion.usage?.completion_tokens || 0,
-        totalTokens: completion.usage?.total_tokens || 0,
-      },
+      usage,
     };
   }
 
@@ -351,11 +361,7 @@ export class OpenAIProvider implements ILLMProvider {
 
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('OpenAI client not initialized');
@@ -378,6 +384,21 @@ export class OpenAIProvider implements ILLMProvider {
       n: request.n,
     });
 
+    // Extract cache metrics from OpenAI response
+    const usage: LLMUsageData = {
+      promptTokens: completion.usage?.prompt_tokens || 0,
+      completionTokens: completion.usage?.completion_tokens || 0,
+      totalTokens: completion.usage?.total_tokens || 0,
+    };
+
+    // Add OpenAI cache metrics if present
+    if (completion.usage && 'prompt_tokens_details' in completion.usage) {
+      const details = (completion.usage as any).prompt_tokens_details;
+      if (details && details.cached_tokens) {
+        usage.cachedPromptTokens = details.cached_tokens;
+      }
+    }
+
     return {
       response: {
         id: completion.id,
@@ -390,11 +411,7 @@ export class OpenAIProvider implements ILLMProvider {
           finish_reason: choice.finish_reason,
         })),
       },
-      usage: {
-        promptTokens: completion.usage?.prompt_tokens || 0,
-        completionTokens: completion.usage?.completion_tokens || 0,
-        totalTokens: completion.usage?.total_tokens || 0,
-      },
+      usage,
     };
   }
 
