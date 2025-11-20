@@ -31,12 +31,28 @@ export type ModelCapability = z.infer<typeof ModelCapabilitySchema>;
 /**
  * Subscription tier types
  * Defines access levels for model usage
+ *
+ * Active Consumer Tiers:
+ * - free ($0/month, 200 credits)
+ * - pro ($15/month, 1,500 credits)
+ * - pro_plus ($45/month, 5,000 credits)
+ * - pro_max ($199/month, 25,000 credits)
+ *
+ * Enterprise Tiers:
+ * - enterprise_pro ($30/month, 3,500 credits)
+ * - enterprise_pro_plus ($90/month, 11,000 credits)
+ * - enterprise_max (custom pricing)
+ *
+ * Special Tiers:
+ * - perpetual (lifetime access)
  */
 export const SubscriptionTierSchema = z.enum([
   'free',
   'pro',
+  'pro_plus',
   'pro_max',
   'enterprise_pro',
+  'enterprise_pro_plus',
   'enterprise_max',
   'perpetual',
 ]);

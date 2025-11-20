@@ -295,8 +295,30 @@ function ModelManagement() {
       loadModels();
       loadAuditLogs();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create model');
-      setTimeout(() => setError(null), 5000);
+      // Extract detailed validation errors from API response
+      const apiError = err.response?.data?.error;
+      let errorMessage = 'Failed to create model';
+
+      if (apiError) {
+        // Check for field-level validation errors
+        if (apiError.details?.fieldErrors) {
+          const fieldErrors = apiError.details.fieldErrors;
+          const errorDetails = Object.entries(fieldErrors)
+            .map(([field, errors]: [string, any]) => {
+              const errorList = Array.isArray(errors) ? errors.join(', ') : errors;
+              return `${field}: ${errorList}`;
+            })
+            .join(' | ');
+          errorMessage = `Validation Error: ${errorDetails}`;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      setError(errorMessage);
+      setTimeout(() => setError(null), 8000); // Longer timeout for detailed errors
     } finally {
       setIsSaving(false);
     }
