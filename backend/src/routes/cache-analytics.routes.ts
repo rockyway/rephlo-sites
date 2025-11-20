@@ -22,6 +22,7 @@ import RedisStore from 'rate-limit-redis';
 import { container } from '../container';
 import { CacheAnalyticsController } from '../controllers/cache-analytics.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { requireFeature } from '../config/feature-flags';
 import logger from '../utils/logger';
 import Redis from 'ioredis';
 
@@ -106,9 +107,11 @@ const cacheAnalyticsRateLimiter = rateLimit({
 
 /**
  * All cache analytics routes require:
- * 1. JWT authentication (authMiddleware)
- * 2. Rate limiting (cacheAnalyticsRateLimiter)
+ * 1. Feature flag enabled (requireFeature)
+ * 2. JWT authentication (authMiddleware)
+ * 3. Rate limiting (cacheAnalyticsRateLimiter)
  */
+router.use(requireFeature('cacheAnalyticsEnabled'));
 router.use(authMiddleware);
 router.use(cacheAnalyticsRateLimiter);
 

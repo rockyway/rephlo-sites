@@ -24,6 +24,7 @@ import RedisStore from 'rate-limit-redis';
 import { container } from '../container';
 import { CacheAnalyticsController } from '../controllers/cache-analytics.controller';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
+import { requireFeature } from '../config/feature-flags';
 import logger from '../utils/logger';
 import Redis from 'ioredis';
 
@@ -108,10 +109,12 @@ const adminCacheAnalyticsRateLimiter = rateLimit({
 
 /**
  * All admin cache analytics routes require:
- * 1. JWT authentication (authMiddleware)
- * 2. Admin role (requireAdmin)
- * 3. Rate limiting (adminCacheAnalyticsRateLimiter)
+ * 1. Feature flag enabled (requireFeature)
+ * 2. JWT authentication (authMiddleware)
+ * 3. Admin role (requireAdmin)
+ * 4. Rate limiting (adminCacheAnalyticsRateLimiter)
  */
+router.use(requireFeature('cacheAnalyticsEnabled'));
 router.use(authMiddleware);
 router.use(requireAdmin);
 router.use(adminCacheAnalyticsRateLimiter);
