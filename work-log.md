@@ -2258,3 +2258,10 @@ Created comprehensive integration tests for the separate input/output pricing sy
   * llm-service.test.ts: Fixed all provider and model creations
 - All schema fixes align test data with actual Prisma schema structure
 
+
+2025-11-19: Fixed 10× cost error in seed data
+- Issue: Model costs in seed data were 10× too high (e.g., 1250 cents instead of 125 cents for $1.25)
+- Fixed 7 models: gpt-5, gpt-5-mini, gpt-5-nano, claude-opus-4.1, claude-sonnet-4.5, claude-haiku-4.5, mistral-medium-3
+- Aligned model meta costs with model_provider_pricing table
+- Verification: All models with pricing data now pass cost validation
+
