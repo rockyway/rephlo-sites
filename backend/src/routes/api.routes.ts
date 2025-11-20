@@ -21,6 +21,7 @@ import { UsersController } from '../controllers/users.controller';
 import { CreditsController } from '../controllers/credits.controller';
 import { BillingController } from '../controllers/billing.controller';
 import { UsageController } from '../controllers/usage.controller';
+import cacheAnalyticsRoutes from './cache-analytics.routes';
 import logger from '../utils/logger';
 
 /**
@@ -255,6 +256,26 @@ export function createAPIRouter(): Router {
     requireScope('user.info'),
     asyncHandler(usageController.getMonthlySummary.bind(usageController))
   );
+
+  // =============================================================================
+  // Cache Analytics Endpoints (Plan 207)
+  // =============================================================================
+
+  /**
+   * User-facing cache analytics endpoints
+   *
+   * Endpoints:
+   * - GET /api/cache-analytics/performance     - User cache performance KPI
+   * - GET /api/cache-analytics/hit-rate-trend  - User cache hit rate trend
+   *
+   * Security:
+   * - JWT authentication required (handled by cache-analytics.routes)
+   * - User can only access their own cache metrics
+   * - Rate limiting: 60 requests per hour (handled by cache-analytics.routes)
+   *
+   * Reference: docs/plan/207-prompt-caching-support.md
+   */
+  router.use('/cache-analytics', cacheAnalyticsRoutes);
 
   logger.debug('API Router: Enhanced endpoints registered');
 
