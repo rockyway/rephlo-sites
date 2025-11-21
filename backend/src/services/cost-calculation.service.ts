@@ -51,6 +51,8 @@ export class CostCalculationService implements ICostCalculationService {
 
     try {
       // Find pricing that was effective at the given date
+      // Note: Prisma maps cache_write_price_per_1k → cache_input_price_per_1k
+      //       and cache_read_price_per_1k → cache_hit_price_per_1k in the schema
       const pricing = await this.prisma.$queryRaw<any[]>`
         SELECT
           id,
@@ -60,8 +62,6 @@ export class CostCalculationService implements ICostCalculationService {
           output_price_per_1k as "outputPricePer1k",
           cache_input_price_per_1k as "cacheInputPricePer1k",
           cache_hit_price_per_1k as "cacheHitPricePer1k",
-          cache_write_price_per_1k as "cacheWritePricePer1k",
-          cache_read_price_per_1k as "cacheReadPricePer1k",
           effective_from as "effectiveFrom",
           effective_until as "effectiveUntil",
           is_active as "isActive"
@@ -98,17 +98,20 @@ export class CostCalculationService implements ICostCalculationService {
         modelName: record.modelName,
         inputPricePer1k: parseFloat(record.inputPricePer1k),
         outputPricePer1k: parseFloat(record.outputPricePer1k),
+        // Database columns: cache_input_price_per_1k, cache_hit_price_per_1k
+        // Prisma TypeScript names: cache_write_price_per_1k, cache_read_price_per_1k
+        // Support both naming schemes for backward compatibility
         cacheInputPricePer1k: record.cacheInputPricePer1k
           ? parseFloat(record.cacheInputPricePer1k)
           : undefined,
         cacheHitPricePer1k: record.cacheHitPricePer1k
           ? parseFloat(record.cacheHitPricePer1k)
           : undefined,
-        cacheWritePricePer1k: record.cacheWritePricePer1k
-          ? parseFloat(record.cacheWritePricePer1k)
+        cacheWritePricePer1k: record.cacheInputPricePer1k
+          ? parseFloat(record.cacheInputPricePer1k)
           : undefined,
-        cacheReadPricePer1k: record.cacheReadPricePer1k
-          ? parseFloat(record.cacheReadPricePer1k)
+        cacheReadPricePer1k: record.cacheHitPricePer1k
+          ? parseFloat(record.cacheHitPricePer1k)
           : undefined,
         effectiveFrom: new Date(record.effectiveFrom),
         effectiveUntil: record.effectiveUntil ? new Date(record.effectiveUntil) : undefined,
@@ -374,6 +377,8 @@ export class CostCalculationService implements ICostCalculationService {
     logger.debug('CostCalculationService: Getting all active pricing');
 
     try {
+      // Note: Prisma maps cache_write_price_per_1k → cache_input_price_per_1k
+      //       and cache_read_price_per_1k → cache_hit_price_per_1k in the schema
       const pricingRecords = await this.prisma.$queryRaw<any[]>`
         SELECT
           id,
@@ -383,8 +388,6 @@ export class CostCalculationService implements ICostCalculationService {
           output_price_per_1k as "outputPricePer1k",
           cache_input_price_per_1k as "cacheInputPricePer1k",
           cache_hit_price_per_1k as "cacheHitPricePer1k",
-          cache_write_price_per_1k as "cacheWritePricePer1k",
-          cache_read_price_per_1k as "cacheReadPricePer1k",
           effective_from as "effectiveFrom",
           effective_until as "effectiveUntil",
           is_active as "isActive"
@@ -401,17 +404,20 @@ export class CostCalculationService implements ICostCalculationService {
         modelName: record.modelName,
         inputPricePer1k: parseFloat(record.inputPricePer1k),
         outputPricePer1k: parseFloat(record.outputPricePer1k),
+        // Database columns: cache_input_price_per_1k, cache_hit_price_per_1k
+        // Prisma TypeScript names: cache_write_price_per_1k, cache_read_price_per_1k
+        // Support both naming schemes for backward compatibility
         cacheInputPricePer1k: record.cacheInputPricePer1k
           ? parseFloat(record.cacheInputPricePer1k)
           : undefined,
         cacheHitPricePer1k: record.cacheHitPricePer1k
           ? parseFloat(record.cacheHitPricePer1k)
           : undefined,
-        cacheWritePricePer1k: record.cacheWritePricePer1k
-          ? parseFloat(record.cacheWritePricePer1k)
+        cacheWritePricePer1k: record.cacheInputPricePer1k
+          ? parseFloat(record.cacheInputPricePer1k)
           : undefined,
-        cacheReadPricePer1k: record.cacheReadPricePer1k
-          ? parseFloat(record.cacheReadPricePer1k)
+        cacheReadPricePer1k: record.cacheHitPricePer1k
+          ? parseFloat(record.cacheHitPricePer1k)
           : undefined,
         effectiveFrom: new Date(record.effectiveFrom),
         effectiveUntil: record.effectiveUntil ? new Date(record.effectiveUntil) : undefined,
