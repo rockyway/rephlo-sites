@@ -479,14 +479,18 @@ model margin_audit_log {
 }
 
 model model_provider_pricing {
-  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  provider_id                 String    @db.Uuid
-  model_name                  String    @db.VarChar(255)
-  vendor_model_id             String?   @unique @db.VarChar(255)
-  input_price_per_1k          Decimal   @db.Decimal(10, 8)
-  output_price_per_1k         Decimal   @db.Decimal(10, 8)
-  cache_input_price_per_1k    Decimal?  @db.Decimal(10, 8)
-  cache_hit_price_per_1k      Decimal?  @db.Decimal(10, 8)
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider_id         String  @db.Uuid
+  model_name          String  @db.VarChar(255)
+  vendor_model_id     String? @unique @db.VarChar(255)
+  input_price_per_1k  Decimal @db.Decimal(10, 8)
+  output_price_per_1k Decimal @db.Decimal(10, 8)
+
+  /// Plan 207: Prompt Caching - Cache write price (Anthropic: 1.25x, OpenAI: 1x)
+  cache_write_price_per_1k Decimal? @map("cache_input_price_per_1k") @db.Decimal(10, 8)
+  /// Plan 207: Prompt Caching - Cache read price (Anthropic: 0.1x, OpenAI: 0.5x)
+  cache_read_price_per_1k  Decimal? @map("cache_hit_price_per_1k") @db.Decimal(10, 8)
+
   effective_from              DateTime
   effective_until             DateTime?
   previous_price_input        Decimal?  @db.Decimal(10, 8)
@@ -1113,17 +1117,37 @@ model token_usage_ledger {
   cached_input_tokens Int     @default(0)
 
   // Plan 204: Vision/Image Support - Image tracking fields
-  image_count         Int     @default(0)  // Number of images in the request
-  image_tokens        Int     @default(0)  // Tokens consumed by image processing
+  image_count  Int @default(0) // Number of images in the request
+  image_tokens Int @default(0) // Tokens consumed by image processing
 
-  vendor_cost         Decimal @db.Decimal(10, 8)
-  margin_multiplier   Decimal @db.Decimal(4, 2)
-  credit_value_usd    Decimal @db.Decimal(10, 8)
+  // Plan 207: Prompt Caching - Cache-specific token counts
+  /// Anthropic: Tokens written to cache (charged at 1.25x)
+  cache_creation_tokens Int? @default(0) @map("cache_creation_tokens")
+  /// Anthropic: Tokens read from cache (charged at 0.1x)
+  cache_read_tokens     Int? @default(0) @map("cache_read_tokens")
+  /// OpenAI/Google: Cached tokens from previous requests
+  cached_prompt_tokens  Int? @default(0) @map("cached_prompt_tokens")
+
+  // Plan 207: Prompt Caching - Cache performance metrics
+  /// Cache hit rate percentage (0-100)
+  cache_hit_rate       Decimal? @map("cache_hit_rate") @db.Decimal(5, 2)
+  /// Cost savings percentage vs non-cached request (0-100)
+  cost_savings_percent Decimal? @map("cost_savings_percent") @db.Decimal(5, 2)
+
+  vendor_cost       Decimal @db.Decimal(10, 8)
+  margin_multiplier Decimal @db.Decimal(4, 2)
+  credit_value_usd  Decimal @db.Decimal(10, 8)
 
   // Phase 3: Separate input/output pricing - NEW fields
   input_credits  Int? @map("input_credits")
   output_credits Int? @map("output_credits")
   total_credits  Int? @map("total_credits")
+
+  // Plan 207: Prompt Caching - Detailed credit breakdown
+  /// Credits charged for cache write operations
+  cache_write_credits Int? @map("cache_write_credits")
+  /// Credits charged for cache read operations
+  cache_read_credits  Int? @map("cache_read_credits")
 
   // DEPRECATED: Will be removed in future version after migration
   credits_deducted Int
@@ -1156,6 +1180,8 @@ model token_usage_ledger {
   @@index([user_id, created_at])
   @@index([user_id, vendor_cost])
   @@index([image_count], map: "idx_token_usage_image_count") // Plan 204: Filter vision requests
+  @@index([cache_hit_rate], map: "idx_token_usage_cache_hit_rate") // Plan 207: Cache performance queries
+  @@index([user_id, created_at], map: "idx_token_usage_user_analytics") // Plan 207: User analytics (composite)
 }
 
 model user_credit_balance {

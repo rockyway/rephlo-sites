@@ -253,14 +253,14 @@ export type UpdateModelRequest = z.infer<typeof updateModelRequestSchema>;
  * @param inputCostPerMillion - Input cost per million tokens (cents)
  * @param outputCostPerMillion - Output cost per million tokens (cents)
  * @param marginMultiplier - Profit margin multiplier (default 2.5x)
- * @param creditUsdValue - USD value per credit (default $0.0005)
+ * @param creditUsdValue - USD value per credit (default $0.01)
  * @returns Calculated credits per 1K tokens
  */
 export function calculateCreditsPerKTokens(
   inputCostPerMillion: number,
   outputCostPerMillion: number,
   marginMultiplier: number = 2.5,
-  creditUsdValue: number = 0.0005
+  creditUsdValue: number = 0.01
 ): number {
   const avgCostPerMillion = (inputCostPerMillion + outputCostPerMillion) / 2;
   const costPer1K = avgCostPerMillion / 1000;
@@ -277,42 +277,51 @@ export function calculateCreditsPerKTokens(
  * This function calculates separate credit costs for input and output tokens,
  * allowing more accurate pricing that reflects real-world usage patterns.
  *
- * Formula:
- * - Input: (inputCostPerMillion / 1000) * margin / creditCentValue
- * - Output: (outputCostPerMillion / 1000) * margin / creditCentValue
+ * Formula (per Plan 189):
+ * credits = ceil(cost_in_dollars × marginMultiplier × 100)
+ *
+ * Where:
+ * - cost_in_dollars = (inputCostPerMillion in cents / 100) / 1000
+ * - 1 credit = $0.01 USD
  *
  * @param inputCostPerMillion - Input cost per million tokens (cents)
  * @param outputCostPerMillion - Output cost per million tokens (cents)
  * @param marginMultiplier - Profit margin multiplier (default 2.5x)
- * @param creditUsdValue - USD value per credit (default $0.0005)
+ * @param creditUsdValue - USD value per credit (default $0.01)
  * @returns Object with separate input/output credits and estimated total
  *
  * @example
- * // GPT-5 Chat pricing: Input $1.25, Output $10 per 1M tokens
+ * // GPT-5 Chat pricing: Input $1.25, Output $10 per 1M tokens (with 2.5x margin)
  * const result = calculateSeparateCreditsPerKTokens(125, 1000);
- * // Result: { inputCreditsPerK: 7, outputCreditsPerK: 50, estimatedTotalPerK: 47 }
- * // Typical usage (1:10 ratio): 1×7 + 10×50 = 507, divided by 11 = ~47 credits
+ * // Input: $0.00125/1K × 2.5 margin × 100 = ceil(0.3125) = 1 credit/1K
+ * // Output: $0.01/1K × 2.5 margin × 100 = ceil(2.5) = 3 credits/1K
+ * // Result: { inputCreditsPerK: 1, outputCreditsPerK: 3, estimatedTotalPerK: 3 }
+ * // Typical usage (1:10 ratio): (1×1 + 10×3) / 11 = 31/11 ≈ 3 credits per request
  */
 export function calculateSeparateCreditsPerKTokens(
   inputCostPerMillion: number,
   outputCostPerMillion: number,
   marginMultiplier: number = 2.5,
-  creditUsdValue: number = 0.0005
+  creditUsdValue: number = 0.01
 ): {
   inputCreditsPerK: number;
   outputCreditsPerK: number;
   estimatedTotalPerK: number;
 } {
-  // Convert to cost per 1K tokens
-  const inputCostPer1K = inputCostPerMillion / 1000;
-  const outputCostPer1K = outputCostPerMillion / 1000;
+  // Step 1: Convert from cents per million to cents per 1K tokens
+  const inputCostPer1K = inputCostPerMillion / 1000; // cents per 1K
+  const outputCostPer1K = outputCostPerMillion / 1000; // cents per 1K
 
-  // Apply margin
-  const inputCostWithMargin = inputCostPer1K * marginMultiplier;
-  const outputCostWithMargin = outputCostPer1K * marginMultiplier;
+  // Step 2: Apply margin multiplier
+  const inputCostWithMargin = inputCostPer1K * marginMultiplier; // cents per 1K with margin
+  const outputCostWithMargin = outputCostPer1K * marginMultiplier; // cents per 1K with margin
 
-  // Convert credit USD value to cents
-  const creditCentValue = creditUsdValue * 100;
+  // Step 3: Calculate credits using Plan 189 formula
+  // Formula: credits = ceil(cost_in_dollars × 100)
+  // Since costs are in cents, divide by 100 to get dollars, then multiply by 100 to get credits
+  // This simplifies to: credits = ceil(cost_in_cents)
+  // With creditUsdValue = 0.01 (1 credit = $0.01), creditCentValue = 1.0 cent
+  const creditCentValue = creditUsdValue * 100; // 0.01 × 100 = 1.0 cent per credit
 
   // Calculate separate credits (round up to ensure we cover costs)
   const inputCreditsPerK = Math.ceil(inputCostWithMargin / creditCentValue);

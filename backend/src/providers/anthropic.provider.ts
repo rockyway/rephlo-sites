@@ -8,7 +8,7 @@
 import { injectable, inject } from 'tsyringe';
 import Anthropic from '@anthropic-ai/sdk';
 import { Response } from 'express';
-import { ILLMProvider } from '../interfaces';
+import { ILLMProvider, LLMUsageData } from '../interfaces';
 import {
   ChatCompletionRequest,
   TextCompletionRequest,
@@ -33,11 +33,7 @@ export class AnthropicProvider implements ILLMProvider {
 
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('Anthropic client not initialized. Set ANTHROPIC_API_KEY environment variable.');
@@ -48,12 +44,12 @@ export class AnthropicProvider implements ILLMProvider {
       messagesCount: request.messages.length,
     });
 
-    // Convert messages to Anthropic format
+    // Convert messages to Anthropic format (preserve cache_control if present)
     const anthropicMessages = request.messages
       .filter((m) => m.role !== 'system')
       .map((m) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content as any, // TODO: Transform vision content for Anthropic (Plan 204 Phase 2)
+        content: m.content as any, // Preserves cache_control in content parts
       }));
 
     const systemMessage = request.messages.find((m) => m.role === 'system');
@@ -61,7 +57,7 @@ export class AnthropicProvider implements ILLMProvider {
     const message = await this.client.messages.create({
       model: request.model,
       max_tokens: request.max_tokens || 1000,
-      messages: anthropicMessages as any, // TODO: Proper typing for vision content (Plan 204 Phase 2)
+      messages: anthropicMessages as any,
       system: (typeof systemMessage?.content === 'string' ? systemMessage?.content : undefined) as any,
       temperature: request.temperature,
       top_p: request.top_p,
@@ -74,6 +70,28 @@ export class AnthropicProvider implements ILLMProvider {
 
     const completionText =
       message.content[0].type === 'text' ? message.content[0].text : '';
+
+    // Extract cache metrics from Anthropic response
+    const usage: LLMUsageData = {
+      promptTokens: message.usage.input_tokens,
+      completionTokens: message.usage.output_tokens,
+      totalTokens: message.usage.input_tokens + message.usage.output_tokens,
+    };
+
+    // Add cache metrics if present (Anthropic Prompt Caching)
+    if ('cache_creation_input_tokens' in message.usage && message.usage.cache_creation_input_tokens) {
+      usage.cacheCreationInputTokens = message.usage.cache_creation_input_tokens;
+      logger.debug('AnthropicProvider: Cache write tokens detected', {
+        cacheCreationInputTokens: usage.cacheCreationInputTokens,
+      });
+    }
+
+    if ('cache_read_input_tokens' in message.usage && message.usage.cache_read_input_tokens) {
+      usage.cacheReadInputTokens = message.usage.cache_read_input_tokens;
+      logger.debug('AnthropicProvider: Cache read tokens detected', {
+        cacheReadInputTokens: usage.cacheReadInputTokens,
+      });
+    }
 
     return {
       response: {
@@ -92,11 +110,7 @@ export class AnthropicProvider implements ILLMProvider {
           },
         ],
       },
-      usage: {
-        promptTokens: message.usage.input_tokens,
-        completionTokens: message.usage.output_tokens,
-        totalTokens: message.usage.input_tokens + message.usage.output_tokens,
-      },
+      usage,
     };
   }
 
@@ -165,11 +179,7 @@ export class AnthropicProvider implements ILLMProvider {
 
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('Anthropic client not initialized');
@@ -192,6 +202,22 @@ export class AnthropicProvider implements ILLMProvider {
     const completionText =
       message.content[0].type === 'text' ? message.content[0].text : '';
 
+    // Extract cache metrics from Anthropic response
+    const usage: LLMUsageData = {
+      promptTokens: message.usage.input_tokens,
+      completionTokens: message.usage.output_tokens,
+      totalTokens: message.usage.input_tokens + message.usage.output_tokens,
+    };
+
+    // Add cache metrics if present
+    if ('cache_creation_input_tokens' in message.usage && message.usage.cache_creation_input_tokens) {
+      usage.cacheCreationInputTokens = message.usage.cache_creation_input_tokens;
+    }
+
+    if ('cache_read_input_tokens' in message.usage && message.usage.cache_read_input_tokens) {
+      usage.cacheReadInputTokens = message.usage.cache_read_input_tokens;
+    }
+
     return {
       response: {
         id: message.id,
@@ -206,11 +232,7 @@ export class AnthropicProvider implements ILLMProvider {
           },
         ],
       },
-      usage: {
-        promptTokens: message.usage.input_tokens,
-        completionTokens: message.usage.output_tokens,
-        totalTokens: message.usage.input_tokens + message.usage.output_tokens,
-      },
+      usage,
     };
   }
 

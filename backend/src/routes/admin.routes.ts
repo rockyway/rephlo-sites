@@ -29,6 +29,7 @@ import { SettingsController } from '../controllers/admin/settings.controller';
 import { BillingController } from '../controllers/billing.controller';
 import { ProfitabilityController } from '../controllers/admin/profitability.controller';
 import vendorAnalyticsRoutes from './vendor-analytics.routes';
+import adminCacheAnalyticsRoutes from './admin-cache-analytics.routes';
 import { asyncHandler } from '../middleware/error.middleware';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware';
 import { auditLog } from '../middleware/audit.middleware';
@@ -999,6 +1000,28 @@ router.post(
  * Reference: docs/plan/180-admin-analytics-dashboard-ui-design.md
  */
 router.use('/analytics', vendorAnalyticsRoutes);
+
+// =============================================================================
+// Cache Analytics Routes (Plan 207)
+// =============================================================================
+
+/**
+ * Cache performance analytics for Admin Analytics Dashboard
+ *
+ * Endpoints:
+ * - GET  /admin/analytics/cache/performance         - Platform cache KPI
+ * - GET  /admin/analytics/cache/hit-rate-trend      - Platform cache trend
+ * - GET  /admin/analytics/cache/savings-by-provider - Provider savings breakdown
+ * - GET  /admin/analytics/cache/efficiency-by-model - Model efficiency ranking
+ *
+ * Security:
+ * - JWT authentication (handled by parent router)
+ * - Admin role required (handled by parent router)
+ * - Rate limiting: 100 requests per hour (handled by admin-cache-analytics.routes)
+ *
+ * Reference: docs/plan/207-prompt-caching-support.md
+ */
+router.use('/analytics/cache', adminCacheAnalyticsRoutes);
 
 // =============================================================================
 // Refund Management Endpoints (Plan 192 Section 7)

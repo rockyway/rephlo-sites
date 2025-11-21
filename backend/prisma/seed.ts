@@ -733,12 +733,12 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 272000,
         maxOutputTokens: 128000,
-        inputCostPerMillionTokens: 500,
-        outputCostPerMillionTokens: 1500,
-        ...calculateModelCredits(500, 1500, 'pro_max'),
-        requiredTier: 'pro_max',
+        inputCostPerMillionTokens: 125,
+        outputCostPerMillionTokens: 1000,
+        ...calculateModelCredits(125, 1000, 'pro'),
+        requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        allowedTiers: ['pro', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           openai: {
             modelFamily: 'gpt-5',
@@ -761,9 +761,9 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 272000,
         maxOutputTokens: 128000,
-        inputCostPerMillionTokens: 15,
-        outputCostPerMillionTokens: 60,
-        ...calculateModelCredits(15, 60, 'pro'),
+        inputCostPerMillionTokens: 25,
+        outputCostPerMillionTokens: 200,
+        ...calculateModelCredits(25, 200, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -837,8 +837,8 @@ async function seedModels() {
         contextLength: 272000,
         maxOutputTokens: 128000,
         inputCostPerMillionTokens: 5,
-        outputCostPerMillionTokens: 20,
-        ...calculateModelCredits(5, 20, 'free'),
+        outputCostPerMillionTokens: 40,
+        ...calculateModelCredits(5, 40, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1761,15 +1761,15 @@ async function seedModelPricing(providers: any[]) {
       create: {
         provider_id: providerMap['openai'],
         model_name: 'gpt-5',
-        input_price_per_1k: 0.005, // Same as GPT-4o
-        output_price_per_1k: 0.015,
+        input_price_per_1k: 0.00125, 
+        output_price_per_1k: 0.0010,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // GPT-5 Mini (use GPT-4o-mini pricing as placeholder)
+    // GPT-5 Mini 
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -1782,15 +1782,15 @@ async function seedModelPricing(providers: any[]) {
       create: {
         provider_id: providerMap['openai'],
         model_name: 'gpt-5-mini',
-        input_price_per_1k: 0.00015, // Same as gpt-4o-mini
-        output_price_per_1k: 0.0006,
+        input_price_per_1k: 0.00025, 
+        output_price_per_1k: 0.002,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // GPT-5 Nano (estimated $0.05/$0.20 per 1M tokens)
+    // GPT-5 Nano
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -1804,7 +1804,7 @@ async function seedModelPricing(providers: any[]) {
         provider_id: providerMap['openai'],
         model_name: 'gpt-5-nano',
         input_price_per_1k: 0.00005, // $0.05 per 1M / 1000
-        output_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1894,8 +1894,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-opus-4.1',
         input_price_per_1k: 0.015, // $15 per 1M / 1000
         output_price_per_1k: 0.075, // $75 per 1M / 1000
-        cache_input_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
-        cache_hit_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
+        cache_read_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1918,8 +1918,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-sonnet-4.5',
         input_price_per_1k: 0.003, // $3 per 1M / 1000
         output_price_per_1k: 0.015, // $15 per 1M / 1000
-        cache_input_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
-        cache_hit_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
+        cache_read_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1941,8 +1941,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-3-5-sonnet',
         input_price_per_1k: 0.003,
         output_price_per_1k: 0.015,
-        cache_input_price_per_1k: 0.00375,
-        cache_hit_price_per_1k: 0.0003,
+        cache_write_price_per_1k: 0.00375,
+        cache_read_price_per_1k: 0.0003,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1965,8 +1965,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-haiku-4.5',
         input_price_per_1k: 0.001, // $1 per 1M / 1000
         output_price_per_1k: 0.005, // $5 per 1M / 1000
-        cache_input_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
-        cache_hit_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
+        cache_read_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1993,7 +1993,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-5-pro',
         input_price_per_1k: 0.00125, // $1.25 per 1M / 1000
         output_price_per_1k: 0.01, // $10 per 1M / 1000
-        cache_input_price_per_1k: 0.000125, // $0.125 per 1M / 1000
+        cache_write_price_per_1k: 0.000125, // $0.125 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2016,7 +2016,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-5-flash',
         input_price_per_1k: 0.0003, // $0.30 per 1M / 1000
         output_price_per_1k: 0.0025, // $2.50 per 1M / 1000
-        cache_input_price_per_1k: 0.00003, // $0.03 per 1M / 1000
+        cache_write_price_per_1k: 0.00003, // $0.03 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2038,7 +2038,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-0-flash',
         input_price_per_1k: 0.0003, // Same as 2.5 Flash
         output_price_per_1k: 0.0025,
-        cache_input_price_per_1k: 0.00003,
+        cache_write_price_per_1k: 0.00003,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2061,7 +2061,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-5-flash-lite',
         input_price_per_1k: 0.0001, // $0.10 per 1M / 1000
         output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
-        cache_input_price_per_1k: 0.00001, // $0.01 per 1M / 1000
+        cache_write_price_per_1k: 0.00001, // $0.01 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2083,7 +2083,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-0-flash-lite',
         input_price_per_1k: 0.0001, // Same as 2.5 Flash-Lite
         output_price_per_1k: 0.0004,
-        cache_input_price_per_1k: 0.00001,
+        cache_write_price_per_1k: 0.00001,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),

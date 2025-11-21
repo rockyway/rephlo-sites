@@ -663,9 +663,10 @@ export class ModelService implements IModelService {
     });
 
     // Step 3: Create pricing record in model_provider_pricing table
-    // Convert per-million pricing to per-1k pricing (divide by 1000)
-    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 1000;
-    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 1000;
+    // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+    // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 100 / 1000;
+    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 100 / 1000;
 
     logger.info('ModelService: Creating pricing record', {
       modelId: model.id,
@@ -680,8 +681,8 @@ export class ModelService implements IModelService {
         model_name: model.id,
         input_price_per_1k: inputPricePer1k,
         output_price_per_1k: outputPricePer1k,
-        cache_input_price_per_1k: null, // Future: Support prompt caching pricing
-        cache_hit_price_per_1k: null,
+        cache_write_price_per_1k: null, // Plan 207: Cache write pricing (1.25x for Anthropic)
+        cache_read_price_per_1k: null, // Plan 207: Cache read pricing (0.1x for Anthropic)
         effective_from: new Date(),
         effective_until: null, // Active indefinitely
         is_active: true,
@@ -1076,9 +1077,10 @@ export class ModelService implements IModelService {
             );
           }
 
-          // Convert per-million pricing to per-1k pricing
-          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 1000;
-          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 1000;
+          // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+          // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 100 / 1000;
+          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 100 / 1000;
 
           logger.info('ModelService: Updating pricing record', {
             modelId,
