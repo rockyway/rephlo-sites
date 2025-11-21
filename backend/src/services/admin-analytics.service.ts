@@ -320,8 +320,8 @@ export class AdminAnalyticsService {
       _sum: { credits_deducted: true },
     });
 
-    const currentValue = currentCredits._sum.credits_deducted || 0;
-    const previousValue = previousCredits._sum.credits_deducted || 0;
+    const currentValue = parseFloat(currentCredits._sum.credits_deducted?.toString() || '0');
+    const previousValue = parseFloat(previousCredits._sum.credits_deducted?.toString() || '0');
 
     return {
       value: currentValue,

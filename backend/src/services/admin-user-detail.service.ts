@@ -177,11 +177,11 @@ export class AdminUserDetailService {
               maxDevices: currentLicense.max_activations,
             }
           : null,
-        creditBalance: creditBalance?.amount || 0,
+        creditBalance: creditBalance?.amount ? parseFloat(creditBalance.amount.toString()) : 0,
         stats: {
           totalSubscriptions: totalSubscriptions,
           totalLicenses: totalLicenses,
-          creditsConsumed: Number(totalCreditsConsumed._sum?.credits_deducted || 0),
+          creditsConsumed: parseFloat(totalCreditsConsumed._sum?.credits_deducted?.toString() || '0'),
           couponsRedeemed: totalCouponsRedeemed,
         },
       };
@@ -518,7 +518,7 @@ export class AdminUserDetailService {
 
       return {
         balance: {
-          amount: balance?.amount || 0,
+          amount: balance?.amount ? parseFloat(balance.amount.toString()) : 0,
           lastUpdated: balance?.updated_at || new Date(),
         },
         allocations: allocations.map((alloc) => ({
@@ -530,21 +530,21 @@ export class AdminUserDetailService {
         })),
         usage: usageByModel.map((usage) => ({
           model: modelPricingMap.get(usage.model_id) || 'Unknown Model',
-          totalCredits: usage._sum?.credits_deducted || 0,
+          totalCredits: parseFloat(usage._sum?.credits_deducted?.toString() || '0'),
           requestCount: usage._count?.id || 0,
         })),
         deductions: deductions.map((deduction) => ({
           id: deduction.id,
-          amount: deduction.amount,
+          amount: parseFloat(deduction.amount.toString()),
           modelUsed: 'Unknown', // Would need to join with usage ledger
           timestamp: deduction.created_at,
         })),
         totalAllocations: totalAllocations._sum?.amount || 0,
         totalUsage: usageByModel.reduce(
-          (sum, u) => sum + (u._sum?.credits_deducted || 0),
+          (sum, u) => sum + parseFloat(u._sum?.credits_deducted?.toString() || '0'),
           0
         ),
-        totalDeductions: totalDeductions._sum?.amount || 0,
+        totalDeductions: parseFloat(totalDeductions._sum?.amount?.toString() || '0'),
       };
     } catch (error) {
       logger.error('AdminUserDetailService.getUserCredits: Error', {

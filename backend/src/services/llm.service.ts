@@ -201,9 +201,12 @@ export class LLMService {
         modelId
       );
 
-      // Step 4: Apply formula: credits = ceil(vendorCost × marginMultiplier × 100)
-      // Where × 100 converts USD to credits (1 credit = $0.01)
-      const credits = Math.ceil(costCalculation.vendorCost * marginMultiplier * 100);
+      // Step 4: Apply formula using configurable increment (Plan 208)
+      // Use CreditDeductionService for consistent credit calculation
+      const credits = this.creditDeductionService.calculateCreditsFromCost(
+        costCalculation.vendorCost,
+        marginMultiplier
+      );
 
       // Step 4.5: Calculate separate input/output credits (Phase 3)
       let inputCredits = 0;

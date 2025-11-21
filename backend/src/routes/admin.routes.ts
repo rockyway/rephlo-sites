@@ -28,6 +28,7 @@ import { RevenueAnalyticsController } from '../controllers/revenue-analytics.con
 import { SettingsController } from '../controllers/admin/settings.controller';
 import { BillingController } from '../controllers/billing.controller';
 import { ProfitabilityController } from '../controllers/admin/profitability.controller';
+import { AdminSettingsController } from '../controllers/admin-settings.controller';
 import vendorAnalyticsRoutes from './vendor-analytics.routes';
 import adminCacheAnalyticsRoutes from './admin-cache-analytics.routes';
 import { asyncHandler } from '../middleware/error.middleware';
@@ -50,6 +51,7 @@ const revenueAnalyticsController = container.resolve(RevenueAnalyticsController)
 const settingsController = container.resolve(SettingsController);
 const billingController = container.resolve(BillingController);
 const profitabilityController = container.resolve(ProfitabilityController);
+const adminSettingsController = container.resolve(AdminSettingsController);
 
 // =============================================================================
 // Admin Endpoints
@@ -1132,6 +1134,64 @@ router.get(
   '/subscriptions/:id/credit-usage',
   auditLog({ action: 'read', resourceType: 'subscription' }),
   asyncHandler(adminController.getSubscriptionCreditUsage.bind(adminController))
+);
+
+// =============================================================================
+// Admin Settings Endpoints (Plan 208: Fractional Credit System)
+// =============================================================================
+
+/**
+ * GET /admin/settings/credit-increment
+ * Get current minimum credit increment setting
+ *
+ * Returns current credit increment configuration for credit deduction rounding.
+ * Part of Plan 208: Fractional Credit System Migration
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "creditMinimumIncrement": 0.1,
+ *     "allowedValues": [0.01, 0.1, 1.0],
+ *     "description": "Minimum credit increment for rounding (e.g., 0.1 = $0.001 per increment)"
+ *   }
+ * }
+ *
+ * Reference: docs/plan/208-fractional-credit-system-migration.md
+ */
+router.get(
+  '/settings/credit-increment',
+  auditLog({ action: 'read', resourceType: 'system_settings' }),
+  asyncHandler(adminSettingsController.getCreditIncrement.bind(adminSettingsController))
+);
+
+/**
+ * PUT /admin/settings/credit-increment
+ * Update minimum credit increment for credit deduction rounding
+ *
+ * Allows administrators to adjust credit increment without code changes.
+ * Part of Plan 208: Fractional Credit System Migration
+ *
+ * Request Body:
+ * {
+ *   "increment": 0.1 | 0.01 | 1.0
+ * }
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "creditMinimumIncrement": 0.1,
+ *     "message": "Credit increment updated successfully"
+ *   }
+ * }
+ *
+ * Reference: docs/plan/208-fractional-credit-system-migration.md
+ */
+router.put(
+  '/settings/credit-increment',
+  auditLog({ action: 'update', resourceType: 'system_settings', captureRequestBody: true }),
+  asyncHandler(adminSettingsController.updateCreditIncrement.bind(adminSettingsController))
 );
 
 export default router;

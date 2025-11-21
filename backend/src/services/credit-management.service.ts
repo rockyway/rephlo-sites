@@ -414,7 +414,7 @@ export class CreditManagementService {
 
       const expectedBalance =
         allocations.reduce((sum, a) => sum + a.amount, 0) -
-        deductions.reduce((sum, d) => sum + d.amount, 0);
+        deductions.reduce((sum, d) => sum + parseFloat(d.amount.toString()), 0);
 
       // Update balance to match expected value
       await this.prisma.user_credit_balance.upsert({

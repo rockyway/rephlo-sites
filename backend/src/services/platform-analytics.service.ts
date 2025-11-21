@@ -393,7 +393,7 @@ export class PlatformAnalyticsService {
         _sum: { credits_deducted: true },
       });
 
-      const totalUsed = usage._sum.credits_deducted || 0;
+      const totalUsed = parseFloat(usage._sum.credits_deducted?.toString() || '0');
 
       const utilizationRate = totalAllocated > 0 ? (totalUsed / totalAllocated) * 100 : 0;
 
@@ -424,7 +424,7 @@ export class PlatformAnalyticsService {
       ]);
 
       const totalAllocated = allocations._sum.amount || 0;
-      const totalUsed = usage._sum.credits_deducted || 0;
+      const totalUsed = parseFloat(usage._sum.credits_deducted?.toString() || '0');
       const utilizationRate = totalAllocated > 0 ? (totalUsed / totalAllocated) * 100 : 0;
 
       const result = {
@@ -460,7 +460,7 @@ export class PlatformAnalyticsService {
 
       const result = topUsers.map((user) => ({
         userId: user.user_id,
-        credits_deducted: user._sum.credits_deducted || 0,
+        credits_deducted: parseFloat(user._sum.credits_deducted?.toString() || '0'),
       }));
 
       logger.info('PlatformAnalyticsService: Top credit consumers retrieved', {
