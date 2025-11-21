@@ -230,7 +230,7 @@ export class TokenTrackingService implements ITokenTrackingService {
           ${record.cacheCreationTokens || 0}, ${record.cacheReadTokens || 0}, ${record.cachedPromptTokens || 0},
           ${record.cacheHitRate}, ${record.costSavingsPercent},
           ${record.cacheWriteCredits}, ${record.cacheReadCredits},
-          ${record.vendorCost}, ${record.marginMultiplier}, ${record.vendorCost * record.marginMultiplier}, ${record.creditDeducted}, ${record.grossMargin},
+          ${record.vendorCost}, ${record.marginMultiplier}, ${record.creditDeducted * 0.01}, ${record.creditDeducted}, ${record.grossMargin},
           ${record.requestType}, ${record.streamingSegments},
           ${record.requestStartedAt}, ${record.requestCompletedAt}, ${record.processingTime},
           ${record.status}, ${record.errorMessage}, ${record.isStreamingComplete ?? true},

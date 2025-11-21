@@ -663,9 +663,10 @@ export class ModelService implements IModelService {
     });
 
     // Step 3: Create pricing record in model_provider_pricing table
-    // Convert per-million pricing to per-1k pricing (divide by 1000)
-    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 1000;
-    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 1000;
+    // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+    // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 100 / 1000;
+    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 100 / 1000;
 
     logger.info('ModelService: Creating pricing record', {
       modelId: model.id,
@@ -1076,9 +1077,10 @@ export class ModelService implements IModelService {
             );
           }
 
-          // Convert per-million pricing to per-1k pricing
-          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 1000;
-          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 1000;
+          // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+          // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 100 / 1000;
+          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 100 / 1000;
 
           logger.info('ModelService: Updating pricing record', {
             modelId,

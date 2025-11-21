@@ -101,7 +101,7 @@ export class UsageService {
         output_tokens: input.outputTokens || 0,
         vendor_cost: 0, // TODO: Needs actual vendor cost
         margin_multiplier: 1,
-        credit_value_usd: 0.001,
+        credit_value_usd: 0.01,
         credits_deducted: input.creditsUsed,
         request_type: 'chat' as any,
         request_started_at: new Date(),

@@ -211,12 +211,18 @@ export class CreditDeductionService implements ICreditDeductionService {
       const result = await this.prisma.$transaction(
         async (tx) => {
           // Step 1: Lock user credit balance (SELECT FOR UPDATE)
+          logger.debug('CreditDeductionService: Locking user balance', { userId, creditsToDeduct });
           const balanceRecords = await tx.$queryRaw<any[]>`
             SELECT amount
             FROM user_credit_balance
             WHERE user_id = ${userId}::uuid
             FOR UPDATE
           `;
+
+          logger.debug('CreditDeductionService: Balance records fetched', {
+            recordCount: balanceRecords?.length || 0,
+            records: balanceRecords,
+          });
 
           let currentBalance = 0;
           let balanceExists = balanceRecords && balanceRecords.length > 0;
@@ -225,8 +231,21 @@ export class CreditDeductionService implements ICreditDeductionService {
             currentBalance = parseInt(balanceRecords[0].amount) || 0;
           }
 
+          logger.debug('CreditDeductionService: Balance check', {
+            userId,
+            currentBalance,
+            creditsToDeduct,
+            sufficient: currentBalance >= creditsToDeduct,
+          });
+
           // Step 2: Pre-check: Sufficient credits?
           if (currentBalance < creditsToDeduct) {
+            logger.error('CreditDeductionService: Insufficient credits in transaction', {
+              userId,
+              currentBalance,
+              creditsToDeduct,
+              shortfall: creditsToDeduct - currentBalance,
+            });
             throw new InsufficientCreditsError(
               `Insufficient credits. Balance: ${currentBalance}, Required: ${creditsToDeduct}`
             );
@@ -291,7 +310,7 @@ export class CreditDeductionService implements ICreditDeductionService {
               ${tokenUsageRecord.imageTokens || 0},
               ${tokenUsageRecord.vendorCost},
               ${tokenUsageRecord.marginMultiplier},
-              ${tokenUsageRecord.vendorCost * tokenUsageRecord.marginMultiplier},
+              ${creditsToDeduct * 0.01},
               ${creditsToDeduct},
               ${inputCredits},
               ${outputCredits},

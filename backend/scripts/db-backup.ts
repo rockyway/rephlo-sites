@@ -16,10 +16,11 @@
  *   BACKUP_RETENTION_DAYS - Days to keep backups (default: 30)
  */
 
-import { execSync } from 'child_process';
+import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
+import * as zlib from 'zlib';
 import { config } from 'dotenv';
 
 // Load environment variables from .env file
@@ -133,44 +134,27 @@ const createBackup = (config: BackupConfig): string => {
       PGPASSWORD: dbInfo.password,
     };
 
-    // Build pg_dump command
-    const pgDumpCmd = [
-      'pg_dump',
-      `-h ${dbInfo.host}`,
-      `-p ${dbInfo.port}`,
-      `-U ${dbInfo.username}`,
-      `-d ${dbInfo.database}`,
+    // Build pg_dump arguments array
+    const pgDumpArgs = [
+      `-h`, dbInfo.host,
+      `-p`, dbInfo.port,
+      `-U`, dbInfo.username,
+      `-d`, dbInfo.database,
       '--no-password',
       '--verbose',
       '--format=plain',
       '--no-owner',
       '--no-acl',
-    ].join(' ');
+    ];
 
-    // Execute backup (with optional compression)
+    // Execute backup (with optional compression using Node.js zlib)
     if (config.compress) {
-      execSync(`${pgDumpCmd} | gzip > "${backupPath}"`, {
-        env,
-        stdio: ['ignore', 'pipe', 'inherit']
-      });
+      // Use spawn for streaming with compression
+      return createBackupWithCompression(pgDumpArgs, env, backupPath);
     } else {
-      execSync(`${pgDumpCmd} > "${backupPath}"`, {
-        env,
-        stdio: ['ignore', 'pipe', 'inherit']
-      });
+      // Use spawn for streaming without compression
+      return createBackupWithoutCompression(pgDumpArgs, env, backupPath);
     }
-
-    // Get backup file size
-    const stats = fs.statSync(backupPath);
-    const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-
-    console.log('');
-    console.log('✅ Backup completed successfully!');
-    console.log(`   File: ${backupPath}`);
-    console.log(`   Size: ${sizeMB} MB`);
-    console.log('');
-
-    return backupPath;
 
   } catch (error) {
     console.error('');
@@ -179,6 +163,115 @@ const createBackup = (config: BackupConfig): string => {
     console.error('');
     process.exit(1);
   }
+};
+
+/**
+ * Create backup with gzip compression using Node.js zlib (cross-platform)
+ */
+const createBackupWithCompression = (pgDumpArgs: string[], env: NodeJS.ProcessEnv, backupPath: string): string => {
+  const pgDump = spawn('pg_dump', pgDumpArgs, { env });
+  const gzip = zlib.createGzip();
+  const output = fs.createWriteStream(backupPath);
+
+  // Pipe: pg_dump stdout -> gzip -> file
+  pgDump.stdout.pipe(gzip).pipe(output);
+
+  // Pipe stderr to console for verbose output
+  pgDump.stderr.on('data', (data) => {
+    process.stderr.write(data);
+  });
+
+  return new Promise<string>((resolve, reject) => {
+    let errorOccurred = false;
+
+    pgDump.on('error', (error) => {
+      errorOccurred = true;
+      reject(new Error(`pg_dump failed: ${error.message}`));
+    });
+
+    output.on('error', (error) => {
+      errorOccurred = true;
+      reject(new Error(`File write failed: ${error.message}`));
+    });
+
+    pgDump.on('close', (code) => {
+      if (errorOccurred) return;
+
+      if (code !== 0) {
+        reject(new Error(`pg_dump exited with code ${code}`));
+        return;
+      }
+
+      // Wait for output stream to finish
+      output.on('finish', () => {
+        // Get backup file size
+        const stats = fs.statSync(backupPath);
+        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+
+        console.log('');
+        console.log('✅ Backup completed successfully!');
+        console.log(`   File: ${backupPath}`);
+        console.log(`   Size: ${sizeMB} MB`);
+        console.log('');
+
+        resolve(backupPath);
+      });
+    });
+  }) as any; // Type cast to match function return type
+};
+
+/**
+ * Create backup without compression
+ */
+const createBackupWithoutCompression = (pgDumpArgs: string[], env: NodeJS.ProcessEnv, backupPath: string): string => {
+  const pgDump = spawn('pg_dump', pgDumpArgs, { env });
+  const output = fs.createWriteStream(backupPath);
+
+  // Pipe: pg_dump stdout -> file
+  pgDump.stdout.pipe(output);
+
+  // Pipe stderr to console for verbose output
+  pgDump.stderr.on('data', (data) => {
+    process.stderr.write(data);
+  });
+
+  return new Promise<string>((resolve, reject) => {
+    let errorOccurred = false;
+
+    pgDump.on('error', (error) => {
+      errorOccurred = true;
+      reject(new Error(`pg_dump failed: ${error.message}`));
+    });
+
+    output.on('error', (error) => {
+      errorOccurred = true;
+      reject(new Error(`File write failed: ${error.message}`));
+    });
+
+    pgDump.on('close', (code) => {
+      if (errorOccurred) return;
+
+      if (code !== 0) {
+        reject(new Error(`pg_dump exited with code ${code}`));
+        return;
+      }
+
+      // Wait for output stream to finish
+      output.on('finish', () => {
+        // Get backup file size
+        const stats = fs.statSync(backupPath);
+        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+
+        console.log('');
+        console.log('✅ Backup completed successfully!');
+        console.log(`   File: ${backupPath}`);
+        console.log(`   Size: ${sizeMB} MB`);
+        console.log('');
+
+        resolve(backupPath);
+      });
+    });
+  }) as any; // Type cast to match function return type
 };
 
 // ============================================================================
@@ -251,7 +344,7 @@ const main = async (): Promise<void> => {
     const dbInfo = parseDatabaseUrl(config.databaseUrl);
     console.log(`📊 Database: ${dbInfo.database}`);
     console.log(`🗂️  Backup directory: ${config.backupDir}`);
-    console.log(`🗜️  Compression: ${config.compress ? 'Enabled' : 'Disabled'}`);
+    console.log(`🗜️  Compression: ${config.compress ? 'Enabled (Node.js zlib)' : 'Disabled'}`);
     console.log('');
 
     const confirmed = await askForConfirmation('⚠️  Proceed with backup?');
@@ -262,8 +355,8 @@ const main = async (): Promise<void> => {
     }
   }
 
-  // Create backup
-  createBackup(config);
+  // Create backup (now returns a promise)
+  await createBackup(config);
 
   // Cleanup old backups
   if (!config.autoMode) {
