@@ -1858,6 +1858,75 @@ npm run test -- src/components/admin/__tests__/EditModelDialog.test.tsx
 - Add snapshot tests for UI consistency
 
 
+2025-11-19 14:47 - Created Plan 203: Perpetual License Auto-Activation Coordination (docs/plan/203-perpetual-license-auto-activation-coordination-plan.md). Analyzed existing Plan 110 implementation, identified missing GET /api/licenses/me endpoint and IDP JWT claims integration. Updated desktop requirements to leverage Text Assistant WPF infrastructure (OAuth, encryption, EF Core). Reduced desktop effort from 4 weeks to 2.5 weeks.
+
+## 2025-01-19: JWT License Claims Integration (Plan 203, Phase 2)
+
+Implemented perpetual license claims in Identity Provider JWT tokens:
+- Added `maskLicenseKey()` helper function to mask license keys (REPHLO-V1-****-****-AB12)
+- Enhanced `findAccount()` to include perpetualLicenses relation (active licenses only)
+- Modified `getClaimsForUser()` to include license claims: licenseStatus, licenseKey (masked), licenseTier, licenseVersion
+- Updated identity-provider Prisma schema to include PerpetualLicense model and LicenseStatus enum
+- JWT now includes license info for Desktop App auto-activation and offline validation
+- Userinfo endpoint automatically includes license claims via shared claims() function
+
+Perpetual License Auto-Activation - Implementation Complete
+Date: 2025-01-19
+Plan: 203
+
+COMPLETED TASKS (10/12):
+
+✅ Backend API Implementation:
+   - GET /api/licenses/me endpoint (backend/src/routes/plan110.routes.ts:91-100)
+   - getUserActiveLicense() service method (backend/src/services/license-management.service.ts:607-644)
+   - getMyLicense() controller (backend/src/controllers/license-management.controller.ts:238-291)
+
+✅ Identity Provider Integration:
+   - findAccount() enhanced with perpetualLicenses join (identity-provider/src/services/auth.service.ts)
+   - maskLicenseKey() helper function implemented
+   - JWT claims include: licenseStatus, licenseKey, licenseTier, licenseVersion
+
+✅ Seed Data:
+   - New user persona: perpetual.user@example.com
+   - Test license: REPHLO-V1-TEST-AUTO-ACT1 (2/3 devices activated)
+   - seedPerpetualLicenses() function (backend/prisma/seed.ts:593-681)
+
+✅ Test Scripts:
+   - Bash: backend/test-perpetual-license-api.sh
+   - PowerShell: backend/test-perpetual-license-api.ps1
+   - Documentation: backend/PERPETUAL_LICENSE_API_TESTS.md
+
+✅ Desktop Specification:
+   - Complete implementation guide: docs/reference/204-desktop-perpetual-license-implementation-spec.md
+   - Entity models, services, UI components, testing requirements
+   - 2.5 week implementation timeline
+
+PENDING TASKS (2):
+⏳ Backend integration tests for license retrieval
+⏳ IDP integration tests for JWT claims
+
+DELIVERABLES:
+- Backend endpoint ready for integration
+- JWT auto-activation flow implemented in IDP
+- Test data available for E2E testing
+- Desktop team has comprehensive implementation specs
+
+NEXT STEPS:
+1. Set up database (DATABASE_URL in backend/.env)
+2. Run: cd backend && npm run seed
+3. Start servers: npm run dev:all (from project root)
+4. Test endpoints using provided scripts
+5. Desktop team implements using specs in docs/reference/204-*
+
+
+## 2025-01-19: Completed Plan 203 Integration Tests
+- Created backend/tests/integration/perpetual-license.test.ts (400+ lines, 14 test cases)
+- Created identity-provider/src/services/__tests__/auth.service.jwt-claims.test.ts (600+ lines, 16 test cases)
+- All 12 tasks from Plan 203 orchestration completed successfully
+- Auto-activation flow fully tested: JWT claims + license retrieval endpoint
+2025-11-22 08:41:20 - Fixed undefined toLocaleString error in MarginTracking.tsx by adding null-safety checks to all numeric fields (requests, vendorCost, marginPercent, tokensMillions, variance)
+2025-11-22 08:43:59 - Fixed missing key prop warning in ProviderCostChart.tsx by adding index fallback and null-safety checks to numeric fields
+2025-11-22 08:46:01 - Fixed additional toLocaleString error on metrics.creditValue (line 235) and variance comparison (line 202) in MarginTracking.tsx. Updated MarginMetrics interface to make all numeric fields optional.
 
 ## 2025-11-19 - Model Version History Implementation Complete
 

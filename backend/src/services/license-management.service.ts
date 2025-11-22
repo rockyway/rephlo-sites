@@ -605,6 +605,45 @@ export class LicenseManagementService {
   }
 
   /**
+   * Get user's active perpetual license (for authenticated endpoint)
+   * Returns the most recent active license for a user
+   * Used by GET /api/licenses/me endpoint
+   * @param userId - User ID from JWT
+   * @returns Active license with activation count or null if no active license
+   */
+  async getUserActiveLicense(
+    userId: string
+  ): Promise<
+    | (PerpetualLicense & {
+        _count: {
+          license_activation: number;
+        };
+      })
+    | null
+  > {
+    const license = await this.prisma.perpetual_license.findFirst({
+      where: {
+        user_id: userId,
+        status: 'active',
+      },
+      include: {
+        _count: {
+          select: {
+            license_activation: {
+              where: { status: 'active' },
+            },
+          },
+        },
+      },
+      orderBy: {
+        purchased_at: 'desc', // Most recent if multiple active licenses
+      },
+    });
+
+    return license;
+  }
+
+  /**
    * Get license activation history
    * @param licenseId - License ID
    * @returns Activation history
