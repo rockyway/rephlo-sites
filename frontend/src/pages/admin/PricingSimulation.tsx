@@ -236,8 +236,10 @@ Net Benefit: $${result.netFinancialImpact.netBenefit.toLocaleString()}/month (${
                   <option value="">All Tiers</option>
                   <option value="free">Free</option>
                   <option value="pro">Pro</option>
+                  <option value="pro_plus">Pro+</option>
                   <option value="pro_max">Pro Max</option>
                   <option value="enterprise_pro">Enterprise Pro</option>
+                  <option value="enterprise_pro_plus">Enterprise Pro+</option>
                 </select>
 
                 <select

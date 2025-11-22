@@ -8,7 +8,7 @@
 import { injectable, inject } from 'tsyringe';
 import OpenAI from 'openai';
 import { Response } from 'express';
-import { ILLMProvider } from '../interfaces';
+import { ILLMProvider, LLMUsageData } from '../interfaces';
 import {
   ChatCompletionRequest,
   TextCompletionRequest,
@@ -81,20 +81,22 @@ export class OpenAIProvider implements ILLMProvider {
   }
 
   /**
-   * Checks if the model is GPT-5-mini (which has restricted temperature support)
+   * Checks if the model has restricted temperature support (only supports temperature=1.0)
+   * Currently applies to: gpt-5-mini, gpt-5.1-chat
    */
-  private isGPT5Mini(model: string): boolean {
-    return model.includes('gpt-5-mini');
+  private hasRestrictedTemperature(model: string): boolean {
+    const restrictedModels = ['gpt-5-mini', 'gpt-5.1-chat'];
+    return restrictedModels.some(restricted => model.includes(restricted));
   }
 
   /**
    * Builds API parameters with GPT-5 compatibility
    * GPT-5 models use max_completion_tokens instead of max_tokens
-   * GPT-5-mini only supports default temperature (1.0)
+   * Some models (gpt-5-mini, gpt-5.1-chat) only support default temperature (1.0)
    */
   private buildChatParams(request: ChatCompletionRequest, streaming: boolean = false): any {
     const isGPT5 = this.isGPT5Model(request.model);
-    const isGPT5Mini = this.isGPT5Mini(request.model);
+    const hasTemperatureRestriction = this.hasRestrictedTemperature(request.model);
 
     const params: any = {
       model: request.model,
@@ -112,9 +114,9 @@ export class OpenAIProvider implements ILLMProvider {
       params.max_tokens = request.max_tokens;
     }
 
-    // GPT-5-mini only supports default temperature (1.0)
-    // Other GPT-5 variants and GPT-4 support custom temperature
-    if (!isGPT5Mini) {
+    // Some models only support default temperature (1.0)
+    // Do not send temperature/top_p for these models
+    if (!hasTemperatureRestriction) {
       params.temperature = request.temperature;
       params.top_p = request.top_p;
     }
@@ -138,11 +140,7 @@ export class OpenAIProvider implements ILLMProvider {
 
   async chatCompletion(request: ChatCompletionRequest): Promise<{
     response: Omit<ChatCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('OpenAI client not initialized. Set OPENAI_API_KEY environment variable.');
@@ -152,7 +150,7 @@ export class OpenAIProvider implements ILLMProvider {
       model: request.model,
       messagesCount: request.messages.length,
       isGPT5: this.isGPT5Model(request.model),
-      isGPT5Mini: this.isGPT5Mini(request.model),
+      hasTemperatureRestriction: this.hasRestrictedTemperature(request.model),
       isAzure: this.isAzure,
     });
 
@@ -162,6 +160,24 @@ export class OpenAIProvider implements ILLMProvider {
     // Build API parameters with GPT-5 compatibility
     const params = this.buildChatParams(request, false);
     const completion = await clientForModel.chat.completions.create(params);
+
+    // Extract cache metrics from OpenAI response
+    const usage: LLMUsageData = {
+      promptTokens: completion.usage?.prompt_tokens || 0,
+      completionTokens: completion.usage?.completion_tokens || 0,
+      totalTokens: completion.usage?.total_tokens || 0,
+    };
+
+    // Add OpenAI cache metrics if present (prompt caching)
+    if (completion.usage && 'prompt_tokens_details' in completion.usage) {
+      const details = (completion.usage as any).prompt_tokens_details;
+      if (details && details.cached_tokens) {
+        usage.cachedPromptTokens = details.cached_tokens;
+        logger.debug('OpenAIProvider: Cached prompt tokens detected', {
+          cachedPromptTokens: usage.cachedPromptTokens,
+        });
+      }
+    }
 
     return {
       response: {
@@ -178,11 +194,7 @@ export class OpenAIProvider implements ILLMProvider {
           finish_reason: choice.finish_reason,
         })),
       },
-      usage: {
-        promptTokens: completion.usage?.prompt_tokens || 0,
-        completionTokens: completion.usage?.completion_tokens || 0,
-        totalTokens: completion.usage?.total_tokens || 0,
-      },
+      usage,
     };
   }
 
@@ -197,17 +209,46 @@ export class OpenAIProvider implements ILLMProvider {
     // Get client with correct base URL for the model (Azure: dynamic deployment URL)
     const clientForModel = this.getClientForModel(request.model);
 
+    // ENHANCED: Log complete request details before API call
     logger.debug('OpenAIProvider: Streaming chat completion request', {
       model: request.model,
       baseURL: clientForModel.baseURL,
       isGPT5: this.isGPT5Model(request.model),
-      isGPT5Mini: this.isGPT5Mini(request.model),
+      hasTemperatureRestriction: this.hasRestrictedTemperature(request.model),
       isAzure: this.isAzure,
+      messagesCount: request.messages.length,
+      messages: request.messages.map((msg, idx) => ({
+        index: idx,
+        role: msg.role,
+        contentLength: typeof msg.content === 'string' ? msg.content.length : JSON.stringify(msg.content).length,
+        contentPreview: typeof msg.content === 'string' ? msg.content.substring(0, 100) : JSON.stringify(msg.content).substring(0, 100)
+      })),
+      requestDetails: {
+        maxTokens: request.max_tokens,
+        temperature: request.temperature,
+        topP: request.top_p,
+        stream: request.stream
+      }
     });
 
     try {
       // Build API parameters with GPT-5 compatibility
       const params = this.buildChatParams(request, true);
+
+      // ENHANCED: Log exact parameters being sent to OpenAI/Azure API
+      logger.debug('OpenAIProvider: API call parameters', {
+        model: request.model,
+        baseURL: clientForModel.baseURL,
+        params: {
+          model: params.model,
+          messagesCount: params.messages?.length,
+          maxTokens: params.max_tokens || params.max_completion_tokens,
+          temperature: params.temperature,
+          stream: params.stream,
+          streamOptions: params.stream_options
+        },
+        fullParams: JSON.stringify(params).substring(0, 1000)
+      });
 
       // Add stream_options to get accurate token usage in streaming mode
       // Supported by OpenAI API and Azure OpenAI API v2024-12-01-preview
@@ -286,11 +327,29 @@ export class OpenAIProvider implements ILLMProvider {
 
       return totalTokens;
     } catch (error) {
+      // ENHANCED: Log complete error details with request context
       logger.error('OpenAIProvider: Streaming chat completion error', {
         model: request.model,
         baseURL: clientForModel.baseURL,
+        isAzure: this.isAzure,
+        azureConfig: this.isAzure ? {
+          endpoint: this.azureEndpoint,
+          apiVersion: this.azureApiVersion,
+          hasApiKey: !!this.azureApiKey
+        } : null,
         error: error instanceof Error ? error.message : 'Unknown error',
+        errorName: error instanceof Error ? error.name : typeof error,
+        errorCode: (error as any)?.code,
+        errorStatus: (error as any)?.status,
+        errorType: (error as any)?.type,
+        errorResponse: (error as any)?.response?.data ?
+          JSON.stringify((error as any).response.data).substring(0, 500) : null,
         stack: error instanceof Error ? error.stack : undefined,
+        requestContext: {
+          messagesCount: request.messages.length,
+          maxTokens: request.max_tokens,
+          stream: request.stream
+        }
       });
       throw error;
     }
@@ -302,11 +361,7 @@ export class OpenAIProvider implements ILLMProvider {
 
   async textCompletion(request: TextCompletionRequest): Promise<{
     response: Omit<TextCompletionResponse, 'usage'>;
-    usage: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
+    usage: LLMUsageData;
   }> {
     if (!this.client) {
       throw new Error('OpenAI client not initialized');
@@ -329,6 +384,21 @@ export class OpenAIProvider implements ILLMProvider {
       n: request.n,
     });
 
+    // Extract cache metrics from OpenAI response
+    const usage: LLMUsageData = {
+      promptTokens: completion.usage?.prompt_tokens || 0,
+      completionTokens: completion.usage?.completion_tokens || 0,
+      totalTokens: completion.usage?.total_tokens || 0,
+    };
+
+    // Add OpenAI cache metrics if present
+    if (completion.usage && 'prompt_tokens_details' in completion.usage) {
+      const details = (completion.usage as any).prompt_tokens_details;
+      if (details && details.cached_tokens) {
+        usage.cachedPromptTokens = details.cached_tokens;
+      }
+    }
+
     return {
       response: {
         id: completion.id,
@@ -341,11 +411,7 @@ export class OpenAIProvider implements ILLMProvider {
           finish_reason: choice.finish_reason,
         })),
       },
-      usage: {
-        promptTokens: completion.usage?.prompt_tokens || 0,
-        completionTokens: completion.usage?.completion_tokens || 0,
-        totalTokens: completion.usage?.total_tokens || 0,
-      },
+      usage,
     };
   }
 

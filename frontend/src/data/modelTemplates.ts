@@ -180,6 +180,8 @@ export const TIER_RESTRICTION_MODE_OPTIONS = [
  * Calculate suggested creditsPer1kTokens based on vendor pricing
  * Formula: ((inputCost + outputCost) / 2 / 1000) * marginMultiplier / creditUSDValue
  *
+ * @deprecated Use calculateSeparateCreditsPerKTokens instead
+ *
  * @param inputCostPerMillion - Cost per 1M input tokens in cents
  * @param outputCostPerMillion - Cost per 1M output tokens in cents
  * @param marginMultiplier - Profit margin multiplier (default 2.5x)
@@ -205,4 +207,68 @@ export function calculateSuggestedCredits(
   const creditsPerK = Math.ceil(costWithMargin / creditUSDValue);
 
   return creditsPerK;
+}
+
+/**
+ * Calculate separate input/output credits per 1K tokens
+ *
+ * Phase 3: Separate input/output pricing implementation
+ *
+ * This function calculates separate credit costs for input and output tokens,
+ * allowing more accurate pricing that reflects real-world usage patterns.
+ *
+ * Formula:
+ * - Input: (inputCostPerMillion / 1000) * margin / creditCentValue
+ * - Output: (outputCostPerMillion / 1000) * margin / creditCentValue
+ *
+ * @param inputCostPerMillion - Input cost per million tokens (cents)
+ * @param outputCostPerMillion - Output cost per million tokens (cents)
+ * @param marginMultiplier - Profit margin multiplier (default 2.5x)
+ * @param creditUsdValue - USD value per credit (default $0.0005)
+ * @returns Object with separate input/output credits and estimated total
+ *
+ * @example
+ * // GPT-5 Chat pricing: Input $1.25, Output $10 per 1M tokens
+ * const result = calculateSeparateCreditsPerKTokens(125, 1000);
+ * // Result: { inputCreditsPerK: 7, outputCreditsPerK: 50, estimatedTotalPerK: 47 }
+ * // Typical usage (1:10 ratio): 1×7 + 10×50 = 507, divided by 11 = ~47 credits
+ */
+export function calculateSeparateCreditsPerKTokens(
+  inputCostPerMillion: number,
+  outputCostPerMillion: number,
+  marginMultiplier = 2.5,
+  creditUsdValue = 0.0005
+): {
+  inputCreditsPerK: number;
+  outputCreditsPerK: number;
+  estimatedTotalPerK: number;
+} {
+  if (inputCostPerMillion < 0 || outputCostPerMillion < 0) {
+    return { inputCreditsPerK: 0, outputCreditsPerK: 0, estimatedTotalPerK: 0 };
+  }
+
+  // Convert to cost per 1K tokens
+  const inputCostPer1K = inputCostPerMillion / 1000;
+  const outputCostPer1K = outputCostPerMillion / 1000;
+
+  // Apply margin
+  const inputCostWithMargin = inputCostPer1K * marginMultiplier;
+  const outputCostWithMargin = outputCostPer1K * marginMultiplier;
+
+  // Convert credit USD value to cents
+  const creditCentValue = creditUsdValue * 100;
+
+  // Calculate separate credits (round up to ensure we cover costs)
+  const inputCreditsPerK = Math.ceil(inputCostWithMargin / creditCentValue);
+  const outputCreditsPerK = Math.ceil(outputCostWithMargin / creditCentValue);
+
+  // Estimate total credits assuming typical 1:10 input:output ratio
+  // This gives admins a rough idea of expected cost per request
+  const estimatedTotalPerK = Math.ceil((1 * inputCreditsPerK + 10 * outputCreditsPerK) / 11);
+
+  return {
+    inputCreditsPerK,
+    outputCreditsPerK,
+    estimatedTotalPerK,
+  };
 }

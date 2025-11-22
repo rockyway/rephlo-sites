@@ -211,12 +211,18 @@ export class CreditDeductionService implements ICreditDeductionService {
       const result = await this.prisma.$transaction(
         async (tx) => {
           // Step 1: Lock user credit balance (SELECT FOR UPDATE)
+          logger.debug('CreditDeductionService: Locking user balance', { userId, creditsToDeduct });
           const balanceRecords = await tx.$queryRaw<any[]>`
             SELECT amount
             FROM user_credit_balance
             WHERE user_id = ${userId}::uuid
             FOR UPDATE
           `;
+
+          logger.debug('CreditDeductionService: Balance records fetched', {
+            recordCount: balanceRecords?.length || 0,
+            records: balanceRecords,
+          });
 
           let currentBalance = 0;
           let balanceExists = balanceRecords && balanceRecords.length > 0;
@@ -225,8 +231,21 @@ export class CreditDeductionService implements ICreditDeductionService {
             currentBalance = parseInt(balanceRecords[0].amount) || 0;
           }
 
+          logger.debug('CreditDeductionService: Balance check', {
+            userId,
+            currentBalance,
+            creditsToDeduct,
+            sufficient: currentBalance >= creditsToDeduct,
+          });
+
           // Step 2: Pre-check: Sufficient credits?
           if (currentBalance < creditsToDeduct) {
+            logger.error('CreditDeductionService: Insufficient credits in transaction', {
+              userId,
+              currentBalance,
+              creditsToDeduct,
+              shortfall: creditsToDeduct - currentBalance,
+            });
             throw new InsufficientCreditsError(
               `Insufficient credits. Balance: ${currentBalance}, Required: ${creditsToDeduct}`
             );
@@ -264,11 +283,18 @@ export class CreditDeductionService implements ICreditDeductionService {
           `;
 
           // Step 5: Create token usage ledger record FIRST (FK requirement for credit_deduction_ledger)
+          // Phase 3: Track separate input/output credits
+          const inputCredits = tokenUsageRecord.inputCredits || 0;
+          const outputCredits = tokenUsageRecord.outputCredits || 0;
+          const totalCredits = inputCredits + outputCredits;
+
           await tx.$executeRaw`
             INSERT INTO token_usage_ledger (
               request_id, user_id, subscription_id, model_id, provider_id,
               input_tokens, output_tokens, cached_input_tokens,
+              image_count, image_tokens,
               vendor_cost, margin_multiplier, credit_value_usd, credits_deducted,
+              input_credits, output_credits, total_credits,
               request_type, request_started_at, request_completed_at,
               processing_time_ms, status, gross_margin_usd, created_at
             ) VALUES (
@@ -280,10 +306,15 @@ export class CreditDeductionService implements ICreditDeductionService {
               ${tokenUsageRecord.inputTokens},
               ${tokenUsageRecord.outputTokens},
               ${tokenUsageRecord.cachedInputTokens || 0},
+              ${tokenUsageRecord.imageCount || 0},
+              ${tokenUsageRecord.imageTokens || 0},
               ${tokenUsageRecord.vendorCost},
               ${tokenUsageRecord.marginMultiplier},
-              ${tokenUsageRecord.vendorCost * tokenUsageRecord.marginMultiplier},
+              ${creditsToDeduct * 0.01},
               ${creditsToDeduct},
+              ${inputCredits},
+              ${outputCredits},
+              ${totalCredits},
               ${tokenUsageRecord.requestType}::request_type,
               ${tokenUsageRecord.requestStartedAt},
               ${tokenUsageRecord.requestCompletedAt},

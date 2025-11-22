@@ -29,6 +29,11 @@ out
 uploads/
 temp/
 
+# Database Backups
+backups/
+*.sql
+*.sql.gz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -20,6 +20,7 @@ import MarkLegacyDialog from '@/components/admin/MarkLegacyDialog';
 import ArchiveDialog from '@/components/admin/ArchiveDialog';
 import UnarchiveDialog from '@/components/admin/UnarchiveDialog';
 import AddModelDialog from '@/components/admin/AddModelDialog';
+import ModelVersionHistory from '@/components/admin/ModelVersionHistory';
 import { adminAPI } from '@/api/admin';
 import { cn } from '@/lib/utils';
 import Breadcrumbs from '@/components/admin/layout/Breadcrumbs';
@@ -87,6 +88,10 @@ function ModelManagement() {
 
   // Add Model dialog state
   const [addModelDialogOpen, setAddModelDialogOpen] = useState(false);
+
+  // Version history dialog state
+  const [versionHistoryModelId, setVersionHistoryModelId] = useState<string | null>(null);
+  const [isVersionHistoryDialogOpen, setIsVersionHistoryDialogOpen] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -158,6 +163,11 @@ function ModelManagement() {
   const handleFullEditModel = (model: ModelInfo) => {
     setEditingFullModel(model);
     setIsFullEditDialogOpen(true);
+  };
+
+  const handleViewVersionHistory = (modelId: string) => {
+    setVersionHistoryModelId(modelId);
+    setIsVersionHistoryDialogOpen(true);
   };
 
   const handleSaveFullModel = async (updates: {
@@ -285,8 +295,30 @@ function ModelManagement() {
       loadModels();
       loadAuditLogs();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create model');
-      setTimeout(() => setError(null), 5000);
+      // Extract detailed validation errors from API response
+      const apiError = err.response?.data?.error;
+      let errorMessage = 'Failed to create model';
+
+      if (apiError) {
+        // Check for field-level validation errors
+        if (apiError.details?.fieldErrors) {
+          const fieldErrors = apiError.details.fieldErrors;
+          const errorDetails = Object.entries(fieldErrors)
+            .map(([field, errors]: [string, any]) => {
+              const errorList = Array.isArray(errors) ? errors.join(', ') : errors;
+              return `${field}: ${errorList}`;
+            })
+            .join(' | ');
+          errorMessage = `Validation Error: ${errorDetails}`;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        }
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      setError(errorMessage);
+      setTimeout(() => setError(null), 8000); // Longer timeout for detailed errors
     } finally {
       setIsSaving(false);
     }
@@ -647,6 +679,7 @@ function ModelManagement() {
                         }}
                         onEditMeta={() => handleEditModel(model)}
                         onEditFull={() => handleFullEditModel(model as any as ModelInfo)}
+                        onViewHistory={() => handleViewVersionHistory(model.id)}
                         permissions={{
                           canManageLifecycle: permissions.canManageLifecycle,
                           canEditMeta: permissions.canEditMeta,
@@ -724,6 +757,34 @@ function ModelManagement() {
         onCancel={() => setIsFullEditDialogOpen(false)}
         isSaving={isSaving}
       />
+
+      {/* Version History Dialog */}
+      {isVersionHistoryDialogOpen && versionHistoryModelId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setIsVersionHistoryDialogOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-deep-navy-900 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white dark:bg-deep-navy-900 border-b border-deep-navy-200 dark:border-deep-navy-700 p-4 flex items-center justify-between">
+              <h2 className="text-h2 font-semibold text-deep-navy-800 dark:text-white">
+                Model Version History
+              </h2>
+              <button
+                onClick={() => setIsVersionHistoryDialogOpen(false)}
+                className="text-deep-navy-600 hover:text-deep-navy-800 dark:text-deep-navy-400 dark:hover:text-white"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <ModelVersionHistory modelId={versionHistoryModelId} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

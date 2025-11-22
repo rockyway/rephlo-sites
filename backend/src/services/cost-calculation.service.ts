@@ -51,6 +51,8 @@ export class CostCalculationService implements ICostCalculationService {
 
     try {
       // Find pricing that was effective at the given date
+      // Note: Prisma maps cache_write_price_per_1k → cache_input_price_per_1k
+      //       and cache_read_price_per_1k → cache_hit_price_per_1k in the schema
       const pricing = await this.prisma.$queryRaw<any[]>`
         SELECT
           id,
@@ -96,10 +98,19 @@ export class CostCalculationService implements ICostCalculationService {
         modelName: record.modelName,
         inputPricePer1k: parseFloat(record.inputPricePer1k),
         outputPricePer1k: parseFloat(record.outputPricePer1k),
+        // Database columns: cache_input_price_per_1k, cache_hit_price_per_1k
+        // Prisma TypeScript names: cache_write_price_per_1k, cache_read_price_per_1k
+        // Support both naming schemes for backward compatibility
         cacheInputPricePer1k: record.cacheInputPricePer1k
           ? parseFloat(record.cacheInputPricePer1k)
           : undefined,
         cacheHitPricePer1k: record.cacheHitPricePer1k
+          ? parseFloat(record.cacheHitPricePer1k)
+          : undefined,
+        cacheWritePricePer1k: record.cacheInputPricePer1k
+          ? parseFloat(record.cacheInputPricePer1k)
+          : undefined,
+        cacheReadPricePer1k: record.cacheHitPricePer1k
           ? parseFloat(record.cacheHitPricePer1k)
           : undefined,
         effectiveFrom: new Date(record.effectiveFrom),
@@ -118,10 +129,12 @@ export class CostCalculationService implements ICostCalculationService {
 
   /**
    * Calculate vendor cost from token usage
-   * Handles regular tokens and cached tokens (for Anthropic, Google)
+   * Handles regular tokens and cached tokens with differential pricing
+   * Anthropic: Cache write (1.25x), Cache read (0.1x)
+   * OpenAI: Cached prompt tokens (0.5x)
    *
    * @param usage - Token usage details
-   * @returns Detailed cost calculation
+   * @returns Detailed cost calculation with cache breakdown
    * @throws Error if pricing not found
    */
   async calculateVendorCost(usage: TokenUsage): Promise<CostCalculation> {
@@ -130,6 +143,9 @@ export class CostCalculationService implements ICostCalculationService {
       providerId: usage.providerId,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
+      cacheCreationInputTokens: usage.cacheCreationInputTokens,
+      cacheReadInputTokens: usage.cacheReadInputTokens,
+      cachedPromptTokens: usage.cachedPromptTokens,
     });
 
     // Step 1: Look up active pricing for this model/provider
@@ -141,26 +157,70 @@ export class CostCalculationService implements ICostCalculationService {
       throw new Error(errorMsg);
     }
 
-    // Step 2: Calculate costs
+    // Step 2: Calculate regular input/output costs
     const inputCost = (usage.inputTokens * pricing.inputPricePer1k) / 1000;
     const outputCost = (usage.outputTokens * pricing.outputPricePer1k) / 1000;
 
-    // Handle cached tokens if present (Anthropic/Google feature)
-    let cachedCost = 0;
-    if (usage.cachedInputTokens && pricing.cacheInputPricePer1k) {
-      cachedCost = (usage.cachedInputTokens * pricing.cacheInputPricePer1k) / 1000;
+    // Step 3: Calculate cache costs with differential pricing
+    let cacheWriteCost = 0;
+    let cacheReadCost = 0;
+
+    // Anthropic cache metrics (separate write/read)
+    if (usage.cacheCreationInputTokens) {
+      const cacheWritePrice = pricing.cacheWritePricePer1k || pricing.cacheInputPricePer1k || pricing.inputPricePer1k;
+      cacheWriteCost = (usage.cacheCreationInputTokens * cacheWritePrice) / 1000;
     }
 
-    const totalVendorCost = inputCost + outputCost + cachedCost;
+    if (usage.cacheReadInputTokens) {
+      const cacheReadPrice = pricing.cacheReadPricePer1k || pricing.cacheHitPricePer1k || (pricing.inputPricePer1k * 0.1);
+      cacheReadCost = (usage.cacheReadInputTokens * cacheReadPrice) / 1000;
+    }
 
-    // Step 3: Return detailed breakdown
+    // OpenAI/Google cache metrics (single cached token count)
+    if (usage.cachedPromptTokens && !usage.cacheReadInputTokens) {
+      const cachedPrice = pricing.cacheReadPricePer1k || pricing.cacheHitPricePer1k || (pricing.inputPricePer1k * 0.5);
+      cacheReadCost = (usage.cachedPromptTokens * cachedPrice) / 1000;
+    }
+
+    if (usage.cachedContentTokenCount && !usage.cacheReadInputTokens && !usage.cachedPromptTokens) {
+      const cachedPrice = pricing.cacheReadPricePer1k || (pricing.inputPricePer1k * 0.1);
+      cacheReadCost = (usage.cachedContentTokenCount * cachedPrice) / 1000;
+    }
+
+    const totalVendorCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
+
+    // Step 4: Calculate cost savings (what it would have cost without caching)
+    let costWithoutCaching: number | undefined;
+    let costSavingsPercent: number | undefined;
+
+    const totalCachedTokens = (usage.cacheCreationInputTokens || 0) + (usage.cacheReadInputTokens || 0) +
+                              (usage.cachedPromptTokens || 0) + (usage.cachedContentTokenCount || 0);
+
+    if (totalCachedTokens > 0) {
+      // Calculate what it would cost if all cached tokens were regular input tokens
+      const hypotheticalInputTokens = usage.inputTokens + totalCachedTokens;
+      costWithoutCaching = (hypotheticalInputTokens * pricing.inputPricePer1k) / 1000 + outputCost;
+
+      if (costWithoutCaching > 0) {
+        costSavingsPercent = ((costWithoutCaching - totalVendorCost) / costWithoutCaching) * 100;
+      }
+    }
+
+    // Step 5: Return detailed breakdown
     const result: CostCalculation = {
       vendorCost: totalVendorCost,
       inputCost,
       outputCost,
+      cacheWriteCost: cacheWriteCost > 0 ? cacheWriteCost : undefined,
+      cacheReadCost: cacheReadCost > 0 ? cacheReadCost : undefined,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
-      cachedTokens: usage.cachedInputTokens,
+      cachedTokens: usage.cachedInputTokens, // Legacy field
+      cacheCreationTokens: usage.cacheCreationInputTokens,
+      cacheReadTokens: usage.cacheReadInputTokens,
+      cachedPromptTokens: usage.cachedPromptTokens || usage.cachedContentTokenCount,
+      costWithoutCaching,
+      costSavingsPercent,
       pricingSource: `${pricing.providerId}/${pricing.modelName} (effective ${pricing.effectiveFrom.toISOString()})`,
     };
 
@@ -170,7 +230,9 @@ export class CostCalculationService implements ICostCalculationService {
       vendorCost: totalVendorCost,
       inputCost,
       outputCost,
-      cachedCost,
+      cacheWriteCost,
+      cacheReadCost,
+      costSavingsPercent,
     });
 
     return result;
@@ -254,31 +316,53 @@ export class CostCalculationService implements ICostCalculationService {
       return this.calculateVendorCost(usage);
     }
 
-    // Use the historical pricing
+    // Use the historical pricing - apply same cache calculation logic
     const inputCost = (usage.inputTokens * historicalPricing.inputPricePer1k) / 1000;
     const outputCost = (usage.outputTokens * historicalPricing.outputPricePer1k) / 1000;
 
-    let cachedCost = 0;
-    if (usage.cachedInputTokens && historicalPricing.cacheInputPricePer1k) {
-      cachedCost = (usage.cachedInputTokens * historicalPricing.cacheInputPricePer1k) / 1000;
+    let cacheWriteCost = 0;
+    let cacheReadCost = 0;
+
+    // Anthropic cache metrics
+    if (usage.cacheCreationInputTokens) {
+      const cacheWritePrice = historicalPricing.cacheWritePricePer1k || historicalPricing.cacheInputPricePer1k || historicalPricing.inputPricePer1k;
+      cacheWriteCost = (usage.cacheCreationInputTokens * cacheWritePrice) / 1000;
     }
 
-    const totalVendorCost = inputCost + outputCost + cachedCost;
+    if (usage.cacheReadInputTokens) {
+      const cacheReadPrice = historicalPricing.cacheReadPricePer1k || historicalPricing.cacheHitPricePer1k || (historicalPricing.inputPricePer1k * 0.1);
+      cacheReadCost = (usage.cacheReadInputTokens * cacheReadPrice) / 1000;
+    }
+
+    // OpenAI/Google cache metrics
+    if (usage.cachedPromptTokens && !usage.cacheReadInputTokens) {
+      const cachedPrice = historicalPricing.cacheReadPricePer1k || historicalPricing.cacheHitPricePer1k || (historicalPricing.inputPricePer1k * 0.5);
+      cacheReadCost = (usage.cachedPromptTokens * cachedPrice) / 1000;
+    }
+
+    const totalVendorCost = inputCost + outputCost + cacheWriteCost + cacheReadCost;
 
     logger.info('CostCalculationService: Historical cost calculated', {
       modelId: usage.modelId,
       providerId: usage.providerId,
       requestStartedAt,
       vendorCost: totalVendorCost,
+      cacheWriteCost,
+      cacheReadCost,
     });
 
     return {
       vendorCost: totalVendorCost,
       inputCost,
       outputCost,
+      cacheWriteCost: cacheWriteCost > 0 ? cacheWriteCost : undefined,
+      cacheReadCost: cacheReadCost > 0 ? cacheReadCost : undefined,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       cachedTokens: usage.cachedInputTokens,
+      cacheCreationTokens: usage.cacheCreationInputTokens,
+      cacheReadTokens: usage.cacheReadInputTokens,
+      cachedPromptTokens: usage.cachedPromptTokens,
       pricingSource: `Historical pricing from ${historicalPricing.effectiveFrom.toISOString()}`,
     };
   }
@@ -293,6 +377,8 @@ export class CostCalculationService implements ICostCalculationService {
     logger.debug('CostCalculationService: Getting all active pricing');
 
     try {
+      // Note: Prisma maps cache_write_price_per_1k → cache_input_price_per_1k
+      //       and cache_read_price_per_1k → cache_hit_price_per_1k in the schema
       const pricingRecords = await this.prisma.$queryRaw<any[]>`
         SELECT
           id,
@@ -318,10 +404,19 @@ export class CostCalculationService implements ICostCalculationService {
         modelName: record.modelName,
         inputPricePer1k: parseFloat(record.inputPricePer1k),
         outputPricePer1k: parseFloat(record.outputPricePer1k),
+        // Database columns: cache_input_price_per_1k, cache_hit_price_per_1k
+        // Prisma TypeScript names: cache_write_price_per_1k, cache_read_price_per_1k
+        // Support both naming schemes for backward compatibility
         cacheInputPricePer1k: record.cacheInputPricePer1k
           ? parseFloat(record.cacheInputPricePer1k)
           : undefined,
         cacheHitPricePer1k: record.cacheHitPricePer1k
+          ? parseFloat(record.cacheHitPricePer1k)
+          : undefined,
+        cacheWritePricePer1k: record.cacheInputPricePer1k
+          ? parseFloat(record.cacheInputPricePer1k)
+          : undefined,
+        cacheReadPricePer1k: record.cacheHitPricePer1k
           ? parseFloat(record.cacheHitPricePer1k)
           : undefined,
         effectiveFrom: new Date(record.effectiveFrom),

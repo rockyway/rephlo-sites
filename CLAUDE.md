@@ -847,3 +847,6 @@ Ensure consistent type transformations between **database (snake_case)** and **A
 ## Launch Plan
 - The application is scheduled to launch in March 2026.
 - It is currently in the development phase and undergoing local testing.
+
+## Desktop Client APP (main app to end user)
+- D:\sources\demo\text-assistant\PROJECT_STRUCTURE.md

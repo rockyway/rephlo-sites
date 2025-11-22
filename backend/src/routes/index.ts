@@ -105,6 +105,8 @@ router.get('/', (_req: Request, res: Response) => {
         version_upgrades: '/api/licenses/:licenseKey/upgrade',
         proration: '/api/subscriptions/:id/proration-preview',
         migrations: '/api/migrations',
+        cache_analytics_performance: '/api/cache-analytics/performance',
+        cache_analytics_trend: '/api/cache-analytics/hit-rate-trend',
       },
       admin: {
         metrics: '/admin/metrics',
@@ -114,6 +116,10 @@ router.get('/', (_req: Request, res: Response) => {
         licenses: '/admin/licenses',
         prorations: '/admin/prorations',
         upgrade_analytics: '/admin/analytics/upgrade-conversion',
+        cache_analytics_performance: '/admin/analytics/cache/performance',
+        cache_analytics_trend: '/admin/analytics/cache/hit-rate-trend',
+        cache_savings_by_provider: '/admin/analytics/cache/savings-by-provider',
+        cache_efficiency_by_model: '/admin/analytics/cache/efficiency-by-model',
       },
       branding: {
         downloads: '/api/track-download',

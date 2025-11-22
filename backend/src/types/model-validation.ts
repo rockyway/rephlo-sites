@@ -108,11 +108,61 @@ export const chatMessageRoleSchema = z.enum([
 ]);
 
 /**
+ * Anthropic Prompt Caching: cache_control block
+ * Specifies caching behavior for prompt segments
+ * - ephemeral: 5-minute cache (default)
+ * - extended: 1-hour cache (requires extended_cache_control feature)
+ */
+export const anthropicCacheControlSchema = z.object({
+  type: z.enum(['ephemeral', 'extended']),
+});
+
+export type AnthropicCacheControl = z.infer<typeof anthropicCacheControlSchema>;
+
+/**
+ * Content part types for multimodal messages (text + images)
+ * Supports Anthropic's cache_control for prompt caching optimization
+ */
+export const textContentPartSchema = z.object({
+  type: z.literal('text'),
+  text: z.string().min(1, 'Text content cannot be empty'),
+  cache_control: anthropicCacheControlSchema.optional(), // Anthropic prompt caching
+});
+
+export const imageUrlSchema = z.object({
+  url: z.string().refine(
+    (url) => url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/'),
+    { message: 'Invalid image URL: must be HTTP(S) URL or data URI (data:image/...)' }
+  ),
+  detail: z.enum(['auto', 'low', 'high']).optional().default('auto'),
+});
+
+export const imageContentPartSchema = z.object({
+  type: z.literal('image_url'),
+  image_url: imageUrlSchema,
+});
+
+export const contentPartSchema = z.union([
+  textContentPartSchema,
+  imageContentPartSchema,
+]);
+
+export type TextContentPart = z.infer<typeof textContentPartSchema>;
+export type ImageUrl = z.infer<typeof imageUrlSchema>;
+export type ImageContentPart = z.infer<typeof imageContentPartSchema>;
+export type ContentPart = z.infer<typeof contentPartSchema>;
+
+/**
  * Chat message schema
+ * Supports both text-only (string) and multimodal (ContentPart[]) content
+ * Supports Anthropic's message-level cache_control for prompt caching
  */
 export const chatMessageSchema = z.object({
   role: chatMessageRoleSchema,
-  content: z.string().min(1, 'Message content cannot be empty'),
+  content: z.union([
+    z.string().min(1, 'Message content cannot be empty'),  // Text-only (backward compatible)
+    z.array(contentPartSchema).min(1, 'Content array cannot be empty'),  // Multimodal (new)
+  ]),
   name: z.string().optional(), // For function messages
   function_call: z
     .object({
@@ -120,7 +170,8 @@ export const chatMessageSchema = z.object({
       arguments: z.string(),
     })
     .optional(), // For assistant messages with function calls
-});
+  cache_control: anthropicCacheControlSchema.optional(), // Anthropic message-level caching
+}).passthrough(); // Allow provider-specific fields (e.g., Anthropic extensions)
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
@@ -132,7 +183,19 @@ export const chatCompletionSchema = z.object({
   model: z.string().min(1, 'Model ID is required'),
   messages: z
     .array(chatMessageSchema)
-    .min(1, 'At least one message is required'),
+    .min(1, 'At least one message is required')
+    .refine(
+      (messages) => {
+        const imageCount = messages.reduce((count, msg) => {
+          if (Array.isArray(msg.content)) {
+            return count + msg.content.filter(part => part.type === 'image_url').length;
+          }
+          return count;
+        }, 0);
+        return imageCount <= 10;
+      },
+      { message: 'Maximum 10 images per request' }
+    ),
   max_tokens: z
     .number()
     .int()
@@ -196,6 +259,7 @@ export interface LegacyInfo {
 
 /**
  * Model listing response
+ * Phase 3: Includes separate input/output pricing
  */
 export interface ModelListItem {
   id: string;
@@ -205,7 +269,14 @@ export interface ModelListItem {
   capabilities: string[];
   context_length: number;
   max_output_tokens: number | null;
+
+  // Phase 3: Separate input/output pricing
+  input_credits_per_k?: number;
+  output_credits_per_k?: number;
+
+  // DEPRECATED: Kept for backward compatibility
   credits_per_1k_tokens: number;
+
   is_available: boolean;
   is_legacy?: boolean; // NEW: Legacy status
   is_archived?: boolean; // NEW: Archived status
@@ -226,6 +297,7 @@ export interface ModelListResponse {
 
 /**
  * Model details response
+ * Phase 3: Includes separate input/output pricing
  */
 export interface ModelDetailsResponse {
   id: string;
@@ -238,7 +310,14 @@ export interface ModelDetailsResponse {
   max_output_tokens: number | null;
   input_cost_per_million_tokens: number;
   output_cost_per_million_tokens: number;
+
+  // Phase 3: Separate input/output pricing
+  input_credits_per_k?: number;
+  output_credits_per_k?: number;
+
+  // DEPRECATED: Kept for backward compatibility
   credits_per_1k_tokens: number;
+
   is_available: boolean;
   is_deprecated: boolean;
   is_legacy?: boolean; // NEW: Legacy status
@@ -282,8 +361,28 @@ export interface CompletionUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+
+  // Phase 3: Separate input/output credit tracking
+  inputCredits?: number;   // Credits for input tokens
+  outputCredits?: number;  // Credits for output tokens
+
+  // DEPRECATED: Kept for backward compatibility
   creditsUsed: number;
-  cachedTokens?: number; // Optional: For Anthropic/Google prompt caching
+
+  // Prompt Caching Support (Phase 4)
+  cachedTokens?: number; // DEPRECATED: Generic cached tokens (for backward compatibility)
+
+  // Anthropic Prompt Caching Metrics
+  cacheCreationInputTokens?: number; // Tokens written to cache (billed at 1.25x)
+  cacheReadInputTokens?: number;     // Tokens read from cache (billed at 0.1x)
+
+  // OpenAI/Google Prompt Caching Metrics
+  cachedPromptTokens?: number;       // OpenAI: cached tokens (billed at 0.5x)
+
+  // Cache Performance Metrics
+  cacheHitRate?: number;             // Percentage of prompt served from cache (0-100)
+  costSavingsPercent?: number;       // Cost savings due to caching (0-100)
+
   credits?: CreditInfo;   // Optional: Credit balance info (non-streaming: always included, streaming: final chunk only)
 }
 

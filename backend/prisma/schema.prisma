@@ -479,14 +479,18 @@ model margin_audit_log {
 }
 
 model model_provider_pricing {
-  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  provider_id                 String    @db.Uuid
-  model_name                  String    @db.VarChar(255)
-  vendor_model_id             String?   @unique @db.VarChar(255)
-  input_price_per_1k          Decimal   @db.Decimal(10, 8)
-  output_price_per_1k         Decimal   @db.Decimal(10, 8)
-  cache_input_price_per_1k    Decimal?  @db.Decimal(10, 8)
-  cache_hit_price_per_1k      Decimal?  @db.Decimal(10, 8)
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider_id         String  @db.Uuid
+  model_name          String  @db.VarChar(255)
+  vendor_model_id     String? @unique @db.VarChar(255)
+  input_price_per_1k  Decimal @db.Decimal(10, 8)
+  output_price_per_1k Decimal @db.Decimal(10, 8)
+
+  /// Plan 207: Prompt Caching - Cache write price (Anthropic: 1.25x, OpenAI: 1x)
+  cache_write_price_per_1k Decimal? @map("cache_input_price_per_1k") @db.Decimal(10, 8)
+  /// Plan 207: Prompt Caching - Cache read price (Anthropic: 0.1x, OpenAI: 0.5x)
+  cache_read_price_per_1k  Decimal? @map("cache_hit_price_per_1k") @db.Decimal(10, 8)
+
   effective_from              DateTime
   effective_until             DateTime?
   previous_price_input        Decimal?  @db.Decimal(10, 8)
@@ -527,19 +531,120 @@ model model_tier_audit_logs {
 }
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+///
+/// Plan 203: Model Parameter Constraints
+/// The `meta` field stores JSONB data with the following structure:
+///
+/// ```typescript
+/// interface ModelMeta {
+///   displayName: string;
+///   description: string;
+///   capabilities: string[];
+///   contextLength: number;
+///   maxOutputTokens: number;
+///   inputCostPerMillionTokens: number;
+///   outputCostPerMillionTokens: number;
+///   requiredTier: string;
+///   tierRestrictionMode: 'minimum' | 'exact' | 'whitelist';
+///   allowedTiers: string[];
+///
+///   // Plan 203: Parameter Constraints
+///   parameterConstraints?: {
+///     temperature?: {
+///       supported: boolean;           // Can this parameter be used?
+///       min?: number;                 // Minimum allowed value
+///       max?: number;                 // Maximum allowed value
+///       default?: number;             // Default value if not specified
+///       allowedValues?: number[];     // Discrete allowed values (e.g., [1.0])
+///       mutuallyExclusiveWith?: string[];  // Cannot be used with these params
+///       reason?: string;              // Admin note explaining the restriction
+///     };
+///     max_tokens?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       alternativeName?: string;     // e.g., "max_completion_tokens" for GPT-5
+///       reason?: string;
+///     };
+///     top_p?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       mutuallyExclusiveWith?: string[];  // e.g., ["temperature"]
+///       reason?: string;
+///     };
+///     top_k?: {                       // Anthropic, Google only
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       reason?: string;
+///     };
+///     presence_penalty?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       reason?: string;
+///     };
+///     frequency_penalty?: {
+///       supported: boolean;
+///       min?: number;
+///       max?: number;
+///       default?: number;
+///       reason?: string;
+///     };
+///     stop?: {
+///       supported: boolean;
+///       maxSequences?: number;        // Max number of stop sequences
+///       maxLength?: number;           // Max length per sequence
+///       reason?: string;
+///     };
+///     n?: {
+///       supported: boolean;
+///       max?: number;                 // Max number of completions
+///       reason?: string;
+///     };
+///   };
+/// }
+/// ```
+///
+/// Example (GPT-5-mini with restricted temperature):
+/// ```json
+/// {
+///   "displayName": "GPT-5 Mini",
+///   "parameterConstraints": {
+///     "temperature": {
+///       "supported": true,
+///       "allowedValues": [1.0],
+///       "default": 1.0,
+///       "reason": "GPT-5-mini only supports temperature=1.0"
+///     },
+///     "max_tokens": {
+///       "supported": true,
+///       "min": 1,
+///       "max": 4096,
+///       "default": 1000,
+///       "alternativeName": "max_completion_tokens"
+///     }
+///   }
+/// }
+/// ```
 model models {
-  id                      String                    @id @db.VarChar(100)
-  name                    String                    @db.VarChar(255)
-  provider                String                    @db.VarChar(100)
-  is_available            Boolean                   @default(true)
-  created_at              DateTime                  @default(now())
-  updated_at              DateTime
-  is_legacy               Boolean                   @default(false)
-  is_archived             Boolean                   @default(false)
-  meta                    Json
-  model_tier_audit_logs   model_tier_audit_logs[]
-  user_preferences        user_preferences[]
-  model_version_history   model_version_history[]
+  id                    String                  @id @db.VarChar(100)
+  name                  String                  @db.VarChar(255)
+  provider              String                  @db.VarChar(100)
+  is_available          Boolean                 @default(true)
+  created_at            DateTime                @default(now())
+  updated_at            DateTime
+  is_legacy             Boolean                 @default(false)
+  is_archived           Boolean                 @default(false)
+  meta                  Json
+  model_tier_audit_logs model_tier_audit_logs[]
+  user_preferences      user_preferences[]
+  model_version_history model_version_history[]
 
   @@index([is_archived], map: "idx_models_is_archived")
   @@index([is_available, is_archived], map: "idx_models_is_available_is_archived")
@@ -552,26 +657,26 @@ model models {
 /// Model version history table
 /// Tracks all changes to models for audit trail and rollback capability
 model model_version_history {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  model_id            String   @db.VarChar(100)
-  version_number      Int      // Incremental version number per model
-  changed_by          String   @db.Uuid // Admin user ID who made the change
-  change_type         String   @db.VarChar(50) // 'update', 'legacy_mark', 'archive', 'tier_change'
-  change_reason       String?  @db.VarChar(1000) // Admin-provided reason
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  model_id       String  @db.VarChar(100)
+  version_number Int // Incremental version number per model
+  changed_by     String  @db.Uuid // Admin user ID who made the change
+  change_type    String  @db.VarChar(50) // 'update', 'legacy_mark', 'archive', 'tier_change'
+  change_reason  String? @db.VarChar(1000) // Admin-provided reason
 
   // Snapshot data
-  previous_state      Json     // Complete previous state before change
-  new_state           Json     // Complete new state after change
-  changes_summary     Json     // { field: { old: value, new: value } }
+  previous_state  Json // Complete previous state before change
+  new_state       Json // Complete new state after change
+  changes_summary Json // { field: { old: value, new: value } }
 
   // Metadata
-  ip_address          String?  @db.VarChar(45)
-  user_agent          String?
-  created_at          DateTime @default(now())
+  ip_address String?  @db.VarChar(45)
+  user_agent String?
+  created_at DateTime @default(now())
 
   // Relations
-  model               models   @relation(fields: [model_id], references: [id], onDelete: Cascade)
-  admin               users    @relation(fields: [changed_by], references: [id])
+  model models @relation(fields: [model_id], references: [id], onDelete: Cascade)
+  admin users  @relation(fields: [changed_by], references: [id])
 
   @@unique([model_id, version_number])
   @@index([model_id, created_at])
@@ -1001,19 +1106,52 @@ model token_usage_daily_summary {
 }
 
 model token_usage_ledger {
-  id                                                                                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  request_id                                                                              String                   @unique @db.Uuid
-  user_id                                                                                 String                   @db.Uuid
-  subscription_id                                                                         String?                  @db.Uuid
-  model_id                                                                                String                   @db.VarChar(255)
-  provider_id                                                                             String                   @db.Uuid
-  input_tokens                                                                            Int
-  output_tokens                                                                           Int
-  cached_input_tokens                                                                     Int                      @default(0)
-  vendor_cost                                                                             Decimal                  @db.Decimal(10, 8)
-  margin_multiplier                                                                       Decimal                  @db.Decimal(4, 2)
-  credit_value_usd                                                                        Decimal                  @db.Decimal(10, 8)
-  credits_deducted                                                                        Int
+  id                  String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  request_id          String  @unique @db.Uuid
+  user_id             String  @db.Uuid
+  subscription_id     String? @db.Uuid
+  model_id            String  @db.VarChar(255)
+  provider_id         String  @db.Uuid
+  input_tokens        Int
+  output_tokens       Int
+  cached_input_tokens Int     @default(0)
+
+  // Plan 204: Vision/Image Support - Image tracking fields
+  image_count  Int @default(0) // Number of images in the request
+  image_tokens Int @default(0) // Tokens consumed by image processing
+
+  // Plan 207: Prompt Caching - Cache-specific token counts
+  /// Anthropic: Tokens written to cache (charged at 1.25x)
+  cache_creation_tokens Int? @default(0) @map("cache_creation_tokens")
+  /// Anthropic: Tokens read from cache (charged at 0.1x)
+  cache_read_tokens     Int? @default(0) @map("cache_read_tokens")
+  /// OpenAI/Google: Cached tokens from previous requests
+  cached_prompt_tokens  Int? @default(0) @map("cached_prompt_tokens")
+
+  // Plan 207: Prompt Caching - Cache performance metrics
+  /// Cache hit rate percentage (0-100)
+  cache_hit_rate       Decimal? @map("cache_hit_rate") @db.Decimal(5, 2)
+  /// Cost savings percentage vs non-cached request (0-100)
+  cost_savings_percent Decimal? @map("cost_savings_percent") @db.Decimal(5, 2)
+
+  vendor_cost       Decimal @db.Decimal(10, 8)
+  margin_multiplier Decimal @db.Decimal(4, 2)
+  credit_value_usd  Decimal @db.Decimal(10, 8)
+
+  // Phase 3: Separate input/output pricing - NEW fields
+  input_credits  Int? @map("input_credits")
+  output_credits Int? @map("output_credits")
+  total_credits  Int? @map("total_credits")
+
+  // Plan 207: Prompt Caching - Detailed credit breakdown
+  /// Credits charged for cache write operations
+  cache_write_credits Int? @map("cache_write_credits")
+  /// Credits charged for cache read operations
+  cache_read_credits  Int? @map("cache_read_credits")
+
+  // DEPRECATED: Will be removed in future version after migration
+  credits_deducted Int
+
   request_type                                                                            request_type
   streaming_segments                                                                      Int?
   request_started_at                                                                      DateTime
@@ -1041,6 +1179,9 @@ model token_usage_ledger {
   @@index([status])
   @@index([user_id, created_at])
   @@index([user_id, vendor_cost])
+  @@index([image_count], map: "idx_token_usage_image_count") // Plan 204: Filter vision requests
+  @@index([cache_hit_rate], map: "idx_token_usage_cache_hit_rate") // Plan 207: Cache performance queries
+  @@index([user_id, created_at], map: "idx_token_usage_user_analytics") // Plan 207: User analytics (composite)
 }
 
 model user_credit_balance {

@@ -23,6 +23,23 @@ export interface TokenUsageRecord {
   marginMultiplier: number;
   grossMargin: number;
 
+  // Phase 3: Separate input/output credits
+  inputCredits?: number;
+  outputCredits?: number;
+
+  // Plan 204: Vision/Image Support
+  imageCount?: number;     // Number of images in the request
+  imageTokens?: number;    // Tokens consumed by image processing
+
+  // Plan 207: Prompt Caching Support
+  cacheCreationTokens?: number;    // Tokens written to cache (billed at 1.25x for Anthropic)
+  cacheReadTokens?: number;        // Tokens read from cache (billed at 0.1x for Anthropic)
+  cachedPromptTokens?: number;     // Cached tokens in prompt (billed at 0.5x for OpenAI)
+  cacheHitRate?: number | null;    // Cache hit rate percentage (0-100)
+  costSavingsPercent?: number | null;  // Cost savings percentage from caching
+  cacheWriteCredits?: number | null;   // Credits for cache write operations
+  cacheReadCredits?: number | null;    // Credits for cache read operations
+
   // Request metadata
   requestType: 'completion' | 'streaming' | 'batch';
   streamingSegments?: number;

@@ -104,13 +104,14 @@ export function countTokens(text: string, model: string = 'gpt-5'): number {
 
 /**
  * Counts tokens for chat messages (includes role and formatting overhead)
+ * Supports both text-only (string) and multimodal (ContentPart[]) content
  *
  * @param messages - Array of chat messages
  * @param model - The model name
  * @returns Object with prompt tokens, completion tokens estimate, and total
  */
 export function countChatTokens(
-  messages: Array<{ role: string; content: string }>,
+  messages: Array<{ role: string; content: string | any[] }>,
   model: string = 'gpt-5'
 ): { promptTokens: number; perMessage: number; perName: number } {
   let encoder: Tiktoken | null = null;
@@ -136,7 +137,18 @@ export function countChatTokens(
       totalTokens += encoder.encode(message.role).length;
 
       // Count tokens in content
-      totalTokens += encoder.encode(message.content || '').length;
+      if (typeof message.content === 'string') {
+        totalTokens += encoder.encode(message.content || '').length;
+      } else if (Array.isArray(message.content)) {
+        // For content arrays, only count text parts (images handled separately)
+        for (const part of message.content) {
+          if (part.type === 'text' && part.text) {
+            totalTokens += encoder.encode(part.text).length;
+          }
+          // Note: image_url parts are NOT counted here
+          // Vision tokens should be calculated separately using VisionTokenCalculatorService
+        }
+      }
 
       // Add overhead for name field if present
       if ((message as any).name) {

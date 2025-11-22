@@ -10,8 +10,11 @@ import {
   CAPABILITY_OPTIONS,
   TIER_OPTIONS,
   TIER_RESTRICTION_MODE_OPTIONS,
-  calculateSuggestedCredits,
+  calculateSeparateCreditsPerKTokens,
 } from '@/data/modelTemplates';
+import ParameterConstraintsEditor, {
+  type ParameterConstraints,
+} from './ParameterConstraintsEditor';
 
 interface AddModelDialogProps {
   isOpen: boolean;
@@ -58,13 +61,18 @@ function AddModelDialog({
   const [maxOutputTokens, setMaxOutputTokens] = useState<string>('');
   const [inputCost, setInputCost] = useState<string>('');
   const [outputCost, setOutputCost] = useState<string>('');
-  const [creditsPerK, setCreditsPerK] = useState<string>('');
+  const [inputCreditsPerK, setInputCreditsPerK] = useState<string>('');
+  const [outputCreditsPerK, setOutputCreditsPerK] = useState<string>('');
+  const [estimatedTotalPerK, setEstimatedTotalPerK] = useState<string>('');
   const [requiredTier, setRequiredTier] = useState<string>('');
   const [tierRestrictionMode, setTierRestrictionMode] = useState<'minimum' | 'exact' | 'whitelist'>('minimum');
   const [allowedTiers, setAllowedTiers] = useState<string[]>([]);
 
   // Provider metadata
   const [providerMeta, setProviderMeta] = useState<any>({});
+
+  // Parameter constraints (Plans 203 & 205)
+  const [parameterConstraints, setParameterConstraints] = useState<ParameterConstraints>({});
 
   // Internal fields
   const [internalNotes, setInternalNotes] = useState<string>('');
@@ -100,17 +108,20 @@ function AddModelDialog({
     const inputCents = Math.round(inputDollars * 100);
     const outputCents = Math.round(outputDollars * 100);
 
-    // Auto-calc requires at least output cost > 0 (input can be free for some models)
-    if (!isNaN(inputCents) && !isNaN(outputCents) && outputCents > 0) {
-      const suggested = calculateSuggestedCredits(inputCents, outputCents);
+    // Auto-calc requires valid costs (input can be free for some models)
+    if (!isNaN(inputCents) && !isNaN(outputCents) && inputCents >= 0 && outputCents >= 0) {
+      const result = calculateSeparateCreditsPerKTokens(inputCents, outputCents);
       setShowAutoCalculation(true);
 
-      // Only auto-fill if user hasn't manually set credits
-      if (!creditsPerK || creditsPerK === '0') {
-        setCreditsPerK(suggested.toString());
-      }
+      // Auto-fill calculated values
+      setInputCreditsPerK(result.inputCreditsPerK.toString());
+      setOutputCreditsPerK(result.outputCreditsPerK.toString());
+      setEstimatedTotalPerK(result.estimatedTotalPerK.toString());
     } else {
       setShowAutoCalculation(false);
+      setInputCreditsPerK('0');
+      setOutputCreditsPerK('0');
+      setEstimatedTotalPerK('0');
     }
   }, [inputCost, outputCost]);
 
@@ -128,7 +139,10 @@ function AddModelDialog({
       setMaxOutputTokens('');
       setInputCost('');
       setOutputCost('');
-      setCreditsPerK('');
+      setInputCreditsPerK('');
+      setOutputCreditsPerK('');
+      setEstimatedTotalPerK('');
+      setParameterConstraints({});
       setInternalNotes('');
       setComplianceTags('');
       setErrors({});
@@ -146,9 +160,10 @@ function AddModelDialog({
     if (!displayName.trim()) newErrors.displayName = 'Display name is required';
     if (capabilities.length === 0) newErrors.capabilities = 'Select at least one capability';
     if (!contextLength || parseInt(contextLength) <= 0) newErrors.contextLength = 'Context length must be positive';
-    if (!inputCost || parseInt(inputCost) < 0) newErrors.inputCost = 'Input cost must be non-negative';
-    if (!outputCost || parseInt(outputCost) < 0) newErrors.outputCost = 'Output cost must be non-negative';
-    if (!creditsPerK || parseInt(creditsPerK) <= 0) newErrors.creditsPerK = 'Credits per 1K must be positive';
+    if (!inputCost || parseFloat(inputCost) < 0) newErrors.inputCost = 'Input cost must be non-negative';
+    if (!outputCost || parseFloat(outputCost) < 0) newErrors.outputCost = 'Output cost must be non-negative';
+    if (!inputCreditsPerK || parseInt(inputCreditsPerK) < 0) newErrors.inputCreditsPerK = 'Input credits must be non-negative';
+    if (!outputCreditsPerK || parseInt(outputCreditsPerK) <= 0) newErrors.outputCreditsPerK = 'Output credits must be positive';
     if (!requiredTier) newErrors.requiredTier = 'Required tier is required';
     if (allowedTiers.length === 0) newErrors.allowedTiers = 'Select at least one allowed tier';
 
@@ -179,11 +194,14 @@ function AddModelDialog({
         maxOutputTokens: maxOutputTokens ? parseInt(maxOutputTokens) : undefined,
         inputCostPerMillionTokens: inputCostInCents,
         outputCostPerMillionTokens: outputCostInCents,
-        creditsPer1kTokens: parseInt(creditsPerK),
+        inputCreditsPerK: parseInt(inputCreditsPerK),
+        outputCreditsPerK: parseInt(outputCreditsPerK),
+        creditsPer1kTokens: parseInt(estimatedTotalPerK), // DEPRECATED: For backward compatibility
         requiredTier,
         tierRestrictionMode,
         allowedTiers,
         providerMetadata: Object.keys(providerMeta).length > 0 ? providerMeta : undefined,
+        parameterConstraints: Object.keys(parameterConstraints).length > 0 ? parameterConstraints : undefined,
         internalNotes: internalNotes.trim() || undefined,
         complianceTags: complianceTags.trim()
           ? complianceTags.split(',').map((tag) => tag.trim()).filter(Boolean)
@@ -514,26 +532,80 @@ function AddModelDialog({
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
-                    Credits per 1K Tokens <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    value={creditsPerK}
-                    onChange={(e) => setCreditsPerK(e.target.value)}
-                    placeholder="Auto-calculated from vendor pricing"
-                    disabled={isSaving}
-                    error={!!errors.creditsPerK}
-                  />
-                  {errors.creditsPerK && (
-                    <p className="mt-1 text-caption text-red-600 dark:text-red-400">{errors.creditsPerK}</p>
-                  )}
-                  {showAutoCalculation && (
-                    <div className="mt-2 flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950 rounded-md">
-                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-caption text-blue-800 dark:text-blue-200">
-                        Auto-calculated using 2.5x margin: {creditsPerK} credits per 1K tokens
+                  <h4 className="text-body font-semibold text-deep-navy-800 dark:text-white mb-3">
+                    Calculated Credits (Auto-filled) <span className="text-red-500">*</span>
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
+                        Input Credits per 1K
+                      </label>
+                      <Input
+                        type="number"
+                        value={inputCreditsPerK}
+                        onChange={(e) => setInputCreditsPerK(e.target.value)}
+                        placeholder="Auto-calculated"
+                        disabled={true}
+                        error={!!errors.inputCreditsPerK}
+                        className="bg-deep-navy-50 dark:bg-deep-navy-900"
+                      />
+                      {errors.inputCreditsPerK && (
+                        <p className="mt-1 text-caption text-red-600 dark:text-red-400">{errors.inputCreditsPerK}</p>
+                      )}
+                      <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                        Credits charged per 1K input tokens
                       </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
+                        Output Credits per 1K
+                      </label>
+                      <Input
+                        type="number"
+                        value={outputCreditsPerK}
+                        onChange={(e) => setOutputCreditsPerK(e.target.value)}
+                        placeholder="Auto-calculated"
+                        disabled={true}
+                        error={!!errors.outputCreditsPerK}
+                        className="bg-deep-navy-50 dark:bg-deep-navy-900"
+                      />
+                      {errors.outputCreditsPerK && (
+                        <p className="mt-1 text-caption text-red-600 dark:text-red-400">{errors.outputCreditsPerK}</p>
+                      )}
+                      <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                        Credits charged per 1K output tokens
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-body-sm font-medium text-deep-navy-700 dark:text-deep-navy-200 mb-2">
+                        Estimated Total per 1K
+                      </label>
+                      <Input
+                        type="number"
+                        value={estimatedTotalPerK}
+                        onChange={(e) => setEstimatedTotalPerK(e.target.value)}
+                        placeholder="Auto-calculated"
+                        disabled={true}
+                        className="bg-deep-navy-50 dark:bg-deep-navy-900"
+                      />
+                      <p className="mt-1 text-caption text-deep-navy-600 dark:text-deep-navy-300">
+                        Typical usage (1:10 input:output ratio)
+                      </p>
+                    </div>
+                  </div>
+                  {showAutoCalculation && (
+                    <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
+                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-caption text-blue-800 dark:text-blue-200">
+                        <p className="font-semibold mb-1">Credits auto-calculated with 2.5x margin:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Input: {inputCreditsPerK} credits per 1K tokens</li>
+                          <li>Output: {outputCreditsPerK} credits per 1K tokens</li>
+                          <li>Estimated total: {estimatedTotalPerK} credits per 1K tokens (based on typical 1:10 ratio)</li>
+                        </ul>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -668,6 +740,23 @@ function AddModelDialog({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Step 7: Parameter Constraints (Plans 203 & 205) */}
+            <div>
+              <h3 className="text-h4 font-semibold text-deep-navy-800 dark:text-white mb-4">
+                Step 7: Parameter Constraints (Optional)
+              </h3>
+              <p className="text-body-sm text-deep-navy-700 dark:text-deep-navy-200 mb-4">
+                Configure allowed parameter ranges and restrictions for this model (e.g., temperature limits, mutually exclusive parameters).
+                These constraints will be validated when users make API requests.
+              </p>
+              <ParameterConstraintsEditor
+                provider={provider}
+                constraints={parameterConstraints}
+                onChange={setParameterConstraints}
+                disabled={isSaving}
+              />
             </div>
           </div>
 

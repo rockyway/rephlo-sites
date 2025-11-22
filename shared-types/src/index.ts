@@ -6,6 +6,9 @@
 // User Types
 export * from './user.types';
 
+// Model Types (Phase 3: Separate input/output pricing)
+export * from './model.types';
+
 // Coupon & Campaign Types
 export * from './coupon.types';
 
@@ -31,6 +34,19 @@ export type {
   SuspendUserRequest,
   AdjustCreditsRequest,
 } from './user.types';
+
+export type {
+  // Model (Phase 3)
+  ModelCapability,
+  SubscriptionTier as ModelSubscriptionTier,
+  TierRestrictionMode,
+  ProviderMetadata,
+  ModelMetaApiType,
+  ModelApiType,
+  ModelListApiResponse,
+  ModelApiResponse,
+  ModelPricingBreakdown,
+} from './model.types';
 
 export type {
   // Coupon

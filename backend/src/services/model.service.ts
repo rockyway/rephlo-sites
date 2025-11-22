@@ -33,6 +33,7 @@ import {
   UpdateModelMetaRequest,
   UpdateModelRequest,
   calculateCreditsPerKTokens,
+  calculateSeparateCreditsPerKTokens,
 } from '../types/model-meta';
 import { ModelVersionHistoryService } from './model-version-history.service';
 
@@ -203,7 +204,14 @@ export class ModelService implements IModelService {
           capabilities: meta?.capabilities ?? [],
           context_length: meta?.contextLength ?? 0,
           max_output_tokens: meta?.maxOutputTokens ?? 0,
+
+          // Phase 3: Separate input/output pricing
+          input_credits_per_k: meta?.inputCreditsPerK,
+          output_credits_per_k: meta?.outputCreditsPerK,
+
+          // DEPRECATED: Kept for backward compatibility
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+
           is_available: model.is_available,
           version: meta?.version ?? '',
           // Tier access fields from meta JSONB
@@ -303,7 +311,14 @@ export class ModelService implements IModelService {
       max_output_tokens: meta?.maxOutputTokens ?? 0,
       input_cost_per_million_tokens: meta?.inputCostPerMillionTokens ?? 0,
       output_cost_per_million_tokens: meta?.outputCostPerMillionTokens ?? 0,
+
+      // Phase 3: Separate input/output pricing
+      input_credits_per_k: meta?.inputCreditsPerK,
+      output_credits_per_k: meta?.outputCreditsPerK,
+
+      // DEPRECATED: Kept for backward compatibility
       credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+
       is_available: model.is_available,
       is_deprecated: model.is_legacy, // Use is_legacy instead of deprecated isDeprecated
       version: meta?.version ?? '',
@@ -573,7 +588,28 @@ export class ModelService implements IModelService {
     // Validate meta JSONB
     const validatedMeta = validateModelMeta(data.meta);
 
-    // Auto-calculate creditsPer1kTokens if not reasonable
+    // Phase 3: Auto-calculate separate input/output credits
+    if (
+      !validatedMeta.inputCreditsPerK ||
+      !validatedMeta.outputCreditsPerK ||
+      validatedMeta.inputCreditsPerK <= 0 ||
+      validatedMeta.outputCreditsPerK <= 0
+    ) {
+      const separateCredits = calculateSeparateCreditsPerKTokens(
+        validatedMeta.inputCostPerMillionTokens,
+        validatedMeta.outputCostPerMillionTokens
+      );
+      validatedMeta.inputCreditsPerK = separateCredits.inputCreditsPerK;
+      validatedMeta.outputCreditsPerK = separateCredits.outputCreditsPerK;
+
+      logger.info('ModelService: Auto-calculated separate input/output credits', {
+        modelId: data.id,
+        inputCreditsPerK: separateCredits.inputCreditsPerK,
+        outputCreditsPerK: separateCredits.outputCreditsPerK,
+      });
+    }
+
+    // Auto-calculate creditsPer1kTokens for backward compatibility (DEPRECATED)
     if (
       !validatedMeta.creditsPer1kTokens ||
       validatedMeta.creditsPer1kTokens <= 0
@@ -582,7 +618,7 @@ export class ModelService implements IModelService {
         validatedMeta.inputCostPerMillionTokens,
         validatedMeta.outputCostPerMillionTokens
       );
-      logger.info('ModelService: Auto-calculated creditsPer1kTokens', {
+      logger.info('ModelService: Auto-calculated creditsPer1kTokens (deprecated)', {
         modelId: data.id,
         credits: validatedMeta.creditsPer1kTokens,
       });
@@ -627,9 +663,10 @@ export class ModelService implements IModelService {
     });
 
     // Step 3: Create pricing record in model_provider_pricing table
-    // Convert per-million pricing to per-1k pricing (divide by 1000)
-    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 1000;
-    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 1000;
+    // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+    // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 100 / 1000;
+    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 100 / 1000;
 
     logger.info('ModelService: Creating pricing record', {
       modelId: model.id,
@@ -644,8 +681,8 @@ export class ModelService implements IModelService {
         model_name: model.id,
         input_price_per_1k: inputPricePer1k,
         output_price_per_1k: outputPricePer1k,
-        cache_input_price_per_1k: null, // Future: Support prompt caching pricing
-        cache_hit_price_per_1k: null,
+        cache_write_price_per_1k: null, // Plan 207: Cache write pricing (1.25x for Anthropic)
+        cache_read_price_per_1k: null, // Plan 207: Cache read pricing (0.1x for Anthropic)
         effective_from: new Date(),
         effective_until: null, // Active indefinitely
         is_active: true,
@@ -967,7 +1004,28 @@ export class ModelService implements IModelService {
         ...updates.meta,
       };
 
-      // Auto-calculate creditsPer1kTokens if pricing changed but credits not provided
+      // Phase 3: Auto-calculate separate input/output credits if pricing changed
+      if (
+        (updates.meta.inputCostPerMillionTokens !== undefined ||
+          updates.meta.outputCostPerMillionTokens !== undefined) &&
+        (updates.meta.inputCreditsPerK === undefined ||
+          updates.meta.outputCreditsPerK === undefined)
+      ) {
+        const separateCredits = calculateSeparateCreditsPerKTokens(
+          newMeta.inputCostPerMillionTokens,
+          newMeta.outputCostPerMillionTokens
+        );
+        newMeta.inputCreditsPerK = separateCredits.inputCreditsPerK;
+        newMeta.outputCreditsPerK = separateCredits.outputCreditsPerK;
+
+        logger.info('ModelService: Auto-calculated separate input/output credits', {
+          modelId,
+          inputCreditsPerK: separateCredits.inputCreditsPerK,
+          outputCreditsPerK: separateCredits.outputCreditsPerK,
+        });
+      }
+
+      // Auto-calculate creditsPer1kTokens for backward compatibility (DEPRECATED)
       if (
         (updates.meta.inputCostPerMillionTokens !== undefined ||
           updates.meta.outputCostPerMillionTokens !== undefined) &&
@@ -977,7 +1035,7 @@ export class ModelService implements IModelService {
           newMeta.inputCostPerMillionTokens,
           newMeta.outputCostPerMillionTokens
         );
-        logger.info('ModelService: Auto-calculated creditsPer1kTokens', {
+        logger.info('ModelService: Auto-calculated creditsPer1kTokens (deprecated)', {
           modelId,
           credits: newMeta.creditsPer1kTokens,
         });
@@ -1019,9 +1077,10 @@ export class ModelService implements IModelService {
             );
           }
 
-          // Convert per-million pricing to per-1k pricing
-          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 1000;
-          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 1000;
+          // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+          // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 100 / 1000;
+          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 100 / 1000;
 
           logger.info('ModelService: Updating pricing record', {
             modelId,

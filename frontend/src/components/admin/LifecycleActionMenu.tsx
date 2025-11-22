@@ -5,6 +5,7 @@ import {
   Edit,
   RotateCcw,
   AlertCircle,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ModelInfo } from '@/types/model';
@@ -17,6 +18,7 @@ interface LifecycleActionMenuProps {
   onUnarchive: () => void;
   onEditMeta: () => void;
   onEditFull?: () => void;
+  onViewHistory?: () => void;
   permissions: {
     canManageLifecycle: boolean;
     canEditMeta: boolean;
@@ -42,6 +44,7 @@ function LifecycleActionMenu({
   onUnarchive,
   onEditMeta,
   onEditFull,
+  onViewHistory,
   permissions,
 }: LifecycleActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -232,6 +235,27 @@ function LifecycleActionMenu({
               >
                 <Edit className="h-4 w-4" />
                 <span>Edit Tier Only</span>
+              </button>
+            </>
+          )}
+
+          {/* Version History - Available for all models */}
+          {onViewHistory && (
+            <>
+              <div className="my-1 h-px bg-deep-navy-200 dark:bg-deep-navy-700" />
+              <button
+                onClick={() => handleAction(onViewHistory)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-2',
+                  'text-body-sm text-left',
+                  'text-deep-navy-700 dark:text-deep-navy-200',
+                  'hover:bg-deep-navy-50 dark:hover:bg-deep-navy-700',
+                  'transition-colors duration-fast'
+                )}
+                role="menuitem"
+              >
+                <History className="h-4 w-4" />
+                <span>View History</span>
               </button>
             </>
           )}

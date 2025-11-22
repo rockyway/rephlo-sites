@@ -27,7 +27,13 @@ export interface ModelMeta {
   // Pricing Configuration
   inputCostPerMillionTokens: number;
   outputCostPerMillionTokens: number;
-  creditsPer1kTokens: number;
+
+  // Phase 3: Separate input/output pricing
+  inputCreditsPerK?: number;
+  outputCreditsPerK?: number;
+
+  // DEPRECATED: Will be removed after full migration
+  creditsPer1kTokens?: number;
 
   // Tier Access Configuration
   requiredTier: SubscriptionTier;
@@ -41,6 +47,9 @@ export interface ModelMeta {
 
   // Provider-specific metadata (optional)
   providerMetadata?: Record<string, any>;
+
+  // Parameter constraints (Plans 203 & 205)
+  parameterConstraints?: Record<string, any>;
 
   // Admin notes (optional)
   internalNotes?: string;

@@ -29,6 +29,7 @@ import logger, { loggers } from './utils/logger';
 import { PrismaClient } from '@prisma/client';
 import { billingReminderWorker } from './workers/billing-reminder.worker';
 import { prorationInvoiceWorker } from './workers/proration-invoice.worker';
+import { logFeatureFlags } from './config/feature-flags';
 
 // ===== Configuration =====
 
@@ -92,6 +93,10 @@ const startServer = async (): Promise<void> => {
       billingReminderWorker.start();
       prorationInvoiceWorker.start();
       logger.info('Server: Background workers started successfully');
+
+      // Log feature flags status (Plan 207 Phase 4)
+      logger.info('Server: Feature flags configuration');
+      logFeatureFlags();
 
       console.log(`🚀 Rephlo Backend API running on http://${HOST}:${PORT}`);
       console.log(`📍 Environment: ${NODE_ENV}`);

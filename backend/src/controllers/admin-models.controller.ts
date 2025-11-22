@@ -21,6 +21,7 @@
 
 import { Request, Response } from 'express';
 import { injectable, inject } from 'tsyringe';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { getUserId } from '../middleware/auth.middleware';
 import {
@@ -42,7 +43,8 @@ import { ModelVersionHistoryService } from '../services/model-version-history.se
 export class AdminModelsController {
   constructor(
     @inject('IModelService') private modelService: IModelService,
-    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService
+    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService,
+    @inject('PrismaClient') private prisma: PrismaClient
   ) {
     logger.debug('AdminModelsController: Initialized');
   }
@@ -432,6 +434,236 @@ export class AdminModelsController {
     } catch (error) {
       if (error instanceof Error && error.message.includes('not found')) {
         throw notFoundError(`Model '${modelId}'`);
+      }
+      throw error;
+    }
+  };
+
+  // =============================================================================
+  // Parameter Constraint Management (Plan 203)
+  // =============================================================================
+
+  /**
+   * GET /admin/models/:id/parameters
+   * Get parameter constraints for a specific model
+   *
+   * Returns the parameterConstraints from the model's meta field.
+   * If no constraints are defined, returns an empty object.
+   */
+  getParameterConstraints = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId } = req.params;
+    const adminUserId = getUserId(req);
+
+    logger.debug('Admin: Get parameter constraints', {
+      modelId,
+      adminUserId,
+    });
+
+    try {
+      // Get raw model from database (with meta field)
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { id: true, name: true, provider: true, meta: true },
+      });
+
+      if (!model) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+
+      // Extract parameterConstraints from meta field
+      const parameterConstraints = (model.meta as any)?.parameterConstraints || {};
+
+      res.status(200).json({
+        modelId: model.id,
+        modelName: model.name,
+        provider: model.provider,
+        parameterConstraints,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * PUT /admin/models/:id/parameters
+   * Update parameter constraints for a model
+   *
+   * Request body:
+   * {
+   *   parameterConstraints: {
+   *     temperature: { supported: true, min: 0, max: 2, default: 1 },
+   *     max_tokens: { supported: true, min: 1, max: 4096, default: 1024 },
+   *     ...
+   *   }
+   * }
+   *
+   * Updates the model's meta.parameterConstraints field.
+   * Creates version history entry for audit trail.
+   */
+  updateParameterConstraints = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId } = req.params;
+    const { parameterConstraints } = req.body;
+    const adminUserId = getUserId(req);
+
+    logger.info('Admin: Update parameter constraints', {
+      modelId,
+      adminUserId,
+      parametersCount: Object.keys(parameterConstraints || {}).length,
+    });
+
+    if (!adminUserId) {
+      throw badRequestError('Admin user ID not found');
+    }
+
+    try {
+      // Validate parameterConstraints exists and is an object
+      if (!parameterConstraints || typeof parameterConstraints !== 'object') {
+        throw validationError('Invalid parameterConstraints format: must be an object');
+      }
+
+      // Get current model to preserve other meta fields
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { id: true, meta: true },
+      });
+
+      if (!model) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+
+      // Merge parameterConstraints into meta (preserving other meta fields)
+      const updatedMeta = {
+        ...(model.meta as any),
+        parameterConstraints,
+      };
+
+      // Update via Prisma to ensure proper JSONB handling
+      await this.prisma.models.update({
+        where: { id: modelId },
+        data: { meta: updatedMeta },
+      });
+
+      // Create version history entry
+      await this.versionHistory.createVersionEntry({
+        model_id: modelId,
+        changed_by: adminUserId,
+        change_type: 'update',
+        change_reason: 'Admin updated parameter constraints',
+        previous_state: { parameterConstraints: (model.meta as any)?.parameterConstraints || {} },
+        new_state: { parameterConstraints },
+      });
+
+      logger.info('Admin: Parameter constraints updated successfully', {
+        modelId,
+        parametersCount: Object.keys(parameterConstraints).length,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Parameter constraints updated successfully',
+        modelId,
+        parameterConstraints,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        throw validationError('Invalid request body', (error as any).flatten());
+      }
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * DELETE /admin/models/:id/parameters/:paramName
+   * Remove a specific parameter constraint
+   *
+   * Path parameters:
+   * - id: Model ID
+   * - paramName: Parameter name to remove (e.g., 'temperature', 'max_tokens')
+   *
+   * Removes the specified parameter from meta.parameterConstraints.
+   * Creates version history entry for audit trail.
+   */
+  deleteParameterConstraint = async (req: Request, res: Response): Promise<void> => {
+    const { id: modelId, paramName } = req.params;
+    const adminUserId = getUserId(req);
+
+    logger.info('Admin: Delete parameter constraint', {
+      modelId,
+      paramName,
+      adminUserId,
+    });
+
+    if (!adminUserId) {
+      throw badRequestError('Admin user ID not found');
+    }
+
+    try {
+      // Get current model
+      const model = await this.prisma.models.findUnique({
+        where: { id: modelId },
+        select: { id: true, meta: true },
+      });
+
+      if (!model) {
+        throw notFoundError(`Model '${modelId}'`);
+      }
+
+      const meta = model.meta as any;
+      const parameterConstraints = { ...(meta?.parameterConstraints || {}) };
+      const oldValue = parameterConstraints[paramName];
+
+      // Check if parameter constraint exists
+      if (!parameterConstraints[paramName]) {
+        throw notFoundError(
+          `Parameter constraint '${paramName}' for model '${modelId}'`
+        );
+      }
+
+      // Remove the parameter constraint
+      delete parameterConstraints[paramName];
+
+      // Update model with modified constraints
+      const updatedMeta = {
+        ...meta,
+        parameterConstraints,
+      };
+
+      await this.prisma.models.update({
+        where: { id: modelId },
+        data: { meta: updatedMeta },
+      });
+
+      // Create version history entry
+      await this.versionHistory.createVersionEntry({
+        model_id: modelId,
+        changed_by: adminUserId,
+        change_type: 'update',
+        change_reason: `Admin deleted parameter constraint '${paramName}'`,
+        previous_state: { [`parameterConstraints.${paramName}`]: oldValue },
+        new_state: { [`parameterConstraints.${paramName}`]: null },
+      });
+
+      logger.info('Admin: Parameter constraint deleted successfully', {
+        modelId,
+        paramName,
+      });
+
+      res.status(200).json({
+        status: 'success',
+        message: `Parameter constraint '${paramName}' deleted successfully`,
+        modelId,
+        paramName,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('not found')) {
+        // Re-throw as-is if it's already a not found error
+        throw error;
       }
       throw error;
     }

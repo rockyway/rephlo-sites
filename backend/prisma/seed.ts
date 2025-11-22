@@ -21,6 +21,7 @@ import * as dotenv from 'dotenv';
 
 // Load environment variables from .env file
 dotenv.config();
+import { calculateSeparateCreditsPerKTokens } from '../src/types/model-meta';
 
 const prisma = new PrismaClient();
 
@@ -795,6 +796,50 @@ async function seedCredits(users: any[], subscriptions: any[]) {
 }
 
 /**
+ * Helper function to calculate separate input/output credits for models
+ * Uses the centralized calculation function with tier-specific margins
+ *
+ * @param inputCostPerMillion - Input cost in cents per million tokens
+ * @param outputCostPerMillion - Output cost in cents per million tokens
+ * @param tier - Subscription tier (determines margin multiplier)
+ * @returns Object with inputCreditsPerK, outputCreditsPerK, and creditsPer1kTokens (deprecated)
+ */
+function calculateModelCredits(
+  inputCostPerMillion: number,
+  outputCostPerMillion: number,
+  tier: 'free' | 'pro' | 'pro_plus' | 'pro_max' | 'enterprise_pro' | 'enterprise_pro_plus'
+): {
+  inputCreditsPerK: number;
+  outputCreditsPerK: number;
+  creditsPer1kTokens: number;
+} {
+  // Margin multipliers by tier (from Plan 189)
+  const marginMap = {
+    free: 2.0,                 // 50% margin (abuse prevention)
+    pro: 1.0,                  // Break-even (volume play)
+    pro_plus: 1.1,             // 10% margin
+    pro_max: 1.25,             // 25% margin (premium)
+    enterprise_pro: 1.15,      // 15% margin
+    enterprise_pro_plus: 1.20, // 20% margin
+  };
+
+  const margin = marginMap[tier];
+
+  // Calculate separate credits using the utility function
+  const result = calculateSeparateCreditsPerKTokens(
+    inputCostPerMillion,
+    outputCostPerMillion,
+    margin
+  );
+
+  return {
+    inputCreditsPerK: result.inputCreditsPerK,
+    outputCreditsPerK: result.outputCreditsPerK,
+    creditsPer1kTokens: result.estimatedTotalPerK, // Deprecated: for backward compatibility
+  };
+}
+
+/**
  * Seed LLM Models
  * Seeds top-tier models from major providers with current pricing
  * Uses new JSONB meta format for all model metadata
@@ -816,12 +861,12 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 272000,
         maxOutputTokens: 128000,
-        inputCostPerMillionTokens: 1250,
-        outputCostPerMillionTokens: 10000,
-        creditsPer1kTokens: 28,
-        requiredTier: 'pro_max',
+        inputCostPerMillionTokens: 125,
+        outputCostPerMillionTokens: 1000,
+        ...calculateModelCredits(125, 1000, 'pro'),
+        requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        allowedTiers: ['pro', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           openai: {
             modelFamily: 'gpt-5',
@@ -844,9 +889,9 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 272000,
         maxOutputTokens: 128000,
-        inputCostPerMillionTokens: 250,
-        outputCostPerMillionTokens: 2000,
-        creditsPer1kTokens: 6,
+        inputCostPerMillionTokens: 25,
+        outputCostPerMillionTokens: 200,
+        ...calculateModelCredits(25, 200, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -858,6 +903,53 @@ async function seedModels() {
         },
         internalNotes: 'Cost-efficient variant for pro tier',
         complianceTags: ['SOC2', 'GDPR'],
+        // Plan 203: Parameter Constraints
+        parameterConstraints: {
+          temperature: {
+            supported: true,
+            allowedValues: [1.0],
+            default: 1.0,
+            reason: 'GPT-5-mini only supports temperature=1.0',
+          },
+          max_tokens: {
+            supported: true,
+            min: 1,
+            max: 4096,
+            default: 1000,
+            alternativeName: 'max_completion_tokens',
+            reason: 'Use max_completion_tokens parameter for GPT-5 models',
+          },
+          top_p: {
+            supported: true,
+            min: 0,
+            max: 1,
+            default: 1,
+            mutuallyExclusiveWith: ['temperature'],
+            reason: 'Cannot use both temperature and top_p',
+          },
+          presence_penalty: {
+            supported: true,
+            min: -2.0,
+            max: 2.0,
+            default: 0,
+          },
+          frequency_penalty: {
+            supported: true,
+            min: -2.0,
+            max: 2.0,
+            default: 0,
+          },
+          stop: {
+            supported: true,
+            maxSequences: 4,
+            maxLength: 64,
+          },
+          n: {
+            supported: true,
+            max: 5,
+            reason: 'Maximum 5 completions per request',
+          },
+        },
       },
     },
     {
@@ -872,9 +964,9 @@ async function seedModels() {
         capabilities: ['text', 'function_calling', 'long_context', 'code'],
         contextLength: 272000,
         maxOutputTokens: 128000,
-        inputCostPerMillionTokens: 50,
-        outputCostPerMillionTokens: 400,
-        creditsPer1kTokens: 1,
+        inputCostPerMillionTokens: 5,
+        outputCostPerMillionTokens: 40,
+        ...calculateModelCredits(5, 40, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -902,9 +994,9 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 200000,
         maxOutputTokens: 16384,
-        inputCostPerMillionTokens: 15000,
-        outputCostPerMillionTokens: 75000,
-        creditsPer1kTokens: 180,
+        inputCostPerMillionTokens: 1500,
+        outputCostPerMillionTokens: 7500,
+        ...calculateModelCredits(1500, 7500, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -930,9 +1022,9 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 200000,
         maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 3000,
-        outputCostPerMillionTokens: 15000,
-        creditsPer1kTokens: 40,
+        inputCostPerMillionTokens: 300,
+        outputCostPerMillionTokens: 1500,
+        ...calculateModelCredits(300, 1500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -944,6 +1036,43 @@ async function seedModels() {
         },
         internalNotes: 'Best for agentic coding',
         complianceTags: ['SOC2', 'GDPR', 'HIPAA'],
+        // Plan 203: Parameter Constraints (Anthropic specific)
+        parameterConstraints: {
+          temperature: {
+            supported: true,
+            min: 0,
+            max: 1,
+            default: 1,
+            reason: 'Anthropic models support temperature 0-1',
+          },
+          max_tokens: {
+            supported: true,
+            min: 1,
+            max: 8192,
+            default: 1024,
+            reason: 'Maximum 8192 tokens for Claude Sonnet 4.5',
+          },
+          top_p: {
+            supported: true,
+            min: 0,
+            max: 1,
+            default: 1,
+            reason: 'Nucleus sampling parameter',
+          },
+          top_k: {
+            supported: true,
+            min: 1,
+            max: 500,
+            default: 40,
+            reason: 'Anthropic-specific top-k sampling',
+          },
+          stop: {
+            supported: true,
+            maxSequences: 16,
+            maxLength: 256,
+            reason: 'Anthropic supports up to 16 stop sequences',
+          },
+        },
       },
     },
     {
@@ -958,9 +1087,9 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context'],
         contextLength: 200000,
         maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 1000,
-        outputCostPerMillionTokens: 5000,
-        creditsPer1kTokens: 15,
+        inputCostPerMillionTokens: 100,
+        outputCostPerMillionTokens: 500,
+        ...calculateModelCredits(100, 500, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -987,9 +1116,9 @@ async function seedModels() {
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 200000,
         maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 3000,
-        outputCostPerMillionTokens: 15000,
-        creditsPer1kTokens: 40,
+        inputCostPerMillionTokens: 300,
+        outputCostPerMillionTokens: 1500,
+        ...calculateModelCredits(300, 1500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1022,7 +1151,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 1250,
         outputCostPerMillionTokens: 5000,
-        creditsPer1kTokens: 20,
+        ...calculateModelCredits(1250, 5000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1050,7 +1179,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 100,
         outputCostPerMillionTokens: 400,
-        creditsPer1kTokens: 3,
+        ...calculateModelCredits(100, 400, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1077,7 +1206,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 38,
         outputCostPerMillionTokens: 150,
-        creditsPer1kTokens: 1,
+        ...calculateModelCredits(38, 150, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1104,9 +1233,9 @@ async function seedModels() {
         capabilities: ['text', 'function_calling', 'code'],
         contextLength: 128000,
         maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 400,
-        outputCostPerMillionTokens: 2000,
-        creditsPer1kTokens: 8,
+        inputCostPerMillionTokens: 40,
+        outputCostPerMillionTokens: 200,
+        ...calculateModelCredits(40, 200, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1129,7 +1258,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 600,
-        creditsPer1kTokens: 3,
+        ...calculateModelCredits(200, 600, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1154,7 +1283,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 800,
-        creditsPer1kTokens: 5,
+        ...calculateModelCredits(200, 800, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1177,7 +1306,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 100,
         outputCostPerMillionTokens: 400,
-        creditsPer1kTokens: 2,
+        ...calculateModelCredits(100, 400, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1200,7 +1329,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 300,
         outputCostPerMillionTokens: 1200,
-        creditsPer1kTokens: 6,
+        ...calculateModelCredits(300, 1200, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1225,7 +1354,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 3000,
         outputCostPerMillionTokens: 15000,
-        creditsPer1kTokens: 40,
+        ...calculateModelCredits(3000, 15000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1248,7 +1377,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 500,
-        creditsPer1kTokens: 2,
+        ...calculateModelCredits(200, 500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1271,7 +1400,7 @@ async function seedModels() {
         maxOutputTokens: 8192,
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 1500,
-        creditsPer1kTokens: 5,
+        ...calculateModelCredits(200, 1500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1296,7 +1425,7 @@ async function seedModels() {
         maxOutputTokens: 4096,
         inputCostPerMillionTokens: 2000,
         outputCostPerMillionTokens: 2000,
-        creditsPer1kTokens: 5,
+        ...calculateModelCredits(2000, 2000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1760,15 +1889,15 @@ async function seedModelPricing(providers: any[]) {
       create: {
         provider_id: providerMap['openai'],
         model_name: 'gpt-5',
-        input_price_per_1k: 0.005, // Same as GPT-4o
-        output_price_per_1k: 0.015,
+        input_price_per_1k: 0.00125, 
+        output_price_per_1k: 0.0010,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // GPT-5 Mini (use GPT-4o-mini pricing as placeholder)
+    // GPT-5 Mini 
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -1781,15 +1910,15 @@ async function seedModelPricing(providers: any[]) {
       create: {
         provider_id: providerMap['openai'],
         model_name: 'gpt-5-mini',
-        input_price_per_1k: 0.00015, // Same as gpt-4o-mini
-        output_price_per_1k: 0.0006,
+        input_price_per_1k: 0.00025, 
+        output_price_per_1k: 0.002,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // GPT-5 Nano (estimated $0.05/$0.20 per 1M tokens)
+    // GPT-5 Nano
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -1803,7 +1932,7 @@ async function seedModelPricing(providers: any[]) {
         provider_id: providerMap['openai'],
         model_name: 'gpt-5-nano',
         input_price_per_1k: 0.00005, // $0.05 per 1M / 1000
-        output_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1893,8 +2022,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-opus-4.1',
         input_price_per_1k: 0.015, // $15 per 1M / 1000
         output_price_per_1k: 0.075, // $75 per 1M / 1000
-        cache_input_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
-        cache_hit_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
+        cache_read_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1917,8 +2046,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-sonnet-4.5',
         input_price_per_1k: 0.003, // $3 per 1M / 1000
         output_price_per_1k: 0.015, // $15 per 1M / 1000
-        cache_input_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
-        cache_hit_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
+        cache_read_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1940,8 +2069,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-3-5-sonnet',
         input_price_per_1k: 0.003,
         output_price_per_1k: 0.015,
-        cache_input_price_per_1k: 0.00375,
-        cache_hit_price_per_1k: 0.0003,
+        cache_write_price_per_1k: 0.00375,
+        cache_read_price_per_1k: 0.0003,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1964,8 +2093,8 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-haiku-4.5',
         input_price_per_1k: 0.001, // $1 per 1M / 1000
         output_price_per_1k: 0.005, // $5 per 1M / 1000
-        cache_input_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
-        cache_hit_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
+        cache_read_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -1992,7 +2121,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-5-pro',
         input_price_per_1k: 0.00125, // $1.25 per 1M / 1000
         output_price_per_1k: 0.01, // $10 per 1M / 1000
-        cache_input_price_per_1k: 0.000125, // $0.125 per 1M / 1000
+        cache_write_price_per_1k: 0.000125, // $0.125 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2015,7 +2144,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-5-flash',
         input_price_per_1k: 0.0003, // $0.30 per 1M / 1000
         output_price_per_1k: 0.0025, // $2.50 per 1M / 1000
-        cache_input_price_per_1k: 0.00003, // $0.03 per 1M / 1000
+        cache_write_price_per_1k: 0.00003, // $0.03 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2037,7 +2166,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-0-flash',
         input_price_per_1k: 0.0003, // Same as 2.5 Flash
         output_price_per_1k: 0.0025,
-        cache_input_price_per_1k: 0.00003,
+        cache_write_price_per_1k: 0.00003,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2060,7 +2189,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-5-flash-lite',
         input_price_per_1k: 0.0001, // $0.10 per 1M / 1000
         output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
-        cache_input_price_per_1k: 0.00001, // $0.01 per 1M / 1000
+        cache_write_price_per_1k: 0.00001, // $0.01 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2082,7 +2211,7 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gemini-2-0-flash-lite',
         input_price_per_1k: 0.0001, // Same as 2.5 Flash-Lite
         output_price_per_1k: 0.0004,
-        cache_input_price_per_1k: 0.00001,
+        cache_write_price_per_1k: 0.00001,
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
