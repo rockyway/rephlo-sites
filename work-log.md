@@ -1927,3 +1927,6 @@ NEXT STEPS:
 - Created identity-provider/src/services/__tests__/auth.service.jwt-claims.test.ts (600+ lines, 16 test cases)
 - All 12 tasks from Plan 203 orchestration completed successfully
 - Auto-activation flow fully tested: JWT claims + license retrieval endpoint
+2025-11-22 08:41:20 - Fixed undefined toLocaleString error in MarginTracking.tsx by adding null-safety checks to all numeric fields (requests, vendorCost, marginPercent, tokensMillions, variance)
+2025-11-22 08:43:59 - Fixed missing key prop warning in ProviderCostChart.tsx by adding index fallback and null-safety checks to numeric fields
+2025-11-22 08:46:01 - Fixed additional toLocaleString error on metrics.creditValue (line 235) and variance comparison (line 202) in MarginTracking.tsx. Updated MarginMetrics interface to make all numeric fields optional.

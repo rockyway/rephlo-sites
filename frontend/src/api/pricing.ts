@@ -113,41 +113,41 @@ export interface VendorPriceAlert {
  * Margin Tracking Types
  */
 export interface MarginMetrics {
-  actualGrossMargin: number;
-  targetMargin: number;
-  variance: number;
-  thisMonthVendorCost: number;
-  creditValue: number;
-  grossMarginDollars: number;
+  actualGrossMargin?: number;
+  targetMargin?: number;
+  variance?: number;
+  thisMonthVendorCost?: number;
+  creditValue?: number;
+  grossMarginDollars?: number;
   status: 'on_target' | 'below_target' | 'above_target';
 }
 
 export interface MarginByTier {
   tier: string;
-  marginPercent: number;
-  targetMargin: number;
-  variance: number;
-  requests: number;
-  vendorCost: number;
-  creditValue: number;
+  marginPercent?: number;
+  targetMargin?: number;
+  variance?: number;
+  requests?: number;
+  vendorCost?: number;
+  creditValue?: number;
   status: 'on_target' | 'warning' | 'critical';
 }
 
 export interface MarginByProvider {
   providerId: string;
   providerName: string;
-  vendorCost: number;
-  marginPercent: number;
-  requests: number;
+  vendorCost?: number;
+  marginPercent?: number;
+  requests?: number;
 }
 
 export interface TopModel {
   modelId: string;
   modelName: string;
-  requests: number;
-  tokensMillions: number;
-  vendorCost: number;
-  marginPercent: number;
+  requests?: number;
+  tokensMillions?: number;
+  vendorCost?: number;
+  marginPercent?: number;
   status: 'healthy' | 'warning' | 'critical';
 }
 

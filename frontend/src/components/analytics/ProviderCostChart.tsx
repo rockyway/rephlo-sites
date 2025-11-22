@@ -132,13 +132,13 @@ export const ProviderCostChart: React.FC<ProviderCostChartProps> = ({ filters })
           </tr>
         </thead>
         <tbody>
-          {data.providers.map((provider) => (
-            <tr key={provider.providerId}>
+          {data.providers.map((provider, index) => (
+            <tr key={provider.providerId || `provider-${index}`}>
               <td>{provider.providerName}</td>
-              <td>{formatCurrency(provider.totalCost)}</td>
-              <td>{formatNumber(provider.requestCount)}</td>
-              <td>{formatCurrency(provider.avgCostPerRequest)}</td>
-              <td>{provider.percentage.toFixed(1)}%</td>
+              <td>{formatCurrency(provider.totalCost ?? 0)}</td>
+              <td>{formatNumber(provider.requestCount ?? 0)}</td>
+              <td>{formatCurrency(provider.avgCostPerRequest ?? 0)}</td>
+              <td>{(provider.percentage ?? 0).toFixed(1)}%</td>
             </tr>
           ))}
         </tbody>
