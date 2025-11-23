@@ -181,11 +181,11 @@ function EditModelDialog({
       setValidationError('Input and output costs are required');
       return false;
     }
-    if (!inputCreditsPerK || parseInt(inputCreditsPerK) < 0) {
+    if (!inputCreditsPerK || parseFloat(inputCreditsPerK) < 0) {
       setValidationError('Valid input credits per 1K is required');
       return false;
     }
-    if (!outputCreditsPerK || parseInt(outputCreditsPerK) <= 0) {
+    if (!outputCreditsPerK || parseFloat(outputCreditsPerK) <= 0) {
       setValidationError('Valid output credits per 1K is required');
       return false;
     }
@@ -237,17 +237,16 @@ function EditModelDialog({
       metaUpdates.outputCostPerMillionTokens = outputCostInCents;
     }
 
-    // Phase 3: Separate input/output pricing
-    if (parseInt(inputCreditsPerK) !== currentMeta?.inputCreditsPerK) {
-      metaUpdates.inputCreditsPerK = parseInt(inputCreditsPerK);
+    // Phase 3: Separate input/output pricing (Plan 208: supports decimal credits)
+    if (parseFloat(inputCreditsPerK) !== currentMeta?.inputCreditsPerK) {
+      metaUpdates.inputCreditsPerK = parseFloat(inputCreditsPerK);
     }
-    if (parseInt(outputCreditsPerK) !== currentMeta?.outputCreditsPerK) {
-      metaUpdates.outputCreditsPerK = parseInt(outputCreditsPerK);
+    if (parseFloat(outputCreditsPerK) !== currentMeta?.outputCreditsPerK) {
+      metaUpdates.outputCreditsPerK = parseFloat(outputCreditsPerK);
     }
 
-    // DEPRECATED: For backward compatibility
-    if (parseInt(estimatedTotalPerK) !== currentMeta?.creditsPer1kTokens) {
-      metaUpdates.creditsPer1kTokens = parseInt(estimatedTotalPerK);
+    if (parseFloat(estimatedTotalPerK) !== currentMeta?.creditsPer1kTokens) {
+      metaUpdates.creditsPer1kTokens = parseFloat(estimatedTotalPerK);
     }
 
     const currentCaps = new Set(currentMeta?.capabilities || []);
@@ -539,6 +538,7 @@ function EditModelDialog({
                     </label>
                     <Input
                       type="number"
+                      step="0.01"
                       value={inputCreditsPerK}
                       onChange={(e) => setInputCreditsPerK(e.target.value)}
                       placeholder="Auto-calculated"
@@ -556,6 +556,7 @@ function EditModelDialog({
                     </label>
                     <Input
                       type="number"
+                      step="0.01"
                       value={outputCreditsPerK}
                       onChange={(e) => setOutputCreditsPerK(e.target.value)}
                       placeholder="Auto-calculated"
@@ -573,6 +574,7 @@ function EditModelDialog({
                     </label>
                     <Input
                       type="number"
+                      step="0.01"
                       value={estimatedTotalPerK}
                       onChange={(e) => setEstimatedTotalPerK(e.target.value)}
                       placeholder="Auto-calculated"

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Info, Sparkles } from 'lucide-react';
+import { X, Info, Sparkles, AlertCircle } from 'lucide-react';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Textarea from '@/components/common/Textarea';
@@ -21,6 +21,7 @@ interface AddModelDialogProps {
   onConfirm: (modelData: any) => Promise<void>;
   onCancel: () => void;
   isSaving?: boolean;
+  error?: string | null;
 }
 
 /**
@@ -43,6 +44,7 @@ function AddModelDialog({
   onConfirm,
   onCancel,
   isSaving = false,
+  error = null,
 }: AddModelDialogProps) {
   // Template selection
   const [selectedTemplate, setSelectedTemplate] = useState<string>('openai');
@@ -162,8 +164,8 @@ function AddModelDialog({
     if (!contextLength || parseInt(contextLength) <= 0) newErrors.contextLength = 'Context length must be positive';
     if (!inputCost || parseFloat(inputCost) < 0) newErrors.inputCost = 'Input cost must be non-negative';
     if (!outputCost || parseFloat(outputCost) < 0) newErrors.outputCost = 'Output cost must be non-negative';
-    if (!inputCreditsPerK || parseInt(inputCreditsPerK) < 0) newErrors.inputCreditsPerK = 'Input credits must be non-negative';
-    if (!outputCreditsPerK || parseInt(outputCreditsPerK) <= 0) newErrors.outputCreditsPerK = 'Output credits must be positive';
+    if (!inputCreditsPerK || parseFloat(inputCreditsPerK) < 0) newErrors.inputCreditsPerK = 'Input credits must be non-negative';
+    if (!outputCreditsPerK || parseFloat(outputCreditsPerK) <= 0) newErrors.outputCreditsPerK = 'Output credits must be positive';
     if (!requiredTier) newErrors.requiredTier = 'Required tier is required';
     if (allowedTiers.length === 0) newErrors.allowedTiers = 'Select at least one allowed tier';
 
@@ -194,9 +196,9 @@ function AddModelDialog({
         maxOutputTokens: maxOutputTokens ? parseInt(maxOutputTokens) : undefined,
         inputCostPerMillionTokens: inputCostInCents,
         outputCostPerMillionTokens: outputCostInCents,
-        inputCreditsPerK: parseInt(inputCreditsPerK),
-        outputCreditsPerK: parseInt(outputCreditsPerK),
-        creditsPer1kTokens: parseInt(estimatedTotalPerK), // DEPRECATED: For backward compatibility
+        inputCreditsPerK: parseFloat(inputCreditsPerK),
+        outputCreditsPerK: parseFloat(outputCreditsPerK),
+        creditsPer1kTokens: parseFloat(estimatedTotalPerK),
         requiredTier,
         tierRestrictionMode,
         allowedTiers,
@@ -279,6 +281,17 @@ function AddModelDialog({
               </Dialog.Close>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mx-6 mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-4 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-body-sm text-red-800 dark:text-red-200 font-medium">Error Creating Model</p>
+                <p className="text-body-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+              </div>
+            </div>
+          )}
 
           {/* Content */}
           <div className="p-6 space-y-6">
@@ -542,6 +555,7 @@ function AddModelDialog({
                       </label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={inputCreditsPerK}
                         onChange={(e) => setInputCreditsPerK(e.target.value)}
                         placeholder="Auto-calculated"
@@ -563,6 +577,7 @@ function AddModelDialog({
                       </label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={outputCreditsPerK}
                         onChange={(e) => setOutputCreditsPerK(e.target.value)}
                         placeholder="Auto-calculated"
@@ -584,6 +599,7 @@ function AddModelDialog({
                       </label>
                       <Input
                         type="number"
+                        step="0.01"
                         value={estimatedTotalPerK}
                         onChange={(e) => setEstimatedTotalPerK(e.target.value)}
                         placeholder="Auto-calculated"
@@ -599,11 +615,12 @@ function AddModelDialog({
                     <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
                       <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                       <div className="text-caption text-blue-800 dark:text-blue-200">
-                        <p className="font-semibold mb-1">Credits auto-calculated with 2.5x margin:</p>
+                        <p className="font-semibold mb-1">Credits auto-calculated with 1.5x margin (Plan 208):</p>
                         <ul className="list-disc list-inside space-y-1">
                           <li>Input: {inputCreditsPerK} credits per 1K tokens</li>
                           <li>Output: {outputCreditsPerK} credits per 1K tokens</li>
                           <li>Estimated total: {estimatedTotalPerK} credits per 1K tokens (based on typical 1:10 ratio)</li>
+                          <li className="text-deep-navy-600 dark:text-deep-navy-400">Note: Actual runtime charges may vary based on credit increment setting (default 0.1)</li>
                         </ul>
                       </div>
                     </div>

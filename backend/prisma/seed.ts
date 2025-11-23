@@ -707,7 +707,7 @@ function calculateModelCredits(
   return {
     inputCreditsPerK: result.inputCreditsPerK,
     outputCreditsPerK: result.outputCreditsPerK,
-    creditsPer1kTokens: result.estimatedTotalPerK, // Deprecated: for backward compatibility
+    creditsPer1kTokens: result.estimatedTotalPerK,
   };
 }
 
