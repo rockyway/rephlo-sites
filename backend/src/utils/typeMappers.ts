@@ -60,7 +60,7 @@ export function mapUserToApiType(
     isActive: dbUser.is_active,
     currentTier:
       (dbUser.subscription_monetization[0]?.tier as SubscriptionTier) || SubscriptionTier.FREE,
-    creditsBalance: dbUser.user_credit_balance?.amount || 0,
+    creditsBalance: dbUser.user_credit_balance?.amount ? parseFloat(dbUser.user_credit_balance.amount.toString()) : 0,
     createdAt: dbUser.created_at.toISOString(),
     lastActiveAt: dbUser.last_login_at?.toISOString() || null,
     deactivatedAt: dbUser.deactivated_at?.toISOString() || null,
@@ -480,6 +480,160 @@ export function dateToIsoString(date: Date | null | undefined): string | null {
  */
 export function isoStringToDate(isoString: string | null | undefined): Date | null {
   return isoString ? new Date(isoString) : null;
+}
+
+// =============================================================================
+// MODEL MAPPERS (Phase 3: Separate input/output pricing)
+// =============================================================================
+
+/**
+ * Map database Model to API ModelApiType
+ * Transforms snake_case database fields to camelCase API fields
+ *
+ * Phase 3: Includes separate input/output pricing fields
+ */
+export function mapModelToApiType(
+  dbModel: Prisma.modelsGetPayload<{
+    select: {
+      id: true;
+      name: true;
+      provider: true;
+      is_available: true;
+      is_legacy: true;
+      is_archived: true;
+      meta: true;
+      created_at: true;
+      updated_at: true;
+    };
+  }>
+): import('@rephlo/shared-types').ModelApiType {
+  const meta = dbModel.meta as any;
+
+  return {
+    id: dbModel.id,
+    name: dbModel.name,
+    provider: dbModel.provider,
+    isAvailable: dbModel.is_available,
+    isLegacy: dbModel.is_legacy,
+    isArchived: dbModel.is_archived,
+    createdAt: dbModel.created_at.toISOString(),
+    updatedAt: dbModel.updated_at.toISOString(),
+    meta: {
+      // Display Information
+      displayName: meta?.displayName ?? dbModel.name,
+      description: meta?.description,
+      version: meta?.version,
+
+      // Capabilities
+      capabilities: meta?.capabilities ?? [],
+
+      // Context & Output Limits
+      contextLength: meta?.contextLength ?? 0,
+      maxOutputTokens: meta?.maxOutputTokens,
+
+      // Pricing (in smallest currency unit - cents for USD)
+      inputCostPerMillionTokens: meta?.inputCostPerMillionTokens ?? 0,
+      outputCostPerMillionTokens: meta?.outputCostPerMillionTokens ?? 0,
+
+      // Phase 3: Separate input/output pricing
+      inputCreditsPerK: meta?.inputCreditsPerK,
+      outputCreditsPerK: meta?.outputCreditsPerK,
+
+      // DEPRECATED: Kept for backward compatibility
+      creditsPer1kTokens: meta?.creditsPer1kTokens,
+
+      // Tier Access Control
+      requiredTier: meta?.requiredTier ?? 'free',
+      tierRestrictionMode: meta?.tierRestrictionMode ?? 'minimum',
+      allowedTiers: meta?.allowedTiers ?? ['free'],
+
+      // Legacy Management (Optional)
+      legacyReplacementModelId: meta?.legacyReplacementModelId,
+      deprecationNotice: meta?.deprecationNotice,
+      sunsetDate: meta?.sunsetDate,
+
+      // Provider-Specific Extensions
+      providerMetadata: meta?.providerMetadata,
+
+      // Admin Metadata
+      internalNotes: meta?.internalNotes,
+      complianceTags: meta?.complianceTags,
+    },
+  };
+}
+
+/**
+ * Map database token_usage_ledger to API TokenUsageApiType
+ * Transforms snake_case database fields to camelCase API fields
+ *
+ * Phase 3: Includes separate input/output credits
+ */
+export function mapTokenUsageToApiType(
+  dbUsage: Prisma.token_usage_ledgerGetPayload<{}>
+): {
+  id: string;
+  requestId: string;
+  userId: string;
+  subscriptionId: string | null;
+  modelId: string;
+  providerId: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+  vendorCost: number;
+  marginMultiplier: number;
+  creditValueUsd: number;
+
+  // Phase 3: Separate input/output pricing
+  inputCredits: number | null;
+  outputCredits: number | null;
+  totalCredits: number | null;
+
+  // DEPRECATED: Kept for backward compatibility
+  creditsDeducted: number;
+
+  requestType: string;
+  streamingSegments: number | null;
+  requestStartedAt: string;
+  requestCompletedAt: string;
+  processingTimeMs: number | null;
+  status: string;
+  errorMessage: string | null;
+  isStreamingComplete: boolean;
+  userTierAtRequest: string | null;
+} {
+  return {
+    id: dbUsage.id,
+    requestId: dbUsage.request_id,
+    userId: dbUsage.user_id,
+    subscriptionId: dbUsage.subscription_id,
+    modelId: dbUsage.model_id,
+    providerId: dbUsage.provider_id,
+    inputTokens: dbUsage.input_tokens,
+    outputTokens: dbUsage.output_tokens,
+    cachedInputTokens: dbUsage.cached_input_tokens,
+    vendorCost: decimalToNumber(dbUsage.vendor_cost),
+    marginMultiplier: decimalToNumber(dbUsage.margin_multiplier),
+    creditValueUsd: decimalToNumber(dbUsage.credit_value_usd),
+
+    // Phase 3: Separate input/output pricing
+    inputCredits: dbUsage.input_credits ? parseFloat(dbUsage.input_credits.toString()) : null,
+    outputCredits: dbUsage.output_credits ? parseFloat(dbUsage.output_credits.toString()) : null,
+    totalCredits: dbUsage.total_credits ? parseFloat(dbUsage.total_credits.toString()) : null,
+
+    // DEPRECATED: Kept for backward compatibility (Plan 208: Handle Decimal)
+    creditsDeducted: parseFloat(dbUsage.credits_deducted.toString()),
+
+    requestType: dbUsage.request_type,
+    streamingSegments: dbUsage.streaming_segments,
+    requestStartedAt: dbUsage.request_started_at.toISOString(),
+    requestCompletedAt: dbUsage.request_completed_at.toISOString(),
+    processingTimeMs: dbUsage.processing_time_ms,
+    status: dbUsage.status,
+    errorMessage: dbUsage.error_message,
+    isStreamingComplete: dbUsage.is_streaming_complete,
+    userTierAtRequest: dbUsage.user_tier_at_request,
+  };
 }
 
 // =============================================================================

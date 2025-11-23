@@ -264,6 +264,38 @@ export async function createOIDCProvider(
       'admin': ['role', 'permissions'], // NEW: Admin claims
     },
 
+    // Extra claims to include in access tokens
+    // This adds custom claims to the JWT access token (not just ID token)
+    extraAccessTokenClaims: async (_ctx: any, token: any) => {
+      try {
+        const claims: Record<string, any> = {};
+
+        // Check if email scope is requested
+        if (token.scope && token.scope.includes('email')) {
+          // Fetch user account to get email
+          const account = await authService.findAccount(token.accountId);
+          if (account) {
+            const userClaims = await account.claims('access_token', token.scope);
+            if (userClaims.email) {
+              claims.email = userClaims.email;
+              logger.debug('OIDC: Added email to access token', {
+                sub: token.accountId,
+                email: userClaims.email,
+              });
+            }
+          }
+        }
+
+        return claims;
+      } catch (error) {
+        logger.error('OIDC: extraAccessTokenClaims error', {
+          error: error instanceof Error ? error.message : String(error),
+          accountId: token.accountId,
+        });
+        return {};
+      }
+    },
+
     // Token TTLs (in seconds)
     // NOTE: oidc-provider v9.5.2 requires TTLs to be:
     // - positive integers, OR

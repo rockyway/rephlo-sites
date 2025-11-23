@@ -22,6 +22,10 @@ export interface DeductionResult {
   creditsDeducted: number;
   deductionRecordId: string;
   timestamp: Date;
+  // Plan 208: Rounded values for UI display
+  balanceBeforeRounded?: number;
+  balanceAfterRounded?: number;
+  creditsDeductedRounded?: number;
 }
 
 export interface CreditDeductionRecord {
@@ -131,4 +135,13 @@ export interface ICreditDeductionService {
     endDate?: Date,
     limit?: number
   ): Promise<CreditDeductionRecord[]>;
+
+  /**
+   * Calculate credits to deduct from vendor cost
+   * Plan 208: Uses configurable credit increment
+   * @param vendorCost - Vendor cost in USD
+   * @param marginMultiplier - Margin multiplier (e.g., 1.5)
+   * @returns Credits to deduct (rounded to configurable increment)
+   */
+  calculateCreditsFromCost(vendorCost: number, marginMultiplier: number): number;
 }

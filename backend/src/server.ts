@@ -29,6 +29,7 @@ import logger, { loggers } from './utils/logger';
 import { PrismaClient } from '@prisma/client';
 import { billingReminderWorker } from './workers/billing-reminder.worker';
 import { prorationInvoiceWorker } from './workers/proration-invoice.worker';
+import { logFeatureFlags } from './config/feature-flags';
 
 // ===== Configuration =====
 
@@ -59,6 +60,20 @@ const startServer = async (): Promise<void> => {
     logger.info('Server: Connecting to database...');
     await prisma.$connect();
     logger.info('Server: Database connected successfully');
+
+    // Load credit increment setting (Plan 208: Fractional Credit System)
+    logger.info('Server: Loading credit increment setting...');
+    try {
+      const { CreditDeductionService } = await import('./services/credit-deduction.service');
+      const creditDeductionService = container.resolve(CreditDeductionService);
+      await creditDeductionService.loadCreditIncrementSetting();
+      logger.info('Server: Credit increment setting loaded successfully');
+    } catch (error) {
+      logger.warn('Server: Failed to load credit increment setting, using default', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Continue with default value (0.1) - non-critical error
+    }
 
     // Create Express app with OIDC provider
     logger.info('Server: Creating Express application...');
@@ -92,6 +107,10 @@ const startServer = async (): Promise<void> => {
       billingReminderWorker.start();
       prorationInvoiceWorker.start();
       logger.info('Server: Background workers started successfully');
+
+      // Log feature flags status (Plan 207 Phase 4)
+      logger.info('Server: Feature flags configuration');
+      logFeatureFlags();
 
       console.log(`🚀 Rephlo Backend API running on http://${HOST}:${PORT}`);
       console.log(`📍 Environment: ${NODE_ENV}`);

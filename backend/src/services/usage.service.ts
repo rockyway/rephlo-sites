@@ -101,7 +101,7 @@ export class UsageService {
         output_tokens: input.outputTokens || 0,
         vendor_cost: 0, // TODO: Needs actual vendor cost
         margin_multiplier: 1,
-        credit_value_usd: 0.001,
+        credit_value_usd: 0.01,
         credits_deducted: input.creditsUsed,
         request_type: 'chat' as any,
         request_started_at: new Date(),
@@ -186,7 +186,7 @@ export class UsageService {
     });
 
     const summary = {
-      totalCreditsUsed: summaryData._sum?.credits_deducted || 0,
+      totalCreditsUsed: parseFloat(summaryData._sum?.credits_deducted?.toString() || '0'),
       totalRequests: total,
       totalTokens: (summaryData._sum?.input_tokens || 0) + (summaryData._sum?.output_tokens || 0),
     };
@@ -393,7 +393,7 @@ export class UsageService {
 
     return results.map((row) => ({
       modelId: row.model_id,
-      creditsUsed: row._sum?.credits_deducted || 0,
+      creditsUsed: parseFloat(row._sum?.credits_deducted?.toString() || '0'),
       requestsCount: row._count?.id || 0,
       tokensTotal: (row._sum?.input_tokens || 0) + (row._sum?.output_tokens || 0),
       averageDurationMs: Math.round(row._avg?.processing_time_ms || 0),
@@ -414,7 +414,7 @@ export class UsageService {
     startDate?: Date,
     endDate?: Date
   ): Promise<number> {
-    const where: any = { userId };
+    const where: any = { user_id: userId };
 
     if (startDate || endDate) {
       where.created_at = {};
@@ -429,7 +429,7 @@ export class UsageService {
       },
     });
 
-    return result._sum?.credits_deducted || 0;
+    return parseFloat(result._sum?.credits_deducted?.toString() || '0');
   }
 
   /**
@@ -591,7 +591,7 @@ export class UsageService {
 
     // Aggregate totals
     const summary = {
-      creditsUsed: usageRecords.reduce((sum, r) => sum + r.credits_deducted, 0),
+      creditsUsed: usageRecords.reduce((sum, r) => sum + parseFloat(r.credits_deducted.toString()), 0),
       apiRequests: usageRecords.length,
       totalTokens: usageRecords.reduce((sum, r) => sum + (r.input_tokens + r.output_tokens), 0),
       averageTokensPerRequest: 0,
@@ -616,7 +616,7 @@ export class UsageService {
       }
       acc[key].requests++;
       acc[key].tokens += r.input_tokens + r.output_tokens;
-      acc[key].credits += r.credits_deducted;
+      acc[key].credits += parseFloat(r.credits_deducted.toString());
       return acc;
     }, {} as Record<string, { requests: number; tokens: number; credits: number; provider: string }>);
 

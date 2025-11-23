@@ -195,6 +195,7 @@ import { UserService } from './services/user.service';
 import { CreditService } from './services/credit.service';
 import { UsageService } from './services/usage.service';
 import { ModelService } from './services/model.service';
+import { ModelVersionHistoryService } from './services/model-version-history.service';
 import { WebhookService } from './services/webhook.service';
 import { UsageRecorder } from './services/llm/usage-recorder';
 import { LLMService } from './services/llm.service';
@@ -242,6 +243,9 @@ import { AdminProfitabilityService } from './services/admin-profitability.servic
 // Plan 111: Coupon Analytics Service
 import { CouponAnalyticsService } from './services/coupon-analytics.service';
 
+// Plan 180: General Analytics Service (Vendor Analytics)
+import { AnalyticsService } from './services/analytics.service';
+
 // Plan 190: Tier Config Management Service
 import { TierConfigService } from './services/tier-config.service';
 import { CreditUpgradeService } from './services/credit-upgrade.service';
@@ -279,6 +283,9 @@ container.register('ProrationService', { useClass: ProrationService });
 // Register Audit Logging service (Phase 4 P0 Fixes)
 container.registerSingleton(AuditLogService);
 
+// Register Model Version History service
+container.registerSingleton(ModelVersionHistoryService);
+
 // Register Admin Analytics & User Detail services (Phase 4 Backend)
 container.registerSingleton(AdminAnalyticsService);
 container.registerSingleton(AdminUserDetailService);
@@ -300,6 +307,9 @@ container.register('AdminProfitabilityService', { useClass: AdminProfitabilitySe
 
 // Register Coupon Analytics service (Plan 111)
 container.registerSingleton(CouponAnalyticsService);
+
+// Register General Analytics service (Plan 180)
+container.register('AnalyticsService', { useClass: AnalyticsService });
 
 // Register Tier Config Management service (Plan 190)
 container.register('ITierConfigService', { useClass: TierConfigService });
@@ -371,6 +381,9 @@ import { SettingsController } from './controllers/admin/settings.controller';
 // Plan 131 Phase 6: Profitability Controller
 import { ProfitabilityController } from './controllers/admin/profitability.controller';
 
+// Plan 207: Cache Analytics Controller
+import { CacheAnalyticsController } from './controllers/cache-analytics.controller';
+
 // Register controllers as singletons for consistent instances
 container.registerSingleton(UsersController);
 container.registerSingleton(ModelsController);
@@ -403,6 +416,9 @@ container.registerSingleton(SettingsController);
 
 // Register Profitability controller (Plan 131 Phase 6)
 container.registerSingleton(ProfitabilityController);
+
+// Register Cache Analytics controller (Plan 207)
+container.registerSingleton(CacheAnalyticsController);
 
 logger.info('DI Container: Controllers registered', {
   controllers: [

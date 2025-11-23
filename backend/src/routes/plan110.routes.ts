@@ -89,6 +89,17 @@ export function createPlan110Router(): Router {
   );
 
   /**
+   * GET /api/licenses/me
+   * Get authenticated user's active perpetual license
+   * Requires authentication (JWT token)
+   */
+  router.get(
+    '/licenses/me',
+    authMiddleware,
+    asyncHandler(licenseController.getMyLicense.bind(licenseController))
+  );
+
+  /**
    * GET /api/licenses/:licenseKey
    * Get license details
    * No authentication required (license key is proof of ownership)

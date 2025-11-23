@@ -739,14 +739,14 @@ export class RevenueAnalyticsService {
         },
       });
 
-      const totalCreditsUsed = totalCredits._sum.credits_deducted || 0;
+      const totalCreditsUsed = parseFloat(totalCredits._sum.credits_deducted?.toString() || '0');
 
       // Get total revenue (using new format)
       const revenueData = await this.getRevenueMix(period);
       const totalRevenue = revenueData.total;
 
       const data = usageByModel.map((item) => {
-        const credits = item._sum.credits_deducted || 0;
+        const credits = parseFloat(item._sum.credits_deducted?.toString() || '0');
         const creditPercentage = totalCreditsUsed > 0 ? (credits / totalCreditsUsed) * 100 : 0;
         const revenueContribution = Math.round(
           totalRevenue > 0

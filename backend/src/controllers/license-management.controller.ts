@@ -236,6 +236,61 @@ export class LicenseManagementController {
   }
 
   /**
+   * GET /api/licenses/me
+   * Get authenticated user's active perpetual license
+   * Returns null if user has no active license (not 404 error)
+   */
+  async getMyLicense(req: Request, res: Response): Promise<void> {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      res.status(401).json({
+        error: {
+          code: 'unauthorized',
+          message: 'Authentication required',
+        },
+      });
+      return;
+    }
+
+    try {
+      const license = await this.licenseService.getUserActiveLicense(userId);
+
+      // Return null data if no license (not 404)
+      if (!license) {
+        res.status(200).json({
+          status: 'success',
+          data: null,
+        });
+        return;
+      }
+
+      // Transform to API response format (camelCase)
+      res.status(200).json({
+        status: 'success',
+        data: {
+          id: license.id,
+          licenseKey: license.license_key,
+          status: license.status,
+          purchasedVersion: license.purchased_version,
+          eligibleUntilVersion: license.eligible_until_version,
+          maxActivations: license.max_activations,
+          activeDeviceCount: license._count.license_activation,
+          purchasedAt: license.purchased_at.toISOString(),
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get user license', { userId, error });
+      res.status(500).json({
+        error: {
+          code: 'internal_server_error',
+          message: 'Failed to retrieve user license',
+        },
+      });
+    }
+  }
+
+  /**
    * GET /api/licenses/:licenseKey
    * Get license details
    */

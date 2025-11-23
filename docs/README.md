@@ -1,9 +1,9 @@
-# Rephlo Frontend Modernization - Documentation Index
+# Rephlo - Documentation Index
 
-> **Project**: Rephlo Frontend Modernization
-> **Status**: Complete (Production Ready)
-> **Last Updated**: November 3, 2025
-> **Version**: 1.0
+> **Project**: Rephlo Full-Stack Platform
+> **Status**: Active Development
+> **Last Updated**: November 19, 2025
+> **Version**: 2.0
 
 ---
 
@@ -12,7 +12,10 @@
 | Audience | Start Here |
 |----------|------------|
 | **New Developers** | [Developer Onboarding Guide](guides/003-developer-onboarding-guide.md) |
+| **API Developers** | [Separate Pricing API Reference](reference/194-separate-pricing-api-reference.md) |
 | **Designers** | [Design Token Usage Guide](guides/001-design-token-usage-guide.md) |
+| **End Users** | [Separate Pricing User Guide](guides/020-separate-pricing-user-guide.md) |
+| **Administrators** | [Separate Pricing User Guide - Admin Section](guides/020-separate-pricing-user-guide.md#for-administrators) |
 | **QA/Testing** | [Phase 5 QA Test Report](analysis/002-phase5-comprehensive-qa-test-report.md) |
 | **Project Managers** | [Project Status](../FRONTEND_MODERNIZATION_STATUS.md) |
 | **Architects** | [Phase Completion Reports](progress/) |
@@ -31,19 +34,20 @@ Implementation plans and project organization.
 
 ### `/progress` - Phase Completion Reports
 
-Detailed reports for each completed phase.
+Detailed reports for each completed phase and feature implementation.
 
-| Phase | File | Status |
-|-------|------|--------|
-| **Phase 1** | [003-phase1-design-token-system-complete.md](progress/003-phase1-design-token-system-complete.md) | ✅ Complete |
-| **Phase 2** | [004-phase2-component-refinement-complete.md](progress/004-phase2-component-refinement-complete.md) | ✅ Complete |
-| **Phase 3** | [005-phase3-landing-page-polish-complete.md](progress/005-phase3-landing-page-polish-complete.md) | ✅ Complete |
-| **Phase 4** | [006-phase4-smoothui-research-complete.md](progress/006-phase4-smoothui-research-complete.md) | ✅ Complete (Skipped) |
-| **Phase 5** | [007-phase5-qa-testing-complete.md](progress/007-phase5-qa-testing-complete.md) | ✅ Complete |
+| Phase/Feature | File | Status |
+|---------------|------|--------|
+| **Frontend Phase 1** | [003-phase1-design-token-system-complete.md](progress/003-phase1-design-token-system-complete.md) | ✅ Complete |
+| **Frontend Phase 2** | [004-phase2-component-refinement-complete.md](progress/004-phase2-component-refinement-complete.md) | ✅ Complete |
+| **Frontend Phase 3** | [005-phase3-landing-page-polish-complete.md](progress/005-phase3-landing-page-polish-complete.md) | ✅ Complete |
+| **Frontend Phase 4** | [006-phase4-smoothui-research-complete.md](progress/006-phase4-smoothui-research-complete.md) | ✅ Complete (Skipped) |
+| **Frontend Phase 5** | [007-phase5-qa-testing-complete.md](progress/007-phase5-qa-testing-complete.md) | ✅ Complete |
+| **Separate Pricing** | [205-separate-input-output-pricing-implementation-complete.md](progress/205-separate-input-output-pricing-implementation-complete.md) | ✅ Complete |
 
-### `/guides` - Developer Guides
+### `/guides` - User & Developer Guides
 
-Practical guides for working with the codebase.
+Practical guides for working with the platform and codebase.
 
 | Guide | Description | Audience |
 |-------|-------------|----------|
@@ -51,6 +55,7 @@ Practical guides for working with the codebase.
 | [002-component-enhancement-guide.md](guides/002-component-enhancement-guide.md) | Component patterns and micro-interactions | Developers |
 | [003-developer-onboarding-guide.md](guides/003-developer-onboarding-guide.md) | Getting started guide for new developers | New Developers |
 | [004-design-system-migration-guide.md](guides/004-design-system-migration-guide.md) | How to extend/modify the design system | Developers |
+| [020-separate-pricing-user-guide.md](guides/020-separate-pricing-user-guide.md) | **NEW:** Comprehensive guide to separate input/output pricing | Users, Admins, Developers |
 
 ### `/analysis` - Quality Reports
 
@@ -61,6 +66,15 @@ Test reports, compliance audits, and quality assessments.
 | [001-phase3-brand-compliance-report.md](analysis/001-phase3-brand-compliance-report.md) | Brand compliance audit (95/100 score) | Compliance Audit |
 | [002-phase5-comprehensive-qa-test-report.md](analysis/002-phase5-comprehensive-qa-test-report.md) | Comprehensive QA testing (96/100 score) | QA Testing |
 | [003-lessons-learned-modernization.md](analysis/003-lessons-learned-modernization.md) | Lessons learned from modernization project | Retrospective |
+
+### `/reference` - API & Technical References
+
+API documentation, specifications, and technical references.
+
+| Document | Description | Type |
+|----------|-------------|------|
+| [193-admin-model-management-api.md](reference/193-admin-model-management-api.md) | Admin API for model CRUD operations | API Reference |
+| [194-separate-pricing-api-reference.md](reference/194-separate-pricing-api-reference.md) | **NEW:** Separate input/output pricing API documentation | API Reference |
 
 ### `/research` - Research Reports
 
@@ -321,6 +335,8 @@ All documentation should:
 - **Design Tokens**: [Design Token Usage Guide](guides/001-design-token-usage-guide.md)
 - **Components**: [Component Enhancement Guide](guides/002-component-enhancement-guide.md)
 - **Quality Report**: [QA Test Report](analysis/002-phase5-comprehensive-qa-test-report.md)
+- **Separate Pricing API**: [API Reference](reference/194-separate-pricing-api-reference.md)
+- **Separate Pricing Guide**: [User Guide](guides/020-separate-pricing-user-guide.md)
 
 ### Code Locations
 

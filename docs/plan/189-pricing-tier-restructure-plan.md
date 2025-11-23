@@ -4,6 +4,7 @@
 **Status**: Planning
 **Priority**: High
 **Related**: Credit conversion rate change (x1000 → x100)
+**Enhanced by**: [Plan 208: Fractional Credit System Migration](./208-fractional-credit-system-migration.md) - Implements 0.1 credit increments for fairer pricing
 
 ---
 

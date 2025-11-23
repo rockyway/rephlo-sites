@@ -7,23 +7,33 @@ import crypto from 'crypto';
  */
 export const createTestUser = async (
   prisma: PrismaClient,
-  overrides: Partial<User> = {}
-): Promise<User> => {
+  overrides: Partial<any> = {}
+): Promise<any> => {
   const randomId = crypto.randomBytes(4).toString('hex');
   const email = overrides.email || `test-${randomId}@example.com`;
   const passwordHash = await bcrypt.hash('password123', 10);
 
-  return prisma.user.create({
+  // Generate UUID v4
+  const generateUuid = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
+  return prisma.users.create({
     data: {
+      id: overrides.id || generateUuid(),
       email,
-      emailVerified: true,
-      username: overrides.username || `testuser${randomId}`,
-      passwordHash,
-      firstName: overrides.firstName || 'Test',
-      lastName: overrides.lastName || 'User',
-      profilePictureUrl: overrides.profilePictureUrl || 'https://example.com/avatar.jpg',
-      isActive: overrides.isActive ?? true,
-      ...overrides,
+      email_verified: true,
+      password_hash: passwordHash,
+      first_name: overrides.first_name || 'Test',
+      last_name: overrides.last_name || 'User',
+      role: overrides.role || 'user',
+      is_active: overrides.is_active ?? true,
+      created_at: new Date(),
+      updated_at: new Date(),
     },
   });
 };

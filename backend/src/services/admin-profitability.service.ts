@@ -425,7 +425,7 @@ export class AdminProfitabilityService {
     try {
       const where: any = {};
       if (!includeHistorical) {
-        where.isActive = true;
+        where.is_active = true;
       }
 
       const prices = await this.prisma.model_provider_pricing.findMany({

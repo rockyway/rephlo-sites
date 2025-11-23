@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Access Token</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563EB;
+            margin-bottom: 20px;
+        }
+        .token-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .btn {
+            background: #2563EB;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .success {
+            color: #28a745;
+            margin-top: 10px;
+            display: none;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #2563EB;
+            padding: 12px;
+            margin: 20px 0;
+        }
+        .steps {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 20px 0;
+        }
+        .steps ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Get Access Token for API Testing</h1>
+
+        <div class="info">
+            <strong>ℹ️ Instructions:</strong><br>
+            This page reads the access token from localStorage (same domain as your frontend).
+        </div>
+
+        <div class="steps">
+            <strong>⚠️ Important:</strong> This page must be served from <code>http://localhost:7052</code> to access the same localStorage as your frontend.
+            <ol>
+                <li>Save this file to <code>frontend/public/get-token.html</code></li>
+                <li>Access it at: <code>http://localhost:7052/get-token.html</code></li>
+                <li>Click "Get Token from Browser" below</li>
+                <li>Copy the token and paste it into <code>temp_token.txt</code></li>
+            </ol>
+        </div>
+
+        <button class="btn" onclick="getToken()">Get Token from Browser</button>
+        <button class="btn btn-secondary" onclick="copyToken()">Copy to Clipboard</button>
+
+        <div id="tokenDisplay" class="token-box" style="display: none;"></div>
+        <div id="success" class="success">✅ Token copied to clipboard!</div>
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>Alternative Method (Browser Console):</strong><br>
+            1. Open DevTools (F12)<br>
+            2. Go to Console tab<br>
+            3. Type: <code>localStorage.getItem('access_token')</code><br>
+            4. Copy the token value<br>
+            5. Paste into <code>temp_token.txt</code>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = '';
+
+        function getToken() {
+            const token = localStorage.getItem('access_token');
+            const display = document.getElementById('tokenDisplay');
+            const error = document.getElementById('error');
+
+            if (token) {
+                currentToken = token;
+                display.textContent = token;
+                display.style.display = 'block';
+                error.style.display = 'none';
+
+                // Show token info
+                try {
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        const exp = payload.exp ? new Date(payload.exp * 1000) : null;
+                        const now = new Date();
+
+                        let info = '\n\n--- Token Info ---\n';
+                        info += `Expires: ${exp ? exp.toLocaleString() : 'N/A'}\n`;
+                        info += `Status: ${exp && exp > now ? '✅ Valid' : '❌ Expired'}\n`;
+                        info += `Subject: ${payload.sub || 'N/A'}\n`;
+                        info += `Email: ${payload.email || 'N/A'}\n`;
+                        info += `Role: ${payload.role || 'N/A'}\n`;
+
+                        display.textContent = token + info;
+                    }
+                } catch (e) {
+                    // Ignore parsing errors
+                }
+            } else {
+                error.textContent = '❌ No access token found in localStorage. Please log in first.';
+                error.style.display = 'block';
+                display.style.display = 'none';
+            }
+        }
+
+        function copyToken() {
+            if (!currentToken) {
+                getToken();
+            }
+
+            if (currentToken) {
+                navigator.clipboard.writeText(currentToken).then(() => {
+                    const success = document.getElementById('success');
+                    success.style.display = 'block';
+                    setTimeout(() => {
+                        success.style.display = 'none';
+                    }, 3000);
+                }).catch(err => {
+                    alert('Failed to copy: ' + err);
+                });
+            }
+        }
+
+        // Auto-load token on page load
+        window.addEventListener('load', () => {
+            // Wait a bit for localStorage to be available
+            setTimeout(getToken, 100);
+        });
+    </script>
+</body>
+</html>

@@ -199,7 +199,7 @@ function MarginTracking() {
               value={`${safeToFixed(metrics?.actualGrossMargin)}%`}
               subtitle={
                 metrics?.variance !== undefined
-                  ? `${metrics.variance > 0 ? '+' : ''}${safeToFixed(metrics.variance)}% vs target`
+                  ? `${(metrics.variance ?? 0) > 0 ? '+' : ''}${safeToFixed(metrics.variance ?? 0)}% vs target`
                   : undefined
               }
               icon={Activity}
@@ -232,7 +232,7 @@ function MarginTracking() {
                 <div className="flex items-center justify-between pt-2 border-t border-deep-navy-100">
                   <span className="text-caption text-deep-navy-700 dark:text-deep-navy-200">Credit Value:</span>
                   <span className="text-body-sm font-semibold text-deep-navy-700 dark:text-deep-navy-200">
-                    ${metrics.creditValue.toLocaleString()}
+                    ${(metrics.creditValue ?? 0).toLocaleString()}
                   </span>
                 </div>
               )}
@@ -307,7 +307,7 @@ function MarginTracking() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <MarginBadge marginPercent={tier.marginPercent} targetMargin={tier.targetMargin} />
+                          <MarginBadge marginPercent={tier.marginPercent ?? 0} targetMargin={tier.targetMargin ?? 0} />
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
@@ -316,27 +316,27 @@ function MarginTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1">
-                            {tier.variance > 0 ? (
+                            {(tier.variance ?? 0) > 0 ? (
                               <TrendingUp className="h-4 w-4 text-green-600" />
-                            ) : tier.variance < 0 ? (
+                            ) : (tier.variance ?? 0) < 0 ? (
                               <TrendingDown className="h-4 w-4 text-red-600" />
                             ) : null}
                             <span className={cn(
                               'text-body-sm font-medium',
-                              tier.variance > 0 ? 'text-green-600' : tier.variance < 0 ? 'text-red-600' : 'text-deep-navy-600'
+                              (tier.variance ?? 0) > 0 ? 'text-green-600' : (tier.variance ?? 0) < 0 ? 'text-red-600' : 'text-deep-navy-600'
                             )}>
-                              {tier.variance > 0 ? '+' : ''}{safeToFixed(tier.variance)}%
+                              {(tier.variance ?? 0) > 0 ? '+' : ''}{safeToFixed(tier.variance ?? 0)}%
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            {tier.requests.toLocaleString()}
+                            {(tier.requests ?? 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            ${tier.vendorCost.toLocaleString()}
+                            ${(tier.vendorCost ?? 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -385,19 +385,19 @@ function MarginTracking() {
                         <h3 className="font-semibold text-deep-navy-800 dark:text-white">
                           {provider.providerName}
                         </h3>
-                        <MarginBadge marginPercent={provider.marginPercent} />
+                        <MarginBadge marginPercent={provider.marginPercent ?? 0} />
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between text-body-sm">
                           <span className="text-deep-navy-700 dark:text-deep-navy-200">Requests:</span>
                           <span className="font-medium text-deep-navy-800 dark:text-white">
-                            {provider.requests.toLocaleString()}
+                            {(provider.requests ?? 0).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between text-body-sm">
                           <span className="text-deep-navy-700 dark:text-deep-navy-200">Cost:</span>
                           <span className="font-medium text-deep-navy-800 dark:text-white">
-                            ${provider.vendorCost.toLocaleString()}
+                            ${(provider.vendorCost ?? 0).toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -456,21 +456,21 @@ function MarginTracking() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            {model.requests.toLocaleString()}
+                            {(model.requests ?? 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            {safeToFixed(model.tokensMillions)}M
+                            {safeToFixed(model.tokensMillions ?? 0)}M
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-body text-deep-navy-700 dark:text-deep-navy-200">
-                            ${model.vendorCost.toLocaleString()}
+                            ${(model.vendorCost ?? 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <MarginBadge marginPercent={model.marginPercent} />
+                          <MarginBadge marginPercent={model.marginPercent ?? 0} />
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
@@ -507,11 +507,11 @@ function MarginTracking() {
                     <div key={tier.tier} className="bg-white dark:bg-deep-navy-800 rounded-md p-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-deep-navy-800 dark:text-white capitalize">
-                          {tier.tier.replace(/_/g, ' ')} tier margin {tier.variance < 0 ? 'below' : 'above'} target by{' '}
+                          {tier.tier.replace(/_/g, ' ')} tier margin {(tier.variance ?? 0) < 0 ? 'below' : 'above'} target by{' '}
                           {safeToFixed(Math.abs(tier.variance ?? 0))}%
                         </p>
                         <p className="text-caption text-deep-navy-700 dark:text-deep-navy-200">
-                          Current: {safeToFixed(tier.marginPercent)}% | Target: {safeToFixed(tier.targetMargin)}%
+                          Current: {safeToFixed(tier.marginPercent ?? 0)}% | Target: {safeToFixed(tier.targetMargin ?? 0)}%
                         </p>
                       </div>
                       <Button size="sm" variant="secondary">

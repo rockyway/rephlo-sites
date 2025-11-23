@@ -330,6 +330,41 @@ export const adminAPI = {
   },
 
   /**
+   * Full model update with atomic pricing record update
+   * @param modelId - Model ID to update
+   * @param updates - Full model updates (name, meta, reason)
+   * @returns Updated model information
+   *
+   * @example
+   * const updatedModel = await adminAPI.updateModel('gpt-5-chat', {
+   *   name: 'gpt-5-chat',
+   *   meta: {
+   *     displayName: 'GPT-5 Chat Updated',
+   *     description: 'Updated description',
+   *     inputCostPerMillionTokens: 125,  // $1.25 in cents
+   *     outputCostPerMillionTokens: 1000, // $10.00 in cents
+   *     creditsPer1kTokens: 5,
+   *   },
+   *   reason: 'Updated pricing for Q1 2025'
+   * });
+   */
+  updateModel: async (
+    modelId: string,
+    updates: {
+      name?: string;
+      meta?: Partial<ModelMeta>;
+      reason?: string;
+    }
+  ): Promise<ModelInfo> => {
+    const response = await apiClient.put<{
+      status: string;
+      message: string;
+      data: ModelInfo;
+    }>(`/admin/models/${modelId}`, updates);
+    return response.data.data;
+  },
+
+  /**
    * Create a new model
    * @param modelData - Complete model configuration
    * @returns Created model information

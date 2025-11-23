@@ -31,8 +31,11 @@ import {
   CreateModelRequest,
   MarkLegacyRequest,
   UpdateModelMetaRequest,
+  UpdateModelRequest,
   calculateCreditsPerKTokens,
+  calculateSeparateCreditsPerKTokens,
 } from '../types/model-meta';
+import { ModelVersionHistoryService } from './model-version-history.service';
 
 // =============================================================================
 // In-Memory Cache
@@ -78,7 +81,10 @@ const modelCache = new ModelCache();
 
 @injectable()
 export class ModelService implements IModelService {
-  constructor(@inject('PrismaClient') private prisma: PrismaClient) {
+  constructor(
+    @inject('PrismaClient') private prisma: PrismaClient,
+    @inject(ModelVersionHistoryService) private versionHistory: ModelVersionHistoryService
+  ) {
     logger.debug('ModelService: Initialized');
   }
 
@@ -198,7 +204,14 @@ export class ModelService implements IModelService {
           capabilities: meta?.capabilities ?? [],
           context_length: meta?.contextLength ?? 0,
           max_output_tokens: meta?.maxOutputTokens ?? 0,
+
+          // Phase 3: Separate input/output pricing
+          input_credits_per_k: meta?.inputCreditsPerK,
+          output_credits_per_k: meta?.outputCreditsPerK,
+
+          // DEPRECATED: Kept for backward compatibility
           credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+
           is_available: model.is_available,
           version: meta?.version ?? '',
           // Tier access fields from meta JSONB
@@ -298,7 +311,14 @@ export class ModelService implements IModelService {
       max_output_tokens: meta?.maxOutputTokens ?? 0,
       input_cost_per_million_tokens: meta?.inputCostPerMillionTokens ?? 0,
       output_cost_per_million_tokens: meta?.outputCostPerMillionTokens ?? 0,
+
+      // Phase 3: Separate input/output pricing
+      input_credits_per_k: meta?.inputCreditsPerK,
+      output_credits_per_k: meta?.outputCreditsPerK,
+
+      // DEPRECATED: Kept for backward compatibility
       credits_per_1k_tokens: meta?.creditsPer1kTokens ?? 0,
+
       is_available: model.is_available,
       is_deprecated: model.is_legacy, // Use is_legacy instead of deprecated isDeprecated
       version: meta?.version ?? '',
@@ -568,7 +588,28 @@ export class ModelService implements IModelService {
     // Validate meta JSONB
     const validatedMeta = validateModelMeta(data.meta);
 
-    // Auto-calculate creditsPer1kTokens if not reasonable
+    // Phase 3: Auto-calculate separate input/output credits
+    if (
+      !validatedMeta.inputCreditsPerK ||
+      !validatedMeta.outputCreditsPerK ||
+      validatedMeta.inputCreditsPerK <= 0 ||
+      validatedMeta.outputCreditsPerK <= 0
+    ) {
+      const separateCredits = calculateSeparateCreditsPerKTokens(
+        validatedMeta.inputCostPerMillionTokens,
+        validatedMeta.outputCostPerMillionTokens
+      );
+      validatedMeta.inputCreditsPerK = separateCredits.inputCreditsPerK;
+      validatedMeta.outputCreditsPerK = separateCredits.outputCreditsPerK;
+
+      logger.info('ModelService: Auto-calculated separate input/output credits', {
+        modelId: data.id,
+        inputCreditsPerK: separateCredits.inputCreditsPerK,
+        outputCreditsPerK: separateCredits.outputCreditsPerK,
+      });
+    }
+
+    // Auto-calculate creditsPer1kTokens for backward compatibility (DEPRECATED)
     if (
       !validatedMeta.creditsPer1kTokens ||
       validatedMeta.creditsPer1kTokens <= 0
@@ -577,7 +618,7 @@ export class ModelService implements IModelService {
         validatedMeta.inputCostPerMillionTokens,
         validatedMeta.outputCostPerMillionTokens
       );
-      logger.info('ModelService: Auto-calculated creditsPer1kTokens', {
+      logger.info('ModelService: Auto-calculated creditsPer1kTokens (deprecated)', {
         modelId: data.id,
         credits: validatedMeta.creditsPer1kTokens,
       });
@@ -592,7 +633,20 @@ export class ModelService implements IModelService {
       throw new Error(`Model with ID '${data.id}' already exists`);
     }
 
-    // Create model in database
+    // Step 1: Look up provider UUID
+    const provider = await this.prisma.providers.findUnique({
+      where: { name: data.provider },
+      select: { id: true },
+    });
+
+    if (!provider) {
+      throw new Error(
+        `Provider '${data.provider}' not found in providers table. ` +
+        `Please ensure the provider exists before creating models.`
+      );
+    }
+
+    // Step 2: Create model in database
     // Tier fields stored ONLY in meta JSONB (not in root columns)
     const model = await this.prisma.models.create({
       data: {
@@ -608,13 +662,43 @@ export class ModelService implements IModelService {
       },
     });
 
+    // Step 3: Create pricing record in model_provider_pricing table
+    // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+    // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+    const inputPricePer1k = validatedMeta.inputCostPerMillionTokens / 100 / 1000;
+    const outputPricePer1k = validatedMeta.outputCostPerMillionTokens / 100 / 1000;
+
+    logger.info('ModelService: Creating pricing record', {
+      modelId: model.id,
+      providerId: provider.id,
+      inputPricePer1k,
+      outputPricePer1k,
+    });
+
+    await this.prisma.model_provider_pricing.create({
+      data: {
+        provider_id: provider.id,
+        model_name: model.id,
+        input_price_per_1k: inputPricePer1k,
+        output_price_per_1k: outputPricePer1k,
+        cache_write_price_per_1k: null, // Plan 207: Cache write pricing (1.25x for Anthropic)
+        cache_read_price_per_1k: null, // Plan 207: Cache read pricing (0.1x for Anthropic)
+        effective_from: new Date(),
+        effective_until: null, // Active indefinitely
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+    });
+
     // Clear cache
     modelCache.clear();
 
     // Log audit trail (future: use dedicated audit log table)
-    logger.info('ModelService: Model created successfully', {
+    logger.info('ModelService: Model and pricing created successfully', {
       modelId: model.id,
       adminUserId,
+      pricingCreated: true,
     });
 
     // Return model details
@@ -873,6 +957,221 @@ export class ModelService implements IModelService {
   }
 
   /**
+   * Full model update with atomic pricing record update
+   * Updates model record AND pricing record in a single transaction
+   *
+   * @param modelId - Model ID to update
+   * @param updates - Partial model updates (name, meta)
+   * @param adminUserId - Admin user ID for audit logging
+   * @returns Updated model details
+   * @throws Error if model not found, validation fails, or transaction fails
+   */
+  async updateModel(
+    modelId: string,
+    updates: UpdateModelRequest,
+    adminUserId: string
+  ): Promise<ModelDetailsResponse> {
+    logger.info('ModelService: Updating model with full edit', {
+      modelId,
+      adminUserId,
+      hasNameUpdate: !!updates.name,
+      hasMetaUpdate: !!updates.meta,
+      reason: updates.reason,
+    });
+
+    // Step 1: Validate model exists and fetch current data
+    const existingModel = await this.prisma.models.findUnique({
+      where: { id: modelId },
+      select: {
+        id: true,
+        name: true,
+        provider: true,
+        meta: true,
+      },
+    });
+
+    if (!existingModel) {
+      throw new Error(`Model '${modelId}' not found`);
+    }
+
+    const currentMeta = validateModelMeta(existingModel.meta);
+
+    // Step 2: Merge meta updates
+    let newMeta = currentMeta;
+    if (updates.meta) {
+      newMeta = {
+        ...currentMeta,
+        ...updates.meta,
+      };
+
+      // Phase 3: Auto-calculate separate input/output credits if pricing changed
+      if (
+        (updates.meta.inputCostPerMillionTokens !== undefined ||
+          updates.meta.outputCostPerMillionTokens !== undefined) &&
+        (updates.meta.inputCreditsPerK === undefined ||
+          updates.meta.outputCreditsPerK === undefined)
+      ) {
+        const separateCredits = calculateSeparateCreditsPerKTokens(
+          newMeta.inputCostPerMillionTokens,
+          newMeta.outputCostPerMillionTokens
+        );
+        newMeta.inputCreditsPerK = separateCredits.inputCreditsPerK;
+        newMeta.outputCreditsPerK = separateCredits.outputCreditsPerK;
+
+        logger.info('ModelService: Auto-calculated separate input/output credits', {
+          modelId,
+          inputCreditsPerK: separateCredits.inputCreditsPerK,
+          outputCreditsPerK: separateCredits.outputCreditsPerK,
+        });
+      }
+
+      // Auto-calculate creditsPer1kTokens for backward compatibility (DEPRECATED)
+      if (
+        (updates.meta.inputCostPerMillionTokens !== undefined ||
+          updates.meta.outputCostPerMillionTokens !== undefined) &&
+        updates.meta.creditsPer1kTokens === undefined
+      ) {
+        newMeta.creditsPer1kTokens = calculateCreditsPerKTokens(
+          newMeta.inputCostPerMillionTokens,
+          newMeta.outputCostPerMillionTokens
+        );
+        logger.info('ModelService: Auto-calculated creditsPer1kTokens (deprecated)', {
+          modelId,
+          credits: newMeta.creditsPer1kTokens,
+        });
+      }
+
+      // Validate merged meta
+      newMeta = validateModelMeta(newMeta);
+    }
+
+    // Step 3: Detect pricing changes
+    const pricingChanged =
+      updates.meta?.inputCostPerMillionTokens !== undefined ||
+      updates.meta?.outputCostPerMillionTokens !== undefined;
+
+    // Step 4: Atomic transaction - Update model + pricing
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // Update model record
+        await tx.models.update({
+          where: { id: modelId },
+          data: {
+            name: updates.name ?? existingModel.name,
+            meta: newMeta as any,
+            updated_at: new Date(),
+          },
+        });
+
+        // Update pricing if pricing fields changed
+        if (pricingChanged) {
+          // Look up provider UUID
+          const provider = await tx.providers.findUnique({
+            where: { name: existingModel.provider },
+            select: { id: true },
+          });
+
+          if (!provider) {
+            throw new Error(
+              `Provider '${existingModel.provider}' not found in providers table`
+            );
+          }
+
+          // Convert per-million pricing (in cents) to per-1k pricing (in dollars)
+          // Formula: (cents per 1M tokens) / 100 (cents→dollars) / 1000 (1M→1K) = dollars per 1K tokens
+          const inputPricePer1k = newMeta.inputCostPerMillionTokens / 100 / 1000;
+          const outputPricePer1k = newMeta.outputCostPerMillionTokens / 100 / 1000;
+
+          logger.info('ModelService: Updating pricing record', {
+            modelId,
+            providerId: provider.id,
+            inputPricePer1k,
+            outputPricePer1k,
+          });
+
+          // Update existing pricing record
+          await tx.model_provider_pricing.updateMany({
+            where: {
+              provider_id: provider.id,
+              model_name: modelId,
+              is_active: true,
+            },
+            data: {
+              input_price_per_1k: inputPricePer1k,
+              output_price_per_1k: outputPricePer1k,
+              updated_at: new Date(),
+            },
+          });
+        }
+
+        logger.info('ModelService: Model updated successfully in transaction', {
+          modelId,
+          pricingUpdated: pricingChanged,
+        });
+      });
+    } catch (error) {
+      logger.error('ModelService: Failed to update model', {
+        modelId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw new Error(
+        `Failed to update model '${modelId}': ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+
+    // Step 5: Create version history entry
+    const previousState = {
+      id: existingModel.id,
+      name: existingModel.name,
+      provider: existingModel.provider,
+      meta: currentMeta,
+    };
+
+    const newState = {
+      id: modelId,
+      name: updates.name ?? existingModel.name,
+      provider: existingModel.provider,
+      meta: newMeta,
+    };
+
+    try {
+      await this.versionHistory.createVersionEntry({
+        model_id: modelId,
+        changed_by: adminUserId,
+        change_type: 'update',
+        change_reason: updates.reason,
+        previous_state: previousState,
+        new_state: newState,
+      });
+
+      logger.info('ModelService: Version history entry created', {
+        modelId,
+        adminUserId,
+      });
+    } catch (error) {
+      // Log error but don't fail the update
+      logger.error('ModelService: Failed to create version history entry', {
+        modelId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+
+    // Step 6: Clear cache
+    modelCache.clear();
+
+    // Step 7: Audit log
+    logger.info('ModelService: Model fully updated', {
+      modelId,
+      adminUserId,
+      reason: updates.reason,
+      pricingUpdated: pricingChanged,
+    });
+
+    // Return updated model details
+    return this.getModelDetails(modelId);
+  }
+
+  /**
    * Get all legacy models
    * Returns models where isLegacy = true
    *
@@ -985,6 +1284,9 @@ export class ModelService implements IModelService {
  * Create model service instance
  * Factory function to create service with Prisma client
  */
-export function createModelService(prisma: PrismaClient): ModelService {
-  return new ModelService(prisma);
+export function createModelService(
+  prisma: PrismaClient,
+  versionHistory: ModelVersionHistoryService
+): ModelService {
+  return new ModelService(prisma, versionHistory);
 }

@@ -99,7 +99,9 @@ interface MarginBadgeProps {
 }
 
 export function MarginBadge({ marginPercent, targetMargin, size = 'md' }: MarginBadgeProps) {
-  const variance = targetMargin !== undefined ? marginPercent - targetMargin : 0;
+  // Ensure marginPercent is a valid number
+  const safeMarginPercent = marginPercent ?? 0;
+  const variance = targetMargin !== undefined ? safeMarginPercent - targetMargin : 0;
 
   // Determine color based on variance (with dark mode support)
   let colorClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
@@ -118,7 +120,7 @@ export function MarginBadge({ marginPercent, targetMargin, size = 'md' }: Margin
   return (
     <div className="flex items-center gap-2">
       <span className={cn('rounded-full font-medium', colorClass, sizeClasses[size])}>
-        {marginPercent.toFixed(1)}%
+        {safeMarginPercent.toFixed(1)}%
       </span>
       {targetMargin !== undefined && variance !== 0 && (
         <span className="flex items-center gap-0.5 text-caption text-deep-navy-700">
@@ -260,7 +262,7 @@ export function PricingConfigForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
-  tiers = ['free', 'pro', 'pro_max', 'enterprise_pro', 'enterprise_max'],
+  tiers = ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
   providers = [],
   models = [],
 }: PricingConfigFormProps) {
