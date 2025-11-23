@@ -146,7 +146,7 @@ export class CreditsController {
         id: item.id,
         modelId: item.model_id,
         operation: item.request_type,
-        creditsUsed: item.credits_deducted,
+        creditsUsed: parseFloat(item.credits_deducted.toString()),
         inputTokens: item.input_tokens,
         outputTokens: item.output_tokens,
         totalTokens: item.input_tokens + item.output_tokens,

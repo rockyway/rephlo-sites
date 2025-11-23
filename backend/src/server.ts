@@ -61,6 +61,20 @@ const startServer = async (): Promise<void> => {
     await prisma.$connect();
     logger.info('Server: Database connected successfully');
 
+    // Load credit increment setting (Plan 208: Fractional Credit System)
+    logger.info('Server: Loading credit increment setting...');
+    try {
+      const { CreditDeductionService } = await import('./services/credit-deduction.service');
+      const creditDeductionService = container.resolve(CreditDeductionService);
+      await creditDeductionService.loadCreditIncrementSetting();
+      logger.info('Server: Credit increment setting loaded successfully');
+    } catch (error) {
+      logger.warn('Server: Failed to load credit increment setting, using default', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Continue with default value (0.1) - non-critical error
+    }
+
     // Create Express app with OIDC provider
     logger.info('Server: Creating Express application...');
     const app = await createApp();

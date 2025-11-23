@@ -60,7 +60,7 @@ export function mapUserToApiType(
     isActive: dbUser.is_active,
     currentTier:
       (dbUser.subscription_monetization[0]?.tier as SubscriptionTier) || SubscriptionTier.FREE,
-    creditsBalance: dbUser.user_credit_balance?.amount || 0,
+    creditsBalance: dbUser.user_credit_balance?.amount ? parseFloat(dbUser.user_credit_balance.amount.toString()) : 0,
     createdAt: dbUser.created_at.toISOString(),
     lastActiveAt: dbUser.last_login_at?.toISOString() || null,
     deactivatedAt: dbUser.deactivated_at?.toISOString() || null,
@@ -617,12 +617,12 @@ export function mapTokenUsageToApiType(
     creditValueUsd: decimalToNumber(dbUsage.credit_value_usd),
 
     // Phase 3: Separate input/output pricing
-    inputCredits: dbUsage.input_credits,
-    outputCredits: dbUsage.output_credits,
-    totalCredits: dbUsage.total_credits,
+    inputCredits: dbUsage.input_credits ? parseFloat(dbUsage.input_credits.toString()) : null,
+    outputCredits: dbUsage.output_credits ? parseFloat(dbUsage.output_credits.toString()) : null,
+    totalCredits: dbUsage.total_credits ? parseFloat(dbUsage.total_credits.toString()) : null,
 
-    // DEPRECATED: Kept for backward compatibility
-    creditsDeducted: dbUsage.credits_deducted,
+    // DEPRECATED: Kept for backward compatibility (Plan 208: Handle Decimal)
+    creditsDeducted: parseFloat(dbUsage.credits_deducted.toString()),
 
     requestType: dbUsage.request_type,
     streamingSegments: dbUsage.streaming_segments,

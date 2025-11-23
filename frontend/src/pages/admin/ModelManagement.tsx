@@ -88,6 +88,7 @@ function ModelManagement() {
 
   // Add Model dialog state
   const [addModelDialogOpen, setAddModelDialogOpen] = useState(false);
+  const [addModelError, setAddModelError] = useState<string | null>(null);
 
   // Version history dialog state
   const [versionHistoryModelId, setVersionHistoryModelId] = useState<string | null>(null);
@@ -288,10 +289,12 @@ function ModelManagement() {
   const handleAddModelConfirm = async (modelData: any) => {
     try {
       setIsSaving(true);
+      setAddModelError(null); // Clear previous errors
       await adminAPI.createModel(modelData);
       setSuccessMessage(`Successfully created model '${modelData.meta.displayName || modelData.name}'`);
       setTimeout(() => setSuccessMessage(null), 3000);
       setAddModelDialogOpen(false);
+      setAddModelError(null); // Clear error on success
       loadModels();
       loadAuditLogs();
     } catch (err: any) {
@@ -317,8 +320,7 @@ function ModelManagement() {
         errorMessage = err.response.data.message;
       }
 
-      setError(errorMessage);
-      setTimeout(() => setError(null), 8000); // Longer timeout for detailed errors
+      setAddModelError(errorMessage); // Set error in dialog instead of main page
     } finally {
       setIsSaving(false);
     }
@@ -745,8 +747,12 @@ function ModelManagement() {
       <AddModelDialog
         isOpen={addModelDialogOpen}
         onConfirm={handleAddModelConfirm}
-        onCancel={() => setAddModelDialogOpen(false)}
+        onCancel={() => {
+          setAddModelDialogOpen(false);
+          setAddModelError(null); // Clear error when dialog is closed
+        }}
         isSaving={isSaving}
+        error={addModelError}
       />
 
       {/* Full Edit Dialog */}

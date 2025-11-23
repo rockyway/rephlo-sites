@@ -298,9 +298,9 @@ model credit_allocation {
 model credit_deduction_ledger {
   id                                                                                 String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id                                                                            String                  @db.Uuid
-  amount                                                                             Int
-  balance_before                                                                     Int
-  balance_after                                                                      Int
+  amount                                                                             Decimal                 @db.Decimal(12, 2)
+  balance_before                                                                     Decimal                 @db.Decimal(12, 2)
+  balance_after                                                                      Decimal                 @db.Decimal(12, 2)
   request_id                                                                         String?                 @unique @db.Uuid
   token_vendor_cost                                                                  Decimal?                @db.Decimal(10, 8)
   margin_multiplier                                                                  Decimal?                @db.Decimal(4, 2)
@@ -328,8 +328,8 @@ model credit_usage_daily_summary {
   user_id             String   @db.Uuid
   date                DateTime @db.Date
   credits_allocated   Int      @default(0)
-  credits_deducted    Int      @default(0)
-  credits_balance_eod Int
+  credits_deducted    Decimal  @default(0) @db.Decimal(12, 2)
+  credits_balance_eod Decimal  @db.Decimal(12, 2)
   created_at          DateTime @default(now())
   users               users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -1033,6 +1033,24 @@ model subscription_tier_config {
   @@map("subscription_tier_config")
 }
 
+/// Plan 208: System-wide configuration settings
+/// Stores application-level settings such as credit_minimum_increment
+model system_settings {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key          String   @unique @db.VarChar(100)
+  value        String   @db.Text
+  value_type   String   @default("string") @db.VarChar(20) // 'string', 'number', 'decimal', 'boolean', 'json'
+  description  String?  @db.Text
+  category     String   @default("general") @db.VarChar(50) // 'billing', 'security', 'feature_flags', etc.
+  is_public    Boolean  @default(false) // Whether to expose via public API
+  is_encrypted Boolean  @default(false) // For sensitive values
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
+
+  @@index([category])
+  @@index([key])
+}
+
 // Plan 190: Tier Credit Management - Configuration change history
 model tier_config_history {
   id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1139,18 +1157,18 @@ model token_usage_ledger {
   credit_value_usd  Decimal @db.Decimal(10, 8)
 
   // Phase 3: Separate input/output pricing - NEW fields
-  input_credits  Int? @map("input_credits")
-  output_credits Int? @map("output_credits")
-  total_credits  Int? @map("total_credits")
+  input_credits  Decimal? @map("input_credits") @db.Decimal(12, 2)
+  output_credits Decimal? @map("output_credits") @db.Decimal(12, 2)
+  total_credits  Decimal? @map("total_credits") @db.Decimal(12, 2)
 
   // Plan 207: Prompt Caching - Detailed credit breakdown
   /// Credits charged for cache write operations
-  cache_write_credits Int? @map("cache_write_credits")
+  cache_write_credits Decimal? @map("cache_write_credits") @db.Decimal(12, 2)
   /// Credits charged for cache read operations
-  cache_read_credits  Int? @map("cache_read_credits")
+  cache_read_credits  Decimal? @map("cache_read_credits") @db.Decimal(12, 2)
 
-  // DEPRECATED: Will be removed in future version after migration
-  credits_deducted Int
+  // Plan 208: Fractional credits - Primary credit deduction field
+  credits_deducted Decimal @db.Decimal(12, 2)
 
   request_type                                                                            request_type
   streaming_segments                                                                      Int?
@@ -1187,9 +1205,9 @@ model token_usage_ledger {
 model user_credit_balance {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id               String    @unique @db.Uuid
-  amount                Int       @default(0)
+  amount                Decimal   @default(0) @db.Decimal(12, 2)
   last_deduction_at     DateTime?
-  last_deduction_amount Int?
+  last_deduction_amount Decimal?  @db.Decimal(12, 2)
   updated_at            DateTime
   created_at            DateTime  @default(now())
   users                 users     @relation(fields: [user_id], references: [id], onDelete: Cascade)

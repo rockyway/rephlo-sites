@@ -1,4 +1,4 @@
-import { token_usage_ledger } from '@prisma/client';
+import { token_usage_ledger, Prisma } from '@prisma/client';
 import {
   IUsageService,
   RecordUsageInput,
@@ -26,7 +26,7 @@ export class MockUsageService implements IUsageService {
       vendor_cost: data.vendorCost as any,
       margin_multiplier: data.marginMultiplier as any,
       credit_value_usd: data.creditValueUsd as any,
-      credits_deducted: data.creditsDeducted,
+      credits_deducted: new Prisma.Decimal(data.creditsDeducted),
       request_type: data.requestType as any,
       streaming_segments: data.streamingSegments || null,
       request_started_at: data.requestStartedAt,
@@ -84,7 +84,7 @@ export class MockUsageService implements IUsageService {
 
     // Calculate summary
     const summary = {
-      totalCreditsUsed: filtered.reduce((sum, u) => sum + u.credits_deducted, 0),
+      totalCreditsUsed: filtered.reduce((sum, u) => sum + parseFloat(u.credits_deducted.toString()), 0),
       totalRequests: filtered.length,
       totalTokens: filtered.reduce((sum, u) => sum + u.input_tokens + u.output_tokens, 0),
     };
@@ -119,7 +119,7 @@ export class MockUsageService implements IUsageService {
     // Group by specified dimension
     const stats: UsageStatsItem[] = [];
     const total = {
-      creditsUsed: filtered.reduce((sum, u) => sum + u.credits_deducted, 0),
+      creditsUsed: filtered.reduce((sum, u) => sum + parseFloat(u.credits_deducted.toString()), 0),
       requestsCount: filtered.length,
       tokensTotal: filtered.reduce((sum, u) => sum + u.input_tokens + u.output_tokens, 0),
       averageDurationMs:
@@ -162,13 +162,13 @@ export class MockUsageService implements IUsageService {
       }
       byModel[usage.model_id].requests++;
       byModel[usage.model_id].tokens += usage.input_tokens + usage.output_tokens;
-      byModel[usage.model_id].credits += usage.credits_deducted;
+      byModel[usage.model_id].credits += parseFloat(usage.credits_deducted.toString());
     });
 
     return {
       totalRequests: userUsage.length,
       totalTokens: userUsage.reduce((sum, u) => sum + u.input_tokens + u.output_tokens, 0),
-      totalCredits: userUsage.reduce((sum, u) => sum + u.credits_deducted, 0),
+      totalCredits: userUsage.reduce((sum, u) => sum + parseFloat(u.credits_deducted.toString()), 0),
       byModel,
     };
   }

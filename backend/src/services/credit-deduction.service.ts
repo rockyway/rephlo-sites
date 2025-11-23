@@ -31,8 +31,149 @@ export class InsufficientCreditsError extends Error {
 
 @injectable()
 export class CreditDeductionService implements ICreditDeductionService {
+  // Global static cache for minimum credit increment (Plan 208)
+  // Loaded from system_settings table on service initialization
+  // Default: 0.1 credits = $0.001 per increment
+  private static creditMinimumIncrement: number = 0.1;
+  private static lastSettingsUpdate: Date = new Date(0); // Epoch time
+
   constructor(@inject('PrismaClient') private readonly prisma: PrismaClient) {
     logger.debug('CreditDeductionService: Initialized');
+  }
+
+  /**
+   * Load credit minimum increment from database
+   * Called on service initialization and when settings change
+   * Plan 208: Configurable credit increment system
+   */
+  async loadCreditIncrementSetting(): Promise<void> {
+    try {
+      const setting = await this.prisma.$queryRaw<any[]>`
+        SELECT value FROM system_settings WHERE key = 'credit_minimum_increment'
+      `;
+
+      if (setting && setting.length > 0) {
+        CreditDeductionService.creditMinimumIncrement = parseFloat(setting[0].value);
+        CreditDeductionService.lastSettingsUpdate = new Date();
+        logger.info('CreditDeductionService: Credit minimum increment loaded', {
+          increment: CreditDeductionService.creditMinimumIncrement,
+          lastUpdate: CreditDeductionService.lastSettingsUpdate,
+        });
+      } else {
+        logger.warn('CreditDeductionService: Credit increment setting not found, using default', {
+          defaultIncrement: CreditDeductionService.creditMinimumIncrement,
+        });
+      }
+    } catch (error) {
+      logger.error('CreditDeductionService: Error loading credit increment setting', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Keep using default value on error
+    }
+  }
+
+  /**
+   * Get current credit minimum increment (cached, no DB read)
+   * Plan 208: Global static cache to avoid DB reads on every calculation
+   * Public for admin controller access
+   */
+  getCreditIncrement(): number {
+    return CreditDeductionService.creditMinimumIncrement;
+  }
+
+  /**
+   * Helper method: Calculate credits to deduct with configurable increment
+   * Plan 208: Uses dynamic increment from cache
+   *
+   * Formula:
+   * - divisor = increment * $0.01 per credit
+   * - creditsToDeduct = ceil(costWithMultiplier / divisor) * increment
+   *
+   * Examples:
+   * - increment=0.1: Math.ceil(0.000246 / 0.001) * 0.1 = 1 * 0.1 = 0.1 credits
+   * - increment=0.01: Math.ceil(0.000246 / 0.0001) * 0.01 = 3 * 0.01 = 0.03 credits
+   * - increment=1.0: Math.ceil(0.000246 / 0.01) * 1.0 = 1 * 1.0 = 1.0 credits
+   */
+  private calculateCreditsToDeduct(costWithMultiplier: number): number {
+    const increment = this.getCreditIncrement(); // Cached, no DB read
+    const divisor = increment * 0.01;
+    const result = Math.ceil(costWithMultiplier / divisor) * increment;
+
+    logger.debug('CreditDeductionService: Calculate credits to deduct', {
+      costWithMultiplier,
+      increment,
+      divisor,
+      result,
+    });
+
+    return result;
+  }
+
+  /**
+   * Public wrapper for calculateCreditsToDeduct
+   * Allows other services (e.g., llm.service) to use configurable credit rounding
+   * Plan 208: Expose credit calculation to external services
+   *
+   * @param vendorCost - Vendor cost in USD
+   * @param marginMultiplier - Margin multiplier (e.g., 1.5)
+   * @returns Credits to deduct (rounded to configurable increment)
+   */
+  calculateCreditsFromCost(vendorCost: number, marginMultiplier: number): number {
+    const costWithMultiplier = vendorCost * marginMultiplier;
+    return this.calculateCreditsToDeduct(costWithMultiplier);
+  }
+
+  /**
+   * Admin endpoint to update credit increment
+   * Triggers cache refresh
+   * Plan 208: Administrator can adjust without code changes
+   *
+   * @param newIncrement - Must be 0.01, 0.1, or 1.0
+   */
+  async updateCreditIncrement(newIncrement: number): Promise<void> {
+    // Validate increment (must be 0.01, 0.1, or 1.0)
+    const validIncrements = [0.01, 0.1, 1.0];
+    if (!validIncrements.includes(newIncrement)) {
+      throw new Error('Invalid credit increment. Allowed: 0.01, 0.1, 1.0');
+    }
+
+    logger.info('CreditDeductionService: Updating credit increment', {
+      oldIncrement: CreditDeductionService.creditMinimumIncrement,
+      newIncrement,
+    });
+
+    try {
+      // Upsert setting in database
+      await this.prisma.$executeRaw`
+        INSERT INTO system_settings (key, value, value_type, description, category, is_public, updated_at)
+        VALUES (
+          'credit_minimum_increment',
+          ${newIncrement.toString()},
+          'decimal',
+          'Minimum credit increment for credit deduction rounding (e.g., 0.1 = $0.001 per increment)',
+          'billing',
+          false,
+          NOW()
+        )
+        ON CONFLICT (key)
+        DO UPDATE SET
+          value = ${newIncrement.toString()},
+          updated_at = NOW()
+      `;
+
+      // Refresh cache
+      await this.loadCreditIncrementSetting();
+
+      logger.info('CreditDeductionService: Credit minimum increment updated successfully', {
+        newIncrement: CreditDeductionService.creditMinimumIncrement,
+      });
+    } catch (error) {
+      logger.error('CreditDeductionService: Error updating credit increment', {
+        error: error instanceof Error ? error.message : String(error),
+        newIncrement,
+      });
+      throw new Error('Failed to update credit increment setting');
+    }
   }
 
   /**
@@ -99,7 +240,9 @@ export class CreditDeductionService implements ICreditDeductionService {
       const marginMultiplier = 1.5; // Conservative default
 
       // Apply formula with 10% safety margin
-      const estimatedCredits = Math.ceil(vendorCost * marginMultiplier * 100 * 1.1);
+      // Plan 208: Use configurable increment instead of fixed rounding
+      const costWithMultiplier = vendorCost * marginMultiplier * 1.1; // 10% safety margin
+      const estimatedCredits = this.calculateCreditsToDeduct(costWithMultiplier);
 
       logger.debug('CreditDeductionService: Estimated credits', {
         userId,
@@ -228,7 +371,8 @@ export class CreditDeductionService implements ICreditDeductionService {
           let balanceExists = balanceRecords && balanceRecords.length > 0;
 
           if (balanceExists) {
-            currentBalance = parseInt(balanceRecords[0].amount) || 0;
+            // Plan 208: Use parseFloat for Decimal credit values
+            currentBalance = parseFloat(balanceRecords[0].amount) || 0;
           }
 
           logger.debug('CreditDeductionService: Balance check', {
@@ -374,6 +518,7 @@ export class CreditDeductionService implements ICreditDeductionService {
               total_credits = token_usage_daily_summary.total_credits + ${creditsToDeduct}
           `;
 
+          // Plan 208: Add rounded values for UI display
           return {
             success: true,
             balanceBefore: currentBalance,
@@ -381,6 +526,9 @@ export class CreditDeductionService implements ICreditDeductionService {
             creditsDeducted: creditsToDeduct,
             deductionRecordId,
             timestamp: new Date(),
+            balanceBeforeRounded: Math.round(currentBalance),
+            balanceAfterRounded: Math.round(newBalance),
+            creditsDeductedRounded: Math.round(creditsToDeduct),
           };
         },
         {
@@ -505,7 +653,8 @@ export class CreditDeductionService implements ICreditDeductionService {
         return 0;
       }
 
-      return parseInt(balances[0].amount) || 0;
+      // Plan 208: Use parseFloat for Decimal credit values
+      return parseFloat(balances[0].amount) || 0;
     } catch (error) {
       logger.error('CreditDeductionService: Error getting current balance', {
         error: error instanceof Error ? error.message : String(error),
@@ -539,12 +688,13 @@ export class CreditDeductionService implements ICreditDeductionService {
   }
 
   private mapToDeductionRecord(record: any): CreditDeductionRecord {
+    // Plan 208: Use parseFloat for all Decimal credit fields
     return {
       id: record.id,
       userId: record.user_id,
-      amount: parseInt(record.amount),
-      balanceBefore: parseInt(record.balance_before),
-      balanceAfter: parseInt(record.balance_after),
+      amount: parseFloat(record.amount),
+      balanceBefore: parseFloat(record.balance_before),
+      balanceAfter: parseFloat(record.balance_after),
       requestId: record.request_id,
       tokenVendorCost: record.token_vendor_cost ? parseFloat(record.token_vendor_cost) : undefined,
       marginMultiplier: record.margin_multiplier ? parseFloat(record.margin_multiplier) : undefined,
