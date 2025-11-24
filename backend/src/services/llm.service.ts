@@ -767,21 +767,18 @@ export class LLMService {
       });
 
       // 1. Delegate to provider with transformed request
-      const totalTokens = await provider.streamChatCompletion(transformedRequest, res);
+      const usageData = await provider.streamChatCompletion(transformedRequest, res);
 
       // 2. Business logic (credit calculation using Plan 161 provider pricing)
-      // Note: Streaming providers only return totalTokens, so we estimate the breakdown
-      // Assume 30% are prompt tokens, 70% are completion tokens (typical for chat)
+      // Use actual token counts from provider (accurate from stream_options)
       const duration = Date.now() - startTime;
-      const estimatedPromptTokens = Math.ceil(totalTokens * 0.3);
-      const estimatedCompletionTokens = Math.ceil(totalTokens * 0.7);
 
       const pricingData = await this.calculateCreditsFromVendorCost(
         userId,
         request.model,
         modelProvider,
-        estimatedPromptTokens,
-        estimatedCompletionTokens
+        usageData.promptTokens,
+        usageData.completionTokens
       );
 
       // 3. Deduct credits atomically with token usage record
@@ -793,10 +790,10 @@ export class LLMService {
         userId,
         modelId: request.model,
         providerId: pricingData.providerId,
-        inputTokens: estimatedPromptTokens,
-        outputTokens: estimatedCompletionTokens,
-        cachedInputTokens: 0,
-        totalTokens: totalTokens,
+        inputTokens: usageData.promptTokens,
+        outputTokens: usageData.completionTokens,
+        cachedInputTokens: usageData.cachedPromptTokens || usageData.cacheReadInputTokens || 0,
+        totalTokens: usageData.totalTokens,
         vendorCost: pricingData.vendorCost,
         creditDeducted: pricingData.credits,
         marginMultiplier: pricingData.marginMultiplier,
@@ -829,7 +826,7 @@ export class LLMService {
         provider: modelProvider,
         userId,
         duration,
-        tokens: totalTokens,
+        tokens: usageData.totalTokens,
         estimatedCredits,
         actualCredits: pricingData.credits,
         vendorCost: pricingData.vendorCost,
@@ -847,9 +844,9 @@ export class LLMService {
         model: request.model,
         choices: [],
         usage: {
-          promptTokens: estimatedPromptTokens,
-          completionTokens: estimatedCompletionTokens,
-          totalTokens: totalTokens,
+          promptTokens: usageData.promptTokens,
+          completionTokens: usageData.completionTokens,
+          totalTokens: usageData.totalTokens,
           creditsUsed: pricingData.credits,
           credits: {
             deducted: pricingData.credits,
@@ -1121,20 +1118,17 @@ export class LLMService {
       // LLM API CALL (only executes if credits sufficient)
       // ============================================================================
 
-      const totalTokens = await provider.streamTextCompletion(request, res);
+      const usageData = await provider.streamTextCompletion(request, res);
 
-      // Note: Streaming providers only return totalTokens, so we estimate the breakdown
-      // Assume 30% are prompt tokens, 70% are completion tokens
+      // Use actual token counts from provider
       const duration = Date.now() - startTime;
-      const estimatedPromptTokens = Math.ceil(totalTokens * 0.3);
-      const estimatedCompletionTokens = Math.ceil(totalTokens * 0.7);
 
       const pricingData = await this.calculateCreditsFromVendorCost(
         userId,
         request.model,
         modelProvider,
-        estimatedPromptTokens,
-        estimatedCompletionTokens
+        usageData.promptTokens,
+        usageData.completionTokens
       );
 
       // Deduct credits atomically with token usage record
@@ -1146,10 +1140,10 @@ export class LLMService {
         userId,
         modelId: request.model,
         providerId: pricingData.providerId,
-        inputTokens: estimatedPromptTokens,
-        outputTokens: estimatedCompletionTokens,
-        cachedInputTokens: 0,
-        totalTokens: totalTokens,
+        inputTokens: usageData.promptTokens,
+        outputTokens: usageData.completionTokens,
+        cachedInputTokens: usageData.cachedPromptTokens || usageData.cacheReadInputTokens || 0,
+        totalTokens: usageData.totalTokens,
         vendorCost: pricingData.vendorCost,
         creditDeducted: pricingData.credits,
         marginMultiplier: pricingData.marginMultiplier,
@@ -1179,7 +1173,7 @@ export class LLMService {
         provider: modelProvider,
         userId,
         duration,
-        tokens: totalTokens,
+        tokens: usageData.totalTokens,
         estimatedCredits,
         actualCredits: pricingData.credits,
         vendorCost: pricingData.vendorCost,
@@ -1202,9 +1196,9 @@ export class LLMService {
       const finalChunkWithUsage = {
         ...finalChunk,
         usage: {
-          promptTokens: estimatedPromptTokens,
-          completionTokens: estimatedCompletionTokens,
-          totalTokens: totalTokens,
+          promptTokens: usageData.promptTokens,
+          completionTokens: usageData.completionTokens,
+          totalTokens: usageData.totalTokens,
           creditsUsed: pricingData.credits,
           credits: {
             deducted: pricingData.credits,

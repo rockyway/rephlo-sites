@@ -113,7 +113,7 @@ export class GoogleProvider implements ILLMProvider {
   async streamChatCompletion(
     request: ChatCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('Google AI client not initialized');
     }
@@ -134,10 +134,16 @@ export class GoogleProvider implements ILLMProvider {
 
     let completionText = '';
     let isFirstChunk = true;
+    let usageMetadata: any = null;
 
     for await (const chunk of result.stream) {
       const chunkText = chunk.text();
       completionText += chunkText;
+
+      // Capture usage metadata from the final chunk
+      if (chunk.usageMetadata) {
+        usageMetadata = chunk.usageMetadata;
+      }
 
       const chunkData: ChatCompletionChunk = {
         id: `google-${Date.now()}`,
@@ -159,9 +165,43 @@ export class GoogleProvider implements ILLMProvider {
       isFirstChunk = false;
     }
 
-    const promptText = request.messages.map((m) => m.content).join(' ');
-    const totalTokens = Math.ceil((promptText.length + completionText.length) / 4);
-    return totalTokens;
+    // Use actual token counts from usageMetadata if available, otherwise estimate
+    let promptTokens: number;
+    let candidatesTokens: number;
+    let totalTokens: number;
+
+    if (usageMetadata) {
+      // Use actual usage metadata from the final chunk
+      promptTokens = usageMetadata.promptTokenCount || 0;
+      candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+      totalTokens = usageMetadata.totalTokenCount || (promptTokens + candidatesTokens);
+
+      logger.debug('GoogleProvider: Actual token usage from API', {
+        promptTokens,
+        candidatesTokens,
+        totalTokens,
+        cachedTokens: usageMetadata.cachedContentTokenCount || 0,
+      });
+    } else {
+      // Fallback estimation (should rarely happen)
+      const promptText = request.messages.map((m) => m.content).join(' ');
+      promptTokens = Math.ceil(promptText.length / 4);
+      candidatesTokens = Math.ceil(completionText.length / 4);
+      totalTokens = promptTokens + candidatesTokens;
+
+      logger.warn('GoogleProvider: Using estimated token counts (no usageMetadata in stream)', {
+        promptTokens,
+        candidatesTokens,
+        totalTokens,
+      });
+    }
+
+    return {
+      promptTokens,
+      completionTokens: candidatesTokens,
+      totalTokens,
+      cachedTokens: usageMetadata?.cachedContentTokenCount,
+    };
   }
 
   // ============================================================================
@@ -225,7 +265,7 @@ export class GoogleProvider implements ILLMProvider {
   async streamTextCompletion(
     request: TextCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('Google AI client not initialized');
     }
@@ -234,9 +274,16 @@ export class GoogleProvider implements ILLMProvider {
     const result = await model.generateContentStream(request.prompt);
 
     let completionText = '';
+    let usageMetadata: any = null;
+
     for await (const chunk of result.stream) {
       const chunkText = chunk.text();
       completionText += chunkText;
+
+      // Capture usage metadata from the final chunk
+      if (chunk.usageMetadata) {
+        usageMetadata = chunk.usageMetadata;
+      }
 
       const chunkData: TextCompletionChunk = {
         id: `google-${Date.now()}`,
@@ -254,7 +301,41 @@ export class GoogleProvider implements ILLMProvider {
       res.write(`data: ${JSON.stringify(chunkData)}\n\n`);
     }
 
-    const totalTokens = Math.ceil((request.prompt.length + completionText.length) / 4);
-    return totalTokens;
+    // Use actual token counts from usageMetadata if available, otherwise estimate
+    let promptTokens: number;
+    let candidatesTokens: number;
+    let totalTokens: number;
+
+    if (usageMetadata) {
+      // Use actual usage metadata from the final chunk
+      promptTokens = usageMetadata.promptTokenCount || 0;
+      candidatesTokens = usageMetadata.candidatesTokenCount || 0;
+      totalTokens = usageMetadata.totalTokenCount || (promptTokens + candidatesTokens);
+
+      logger.debug('GoogleProvider: Actual token usage from API (text completion)', {
+        promptTokens,
+        candidatesTokens,
+        totalTokens,
+        cachedTokens: usageMetadata.cachedContentTokenCount || 0,
+      });
+    } else {
+      // Fallback estimation (should rarely happen)
+      promptTokens = Math.ceil(request.prompt.length / 4);
+      candidatesTokens = Math.ceil(completionText.length / 4);
+      totalTokens = promptTokens + candidatesTokens;
+
+      logger.warn('GoogleProvider: Using estimated token counts (no usageMetadata in stream)', {
+        promptTokens,
+        candidatesTokens,
+        totalTokens,
+      });
+    }
+
+    return {
+      promptTokens,
+      completionTokens: candidatesTokens,
+      totalTokens,
+      cachedTokens: usageMetadata?.cachedContentTokenCount,
+    };
   }
 }

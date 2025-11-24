@@ -2790,3 +2790,23 @@ Created comprehensive test suite for fractional credit system with configurable 
 3. Manual testing of production migration scripts
 4. Performance benchmarking
 
+
+
+2025-11-24: Fixed gpt-5-nano streaming error
+- Issue: gpt-5-nano model was failing with streaming chat completion errors
+- Root cause: gpt-5-nano has same temperature restrictions as gpt-5-mini (only supports temperature=1.0), but was not in the restricted models list
+- Fix: Added 'gpt-5-nano' to hasRestrictedTemperature() in both openai.provider.ts and azure-openai.provider.ts
+- Result: gpt-5-nano now skips temperature/top_p parameters like gpt-5-mini, preventing Azure API rejection
+- Files modified: backend/src/providers/openai.provider.ts (line 88), backend/src/providers/azure-openai.provider.ts (lines 57-58, 68)
+
+2025-11-24 12:34:20 - Investigated token count discrepancy for gpt-5-chat model. Found critical bug: Azure OpenAI returns correct token counts (14,317 input / 511 output), but database stores corrupted values (4,449 input / 10,380 output). Total is approximately correct but input/output split is completely wrong. This results in 476% overcharging (/usr/bin/bash.109 vs expected /usr/bin/bash.023). Issue appears to be recurring. Created diagnostic script backend/scripts/check-model-meta.js.
+
+
+[2025-11-24 13:47:02] Token Count Corruption Fix - Implementation Complete
+- Fixed streaming methods to return full LLMUsageData instead of just totalTokens number
+- Updated all 4 providers (OpenAI, Azure OpenAI, Anthropic, Google) + mock providers
+- Fixed LLM service to use actual token counts instead of 30/70 estimation
+- Build: SUCCESS (0 TypeScript errors)
+- Status: Code complete, awaiting manual testing with valid OIDC token
+- See: backend/TEST_INSTRUCTIONS.md for testing steps
+

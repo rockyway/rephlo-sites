@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { ILLMProvider } from '../../interfaces';
+import { ILLMProvider, LLMUsageData } from '../../interfaces';
 import {
   ChatCompletionRequest,
   TextCompletionRequest,
@@ -37,13 +37,13 @@ export class MockOpenAIProvider implements ILLMProvider {
     };
   }
 
-  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<number> {
+  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<LLMUsageData> {
     // Mock streaming
     res.write('data: {"id":"chatcmpl-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":"Mock"},"finish_reason":null}]}\n\n');
     res.write('data: {"id":"chatcmpl-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":" streaming"},"finish_reason":null}]}\n\n');
     res.write('data: {"id":"chatcmpl-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 30; // Mock total tokens
+    return { promptTokens: 10, completionTokens: 20, totalTokens: 30 };
   }
 
   async textCompletion(request: TextCompletionRequest) {
@@ -69,11 +69,11 @@ export class MockOpenAIProvider implements ILLMProvider {
     };
   }
 
-  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<number> {
+  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"id":"cmpl-mock","object":"text_completion","created":1234567890,"choices":[{"text":"Mock","index":0,"finish_reason":null}]}\n\n');
     res.write('data: {"id":"cmpl-mock","object":"text_completion","created":1234567890,"choices":[{"text":" text","index":0,"finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 30; // Mock total tokens
+    return { promptTokens: 10, completionTokens: 20, totalTokens: 30 };
   }
 }
 
@@ -109,11 +109,11 @@ export class MockAzureOpenAIProvider implements ILLMProvider {
     };
   }
 
-  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<number> {
+  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"id":"chatcmpl-azure-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":"Azure"},"finish_reason":null}]}\n\n');
     res.write('data: {"id":"chatcmpl-azure-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":" streaming"},"finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 30;
+    return { promptTokens: 12, completionTokens: 18, totalTokens: 30 };
   }
 
   async textCompletion(request: TextCompletionRequest) {
@@ -139,10 +139,10 @@ export class MockAzureOpenAIProvider implements ILLMProvider {
     };
   }
 
-  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<number> {
+  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"id":"cmpl-azure-mock","object":"text_completion","created":1234567890,"choices":[{"text":"Azure text","index":0,"finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 30;
+    return { promptTokens: 12, completionTokens: 18, totalTokens: 30 };
   }
 }
 
@@ -178,11 +178,11 @@ export class MockAnthropicProvider implements ILLMProvider {
     };
   }
 
-  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<number> {
+  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"id":"msg-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":"Claude"},"finish_reason":null}]}\n\n');
     res.write('data: {"id":"msg-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":" here"},"finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 40;
+    return { promptTokens: 15, completionTokens: 25, totalTokens: 40 };
   }
 
   async textCompletion(request: TextCompletionRequest) {
@@ -208,11 +208,11 @@ export class MockAnthropicProvider implements ILLMProvider {
     };
   }
 
-  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<number> {
+  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"choices":[{"text":"Anthropic","finish_reason":null}]}\n\n');
     res.write('data: {"choices":[{"text":" completion","finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 40;
+    return { promptTokens: 15, completionTokens: 25, totalTokens: 40 };
   }
 }
 
@@ -248,11 +248,11 @@ export class MockGoogleProvider implements ILLMProvider {
     };
   }
 
-  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<number> {
+  async streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"id":"gen-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":"Gemini"},"finish_reason":null}]}\n\n');
     res.write('data: {"id":"gen-mock","object":"chat.completion.chunk","created":1234567890,"model":"' + request.model + '","choices":[{"index":0,"delta":{"content":" streaming"},"finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 30;
+    return { promptTokens: 8, completionTokens: 22, totalTokens: 30 };
   }
 
   async textCompletion(request: TextCompletionRequest) {
@@ -278,10 +278,10 @@ export class MockGoogleProvider implements ILLMProvider {
     };
   }
 
-  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<number> {
+  async streamTextCompletion(_request: TextCompletionRequest, res: Response): Promise<LLMUsageData> {
     res.write('data: {"choices":[{"text":"Google","finish_reason":null}]}\n\n');
     res.write('data: {"choices":[{"text":" text","finish_reason":"stop"}]}\n\n');
     res.write('data: [DONE]\n\n');
-    return 30;
+    return { promptTokens: 8, completionTokens: 22, totalTokens: 30 };
   }
 }
