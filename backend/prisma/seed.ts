@@ -878,16 +878,16 @@ async function seedModels() {
   console.log('Creating LLM models...');
 
   const models = [
-    // OpenAI Models (August 2025 - GPT-5 Release)
+    // OpenAI Models (2025 - GPT-5.1 Release)
     {
-      id: 'gpt-5',
-      name: 'gpt-5',
+      id: 'gpt-5.1',
+      name: 'gpt-5.1',
       provider: 'openai',
       isLegacy: false,
       isArchived: false,
       meta: {
-        displayName: 'GPT-5',
-        description: 'OpenAI\'s best AI system with 272K input, 128K output, 94.6% AIME math, 74.9% SWE-bench coding, 45% fewer hallucinations',
+        displayName: 'GPT-5.1',
+        description: 'OpenAI\'s latest AI system with 272K input, 128K output, 94.6% AIME math, 74.9% SWE-bench coding, improved performance across all tasks',
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 272000,
         maxOutputTokens: 128000,
@@ -903,7 +903,35 @@ async function seedModels() {
             trainingCutoff: '2025-06',
           },
         },
-        internalNotes: 'Flagship model - highest tier access',
+        internalNotes: 'Flagship model - highest tier access (replaces gpt-5)',
+        complianceTags: ['SOC2', 'GDPR'],
+      },
+    },
+    {
+      id: 'gpt-5.1-chat',
+      name: 'gpt-5.1-chat',
+      provider: 'openai',
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'GPT-5.1 Chat',
+        description: 'GPT-5.1 optimized for conversational interactions with enhanced context understanding and natural dialogue',
+        capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
+        contextLength: 272000,
+        maxOutputTokens: 128000,
+        inputCostPerMillionTokens: 125,
+        outputCostPerMillionTokens: 1000,
+        ...calculateModelCredits(125, 1000, 'pro'),
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {
+          openai: {
+            modelFamily: 'gpt-5',
+            trainingCutoff: '2025-06',
+          },
+        },
+        internalNotes: 'Chat-optimized variant of GPT-5.1 for conversational workloads',
         complianceTags: ['SOC2', 'GDPR'],
       },
     },
@@ -1848,20 +1876,41 @@ async function seedModelPricing(providers: any[]) {
       },
     }),
 
-    // GPT-5 (use GPT-4o pricing as placeholder until official release)
+    // GPT-5.1 (replaces GPT-5, same pricing)
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
           provider_id: providerMap['openai'],
-          model_name: 'gpt-5',
+          model_name: 'gpt-5.1',
           effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
         provider_id: providerMap['openai'],
-        model_name: 'gpt-5',
-        input_price_per_1k: 0.00125, 
+        model_name: 'gpt-5.1',
+        input_price_per_1k: 0.00125,
+        output_price_per_1k: 0.0010,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // GPT-5.1 Chat (optimized for conversation, same pricing as gpt-5)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['openai'],
+          model_name: 'gpt-5.1-chat',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['openai'],
+        model_name: 'gpt-5.1-chat',
+        input_price_per_1k: 0.00125,
         output_price_per_1k: 0.0010,
         effective_from: effectiveFrom,
         is_active: true,
