@@ -55,9 +55,9 @@ export interface ILLMProvider {
 
   /**
    * Execute streaming chat completion
-   * Returns total tokens used
+   * Returns enhanced usage data with accurate token breakdown
    */
-  streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<number>;
+  streamChatCompletion(request: ChatCompletionRequest, res: Response): Promise<LLMUsageData>;
 
   /**
    * Execute text completion
@@ -70,7 +70,7 @@ export interface ILLMProvider {
 
   /**
    * Execute streaming text completion
-   * Returns total tokens used
+   * Returns enhanced usage data with accurate token breakdown
    */
-  streamTextCompletion(request: TextCompletionRequest, res: Response): Promise<number>;
+  streamTextCompletion(request: TextCompletionRequest, res: Response): Promise<LLMUsageData>;
 }

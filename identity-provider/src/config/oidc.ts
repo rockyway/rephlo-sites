@@ -717,6 +717,14 @@ export async function createOIDCProvider(
   });
 
   provider.on('grant.error', (_ctx: any, error: any) => {
+    // DIAGNOSTIC: Extract refresh token preview for troubleshooting
+    const refreshToken = _ctx.oidc.params?.refresh_token as string | undefined;
+    const refreshTokenPreview = refreshToken
+      ? (refreshToken.length > 20
+          ? `${refreshToken.substring(0, 10)}...${refreshToken.substring(refreshToken.length - 10)}`
+          : refreshToken)
+      : 'none';
+
     logger.error('OIDC: grant error', {
       errorName: error.name,
       errorMessage: error.message,
@@ -728,6 +736,8 @@ export async function createOIDCProvider(
         grantType: _ctx.oidc.params?.grant_type,
         scope: _ctx.oidc.params?.scope,
         hasRefreshToken: !!_ctx.oidc.params?.refresh_token,
+        refreshTokenPreview,
+        refreshTokenLength: refreshToken?.length || 0,
         hasCode: !!_ctx.oidc.params?.code,
       },
       entities: {

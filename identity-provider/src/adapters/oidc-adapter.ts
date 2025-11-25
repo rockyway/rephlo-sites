@@ -78,10 +78,23 @@ export class OIDCAdapter {
           uid = ${payload.uid || null}
       `;
 
-      logger.debug(`OIDC Adapter: upsert ${this.name}`, {
-        id,
+      // DIAGNOSTIC: Enhanced logging for token saves
+      const tokenPreview = id.length > 20 ? `${id.substring(0, 10)}...${id.substring(id.length - 10)}` : id;
+      logger.info(`OIDC Adapter: upsert ${this.name}`, {
+        tokenPreview,
+        tokenLength: id.length,
         expiresIn,
+        expiresAt: expiresAt?.toISOString(),
         grantId: payload.grantId,
+        ...(this.name === 'RefreshToken' && {
+          refreshTokenDetails: {
+            accountId: payload.accountId,
+            clientId: payload.clientId,
+            consumed: payload.consumed,
+            expiresWithSession: payload.expiresWithSession,
+            scope: payload.scope,
+          },
+        }),
       });
     } catch (error) {
       logger.error(`OIDC Adapter: upsert failed for ${this.name}`, {
@@ -99,6 +112,14 @@ export class OIDCAdapter {
    */
   async find(id: string): Promise<AdapterPayload | undefined> {
     try {
+      // DIAGNOSTIC: Log lookup attempt with token preview
+      const tokenPreview = id.length > 20 ? `${id.substring(0, 10)}...${id.substring(id.length - 10)}` : id;
+      logger.info(`OIDC Adapter: Looking up ${this.name}`, {
+        tokenPreview,
+        tokenLength: id.length,
+        kind: this.name,
+      });
+
       const result = await this.prisma.$queryRaw<
         Array<{
           payload: any;
@@ -112,6 +133,36 @@ export class OIDCAdapter {
       `;
 
       if (result.length === 0) {
+        // DIAGNOSTIC: Check if token exists with different kind or was deleted
+        const anyKindResult = await this.prisma.$queryRaw<
+          Array<{
+            kind: string;
+            expires_at: Date | null;
+          }>
+        >`
+          SELECT kind, expires_at
+          FROM oidc_models
+          WHERE id = ${id}
+          LIMIT 1
+        `;
+
+        if (anyKindResult.length > 0) {
+          logger.warn(`OIDC Adapter: ${this.name} not found but exists with different kind`, {
+            tokenPreview,
+            expectedKind: this.name,
+            actualKind: anyKindResult[0].kind,
+            expiresAt: anyKindResult[0].expires_at,
+          });
+        } else {
+          // Check total count of this kind in database
+          const countResult = await this.prisma.$queryRaw<Array<{ count: bigint }>>`
+            SELECT COUNT(*) as count FROM oidc_models WHERE kind = ${this.name}
+          `;
+          logger.warn(`OIDC Adapter: ${this.name} not found in database`, {
+            tokenPreview,
+            totalRecordsOfKind: Number(countResult[0].count),
+          });
+        }
         return undefined;
       }
 

@@ -117,7 +117,7 @@ export class AnthropicProvider implements ILLMProvider {
   async streamChatCompletion(
     request: ChatCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('Anthropic client not initialized');
     }
@@ -170,7 +170,11 @@ export class AnthropicProvider implements ILLMProvider {
       }
     }
 
-    return inputTokens + outputTokens;
+    return {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    };
   }
 
   // ============================================================================
@@ -239,7 +243,7 @@ export class AnthropicProvider implements ILLMProvider {
   async streamTextCompletion(
     request: TextCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('Anthropic client not initialized');
     }
@@ -277,6 +281,10 @@ export class AnthropicProvider implements ILLMProvider {
       }
     }
 
-    return inputTokens + outputTokens;
+    return {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    };
   }
 }

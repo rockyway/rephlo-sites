@@ -72,6 +72,24 @@ export type TierRestrictionMode = z.infer<typeof TierRestrictionModeSchema>;
 // =============================================================================
 
 /**
+ * Parameter constraint schema
+ * Defines validation rules for LLM request parameters
+ */
+export const ParameterConstraintSchema = z.object({
+  supported: z.boolean().optional(),
+  reason: z.string().optional(),
+  allowedValues: z.array(z.any()).optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  default: z.any().optional(),
+  alternativeName: z.string().optional(),
+  mutuallyExclusiveWith: z.array(z.string()).optional(),
+  maxSequences: z.number().optional(),
+}).passthrough(); // Allow additional properties for extensibility
+
+export type ParameterConstraint = z.infer<typeof ParameterConstraintSchema>;
+
+/**
  * Complete JSONB metadata schema for Model table
  * All variable/descriptive properties stored in this structure
  */
@@ -103,6 +121,9 @@ export const ModelMetaSchema = z.object({
   requiredTier: SubscriptionTierSchema,
   tierRestrictionMode: TierRestrictionModeSchema,
   allowedTiers: z.array(SubscriptionTierSchema).min(1),
+
+  // Parameter Constraints (for LLM API validation)
+  parameterConstraints: z.record(z.string(), ParameterConstraintSchema).optional(),
 
   // Legacy Management (Optional)
   legacyReplacementModelId: z.string().max(100).optional(),

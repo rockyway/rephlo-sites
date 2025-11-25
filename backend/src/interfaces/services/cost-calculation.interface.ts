@@ -66,6 +66,16 @@ export interface VendorPricing {
   cacheWritePricePer1k?: number;      // Cache creation price (Anthropic: 1.25x base)
   cacheReadPricePer1k?: number;       // Cache read price (Anthropic: 0.1x, OpenAI: 0.5x)
 
+  // Plan 209: Context-Size-Based Pricing
+  // Token threshold for high-context pricing tier (e.g., 200000 for 200K tokens)
+  // undefined/null means single-tier pricing (no context threshold)
+  contextThresholdTokens?: number;
+  // High-context pricing (when input tokens > threshold)
+  inputPricePer1kHighContext?: number;
+  outputPricePer1kHighContext?: number;
+  cacheWritePricePer1kHighContext?: number;
+  cacheReadPricePer1kHighContext?: number;
+
   effectiveFrom: Date;
   effectiveUntil?: Date;
   isActive: boolean;

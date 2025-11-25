@@ -82,10 +82,10 @@ export class OpenAIProvider implements ILLMProvider {
 
   /**
    * Checks if the model has restricted temperature support (only supports temperature=1.0)
-   * Currently applies to: gpt-5-mini, gpt-5.1-chat
+   * Currently applies to: gpt-5-mini, gpt-5-nano, gpt-5.1-chat
    */
   private hasRestrictedTemperature(model: string): boolean {
-    const restrictedModels = ['gpt-5-mini', 'gpt-5.1-chat'];
+    const restrictedModels = ['gpt-5-mini', 'gpt-5-nano', 'gpt-5.1-chat'];
     return restrictedModels.some(restricted => model.includes(restricted));
   }
 
@@ -201,7 +201,7 @@ export class OpenAIProvider implements ILLMProvider {
   async streamChatCompletion(
     request: ChatCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('OpenAI client not initialized');
     }
@@ -296,11 +296,11 @@ export class OpenAIProvider implements ILLMProvider {
       }
 
       // Use accurate token counts from OpenAI/Azure (stream_options), fallback to tiktoken if not available
-      let totalTokens: number;
+      let finalUsageData: LLMUsageData;
 
       if (usageData) {
         // Use accurate counts from OpenAI/Azure OpenAI streaming
-        totalTokens = usageData.totalTokens;
+        finalUsageData = usageData;
         logger.debug('OpenAIProvider: Streaming completed (using API usage data)', {
           model: request.model,
           baseURL: clientForModel.baseURL,
@@ -312,20 +312,24 @@ export class OpenAIProvider implements ILLMProvider {
         // Fallback to tiktoken estimation (should rarely happen with modern API versions)
         const { promptTokens } = countChatTokens(request.messages, request.model);
         const completionTokens = countTokens(completionText, request.model);
-        totalTokens = promptTokens + completionTokens;
+        const totalTokens = promptTokens + completionTokens;
+
+        finalUsageData = {
+          promptTokens,
+          completionTokens,
+          totalTokens,
+        };
 
         logger.warn('OpenAIProvider: No usage data in streaming response, using tiktoken estimation', {
           model: request.model,
           baseURL: clientForModel.baseURL,
           chunkCount,
           completionLength: completionText.length,
-          promptTokens,
-          completionTokens,
-          totalTokens,
+          ...finalUsageData,
         });
       }
 
-      return totalTokens;
+      return finalUsageData;
     } catch (error) {
       // ENHANCED: Log complete error details with request context
       logger.error('OpenAIProvider: Streaming chat completion error', {
@@ -418,7 +422,7 @@ export class OpenAIProvider implements ILLMProvider {
   async streamTextCompletion(
     request: TextCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('OpenAI client not initialized');
     }
@@ -455,7 +459,15 @@ export class OpenAIProvider implements ILLMProvider {
       }
     }
 
-    const totalTokens = Math.ceil((request.prompt.length + completionText.length) / 4);
-    return totalTokens;
+    // Estimate token counts for text completion (no stream_options support)
+    const promptTokens = countTokens(request.prompt, request.model);
+    const completionTokens = countTokens(completionText, request.model);
+    const totalTokens = promptTokens + completionTokens;
+
+    return {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+    };
   }
 }

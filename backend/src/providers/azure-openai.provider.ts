@@ -23,7 +23,7 @@
 import { injectable, inject } from 'tsyringe';
 import OpenAI from 'openai';
 import { Response } from 'express';
-import { ILLMProvider } from '../interfaces';
+import { ILLMProvider, LLMUsageData } from '../interfaces';
 import {
   ChatCompletionRequest,
   TextCompletionRequest,
@@ -51,20 +51,21 @@ export class AzureOpenAIProvider implements ILLMProvider {
   }
 
   /**
-   * Checks if the model is GPT-5-mini (which has restricted temperature support)
+   * Checks if the model has restricted temperature support (only supports temperature=1.0)
+   * Currently applies to: gpt-5-mini, gpt-5-nano
    */
-  private isGPT5Mini(model: string): boolean {
-    return model.includes('gpt-5-mini');
+  private hasRestrictedTemperature(model: string): boolean {
+    return model.includes('gpt-5-mini') || model.includes('gpt-5-nano');
   }
 
   /**
    * Builds API parameters with GPT-5 compatibility
    * GPT-5 models use max_completion_tokens instead of max_tokens
-   * GPT-5-mini only supports default temperature (1.0)
+   * Some models (gpt-5-mini, gpt-5-nano) only support default temperature (1.0)
    */
   private buildChatParams(request: ChatCompletionRequest, streaming: boolean = false): any {
     const isGPT5 = this.isGPT5Model(request.model);
-    const isGPT5Mini = this.isGPT5Mini(request.model);
+    const hasTemperatureRestriction = this.hasRestrictedTemperature(request.model);
 
     const params: any = {
       model: request.model,
@@ -82,9 +83,9 @@ export class AzureOpenAIProvider implements ILLMProvider {
       params.max_tokens = request.max_tokens;
     }
 
-    // GPT-5-mini only supports default temperature (1.0)
-    // Other GPT-5 variants and GPT-4 support custom temperature
-    if (!isGPT5Mini) {
+    // Some models only support default temperature (1.0)
+    // Do not send temperature/top_p for these models
+    if (!hasTemperatureRestriction) {
       params.temperature = request.temperature;
       params.top_p = request.top_p;
     }
@@ -122,7 +123,7 @@ export class AzureOpenAIProvider implements ILLMProvider {
       model: request.model,
       messagesCount: request.messages.length,
       isGPT5: this.isGPT5Model(request.model),
-      isGPT5Mini: this.isGPT5Mini(request.model),
+      hasRestrictedTemperature: this.hasRestrictedTemperature(request.model),
     });
 
     // Build API parameters with GPT-5 compatibility
@@ -155,7 +156,7 @@ export class AzureOpenAIProvider implements ILLMProvider {
   async streamChatCompletion(
     request: ChatCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('Azure OpenAI client not initialized');
     }
@@ -163,7 +164,7 @@ export class AzureOpenAIProvider implements ILLMProvider {
     logger.debug('AzureOpenAIProvider: Streaming chat completion request', {
       model: request.model,
       isGPT5: this.isGPT5Model(request.model),
-      isGPT5Mini: this.isGPT5Mini(request.model),
+      hasRestrictedTemperature: this.hasRestrictedTemperature(request.model),
     });
 
     // Build API parameters with GPT-5 compatibility
@@ -215,11 +216,11 @@ export class AzureOpenAIProvider implements ILLMProvider {
     }
 
     // Use accurate token counts from Azure (stream_options), fallback to tiktoken if not available
-    let totalTokens: number;
+    let finalUsageData: LLMUsageData;
 
     if (usageData) {
       // Use accurate counts from Azure OpenAI streaming
-      totalTokens = usageData.totalTokens;
+      finalUsageData = usageData;
       logger.debug('AzureOpenAIProvider: Streaming completed (using Azure usage data)', {
         model: request.model,
         chunkCount,
@@ -230,19 +231,23 @@ export class AzureOpenAIProvider implements ILLMProvider {
       // Fallback to tiktoken estimation (should not happen with API v2024-12-01-preview)
       const { promptTokens } = countChatTokens(request.messages, request.model);
       const completionTokens = countTokens(completionText, request.model);
-      totalTokens = promptTokens + completionTokens;
+      const totalTokens = promptTokens + completionTokens;
+
+      finalUsageData = {
+        promptTokens,
+        completionTokens,
+        totalTokens,
+      };
 
       logger.warn('AzureOpenAIProvider: No usage data in streaming response, using tiktoken estimation', {
         model: request.model,
         chunkCount,
         completionLength: completionText.length,
-        promptTokens,
-        completionTokens,
-        totalTokens,
+        ...finalUsageData,
       });
     }
 
-    return totalTokens;
+    return finalUsageData;
   }
 
   // ============================================================================
@@ -301,7 +306,7 @@ export class AzureOpenAIProvider implements ILLMProvider {
   async streamTextCompletion(
     request: TextCompletionRequest,
     res: Response
-  ): Promise<number> {
+  ): Promise<LLMUsageData> {
     if (!this.client) {
       throw new Error('Azure OpenAI client not initialized');
     }
@@ -338,7 +343,15 @@ export class AzureOpenAIProvider implements ILLMProvider {
       }
     }
 
-    const totalTokens = Math.ceil((request.prompt.length + completionText.length) / 4);
-    return totalTokens;
+    // Estimate token counts for text completion (no stream_options support)
+    const promptTokens = countTokens(request.prompt, request.model);
+    const completionTokens = countTokens(completionText, request.model);
+    const totalTokens = promptTokens + completionTokens;
+
+    return {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+    };
   }
 }
