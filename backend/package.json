@@ -4,7 +4,7 @@
   "description": "Rephlo Branding Website - Backend API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/server.ts",
+    "dev": "nodemon --exec ts-node src/server.ts --ignore prisma/",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
