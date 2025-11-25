@@ -639,14 +639,31 @@ async function seedPerpetualLicenses(users: any[]) {
     });
 
     // Create test device activations (2 out of 3 slots used)
+    // Using composite unique key (license_id, machine_fingerprint) for idempotent upsert
+    const desktopFingerprint = 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6';
+    const laptopFingerprint = 'z6y5x4w3v2u1t0s9r8q7p6o5n4m3l2k1j0i9h8g7f6e5d4c3b2a1';
+
     await prisma.license_activation.upsert({
-      where: { id: randomUUID() }, // Using random UUID for where clause
-      update: {},
+      where: {
+        license_id_machine_fingerprint: {
+          license_id: license.id,
+          machine_fingerprint: desktopFingerprint,
+        },
+      },
+      update: {
+        device_name: 'Test-Desktop-PC',
+        os_type: 'Windows',
+        os_version: '11 Pro',
+        cpu_info: 'Intel Core i7-12700K',
+        last_seen_at: new Date(),
+        status: 'active',
+        updated_at: new Date(),
+      },
       create: {
         id: randomUUID(),
         license_id: license.id,
         user_id: perpetualUser.user_id,
-        machine_fingerprint: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+        machine_fingerprint: desktopFingerprint,
         device_name: 'Test-Desktop-PC',
         os_type: 'Windows',
         os_version: '11 Pro',
@@ -659,13 +676,26 @@ async function seedPerpetualLicenses(users: any[]) {
     });
 
     await prisma.license_activation.upsert({
-      where: { id: randomUUID() },
-      update: {},
+      where: {
+        license_id_machine_fingerprint: {
+          license_id: license.id,
+          machine_fingerprint: laptopFingerprint,
+        },
+      },
+      update: {
+        device_name: 'Test-Laptop',
+        os_type: 'Windows',
+        os_version: '10 Pro',
+        cpu_info: 'AMD Ryzen 7 5800H',
+        last_seen_at: new Date(),
+        status: 'active',
+        updated_at: new Date(),
+      },
       create: {
         id: randomUUID(),
         license_id: license.id,
         user_id: perpetualUser.user_id,
-        machine_fingerprint: 'z6y5x4w3v2u1t0s9r8q7p6o5n4m3l2k1j0i9h8g7f6e5d4c3b2a1',
+        machine_fingerprint: laptopFingerprint,
         device_name: 'Test-Laptop',
         os_type: 'Windows',
         os_version: '10 Pro',
@@ -981,60 +1011,67 @@ async function seedModels() {
       },
     },
 
-    // Anthropic Models (2025 - Claude 4 Generation)
+    // Anthropic Models (2025 - Claude 4.5 Generation)
+    // Plan 209: Only 3 models: Opus 4.5, Sonnet 4.5, Haiku 4.5
     {
-      id: 'claude-opus-4-1',
-      name: 'claude-opus-4.1',
+      id: 'claude-opus-4.5',
+      name: 'claude-opus-4.5',
       provider: 'anthropic',
       isLegacy: false,
       isArchived: false,
       meta: {
-        displayName: 'Claude Opus 4.1',
-        description: 'Most powerful Claude model for highly complex tasks, 200K context (August 2025)',
+        displayName: 'Claude Opus 4.5',
+        description: 'Most intelligent model for building agents and coding with 200K context (November 2025)',
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 200000,
         maxOutputTokens: 16384,
-        inputCostPerMillionTokens: 1500,
-        outputCostPerMillionTokens: 7500,
-        ...calculateModelCredits(1500, 7500, 'pro_max'),
+        // Pricing: $5/MTok input, $25/MTok output
+        inputCostPerMillionTokens: 5000,
+        outputCostPerMillionTokens: 25000,
+        ...calculateModelCredits(5000, 25000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           anthropic: {
-            modelSeries: 'claude-4',
-            knowledgeCutoff: '2025-08',
+            modelSeries: 'claude-4.5',
+            knowledgeCutoff: '2025-11',
           },
         },
-        internalNotes: 'Most powerful Anthropic model',
+        internalNotes: 'Most powerful Anthropic model - optimal for agents and coding',
         complianceTags: ['SOC2', 'GDPR', 'HIPAA'],
       },
     },
     {
-      id: 'claude-sonnet-4-5',
+      id: 'claude-sonnet-4.5',
       name: 'claude-sonnet-4.5',
       provider: 'anthropic',
       isLegacy: false,
       isArchived: false,
       meta: {
         displayName: 'Claude Sonnet 4.5',
-        description: 'Most intelligent for agents, coding, and computer use with 200K context (September 2025)',
+        description: 'Optimal balance of intelligence, cost, and speed with 200K context (November 2025)',
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 200000,
         maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 300,
-        outputCostPerMillionTokens: 1500,
-        ...calculateModelCredits(300, 1500, 'pro'),
+        // Plan 209: Context-based pricing (≤200K: $3/$15, >200K: $6/$22.50)
+        // Base tier pricing shown here
+        inputCostPerMillionTokens: 3000,
+        outputCostPerMillionTokens: 15000,
+        ...calculateModelCredits(3000, 15000, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           anthropic: {
-            modelSeries: 'claude-4',
-            knowledgeCutoff: '2025-09',
+            modelSeries: 'claude-4.5',
+            knowledgeCutoff: '2025-11',
+            // Context-based pricing indicator
+            hasContextBasedPricing: true,
+            contextThresholdTokens: 200000,
           },
         },
-        internalNotes: 'Best for agentic coding',
+        internalNotes: 'Best balance of capability and cost - context-based pricing applies',
         complianceTags: ['SOC2', 'GDPR', 'HIPAA'],
         // Plan 203: Parameter Constraints (Anthropic specific)
         parameterConstraints: {
@@ -1076,82 +1113,84 @@ async function seedModels() {
       },
     },
     {
-      id: 'claude-haiku-4-5',
+      id: 'claude-haiku-4.5',
       name: 'claude-haiku-4.5',
       provider: 'anthropic',
       isLegacy: false,
       isArchived: false,
       meta: {
         displayName: 'Claude Haiku 4.5',
-        description: 'Fastest and most cost-efficient Claude with 200K context (October 2025)',
+        description: 'Fastest, most cost-efficient model with 200K context (November 2025)',
         capabilities: ['text', 'vision', 'function_calling', 'long_context'],
         contextLength: 200000,
         maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 100,
-        outputCostPerMillionTokens: 500,
-        ...calculateModelCredits(100, 500, 'free'),
+        // Pricing: $1/MTok input, $5/MTok output
+        inputCostPerMillionTokens: 1000,
+        outputCostPerMillionTokens: 5000,
+        ...calculateModelCredits(1000, 5000, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
           anthropic: {
-            modelSeries: 'claude-4',
-            knowledgeCutoff: '2025-10',
+            modelSeries: 'claude-4.5',
+            knowledgeCutoff: '2025-11',
           },
         },
-        internalNotes: 'Free tier access - fast and efficient',
+        internalNotes: 'Free tier access - fastest and most cost-efficient',
         complianceTags: ['SOC2', 'GDPR'],
       },
     },
-    // LEGACY MODEL EXAMPLE: Claude 3.5 Sonnet (superseded by Claude 4.5)
+    // Plan 209: Removed claude-3-5-sonnet (legacy) - only 3 models: Opus, Sonnet, Haiku
+
+    // Google Models (2025 - Gemini 2.5+ only)
+    // Plan 209: Removed gemini-2.0 models, kept/added gemini-2.5+ and gemini-3
     {
-      id: 'claude-3-5-sonnet',
-      name: 'claude-3.5-sonnet',
-      provider: 'anthropic',
-      isLegacy: true,
+      id: 'gemini-3-pro-preview',
+      name: 'gemini-3-pro-preview',
+      provider: 'google',
+      isLegacy: false,
       isArchived: false,
       meta: {
-        displayName: 'Claude 3.5 Sonnet (Legacy)',
-        description: 'Previous generation Claude model - superseded by Claude 4.5 Sonnet',
+        displayName: 'Gemini 3 Pro Preview',
+        description: 'Best model for multimodal understanding, agentic and vibe-coding with 1M context',
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
-        contextLength: 200000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 300,
-        outputCostPerMillionTokens: 1500,
-        ...calculateModelCredits(300, 1500, 'pro'),
-        requiredTier: 'pro',
+        contextLength: 1000000,
+        maxOutputTokens: 65536,
+        // Plan 209: Context-based pricing (≤200K: $2/$12, >200K: $4/$18)
+        inputCostPerMillionTokens: 2000,
+        outputCostPerMillionTokens: 12000,
+        ...calculateModelCredits(2000, 12000, 'pro_max'),
+        requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
-        legacyReplacementModelId: 'claude-sonnet-4-5',
-        deprecationNotice: 'Claude 3.5 Sonnet will be deprecated on 2025-12-31. Please migrate to Claude Sonnet 4.5 for improved performance.',
-        sunsetDate: '2025-12-31T23:59:59Z',
+        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {
-          anthropic: {
-            modelSeries: 'claude-3',
-            knowledgeCutoff: '2024-08',
+          google: {
+            modelType: 'gemini-pro',
+            hasContextBasedPricing: true,
+            contextThresholdTokens: 200000,
           },
         },
-        internalNotes: 'Legacy model - encourage migration to 4.5',
+        internalNotes: 'Most powerful Gemini - context-based pricing applies',
         complianceTags: ['SOC2', 'GDPR'],
       },
     },
-
-    // Google Models (2025)
     {
-      id: 'gemini-2-5-pro',
+      id: 'gemini-2.5-pro',
       name: 'gemini-2.5-pro',
       provider: 'google',
       isLegacy: false,
       isArchived: false,
       meta: {
         displayName: 'Gemini 2.5 Pro',
-        description: 'Most advanced Gemini model with 1M context (2M coming soon), exceptional reasoning',
+        description: 'State-of-the-art multipurpose model for coding and complex reasoning with 1M context',
         capabilities: ['text', 'vision', 'function_calling', 'long_context', 'code'],
         contextLength: 1000000,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 65536,
+        // Plan 209: Context-based pricing (≤200K: $1.25/$10, >200K: $2.50/$15)
         inputCostPerMillionTokens: 1250,
-        outputCostPerMillionTokens: 5000,
-        ...calculateModelCredits(1250, 5000, 'pro_max'),
+        outputCostPerMillionTokens: 10000,
+        ...calculateModelCredits(1250, 10000, 'pro_max'),
         requiredTier: 'pro_max',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1159,27 +1198,30 @@ async function seedModels() {
           google: {
             modelType: 'gemini-pro',
             tuningSupport: true,
+            hasContextBasedPricing: true,
+            contextThresholdTokens: 200000,
           },
         },
-        internalNotes: 'Largest context window - 1M tokens',
+        internalNotes: 'Largest context window - 1M tokens, context-based pricing applies',
         complianceTags: ['SOC2', 'GDPR'],
       },
     },
     {
-      id: 'gemini-2-0-flash',
-      name: 'gemini-2.0-flash',
+      id: 'gemini-2.5-flash',
+      name: 'gemini-2.5-flash',
       provider: 'google',
       isLegacy: false,
       isArchived: false,
       meta: {
-        displayName: 'Gemini 2.0 Flash',
-        description: 'Generally available model with 1M context, multimodal input, and native tool use',
+        displayName: 'Gemini 2.5 Flash',
+        description: 'Hybrid reasoning model with 1M context and thinking budgets',
         capabilities: ['text', 'vision', 'function_calling', 'long_context'],
         contextLength: 1000000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 100,
-        outputCostPerMillionTokens: 400,
-        ...calculateModelCredits(100, 400, 'pro'),
+        maxOutputTokens: 65536,
+        // Pricing: $0.30/MTok input, $2.50/MTok output (no context threshold)
+        inputCostPerMillionTokens: 300,
+        outputCostPerMillionTokens: 2500,
+        ...calculateModelCredits(300, 2500, 'pro'),
         requiredTier: 'pro',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1188,25 +1230,26 @@ async function seedModels() {
             modelType: 'gemini-flash',
           },
         },
-        internalNotes: 'Fast multimodal model',
+        internalNotes: 'Fast hybrid reasoning model',
         complianceTags: ['SOC2', 'GDPR'],
       },
     },
     {
-      id: 'gemini-2-0-flash-lite',
-      name: 'gemini-2.0-flash-lite',
+      id: 'gemini-2.5-flash-lite',
+      name: 'gemini-2.5-flash-lite',
       provider: 'google',
       isLegacy: false,
       isArchived: false,
       meta: {
-        displayName: 'Gemini 2.0 Flash-Lite',
-        description: 'Most cost-efficient Gemini model with 1M context and multimodal capabilities',
+        displayName: 'Gemini 2.5 Flash-Lite',
+        description: 'Smallest and most cost-effective model for at-scale usage with 1M context',
         capabilities: ['text', 'vision', 'function_calling', 'long_context'],
         contextLength: 1000000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 38,
-        outputCostPerMillionTokens: 150,
-        ...calculateModelCredits(38, 150, 'free'),
+        maxOutputTokens: 65536,
+        // Pricing: $0.10/MTok input, $0.40/MTok output (no context threshold)
+        inputCostPerMillionTokens: 100,
+        outputCostPerMillionTokens: 400,
+        ...calculateModelCredits(100, 400, 'free'),
         requiredTier: 'free',
         tierRestrictionMode: 'minimum',
         allowedTiers: ['free', 'pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
@@ -1215,35 +1258,14 @@ async function seedModels() {
             modelType: 'gemini-flash',
           },
         },
-        internalNotes: 'Free tier - ultra efficient',
+        internalNotes: 'Free tier - ultra cost efficient',
         complianceTags: ['SOC2'],
       },
     },
+    // Plan 209: Removed gemini-2.0-flash and gemini-2.0-flash-lite (older than 2.5)
 
     // Mistral Models (2025)
-    {
-      id: 'mistral-medium-3',
-      name: 'mistral-medium-3',
-      provider: 'mistral',
-      isLegacy: false,
-      isArchived: false,
-      meta: {
-        displayName: 'Mistral Medium 3',
-        description: 'Latest Mistral model excelling in coding and STEM tasks, 90% of Claude 3.7 at lower cost',
-        capabilities: ['text', 'function_calling', 'code'],
-        contextLength: 128000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 40,
-        outputCostPerMillionTokens: 200,
-        ...calculateModelCredits(40, 200, 'pro'),
-        requiredTier: 'pro',
-        tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
-        providerMetadata: {},
-        internalNotes: 'Strong coding capabilities',
-        complianceTags: ['SOC2'],
-      },
-    },
+    // Plan 209: Removed mistral-medium-3 (deprecated)
     {
       id: 'mistral-small-3-1',
       name: 'mistral-small-3.1',
@@ -1268,90 +1290,24 @@ async function seedModels() {
       },
     },
 
-    // Meta Models (2025)
-    {
-      id: 'llama-4-scout',
-      name: 'llama-4-scout',
-      provider: 'meta',
-      isLegacy: false,
-      isArchived: false,
-      meta: {
-        displayName: 'Llama 4 Scout',
-        description: 'Industry-leading 10M context window with superior text and visual intelligence',
-        capabilities: ['text', 'vision', 'function_calling', 'long_context'],
-        contextLength: 10000000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 200,
-        outputCostPerMillionTokens: 800,
-        ...calculateModelCredits(200, 800, 'pro_max'),
-        requiredTier: 'pro_max',
-        tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
-        providerMetadata: {},
-        internalNotes: 'Massive 10M context window',
-        complianceTags: [],
-      },
-    },
-    {
-      id: 'llama-3-3-70b',
-      name: 'llama-3.3-70b',
-      provider: 'meta',
-      isLegacy: false,
-      isArchived: false,
-      meta: {
-        displayName: 'Llama 3.3 70B',
-        description: 'Excellent performance at 10-15x lower cost than GPT-4o with 128K context',
-        capabilities: ['text', 'function_calling', 'code', 'long_context'],
-        contextLength: 128000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 100,
-        outputCostPerMillionTokens: 400,
-        ...calculateModelCredits(100, 400, 'pro'),
-        requiredTier: 'pro',
-        tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
-        providerMetadata: {},
-        internalNotes: 'Cost-effective large model',
-        complianceTags: [],
-      },
-    },
-    {
-      id: 'llama-3-1-405b',
-      name: 'llama-3.1-405b',
-      provider: 'meta',
-      isLegacy: false,
-      isArchived: false,
-      meta: {
-        displayName: 'Llama 3.1 405B',
-        description: 'Largest Llama model with exceptional capabilities and 128K context',
-        capabilities: ['text', 'function_calling', 'code', 'long_context'],
-        contextLength: 128000,
-        maxOutputTokens: 8192,
-        inputCostPerMillionTokens: 300,
-        outputCostPerMillionTokens: 1200,
-        ...calculateModelCredits(300, 1200, 'pro'),
-        requiredTier: 'pro',
-        tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
-        providerMetadata: {},
-        internalNotes: 'Largest parameter count',
-        complianceTags: [],
-      },
-    },
+    // Plan 209: Removed Meta Models (llama-4-scout, llama-3.3-70b, llama-3.1-405b) - deprecated
 
-    // xAI Models (2025)
+    // xAI Models (2025) - Plan 209: Updated with 128K context threshold pricing
+    // For high context (>128K tokens): price is double the base price
     {
-      id: 'grok-4',
+      id: 'grok-4-0709',
       name: 'grok-4-0709',
       provider: 'xai',
       isLegacy: false,
       isArchived: false,
       meta: {
         displayName: 'Grok 4',
-        description: 'The most intelligent model in the world with native tool use and real-time search (August 2025)',
+        description: 'The most intelligent model in the world with native tool use and real-time search (July 2025)',
         capabilities: ['text', 'function_calling', 'long_context', 'code'],
         contextLength: 256000,
         maxOutputTokens: 8192,
+        // Base pricing: $3.00/$15.00 per 1M tokens (≤128K context)
+        // High context: $6.00/$30.00 per 1M tokens (>128K context)
         inputCostPerMillionTokens: 3000,
         outputCostPerMillionTokens: 15000,
         ...calculateModelCredits(3000, 15000, 'pro_max'),
@@ -1359,22 +1315,24 @@ async function seedModels() {
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
-        internalNotes: 'Real-time search capabilities',
+        internalNotes: 'Premium model - real-time search capabilities',
         complianceTags: [],
       },
     },
     {
-      id: 'grok-4-fast',
-      name: 'grok-4-fast-reasoning',
+      id: 'grok-4-1-fast-reasoning',
+      name: 'grok-4-1-fast-reasoning',
       provider: 'xai',
       isLegacy: false,
       isArchived: false,
       meta: {
-        displayName: 'Grok 4 Fast',
-        description: 'Fast reasoning model with 2M context window, ideal for complex tasks (September 2025)',
-        capabilities: ['text', 'function_calling', 'long_context', 'code'],
-        contextLength: 2000000,
+        displayName: 'Grok 4.1 Fast Reasoning',
+        description: 'Fast reasoning model with extended thinking and 2M context window',
+        capabilities: ['text', 'function_calling', 'long_context', 'code', 'reasoning'],
+        contextLength: 2000000, // 2M context window
         maxOutputTokens: 8192,
+        // Base pricing: $0.20/$0.50 per 1M tokens (≤128K context)
+        // High context: $0.40/$1.00 per 1M tokens (>128K context)
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 500,
         ...calculateModelCredits(200, 500, 'pro'),
@@ -1382,7 +1340,32 @@ async function seedModels() {
         tierRestrictionMode: 'minimum',
         allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
         providerMetadata: {},
-        internalNotes: '2M context - very large',
+        internalNotes: 'Extended thinking for complex reasoning',
+        complianceTags: [],
+      },
+    },
+    {
+      id: 'grok-4-1-fast-non-reasoning',
+      name: 'grok-4-1-fast-non-reasoning',
+      provider: 'xai',
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok 4.1 Fast',
+        description: 'Fast model without extended thinking, 2M context window for quick responses',
+        capabilities: ['text', 'function_calling', 'long_context', 'code'],
+        contextLength: 2000000, // 2M context window
+        maxOutputTokens: 8192,
+        // Base pricing: $0.20/$0.50 per 1M tokens (≤128K context)
+        // High context: $0.40/$1.00 per 1M tokens (>128K context)
+        inputCostPerMillionTokens: 200,
+        outputCostPerMillionTokens: 500,
+        ...calculateModelCredits(200, 500, 'pro'),
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Fast responses without reasoning overhead',
         complianceTags: [],
       },
     },
@@ -1394,10 +1377,12 @@ async function seedModels() {
       isArchived: false,
       meta: {
         displayName: 'Grok Code Fast 1',
-        description: 'Speedy and economical reasoning model excelling at agentic coding (September 2025)',
-        capabilities: ['text', 'function_calling', 'code'],
-        contextLength: 128000,
+        description: 'Speedy and economical reasoning model excelling at agentic coding with 256K context',
+        capabilities: ['text', 'function_calling', 'code', 'long_context'],
+        contextLength: 256000, // 256K context window
         maxOutputTokens: 8192,
+        // Base pricing: $0.20/$1.50 per 1M tokens (≤128K context)
+        // High context: $0.40/$3.00 per 1M tokens (>128K context)
         inputCostPerMillionTokens: 200,
         outputCostPerMillionTokens: 1500,
         ...calculateModelCredits(200, 1500, 'pro'),
@@ -1409,36 +1394,7 @@ async function seedModels() {
         complianceTags: [],
       },
     },
-
-    // ARCHIVED MODEL EXAMPLE: Text-Davinci-003 (GPT-3.5 - retired)
-    {
-      id: 'text-davinci-003',
-      name: 'text-davinci-003',
-      provider: 'openai',
-      isLegacy: false,
-      isArchived: true,
-      meta: {
-        displayName: 'Text-Davinci-003 (Archived)',
-        description: 'Archived GPT-3.5 model - no longer available for inference',
-        capabilities: ['text'],
-        contextLength: 4096,
-        maxOutputTokens: 4096,
-        inputCostPerMillionTokens: 2000,
-        outputCostPerMillionTokens: 2000,
-        ...calculateModelCredits(2000, 2000, 'pro'),
-        requiredTier: 'pro',
-        tierRestrictionMode: 'minimum',
-        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
-        providerMetadata: {
-          openai: {
-            modelFamily: 'gpt-3.5',
-            trainingCutoff: '2021-09',
-          },
-        },
-        internalNotes: 'Archived 2024-01-04 - superseded by GPT-4',
-        complianceTags: [],
-      },
-    },
+    // Plan 209: Removed text-davinci-003 (archived/deprecated)
   ];
 
   const createdModels = [];
@@ -1811,6 +1767,22 @@ async function seedProviders() {
         updated_at: new Date(),
       },
     }),
+
+    // xAI (Grok models) - Plan 209
+    prisma.providers.upsert({
+      where: { name: 'xai' },
+      update: {
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+      create: {
+        name: 'xai',
+        api_type: 'openai-compatible',
+        is_enabled: true,
+        updated_at: new Date(),
+      },
+    }),
   ]);
 
   console.log(`✓ Created/Updated ${providers.length} provider records\n`);
@@ -2004,34 +1976,37 @@ async function seedModelPricing(providers: any[]) {
 
     // ========================================================================
     // Anthropic Models (with prompt caching)
+    // Plan 209: Updated to 3 models only - Opus 4.5, Sonnet 4.5, Haiku 4.5
     // ========================================================================
 
-    // Claude Opus 4.1 ($15/$75 per 1M tokens)
-    // Cache Write (5m): $18.75, Cache Hit: $1.50 per 1M tokens
+    // Claude Opus 4.5 ($5/$25 per 1M tokens) - No context threshold
+    // Cache Write: $6.25, Cache Read: $0.50 per 1M tokens
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
           provider_id: providerMap['anthropic'],
-          model_name: 'claude-opus-4.1',
+          model_name: 'claude-opus-4.5',
           effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
         provider_id: providerMap['anthropic'],
-        model_name: 'claude-opus-4.1',
-        input_price_per_1k: 0.015, // $15 per 1M / 1000
-        output_price_per_1k: 0.075, // $75 per 1M / 1000
-        cache_write_price_per_1k: 0.01875, // $18.75 per 1M / 1000 (5-min cache write)
-        cache_read_price_per_1k: 0.0015, // $1.50 per 1M / 1000 (cache hit)
+        model_name: 'claude-opus-4.5',
+        input_price_per_1k: 0.005, // $5 per 1M / 1000
+        output_price_per_1k: 0.025, // $25 per 1M / 1000
+        cache_write_price_per_1k: 0.00625, // $6.25 per 1M / 1000
+        cache_read_price_per_1k: 0.0005, // $0.50 per 1M / 1000
+        // No context threshold - single tier pricing
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // Claude Sonnet 4.5 ($3/$15 per 1M tokens)
-    // Cache Write (5m): $3.75, Cache Hit: $0.30 per 1M tokens
+    // Claude Sonnet 4.5 - Context-based pricing
+    // ≤200K: $3/$15, Cache Write: $3.75, Cache Read: $0.30
+    // >200K: $6/$22.50, Cache Write: $7.50, Cache Read: $0.60
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -2044,41 +2019,25 @@ async function seedModelPricing(providers: any[]) {
       create: {
         provider_id: providerMap['anthropic'],
         model_name: 'claude-sonnet-4.5',
+        // Base pricing (≤200K tokens)
         input_price_per_1k: 0.003, // $3 per 1M / 1000
         output_price_per_1k: 0.015, // $15 per 1M / 1000
-        cache_write_price_per_1k: 0.00375, // $3.75 per 1M / 1000 (5-min cache write)
-        cache_read_price_per_1k: 0.0003, // $0.30 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.00375, // $3.75 per 1M / 1000
+        cache_read_price_per_1k: 0.0003, // $0.30 per 1M / 1000
+        // Plan 209: Context-based pricing (>200K tokens)
+        context_threshold_tokens: 200000,
+        input_price_per_1k_high_context: 0.006, // $6 per 1M / 1000
+        output_price_per_1k_high_context: 0.0225, // $22.50 per 1M / 1000
+        cache_write_price_per_1k_high_context: 0.0075, // $7.50 per 1M / 1000
+        cache_read_price_per_1k_high_context: 0.0006, // $0.60 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // Claude 3.5 Sonnet (use Sonnet 4.5 pricing)
-    prisma.model_provider_pricing.upsert({
-      where: {
-        provider_id_model_name_effective_from: {
-          provider_id: providerMap['anthropic'],
-          model_name: 'claude-3-5-sonnet',
-          effective_from: effectiveFrom,
-        },
-      },
-      update: {},
-      create: {
-        provider_id: providerMap['anthropic'],
-        model_name: 'claude-3-5-sonnet',
-        input_price_per_1k: 0.003,
-        output_price_per_1k: 0.015,
-        cache_write_price_per_1k: 0.00375,
-        cache_read_price_per_1k: 0.0003,
-        effective_from: effectiveFrom,
-        is_active: true,
-        updated_at: new Date(),
-      },
-    }),
-
-    // Claude Haiku 4.5 ($1/$5 per 1M tokens)
-    // Cache Write (5m): $1.25, Cache Hit: $0.10 per 1M tokens
+    // Claude Haiku 4.5 ($1/$5 per 1M tokens) - No context threshold
+    // Cache Write: $1.25, Cache Read: $0.10 per 1M tokens
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -2093,130 +2052,129 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'claude-haiku-4.5',
         input_price_per_1k: 0.001, // $1 per 1M / 1000
         output_price_per_1k: 0.005, // $5 per 1M / 1000
-        cache_write_price_per_1k: 0.00125, // $1.25 per 1M / 1000 (5-min cache write)
-        cache_read_price_per_1k: 0.0001, // $0.10 per 1M / 1000 (cache hit)
+        cache_write_price_per_1k: 0.00125, // $1.25 per 1M / 1000
+        cache_read_price_per_1k: 0.0001, // $0.10 per 1M / 1000
+        // No context threshold - single tier pricing
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
+    // Plan 209: Removed claude-3-5-sonnet pricing (legacy model removed)
 
     // ========================================================================
     // Google Gemini Models (text/image/video pricing only, audio excluded)
+    // Plan 209: Removed gemini-2.0 models, added gemini-3-pro-preview
     // ========================================================================
 
-    // Gemini 2.5 Pro (≤200K context: $1.25/$10 per 1M tokens)
-    // Cache Write: $0.125, Cache storage not tracked in this table
+    // Gemini 3 Pro Preview - Context-based pricing
+    // ≤200K: $2/$12, Cache Read: $0.20
+    // >200K: $4/$18, Cache Read: $0.40
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
           provider_id: providerMap['google'],
-          model_name: 'gemini-2-5-pro',
+          model_name: 'gemini-3-pro-preview',
           effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
         provider_id: providerMap['google'],
-        model_name: 'gemini-2-5-pro',
+        model_name: 'gemini-3-pro-preview',
+        // Base pricing (≤200K tokens)
+        input_price_per_1k: 0.002, // $2 per 1M / 1000
+        output_price_per_1k: 0.012, // $12 per 1M / 1000
+        cache_read_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        // Plan 209: Context-based pricing (>200K tokens)
+        context_threshold_tokens: 200000,
+        input_price_per_1k_high_context: 0.004, // $4 per 1M / 1000
+        output_price_per_1k_high_context: 0.018, // $18 per 1M / 1000
+        cache_read_price_per_1k_high_context: 0.0004, // $0.40 per 1M / 1000
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Gemini 2.5 Pro - Context-based pricing
+    // ≤200K: $1.25/$10, Cache Read: $0.125
+    // >200K: $2.50/$15, Cache Read: $0.25
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['google'],
+          model_name: 'gemini-2.5-pro',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['google'],
+        model_name: 'gemini-2.5-pro',
+        // Base pricing (≤200K tokens)
         input_price_per_1k: 0.00125, // $1.25 per 1M / 1000
         output_price_per_1k: 0.01, // $10 per 1M / 1000
-        cache_write_price_per_1k: 0.000125, // $0.125 per 1M / 1000
+        cache_read_price_per_1k: 0.000125, // $0.125 per 1M / 1000
+        // Plan 209: Context-based pricing (>200K tokens)
+        context_threshold_tokens: 200000,
+        input_price_per_1k_high_context: 0.0025, // $2.50 per 1M / 1000
+        output_price_per_1k_high_context: 0.015, // $15 per 1M / 1000
+        cache_read_price_per_1k_high_context: 0.00025, // $0.25 per 1M / 1000
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // Gemini 2.5 Flash (text/image/video: $0.30/$2.50 per 1M tokens)
-    // Cache Write: $0.03 per 1M tokens
+    // Gemini 2.5 Flash ($0.30/$2.50 per 1M tokens) - No context threshold
+    // Cache Read: $0.03 per 1M tokens
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
           provider_id: providerMap['google'],
-          model_name: 'gemini-2-5-flash',
+          model_name: 'gemini-2.5-flash',
           effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
         provider_id: providerMap['google'],
-        model_name: 'gemini-2-5-flash',
+        model_name: 'gemini-2.5-flash',
         input_price_per_1k: 0.0003, // $0.30 per 1M / 1000
         output_price_per_1k: 0.0025, // $2.50 per 1M / 1000
-        cache_write_price_per_1k: 0.00003, // $0.03 per 1M / 1000
+        cache_read_price_per_1k: 0.00003, // $0.03 per 1M / 1000
+        // No context threshold - single tier pricing
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
 
-    // Gemini 2.0 Flash (use 2.5 Flash pricing)
+    // Gemini 2.5 Flash-Lite ($0.10/$0.40 per 1M tokens) - No context threshold
+    // Cache Read: $0.01 per 1M tokens
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
           provider_id: providerMap['google'],
-          model_name: 'gemini-2-0-flash',
+          model_name: 'gemini-2.5-flash-lite',
           effective_from: effectiveFrom,
         },
       },
       update: {},
       create: {
         provider_id: providerMap['google'],
-        model_name: 'gemini-2-0-flash',
-        input_price_per_1k: 0.0003, // Same as 2.5 Flash
-        output_price_per_1k: 0.0025,
-        cache_write_price_per_1k: 0.00003,
-        effective_from: effectiveFrom,
-        is_active: true,
-        updated_at: new Date(),
-      },
-    }),
-
-    // Gemini 2.5 Flash-Lite (text/image/video: $0.10/$0.40 per 1M tokens)
-    // Cache Write: $0.01 per 1M tokens
-    prisma.model_provider_pricing.upsert({
-      where: {
-        provider_id_model_name_effective_from: {
-          provider_id: providerMap['google'],
-          model_name: 'gemini-2-5-flash-lite',
-          effective_from: effectiveFrom,
-        },
-      },
-      update: {},
-      create: {
-        provider_id: providerMap['google'],
-        model_name: 'gemini-2-5-flash-lite',
+        model_name: 'gemini-2.5-flash-lite',
         input_price_per_1k: 0.0001, // $0.10 per 1M / 1000
         output_price_per_1k: 0.0004, // $0.40 per 1M / 1000
-        cache_write_price_per_1k: 0.00001, // $0.01 per 1M / 1000
+        cache_read_price_per_1k: 0.00001, // $0.01 per 1M / 1000
+        // No context threshold - single tier pricing
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
       },
     }),
-
-    // Gemini 2.0 Flash-Lite (use 2.5 Flash-Lite pricing)
-    prisma.model_provider_pricing.upsert({
-      where: {
-        provider_id_model_name_effective_from: {
-          provider_id: providerMap['google'],
-          model_name: 'gemini-2-0-flash-lite',
-          effective_from: effectiveFrom,
-        },
-      },
-      update: {},
-      create: {
-        provider_id: providerMap['google'],
-        model_name: 'gemini-2-0-flash-lite',
-        input_price_per_1k: 0.0001, // Same as 2.5 Flash-Lite
-        output_price_per_1k: 0.0004,
-        cache_write_price_per_1k: 0.00001,
-        effective_from: effectiveFrom,
-        is_active: true,
-        updated_at: new Date(),
-      },
-    }),
+    // Plan 209: Removed gemini-2-0-flash and gemini-2-0-flash-lite pricing
 
     // ========================================================================
     // Mistral AI Models
@@ -2243,26 +2201,7 @@ async function seedModelPricing(providers: any[]) {
       },
     }),
 
-    // Mistral Medium 3 ($0.40/$2.00 per 1M tokens)
-    prisma.model_provider_pricing.upsert({
-      where: {
-        provider_id_model_name_effective_from: {
-          provider_id: providerMap['mistral'],
-          model_name: 'mistral-medium-3',
-          effective_from: effectiveFrom,
-        },
-      },
-      update: {},
-      create: {
-        provider_id: providerMap['mistral'],
-        model_name: 'mistral-medium-3',
-        input_price_per_1k: 0.0004, // $0.40 per 1M / 1000
-        output_price_per_1k: 0.002, // $2.00 per 1M / 1000
-        effective_from: effectiveFrom,
-        is_active: true,
-        updated_at: new Date(),
-      },
-    }),
+    // Plan 209: Removed mistral-medium-3 pricing (deprecated)
 
     // ========================================================================
     // Azure OpenAI (same pricing as OpenAI direct)
@@ -2304,6 +2243,115 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'gpt-4o-mini',
         input_price_per_1k: 0.00015, // Same as OpenAI direct
         output_price_per_1k: 0.0006,
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // ========================================================================
+    // xAI (Grok) Models - Plan 209: 128K context threshold
+    // For high context (>128K tokens): price is double the base price
+    // ========================================================================
+
+    // Grok 4.1 Fast Reasoning ($0.20/$0.50 per 1M tokens)
+    // High context (>128K): $0.40/$1.00 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-4-1-fast-reasoning',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-4-1-fast-reasoning',
+        input_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        output_price_per_1k: 0.0005, // $0.50 per 1M / 1000
+        // Plan 209: Context-based pricing (128K threshold)
+        context_threshold_tokens: 128000,
+        input_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
+        output_price_per_1k_high_context: 0.001, // $1.00 per 1M (2x base)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Grok 4.1 Fast Non-Reasoning ($0.20/$0.50 per 1M tokens)
+    // High context (>128K): $0.40/$1.00 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-4-1-fast-non-reasoning',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-4-1-fast-non-reasoning',
+        input_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        output_price_per_1k: 0.0005, // $0.50 per 1M / 1000
+        // Plan 209: Context-based pricing (128K threshold)
+        context_threshold_tokens: 128000,
+        input_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
+        output_price_per_1k_high_context: 0.001, // $1.00 per 1M (2x base)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Grok Code Fast 1 ($0.20/$1.50 per 1M tokens)
+    // High context (>128K): $0.40/$3.00 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-code-fast-1',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-code-fast-1',
+        input_price_per_1k: 0.0002, // $0.20 per 1M / 1000
+        output_price_per_1k: 0.0015, // $1.50 per 1M / 1000
+        // Plan 209: Context-based pricing (128K threshold)
+        context_threshold_tokens: 128000,
+        input_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
+        output_price_per_1k_high_context: 0.003, // $3.00 per 1M (2x base)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Grok 4 (grok-4-0709) ($3.00/$15.00 per 1M tokens)
+    // High context (>128K): $6.00/$30.00 per 1M tokens
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-4-0709',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-4-0709',
+        input_price_per_1k: 0.003, // $3.00 per 1M / 1000
+        output_price_per_1k: 0.015, // $15.00 per 1M / 1000
+        // Plan 209: Context-based pricing (128K threshold)
+        context_threshold_tokens: 128000,
+        input_price_per_1k_high_context: 0.006, // $6.00 per 1M (2x base)
+        output_price_per_1k_high_context: 0.03, // $30.00 per 1M (2x base)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2360,80 +2408,86 @@ async function seedPricingConfigs(providers: any[]) {
   };
 
   // Global tier configs (apply to all providers unless overridden)
+  // Note: Prisma uses database field names (snake_case), not TypeScript conventions
   const globalConfigs = await Promise.all([
     // Free tier: 50% margin (1.50× multiplier)
     findOrCreateConfig({
-      scopeType: 'tier',
-      subscriptionTier: 'free',
-      marginMultiplier: 1.5,
-      targetGrossMarginPercent: 50.0,
-      effectiveFrom,
+      scope_type: 'tier',
+      subscription_tier: 'free',
+      margin_multiplier: 1.5,
+      target_gross_margin_percent: 50.0,
+      effective_from: effectiveFrom,
       reason: 'initial_setup',
-      reasonDetails: 'Initial tier-based pricing configuration',
-      createdBy: adminUser.id,
-      requiresApproval: false,
-      approvalStatus: 'approved',
-      isActive: true,
+      reason_details: 'Initial tier-based pricing configuration',
+      created_by: adminUser.id,
+      requires_approval: false,
+      approval_status: 'approved',
+      is_active: true,
+      updated_at: new Date(),
     }),
 
     // Pro tier: 30% margin (1.30× multiplier)
     findOrCreateConfig({
-      scopeType: 'tier',
-      subscriptionTier: 'pro',
-      marginMultiplier: 1.3,
-      targetGrossMarginPercent: 30.0,
-      effectiveFrom,
+      scope_type: 'tier',
+      subscription_tier: 'pro',
+      margin_multiplier: 1.3,
+      target_gross_margin_percent: 30.0,
+      effective_from: effectiveFrom,
       reason: 'initial_setup',
-      reasonDetails: 'Initial tier-based pricing configuration',
-      createdBy: adminUser.id,
-      requiresApproval: false,
-      approvalStatus: 'approved',
-      isActive: true,
+      reason_details: 'Initial tier-based pricing configuration',
+      created_by: adminUser.id,
+      requires_approval: false,
+      approval_status: 'approved',
+      is_active: true,
+      updated_at: new Date(),
     }),
 
     // Pro Max tier: 25% margin (1.25× multiplier)
     findOrCreateConfig({
-      scopeType: 'tier',
-      subscriptionTier: 'pro_max',
-      marginMultiplier: 1.25,
-      targetGrossMarginPercent: 25.0,
-      effectiveFrom,
+      scope_type: 'tier',
+      subscription_tier: 'pro_max',
+      margin_multiplier: 1.25,
+      target_gross_margin_percent: 25.0,
+      effective_from: effectiveFrom,
       reason: 'initial_setup',
-      reasonDetails: 'Initial tier-based pricing configuration',
-      createdBy: adminUser.id,
-      requiresApproval: false,
-      approvalStatus: 'approved',
-      isActive: true,
+      reason_details: 'Initial tier-based pricing configuration',
+      created_by: adminUser.id,
+      requires_approval: false,
+      approval_status: 'approved',
+      is_active: true,
+      updated_at: new Date(),
     }),
 
     // Enterprise Pro tier: 15% margin (1.15× multiplier)
     findOrCreateConfig({
-      scopeType: 'tier',
-      subscriptionTier: 'enterprise_pro',
-      marginMultiplier: 1.15,
-      targetGrossMarginPercent: 15.0,
-      effectiveFrom,
+      scope_type: 'tier',
+      subscription_tier: 'enterprise_pro',
+      margin_multiplier: 1.15,
+      target_gross_margin_percent: 15.0,
+      effective_from: effectiveFrom,
       reason: 'initial_setup',
-      reasonDetails: 'Initial tier-based pricing configuration',
-      createdBy: adminUser.id,
-      requiresApproval: false,
-      approvalStatus: 'approved',
-      isActive: true,
+      reason_details: 'Initial tier-based pricing configuration',
+      created_by: adminUser.id,
+      requires_approval: false,
+      approval_status: 'approved',
+      is_active: true,
+      updated_at: new Date(),
     }),
 
     // Enterprise Max tier: 10% margin (1.10× multiplier)
     findOrCreateConfig({
-      scopeType: 'tier',
-      subscriptionTier: 'enterprise_pro_plus',
-      marginMultiplier: 1.1,
-      targetGrossMarginPercent: 10.0,
-      effectiveFrom,
+      scope_type: 'tier',
+      subscription_tier: 'enterprise_pro_plus',
+      margin_multiplier: 1.1,
+      target_gross_margin_percent: 10.0,
+      effective_from: effectiveFrom,
       reason: 'initial_setup',
-      reasonDetails: 'Initial tier-based pricing configuration',
-      createdBy: adminUser.id,
-      requiresApproval: false,
-      approvalStatus: 'approved',
-      isActive: true,
+      reason_details: 'Initial tier-based pricing configuration',
+      created_by: adminUser.id,
+      requires_approval: false,
+      approval_status: 'approved',
+      is_active: true,
+      updated_at: new Date(),
     }),
   ]);
 
@@ -2444,18 +2498,19 @@ async function seedPricingConfigs(providers: any[]) {
   const providerConfigs = await Promise.all([
     // OpenAI Free tier: 60% margin (higher than global 50%)
     findOrCreateConfig({
-      scopeType: 'provider',
-      subscriptionTier: 'free',
-      providerId: providerMap['openai'],
-      marginMultiplier: 1.6,
-      targetGrossMarginPercent: 60.0,
-      effectiveFrom,
+      scope_type: 'provider',
+      subscription_tier: 'free',
+      provider_id: providerMap['openai'],
+      margin_multiplier: 1.6,
+      target_gross_margin_percent: 60.0,
+      effective_from: effectiveFrom,
       reason: 'tier_optimization',
-      reasonDetails: 'Higher margin for OpenAI models on Free tier due to premium positioning',
-      createdBy: adminUser.id,
-      requiresApproval: false,
-      approvalStatus: 'approved',
-      isActive: true,
+      reason_details: 'Higher margin for OpenAI models on Free tier due to premium positioning',
+      created_by: adminUser.id,
+      requires_approval: false,
+      approval_status: 'approved',
+      is_active: true,
+      updated_at: new Date(),
     }),
   ]);
 
