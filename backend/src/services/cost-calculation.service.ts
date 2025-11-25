@@ -53,6 +53,7 @@ export class CostCalculationService implements ICostCalculationService {
       // Find pricing that was effective at the given date
       // Note: Prisma maps cache_write_price_per_1k → cache_input_price_per_1k
       //       and cache_read_price_per_1k → cache_hit_price_per_1k in the schema
+      // Plan 209: Added context-threshold pricing fields
       const pricing = await this.prisma.$queryRaw<any[]>`
         SELECT
           id,
@@ -62,6 +63,11 @@ export class CostCalculationService implements ICostCalculationService {
           output_price_per_1k as "outputPricePer1k",
           cache_input_price_per_1k as "cacheInputPricePer1k",
           cache_hit_price_per_1k as "cacheHitPricePer1k",
+          context_threshold_tokens as "contextThresholdTokens",
+          input_price_per_1k_high_context as "inputPricePer1kHighContext",
+          output_price_per_1k_high_context as "outputPricePer1kHighContext",
+          cache_write_price_per_1k_high_context as "cacheWritePricePer1kHighContext",
+          cache_read_price_per_1k_high_context as "cacheReadPricePer1kHighContext",
           effective_from as "effectiveFrom",
           effective_until as "effectiveUntil",
           is_active as "isActive"
@@ -90,6 +96,7 @@ export class CostCalculationService implements ICostCalculationService {
         providerId,
         inputPricePer1k: record.inputPricePer1k,
         outputPricePer1k: record.outputPricePer1k,
+        contextThresholdTokens: record.contextThresholdTokens,
       });
 
       return {
@@ -112,6 +119,22 @@ export class CostCalculationService implements ICostCalculationService {
           : undefined,
         cacheReadPricePer1k: record.cacheHitPricePer1k
           ? parseFloat(record.cacheHitPricePer1k)
+          : undefined,
+        // Plan 209: Context-Size-Based Pricing
+        contextThresholdTokens: record.contextThresholdTokens
+          ? parseInt(record.contextThresholdTokens)
+          : undefined,
+        inputPricePer1kHighContext: record.inputPricePer1kHighContext
+          ? parseFloat(record.inputPricePer1kHighContext)
+          : undefined,
+        outputPricePer1kHighContext: record.outputPricePer1kHighContext
+          ? parseFloat(record.outputPricePer1kHighContext)
+          : undefined,
+        cacheWritePricePer1kHighContext: record.cacheWritePricePer1kHighContext
+          ? parseFloat(record.cacheWritePricePer1kHighContext)
+          : undefined,
+        cacheReadPricePer1kHighContext: record.cacheReadPricePer1kHighContext
+          ? parseFloat(record.cacheReadPricePer1kHighContext)
           : undefined,
         effectiveFrom: new Date(record.effectiveFrom),
         effectiveUntil: record.effectiveUntil ? new Date(record.effectiveUntil) : undefined,
@@ -157,9 +180,38 @@ export class CostCalculationService implements ICostCalculationService {
       throw new Error(errorMsg);
     }
 
-    // Step 2: Calculate regular input/output costs
-    const inputCost = (usage.inputTokens * pricing.inputPricePer1k) / 1000;
-    const outputCost = (usage.outputTokens * pricing.outputPricePer1k) / 1000;
+    // Plan 209: Determine if high-context pricing applies
+    // Check if input tokens exceed the context threshold
+    const isHighContext = pricing.contextThresholdTokens !== undefined
+      && usage.inputTokens > pricing.contextThresholdTokens;
+
+    // Get effective prices based on context size
+    const effectiveInputPrice = isHighContext
+      ? (pricing.inputPricePer1kHighContext ?? pricing.inputPricePer1k)
+      : pricing.inputPricePer1k;
+    const effectiveOutputPrice = isHighContext
+      ? (pricing.outputPricePer1kHighContext ?? pricing.outputPricePer1k)
+      : pricing.outputPricePer1k;
+    const effectiveCacheWritePrice = isHighContext
+      ? (pricing.cacheWritePricePer1kHighContext ?? pricing.cacheWritePricePer1k)
+      : pricing.cacheWritePricePer1k;
+    const effectiveCacheReadPrice = isHighContext
+      ? (pricing.cacheReadPricePer1kHighContext ?? pricing.cacheReadPricePer1k)
+      : pricing.cacheReadPricePer1k;
+
+    if (isHighContext) {
+      logger.debug('CostCalculationService: Using high-context pricing', {
+        modelId: usage.modelId,
+        inputTokens: usage.inputTokens,
+        threshold: pricing.contextThresholdTokens,
+        effectiveInputPrice,
+        effectiveOutputPrice,
+      });
+    }
+
+    // Step 2: Calculate regular input/output costs (using effective prices)
+    const inputCost = (usage.inputTokens * effectiveInputPrice) / 1000;
+    const outputCost = (usage.outputTokens * effectiveOutputPrice) / 1000;
 
     // Step 3: Calculate cache costs with differential pricing
     let cacheWriteCost = 0;
@@ -167,23 +219,23 @@ export class CostCalculationService implements ICostCalculationService {
 
     // Anthropic cache metrics (separate write/read)
     if (usage.cacheCreationInputTokens) {
-      const cacheWritePrice = pricing.cacheWritePricePer1k || pricing.cacheInputPricePer1k || pricing.inputPricePer1k;
+      const cacheWritePrice = effectiveCacheWritePrice || pricing.cacheInputPricePer1k || effectiveInputPrice;
       cacheWriteCost = (usage.cacheCreationInputTokens * cacheWritePrice) / 1000;
     }
 
     if (usage.cacheReadInputTokens) {
-      const cacheReadPrice = pricing.cacheReadPricePer1k || pricing.cacheHitPricePer1k || (pricing.inputPricePer1k * 0.1);
+      const cacheReadPrice = effectiveCacheReadPrice || pricing.cacheHitPricePer1k || (effectiveInputPrice * 0.1);
       cacheReadCost = (usage.cacheReadInputTokens * cacheReadPrice) / 1000;
     }
 
     // OpenAI/Google cache metrics (single cached token count)
     if (usage.cachedPromptTokens && !usage.cacheReadInputTokens) {
-      const cachedPrice = pricing.cacheReadPricePer1k || pricing.cacheHitPricePer1k || (pricing.inputPricePer1k * 0.5);
+      const cachedPrice = effectiveCacheReadPrice || pricing.cacheHitPricePer1k || (effectiveInputPrice * 0.5);
       cacheReadCost = (usage.cachedPromptTokens * cachedPrice) / 1000;
     }
 
     if (usage.cachedContentTokenCount && !usage.cacheReadInputTokens && !usage.cachedPromptTokens) {
-      const cachedPrice = pricing.cacheReadPricePer1k || (pricing.inputPricePer1k * 0.1);
+      const cachedPrice = effectiveCacheReadPrice || (effectiveInputPrice * 0.1);
       cacheReadCost = (usage.cachedContentTokenCount * cachedPrice) / 1000;
     }
 
@@ -270,14 +322,25 @@ export class CostCalculationService implements ICostCalculationService {
       throw new Error(errorMsg);
     }
 
-    const estimatedInputCost = (inputTokens * pricing.inputPricePer1k) / 1000;
-    const estimatedOutputCost = (estimatedOutputTokens * pricing.outputPricePer1k) / 1000;
+    // Plan 209: Use context-aware pricing for estimates
+    const isHighContext = pricing.contextThresholdTokens !== undefined
+      && inputTokens > pricing.contextThresholdTokens;
+    const effectiveInputPrice = isHighContext
+      ? (pricing.inputPricePer1kHighContext ?? pricing.inputPricePer1k)
+      : pricing.inputPricePer1k;
+    const effectiveOutputPrice = isHighContext
+      ? (pricing.outputPricePer1kHighContext ?? pricing.outputPricePer1k)
+      : pricing.outputPricePer1k;
+
+    const estimatedInputCost = (inputTokens * effectiveInputPrice) / 1000;
+    const estimatedOutputCost = (estimatedOutputTokens * effectiveOutputPrice) / 1000;
     const totalEstimatedCost = estimatedInputCost + estimatedOutputCost;
 
     logger.debug('CostCalculationService: Token cost estimated', {
       modelId,
       providerId,
       estimatedCost: totalEstimatedCost,
+      isHighContext,
     });
 
     return totalEstimatedCost;
@@ -316,27 +379,45 @@ export class CostCalculationService implements ICostCalculationService {
       return this.calculateVendorCost(usage);
     }
 
-    // Use the historical pricing - apply same cache calculation logic
-    const inputCost = (usage.inputTokens * historicalPricing.inputPricePer1k) / 1000;
-    const outputCost = (usage.outputTokens * historicalPricing.outputPricePer1k) / 1000;
+    // Plan 209: Determine if high-context pricing applies for historical pricing
+    const isHighContext = historicalPricing.contextThresholdTokens !== undefined
+      && usage.inputTokens > historicalPricing.contextThresholdTokens;
+
+    // Get effective prices based on context size
+    const effectiveInputPrice = isHighContext
+      ? (historicalPricing.inputPricePer1kHighContext ?? historicalPricing.inputPricePer1k)
+      : historicalPricing.inputPricePer1k;
+    const effectiveOutputPrice = isHighContext
+      ? (historicalPricing.outputPricePer1kHighContext ?? historicalPricing.outputPricePer1k)
+      : historicalPricing.outputPricePer1k;
+    const effectiveCacheWritePrice = isHighContext
+      ? (historicalPricing.cacheWritePricePer1kHighContext ?? historicalPricing.cacheWritePricePer1k)
+      : historicalPricing.cacheWritePricePer1k;
+    const effectiveCacheReadPrice = isHighContext
+      ? (historicalPricing.cacheReadPricePer1kHighContext ?? historicalPricing.cacheReadPricePer1k)
+      : historicalPricing.cacheReadPricePer1k;
+
+    // Use the historical pricing - apply same cache calculation logic (with effective prices)
+    const inputCost = (usage.inputTokens * effectiveInputPrice) / 1000;
+    const outputCost = (usage.outputTokens * effectiveOutputPrice) / 1000;
 
     let cacheWriteCost = 0;
     let cacheReadCost = 0;
 
     // Anthropic cache metrics
     if (usage.cacheCreationInputTokens) {
-      const cacheWritePrice = historicalPricing.cacheWritePricePer1k || historicalPricing.cacheInputPricePer1k || historicalPricing.inputPricePer1k;
+      const cacheWritePrice = effectiveCacheWritePrice || historicalPricing.cacheInputPricePer1k || effectiveInputPrice;
       cacheWriteCost = (usage.cacheCreationInputTokens * cacheWritePrice) / 1000;
     }
 
     if (usage.cacheReadInputTokens) {
-      const cacheReadPrice = historicalPricing.cacheReadPricePer1k || historicalPricing.cacheHitPricePer1k || (historicalPricing.inputPricePer1k * 0.1);
+      const cacheReadPrice = effectiveCacheReadPrice || historicalPricing.cacheHitPricePer1k || (effectiveInputPrice * 0.1);
       cacheReadCost = (usage.cacheReadInputTokens * cacheReadPrice) / 1000;
     }
 
     // OpenAI/Google cache metrics
     if (usage.cachedPromptTokens && !usage.cacheReadInputTokens) {
-      const cachedPrice = historicalPricing.cacheReadPricePer1k || historicalPricing.cacheHitPricePer1k || (historicalPricing.inputPricePer1k * 0.5);
+      const cachedPrice = effectiveCacheReadPrice || historicalPricing.cacheHitPricePer1k || (effectiveInputPrice * 0.5);
       cacheReadCost = (usage.cachedPromptTokens * cachedPrice) / 1000;
     }
 
@@ -379,6 +460,7 @@ export class CostCalculationService implements ICostCalculationService {
     try {
       // Note: Prisma maps cache_write_price_per_1k → cache_input_price_per_1k
       //       and cache_read_price_per_1k → cache_hit_price_per_1k in the schema
+      // Plan 209: Added context-threshold pricing fields
       const pricingRecords = await this.prisma.$queryRaw<any[]>`
         SELECT
           id,
@@ -388,6 +470,11 @@ export class CostCalculationService implements ICostCalculationService {
           output_price_per_1k as "outputPricePer1k",
           cache_input_price_per_1k as "cacheInputPricePer1k",
           cache_hit_price_per_1k as "cacheHitPricePer1k",
+          context_threshold_tokens as "contextThresholdTokens",
+          input_price_per_1k_high_context as "inputPricePer1kHighContext",
+          output_price_per_1k_high_context as "outputPricePer1kHighContext",
+          cache_write_price_per_1k_high_context as "cacheWritePricePer1kHighContext",
+          cache_read_price_per_1k_high_context as "cacheReadPricePer1kHighContext",
           effective_from as "effectiveFrom",
           effective_until as "effectiveUntil",
           is_active as "isActive"
@@ -418,6 +505,22 @@ export class CostCalculationService implements ICostCalculationService {
           : undefined,
         cacheReadPricePer1k: record.cacheHitPricePer1k
           ? parseFloat(record.cacheHitPricePer1k)
+          : undefined,
+        // Plan 209: Context-Size-Based Pricing
+        contextThresholdTokens: record.contextThresholdTokens
+          ? parseInt(record.contextThresholdTokens)
+          : undefined,
+        inputPricePer1kHighContext: record.inputPricePer1kHighContext
+          ? parseFloat(record.inputPricePer1kHighContext)
+          : undefined,
+        outputPricePer1kHighContext: record.outputPricePer1kHighContext
+          ? parseFloat(record.outputPricePer1kHighContext)
+          : undefined,
+        cacheWritePricePer1kHighContext: record.cacheWritePricePer1kHighContext
+          ? parseFloat(record.cacheWritePricePer1kHighContext)
+          : undefined,
+        cacheReadPricePer1kHighContext: record.cacheReadPricePer1kHighContext
+          ? parseFloat(record.cacheReadPricePer1kHighContext)
           : undefined,
         effectiveFrom: new Date(record.effectiveFrom),
         effectiveUntil: record.effectiveUntil ? new Date(record.effectiveUntil) : undefined,

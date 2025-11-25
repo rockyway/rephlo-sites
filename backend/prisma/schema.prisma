@@ -491,6 +491,16 @@ model model_provider_pricing {
   /// Plan 207: Prompt Caching - Cache read price (Anthropic: 0.1x, OpenAI: 0.5x)
   cache_read_price_per_1k  Decimal? @map("cache_hit_price_per_1k") @db.Decimal(10, 8)
 
+  /// Plan 209: Context-Size-Based Pricing
+  /// Token threshold for high-context pricing tier (e.g., 200000 for 200K tokens)
+  /// NULL means single-tier pricing (no context threshold)
+  context_threshold_tokens              Int?
+  /// High-context pricing (when input tokens > threshold)
+  input_price_per_1k_high_context       Decimal? @db.Decimal(10, 8)
+  output_price_per_1k_high_context      Decimal? @db.Decimal(10, 8)
+  cache_write_price_per_1k_high_context Decimal? @db.Decimal(10, 8)
+  cache_read_price_per_1k_high_context  Decimal? @db.Decimal(10, 8)
+
   effective_from              DateTime
   effective_until             DateTime?
   previous_price_input        Decimal?  @db.Decimal(10, 8)
