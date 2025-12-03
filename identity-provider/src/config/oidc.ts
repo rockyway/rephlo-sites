@@ -761,7 +761,13 @@ export async function createOIDCProvider(
   });
 
   provider.on('refresh_token.saved', (refreshToken: any) => {
-    logger.info('OIDC: refresh token saved', {
+    // DIAGNOSTIC: Show token preview for new token
+    const jti = refreshToken.jti || '';
+    const tokenPreview = jti.length > 20
+      ? `${jti.substring(0, 10)}...${jti.substring(jti.length - 10)}`
+      : jti;
+    logger.info('OIDC: NEW refresh token saved - Desktop App should use this token for next refresh', {
+      tokenPreview,
       clientId: refreshToken.clientId,
       accountId: refreshToken.accountId,
       jti: refreshToken.jti,
@@ -771,11 +777,18 @@ export async function createOIDCProvider(
   });
 
   provider.on('refresh_token.consumed', (refreshToken: any) => {
-    logger.info('OIDC: refresh token consumed', {
+    // DIAGNOSTIC: Show token preview when consumed (rotated)
+    const jti = refreshToken.jti || '';
+    const tokenPreview = jti.length > 20
+      ? `${jti.substring(0, 10)}...${jti.substring(jti.length - 10)}`
+      : jti;
+    logger.warn('OIDC: refresh token CONSUMED (rotated) - old token is now invalid', {
+      tokenPreview,
       clientId: refreshToken.clientId,
       accountId: refreshToken.accountId,
       jti: refreshToken.jti,
       grantId: refreshToken.grantId,
+      hint: 'The Desktop App MUST use the NEW refresh_token returned in the response',
     });
   });
 

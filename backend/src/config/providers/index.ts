@@ -2,6 +2,7 @@ import { ProviderSpec } from './base-provider-spec';
 import { openaiSpec } from './openai/openai-spec';
 import { anthropicSpec } from './anthropic/anthropic-spec';
 import { googleSpec } from './google/google-spec';
+import { grokSpec } from './grok/grok-spec';
 
 /**
  * Provider Registry
@@ -13,6 +14,7 @@ export const providerRegistry: Record<string, ProviderSpec> = {
   openai: openaiSpec,
   anthropic: anthropicSpec,
   google: googleSpec,
+  xai: grokSpec,
 };
 
 /**
@@ -38,3 +40,5 @@ export * from './openai/transformers';
 export * from './anthropic/anthropic-spec';
 export * from './google/google-spec';
 export * from './google/transformers';
+export * from './grok/grok-spec';
+export * from './grok/transformers';

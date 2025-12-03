@@ -79,12 +79,26 @@ export class GrokProvider implements ILLMProvider {
       }
 
       // Check for OpenAI-style cache metrics (in prompt_tokens_details)
+      // Grok API: prompt_tokens_details.cached_tokens
       if ('prompt_tokens_details' in response.usage) {
         const details = response.usage.prompt_tokens_details;
         if (details && details.cached_tokens) {
           usage.cachedPromptTokens = details.cached_tokens;
           logger.debug('GrokProvider: OpenAI-style cached prompt tokens detected', {
             cachedPromptTokens: usage.cachedPromptTokens,
+          });
+        }
+      }
+
+      // Check for reasoning tokens (in completion_tokens_details)
+      // Grok API: completion_tokens_details.reasoning_tokens
+      // Note: reasoning_tokens is a breakdown of completionTokens for reasoning models
+      if ('completion_tokens_details' in response.usage) {
+        const details = response.usage.completion_tokens_details;
+        if (details && details.reasoning_tokens) {
+          usage.reasoningTokens = details.reasoning_tokens;
+          logger.debug('GrokProvider: Reasoning tokens detected', {
+            reasoningTokens: usage.reasoningTokens,
           });
         }
       }

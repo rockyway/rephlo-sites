@@ -1422,6 +1422,82 @@ async function seedModels() {
         complianceTags: [],
       },
     },
+    // Plan 210: Grok 4 Large Fast Non-Reasoning (NEW)
+    {
+      id: 'grok-4-l-fast-non-reasoning',
+      name: 'grok-4-l-fast-non-reasoning',
+      provider: 'xai',
+      isLegacy: false,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok 4 Large Fast',
+        description: 'Large fast model without reasoning overhead, 2M context window',
+        capabilities: ['text', 'function_calling', 'long_context', 'code'],
+        contextLength: 2000000, // 2M context window
+        maxOutputTokens: 8192,
+        // Base pricing: $0.50/$1.00 per 1M tokens (≤128K context)
+        // High context: $1.00/$2.00 per 1M tokens (>128K context)
+        inputCostPerMillionTokens: 500,
+        outputCostPerMillionTokens: 1000,
+        ...calculateModelCredits(500, 1000, 'pro'),
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Large fast variant - balance of speed and capability',
+        complianceTags: [],
+      },
+    },
+    // Plan 210: Grok 3 (Legacy - NEW)
+    {
+      id: 'grok-3',
+      name: 'grok-3',
+      provider: 'xai',
+      isLegacy: true,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok 3',
+        description: 'Standard Grok 3 model with 131K context window (legacy)',
+        capabilities: ['text', 'function_calling', 'code'],
+        contextLength: 131072, // 131K context window
+        maxOutputTokens: 8192,
+        // Base pricing: $2.00/$10.00 per 1M tokens (no context threshold for 131K)
+        inputCostPerMillionTokens: 2000,
+        outputCostPerMillionTokens: 10000,
+        ...calculateModelCredits(2000, 10000, 'pro'),
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Legacy Grok 3 series - backward compatibility',
+        complianceTags: [],
+      },
+    },
+    // Plan 210: Grok 3 Fast (Legacy - NEW)
+    {
+      id: 'grok-3-fast',
+      name: 'grok-3-fast',
+      provider: 'xai',
+      isLegacy: true,
+      isArchived: false,
+      meta: {
+        displayName: 'Grok 3 Fast',
+        description: 'Fast variant of Grok 3 with 131K context window (legacy)',
+        capabilities: ['text', 'function_calling', 'code'],
+        contextLength: 131072, // 131K context window
+        maxOutputTokens: 8192,
+        // Base pricing: $0.30/$0.75 per 1M tokens (no context threshold for 131K)
+        inputCostPerMillionTokens: 300,
+        outputCostPerMillionTokens: 750,
+        ...calculateModelCredits(300, 750, 'pro'),
+        requiredTier: 'pro',
+        tierRestrictionMode: 'minimum',
+        allowedTiers: ['pro', 'pro_plus', 'pro_max', 'enterprise_pro', 'enterprise_pro_plus'],
+        providerMetadata: {},
+        internalNotes: 'Fast legacy Grok 3 - economical choice',
+        complianceTags: [],
+      },
+    },
     // Plan 209: Removed text-davinci-003 (archived/deprecated)
   ];
 
@@ -2299,12 +2375,14 @@ async function seedModelPricing(providers: any[]) {
     }),
 
     // ========================================================================
-    // xAI (Grok) Models - Plan 209: 128K context threshold
+    // xAI (Grok) Models - Plan 209/210: 128K context threshold + cache pricing
     // For high context (>128K tokens): price is double the base price
+    // Plan 210: Added cache pricing (75-90% discount on cached tokens)
     // ========================================================================
 
     // Grok 4.1 Fast Reasoning ($0.20/$0.50 per 1M tokens)
     // High context (>128K): $0.40/$1.00 per 1M tokens
+    // Cache: 90% discount (write: $0.20, read: $0.02 per 1M)
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -2319,10 +2397,15 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'grok-4-1-fast-reasoning',
         input_price_per_1k: 0.0002, // $0.20 per 1M / 1000
         output_price_per_1k: 0.0005, // $0.50 per 1M / 1000
+        // Plan 210: Cache pricing (90% discount)
+        cache_write_price_per_1k: 0.0002, // $0.20 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.00002, // $0.02 per 1M (90% discount)
         // Plan 209: Context-based pricing (128K threshold)
         context_threshold_tokens: 128000,
         input_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
         output_price_per_1k_high_context: 0.001, // $1.00 per 1M (2x base)
+        cache_write_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
+        cache_read_price_per_1k_high_context: 0.00004, // $0.04 per 1M (90% discount of high context)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2331,6 +2414,7 @@ async function seedModelPricing(providers: any[]) {
 
     // Grok 4.1 Fast Non-Reasoning ($0.20/$0.50 per 1M tokens)
     // High context (>128K): $0.40/$1.00 per 1M tokens
+    // Cache: 90% discount (write: $0.20, read: $0.02 per 1M)
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -2345,10 +2429,15 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'grok-4-1-fast-non-reasoning',
         input_price_per_1k: 0.0002, // $0.20 per 1M / 1000
         output_price_per_1k: 0.0005, // $0.50 per 1M / 1000
+        // Plan 210: Cache pricing (90% discount)
+        cache_write_price_per_1k: 0.0002, // $0.20 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.00002, // $0.02 per 1M (90% discount)
         // Plan 209: Context-based pricing (128K threshold)
         context_threshold_tokens: 128000,
         input_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
         output_price_per_1k_high_context: 0.001, // $1.00 per 1M (2x base)
+        cache_write_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
+        cache_read_price_per_1k_high_context: 0.00004, // $0.04 per 1M (90% discount of high context)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2357,6 +2446,7 @@ async function seedModelPricing(providers: any[]) {
 
     // Grok Code Fast 1 ($0.20/$1.50 per 1M tokens)
     // High context (>128K): $0.40/$3.00 per 1M tokens
+    // Cache: 90% discount (write: $0.20, read: $0.02 per 1M)
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -2371,10 +2461,15 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'grok-code-fast-1',
         input_price_per_1k: 0.0002, // $0.20 per 1M / 1000
         output_price_per_1k: 0.0015, // $1.50 per 1M / 1000
+        // Plan 210: Cache pricing (90% discount)
+        cache_write_price_per_1k: 0.0002, // $0.20 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.00002, // $0.02 per 1M (90% discount)
         // Plan 209: Context-based pricing (128K threshold)
         context_threshold_tokens: 128000,
         input_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
         output_price_per_1k_high_context: 0.003, // $3.00 per 1M (2x base)
+        cache_write_price_per_1k_high_context: 0.0004, // $0.40 per 1M (2x base)
+        cache_read_price_per_1k_high_context: 0.00004, // $0.04 per 1M (90% discount of high context)
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
@@ -2383,6 +2478,7 @@ async function seedModelPricing(providers: any[]) {
 
     // Grok 4 (grok-4-0709) ($3.00/$15.00 per 1M tokens)
     // High context (>128K): $6.00/$30.00 per 1M tokens
+    // Cache: 75% discount (write: $3.00, read: $0.75 per 1M)
     prisma.model_provider_pricing.upsert({
       where: {
         provider_id_model_name_effective_from: {
@@ -2397,10 +2493,101 @@ async function seedModelPricing(providers: any[]) {
         model_name: 'grok-4-0709',
         input_price_per_1k: 0.003, // $3.00 per 1M / 1000
         output_price_per_1k: 0.015, // $15.00 per 1M / 1000
+        // Plan 210: Cache pricing (75% discount)
+        cache_write_price_per_1k: 0.003, // $3.00 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.00075, // $0.75 per 1M (75% discount)
         // Plan 209: Context-based pricing (128K threshold)
         context_threshold_tokens: 128000,
         input_price_per_1k_high_context: 0.006, // $6.00 per 1M (2x base)
         output_price_per_1k_high_context: 0.03, // $30.00 per 1M (2x base)
+        cache_write_price_per_1k_high_context: 0.006, // $6.00 per 1M (2x base)
+        cache_read_price_per_1k_high_context: 0.0015, // $1.50 per 1M (75% discount of high context)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Plan 210: Grok 4 Large Fast Non-Reasoning ($0.50/$1.00 per 1M tokens)
+    // High context (>128K): $1.00/$2.00 per 1M tokens
+    // Cache: 90% discount (write: $0.50, read: $0.05 per 1M)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-4-l-fast-non-reasoning',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-4-l-fast-non-reasoning',
+        input_price_per_1k: 0.0005, // $0.50 per 1M / 1000
+        output_price_per_1k: 0.001, // $1.00 per 1M / 1000
+        // Plan 210: Cache pricing (90% discount)
+        cache_write_price_per_1k: 0.0005, // $0.50 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.00005, // $0.05 per 1M (90% discount)
+        // Plan 209: Context-based pricing (128K threshold)
+        context_threshold_tokens: 128000,
+        input_price_per_1k_high_context: 0.001, // $1.00 per 1M (2x base)
+        output_price_per_1k_high_context: 0.002, // $2.00 per 1M (2x base)
+        cache_write_price_per_1k_high_context: 0.001, // $1.00 per 1M (2x base)
+        cache_read_price_per_1k_high_context: 0.0001, // $0.10 per 1M (90% discount of high context)
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Plan 210: Grok 3 ($2.00/$10.00 per 1M tokens)
+    // No high context threshold (131K is below 128K effective limit)
+    // Cache: 75% discount (write: $2.00, read: $0.50 per 1M)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-3',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-3',
+        input_price_per_1k: 0.002, // $2.00 per 1M / 1000
+        output_price_per_1k: 0.01, // $10.00 per 1M / 1000
+        // Plan 210: Cache pricing (75% discount)
+        cache_write_price_per_1k: 0.002, // $2.00 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.0005, // $0.50 per 1M (75% discount)
+        // No context threshold - 131K max context
+        effective_from: effectiveFrom,
+        is_active: true,
+        updated_at: new Date(),
+      },
+    }),
+
+    // Plan 210: Grok 3 Fast ($0.30/$0.75 per 1M tokens)
+    // No high context threshold (131K is below 128K effective limit)
+    // Cache: 90% discount (write: $0.30, read: $0.03 per 1M)
+    prisma.model_provider_pricing.upsert({
+      where: {
+        provider_id_model_name_effective_from: {
+          provider_id: providerMap['xai'],
+          model_name: 'grok-3-fast',
+          effective_from: effectiveFrom,
+        },
+      },
+      update: {},
+      create: {
+        provider_id: providerMap['xai'],
+        model_name: 'grok-3-fast',
+        input_price_per_1k: 0.0003, // $0.30 per 1M / 1000
+        output_price_per_1k: 0.00075, // $0.75 per 1M / 1000
+        // Plan 210: Cache pricing (90% discount)
+        cache_write_price_per_1k: 0.0003, // $0.30 per 1M (same as input for Grok)
+        cache_read_price_per_1k: 0.00003, // $0.03 per 1M (90% discount)
+        // No context threshold - 131K max context
         effective_from: effectiveFrom,
         is_active: true,
         updated_at: new Date(),
