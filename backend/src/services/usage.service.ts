@@ -547,13 +547,15 @@ export class UsageService {
    * @returns Monthly usage summary with camelCase fields
    */
   async getMonthlySummary(userId: string, period: string = 'current_month'): Promise<UsageSummaryResponse> {
+    // Parse period
+    const { startDate, endDate } = this.parsePeriod(period);
+
     logger.debug('UsageService: Getting monthly summary', {
       userId,
       period,
+      startDateUTC: startDate.toISOString(),
+      endDateUTC: endDate.toISOString(),
     });
-
-    // Parse period
-    const { startDate, endDate } = this.parsePeriod(period);
 
     // Aggregate from token_usage_ledger table (Prisma client uses camelCase)
     const usageRecords = await this.prisma.token_usage_ledger.findMany({
@@ -570,8 +572,23 @@ export class UsageService {
       orderBy: { created_at: 'desc' },
     });
 
+    // Log the result of the query for diagnostics
+    logger.info('UsageService: Query result', {
+      userId,
+      period,
+      recordsFound: usageRecords.length,
+      startDateUTC: startDate.toISOString(),
+      endDateUTC: endDate.toISOString(),
+    });
+
     // Handle empty usage case
     if (usageRecords.length === 0) {
+      logger.warn('UsageService: No usage records found for user in period', {
+        userId,
+        period,
+        startDateUTC: startDate.toISOString(),
+        endDateUTC: endDate.toISOString(),
+      });
       return {
         period: period === 'current_month' ? this.formatPeriod(startDate) : period,
         periodStart: startDate.toISOString(),
@@ -622,17 +639,17 @@ export class UsageService {
 
     const modelBreakdown = Object.entries(modelCounts)
       .map(([model, stats]) => ({
-        model,
+        modelName: model, // Changed from 'model' to match client DTO
         provider: stats.provider,
         requests: stats.requests,
         tokens: stats.tokens,
-        credits: stats.credits,
+        creditsUsed: stats.credits, // Changed from 'credits' to match client DTO
         percentage: Math.round((stats.requests / summary.apiRequests) * 100),
       }))
       .sort((a, b) => b.requests - a.requests);
 
     // Most used model
-    const mostUsedModel = modelBreakdown[0]?.model || 'N/A';
+    const mostUsedModel = modelBreakdown[0]?.modelName || 'N/A';
     const mostUsedModelPercentage = modelBreakdown[0]?.percentage || 0;
 
     summary.mostUsedModel = mostUsedModel;
@@ -752,10 +769,10 @@ export interface CreditBreakdown {
 }
 
 export interface ModelBreakdownItem {
-  model: string;
+  modelName: string; // Changed from 'model' to match client DTO
   provider: string;
   requests: number;
   tokens: number;
-  credits: number;
+  creditsUsed: number; // Changed from 'credits' to match client DTO
   percentage: number;
 }

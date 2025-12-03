@@ -1246,6 +1246,8 @@ export class LLMService {
       message = `Anthropic API error (${error.status}): ${message}`;
     } else if (provider === 'google') {
       message = `Google AI API error: ${message}`;
+    } else if (provider === 'xai' && error.status) {
+      message = `Grok (xAI) API error (${error.status}): ${message}`;
     }
 
     return new Error(message);

@@ -14,6 +14,7 @@ export const ILLMProvider = Symbol('ILLMProvider');
  * - Anthropic: cache_creation_input_tokens, cache_read_input_tokens
  * - OpenAI: cached_prompt_tokens
  * - Google: cached_content_token_count
+ * - Grok/xAI: prompt_tokens_details.cached_tokens, completion_tokens_details.reasoning_tokens
  */
 export interface LLMUsageData {
   promptTokens: number;
@@ -32,6 +33,10 @@ export interface LLMUsageData {
 
   // Google Prompt Caching Metrics (alias for consistency)
   cachedContentTokenCount?: number;  // Google's cache metric name
+
+  // Grok/xAI Reasoning Model Metrics
+  // Note: reasoning_tokens is a breakdown of completionTokens, not additive
+  reasoningTokens?: number;          // Tokens used for chain-of-thought reasoning
 }
 
 /**

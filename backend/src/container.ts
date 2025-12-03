@@ -115,6 +115,22 @@ if (process.env.GOOGLE_API_KEY) {
   logger.warn('DI Container: GOOGLE_API_KEY not set, Google provider will not be available');
 }
 
+/**
+ * Register Grok (xAI) Client
+ * Uses OpenAI SDK with xAI-specific base URL
+ */
+if (process.env.GROK_API_KEY) {
+  container.register('GrokClient', {
+    useValue: new OpenAI({
+      apiKey: process.env.GROK_API_KEY,
+      baseURL: 'https://api.x.ai/v1',
+    }),
+  });
+  logger.info('DI Container: Grok (xAI) client registered');
+} else {
+  logger.warn('DI Container: GROK_API_KEY not set, Grok provider will not be available');
+}
+
 // ============================================================================
 // Azure OpenAI Client (Conditional Registration)
 // ============================================================================
@@ -149,6 +165,7 @@ import { OpenAIProvider } from './providers/openai.provider';
 import { AzureOpenAIProvider } from './providers/azure-openai.provider';
 import { AnthropicProvider } from './providers/anthropic.provider';
 import { GoogleProvider } from './providers/google.provider';
+import { GrokProvider } from './providers/grok.provider';
 
 // Register providers conditionally based on available clients
 // This prevents DI errors when API keys are not set
@@ -176,6 +193,12 @@ if (process.env.ANTHROPIC_API_KEY) {
 if (process.env.GOOGLE_API_KEY) {
   container.register('ILLMProvider', { useClass: GoogleProvider });
   registeredProviders.push('google');
+}
+
+// Register Grok (xAI) provider only if client is available
+if (process.env.GROK_API_KEY) {
+  container.register('ILLMProvider', { useClass: GrokProvider });
+  registeredProviders.push('xai');
 }
 
 if (registeredProviders.length === 0) {
